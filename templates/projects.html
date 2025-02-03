@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Projects</h2>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Created</th>
+                        <th>Type</th>
+                        <th>Frames</th>
+                        <th>FPS</th>
+                        <th>Video</th>
+                        <th>Expires In</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for project in projects.items %}
+                    <tr>
+                        <td>{{ project.name }}</td>
+                        <td>{{ project.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>{{ project.csv_type }}</td>
+                        <td>{{ project.frame_count }}</td>
+                        <td>{{ project.fps }}</td>
+                        <td>{% if project.video_file %}Yes{% else %}No{% endif %}</td>
+                        <td>{{ project.days_until_expiry() }} days</td>
+                        <td>
+                            {% if project.video_file %}
+                            <a href="{{ url_for('download_file', project_id=project.id, type='video') }}" 
+                               class="btn btn-sm btn-success">
+                                <i class="bi bi-download"></i> Video
+                            </a>
+                            {% endif %}
+                            <button onclick="deleteProject({{ project.id }})" 
+                                    class="btn btn-sm btn-danger">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if projects.has_next %}
+        <div class="text-center mt-3">
+            <a href="{{ url_for('list_projects', page=projects.next_num) }}" 
+               class="btn btn-primary">Show More</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% endblock %}

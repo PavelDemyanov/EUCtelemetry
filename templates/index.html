@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Create New Project</h2>
+            </div>
+            <div class="card-body">
+                <form id="uploadForm">
+                    <div class="mb-3">
+                        <label for="projectName" class="form-label">Project Name</label>
+                        <input type="text" class="form-control" id="projectName" name="project_name" placeholder="Leave empty for auto-generation">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="csvFile" class="form-label">CSV File</label>
+                        <input type="file" class="form-control" id="csvFile" name="file" accept=".csv" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Resolution</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="resolution" id="fullhd" value="fullhd" checked>
+                            <label class="form-check-label" for="fullhd">Full HD (1920x1080)</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="resolution" id="4k" value="4k">
+                            <label class="form-check-label" for="4k">4K (3840x2160)</label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="fps" class="form-label">FPS</label>
+                        <input type="number" class="form-control" id="fps" name="fps" value="29.97" step="0.01" min="1" max="60">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Video Codec</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="codec" id="h264" value="h264" checked>
+                            <label class="form-check-label" for="h264">H.264</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="codec" id="h265" value="h265">
+                            <label class="form-check-label" for="h265">H.265</label>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" id="uploadButton">Upload and Process</button>
+                </form>
+
+                <div id="progress" class="mt-4 d-none">
+                    <h4 id="progressTitle">Processing...</h4>
+                    <div class="progress">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" style="width: 0%">0%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/upload.js') }}"></script>
+{% endblock %}

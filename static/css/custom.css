@@ -1,0 +1,15 @@
+.progress {
+    height: 25px;
+}
+
+.card {
+    margin-bottom: 2rem;
+}
+
+.table td, .table th {
+    vertical-align: middle;
+}
+
+.btn-sm {
+    margin: 0.2rem;
+}
