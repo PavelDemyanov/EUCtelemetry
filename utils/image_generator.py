@@ -34,8 +34,8 @@ def create_frame(values, timestamp, resolution, output_path):
     image = Image.new('RGB', (width, height), (0, 0, 255))
     draw = ImageDraw.Draw(image)
 
-    # Calculate scaled font size (32 is base size for Full HD)
-    font_size = int(32 * scale_factor)
+    # Calculate scaled font size (26 is base size for Full HD - reduced by 20% from original 32)
+    font_size = int(26 * scale_factor)
 
     # Load font with scaled size
     try:
