@@ -1,16 +1,24 @@
+import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import os
 import logging
 from datetime import datetime
-import numpy as np
 
-def find_nearest_timestamp_index(timestamps, target):
-    """Find index of nearest timestamp to target value"""
-    timestamps = np.array(timestamps)
-    idx = (np.abs(timestamps - target)).argmin()
-    return idx
+def find_nearest_values(data, timestamp):
+    """Find the nearest value before the given timestamp for each column"""
+    result = {}
+    for column in ['speed', 'gps', 'voltage', 'temperature', 'current', 
+                  'battery', 'mileage', 'pwm', 'power']:
+        # Find the last value before or equal to the timestamp
+        mask = data['timestamp'] <= timestamp
+        if not any(mask):  # If no previous value exists
+            result[column] = 0
+        else:
+            idx = np.where(mask)[0][-1]  # Get the last index where mask is True
+            result[column] = data[column][idx]
+    return result
 
-def create_frame(data, timestamp_idx, resolution, output_path):
+def create_frame(values, timestamp, resolution, output_path):
     # Set resolution
     if resolution == "4k":
         width, height = 3840, 2160
@@ -27,22 +35,22 @@ def create_frame(data, timestamp_idx, resolution, output_path):
     except:
         font = ImageFont.load_default()
 
-    # Parameters to display
-    timestamp = data['timestamp'][timestamp_idx]
+    # Format timestamp
     dt = datetime.fromtimestamp(timestamp)
     formatted_time = dt.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
 
+    # Parameters to display
     params = [
         ('Time', formatted_time),
-        ('Speed', data['speed'][timestamp_idx]),
-        ('GPS', data['gps'][timestamp_idx]),
-        ('Voltage', data['voltage'][timestamp_idx]),
-        ('Temp', data['temperature'][timestamp_idx]),
-        ('Current', data['current'][timestamp_idx]),
-        ('Battery', data['battery'][timestamp_idx]),
-        ('Mileage', data['mileage'][timestamp_idx]),
-        ('PWM', data['pwm'][timestamp_idx]),
-        ('Power', data['power'][timestamp_idx])
+        ('Speed', values['speed']),
+        ('GPS', values['gps']),
+        ('Voltage', values['voltage']),
+        ('Temp', values['temperature']),
+        ('Current', values['current']),
+        ('Battery', values['battery']),
+        ('Mileage', values['mileage']),
+        ('PWM', values['pwm']),
+        ('Power', values['power'])
     ]
 
     # Calculate positions
@@ -74,7 +82,7 @@ def create_frame(data, timestamp_idx, resolution, output_path):
     # Save frame
     image.save(output_path)
 
-def generate_frames(csv_file, project_id, resolution='fullhd'):
+def generate_frames(csv_file, project_id, resolution='fullhd', frame_count=None):
     try:
         # Create project frames directory
         frames_dir = f'frames/project_{project_id}'
@@ -84,26 +92,36 @@ def generate_frames(csv_file, project_id, resolution='fullhd'):
         from utils.csv_processor import process_csv_file
         _, data = process_csv_file(csv_file)
 
-        # Get unique timestamps and sort them
-        timestamps = sorted(set(data['timestamp']))
-        total_duration = timestamps[-1] - timestamps[0]
+        # Convert data to numpy arrays for efficient operations
+        for key in data:
+            data[key] = np.array(data[key])
 
-        # Calculate frame count based on timestamps
-        frame_count = len(timestamps)
-        logging.info(f"Generating {frame_count} frames based on timestamps")
+        # Find T_min and T_max
+        T_min = np.min(data['timestamp'])
+        T_max = np.max(data['timestamp'])
+        duration = T_max - T_min
 
-        # Generate a frame for each unique timestamp
-        for i, timestamp in enumerate(timestamps):
-            # Find the nearest data point for this timestamp
-            idx = find_nearest_timestamp_index(data['timestamp'], timestamp)
+        # If frame_count not specified, use the number of unique timestamps
+        if frame_count is None:
+            frame_count = len(np.unique(data['timestamp']))
+
+        logging.info(f"Generating {frame_count} frames for duration {duration:.2f} seconds")
+
+        # Generate evenly spaced timestamps for frames
+        frame_timestamps = np.linspace(T_min, T_max, frame_count)
+
+        # Generate a frame for each timestamp
+        for i, timestamp in enumerate(frame_timestamps):
+            # Find nearest values for this timestamp
+            values = find_nearest_values(data, timestamp)
             output_path = f'{frames_dir}/frame_{i:06d}.png'
-            create_frame(data, idx, resolution, output_path)
+            create_frame(values, timestamp, resolution, output_path)
             if i % 100 == 0:  # Log progress every 100 frames
                 logging.info(f"Generated frame {i}/{frame_count}")
 
         logging.info(f"Successfully generated {frame_count} frames")
-        logging.info(f"Total video duration based on timestamps: {total_duration:.2f} seconds")
-        return frame_count
+        logging.info(f"Total video duration based on timestamps: {duration:.2f} seconds")
+        return frame_count, duration
     except Exception as e:
         logging.error(f"Error generating frames: {e}")
         raise

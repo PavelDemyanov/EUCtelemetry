@@ -77,18 +77,21 @@ def upload_file():
 def generate_project_frames(project_id):
     project = Project.query.get_or_404(project_id)
     resolution = request.form.get('resolution', 'fullhd')
-    
+    frame_count = request.form.get('frame_count', type=int)  # Get frame count from request
+
     try:
-        frame_count = generate_frames(
+        frame_count, duration = generate_frames(
             os.path.join(app.config['UPLOAD_FOLDER'], project.csv_file),
             project_id,
-            resolution
+            resolution,
+            frame_count
         )
-        
+
         project.frame_count = frame_count
+        project.video_duration = duration  # Save the actual duration from timestamps
         db.session.commit()
-        
-        return jsonify({'success': True, 'frame_count': frame_count})
+
+        return jsonify({'success': True, 'frame_count': frame_count, 'duration': duration})
     except Exception as e:
         logging.error(f"Error generating frames: {str(e)}")
         return jsonify({'error': str(e)}), 500
@@ -106,7 +109,7 @@ def create_project_video(project_id):
         project.fps = fps
         project.codec = codec
         project.resolution = resolution
-        project.video_duration = project.frame_count / fps  # Calculate duration in seconds
+        # Duration is already set when generating frames
         db.session.commit()
 
         return jsonify({'success': True, 'video_path': video_path})

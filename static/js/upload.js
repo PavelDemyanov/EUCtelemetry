@@ -29,14 +29,17 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
         progressBar.textContent = '33%';
 
         // Generate frames
+        const frameParams = new URLSearchParams({
+            'resolution': document.querySelector('input[name="resolution"]:checked').value,
+            'frame_count': document.getElementById('frameCount').value
+        });
+
         return fetch(`/generate_frames/${projectId}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: new URLSearchParams({
-                'resolution': document.querySelector('input[name="resolution"]:checked').value
-            })
+            body: frameParams
         });
     })
     .then(response => response.json())
