@@ -8,6 +8,20 @@
 
 .table td, .table th {
     vertical-align: middle;
+    white-space: nowrap;
+    min-width: 100px;
+}
+
+.table td:first-child {
+    min-width: 200px;  /* Больше места для названия проекта */
+}
+
+.table td:last-child {
+    min-width: 150px;  /* Больше места для кнопок */
+}
+
+.table-responsive {
+    overflow-x: auto;
 }
 
 .btn-sm {
