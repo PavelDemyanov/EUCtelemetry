@@ -17,3 +17,43 @@ function deleteProject(projectId) {
         });
     }
 }
+
+function updateProjectStatuses() {
+    // Find all project status badges
+    document.querySelectorAll('[data-project-status]').forEach(statusBadge => {
+        const projectId = statusBadge.dataset.projectId;
+        const currentStatus = statusBadge.dataset.projectStatus;
+
+        // Only check status for processing projects
+        if (currentStatus === 'processing' || currentStatus === 'pending') {
+            fetch(`/project_status/${projectId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status !== currentStatus) {
+                        // Update the badge class and text based on new status
+                        statusBadge.className = 'badge text-bg-' + 
+                            (data.status === 'completed' ? 'success' : 
+                             data.status === 'processing' ? 'warning' : 
+                             data.status === 'error' ? 'danger' : 'secondary');
+
+                        statusBadge.textContent = data.status.charAt(0).toUpperCase() + data.status.slice(1);
+                        statusBadge.dataset.projectStatus = data.status;
+
+                        // If project completed or errored, add/update error message tooltip
+                        if (data.status === 'error' && data.error_message) {
+                            statusBadge.title = data.error_message;
+                        }
+
+                        // Refresh the page if status changed to completed to show new download buttons
+                        if (data.status === 'completed') {
+                            setTimeout(() => location.reload(), 1000);
+                        }
+                    }
+                })
+                .catch(error => console.error('Error updating status:', error));
+        }
+    });
+}
+
+// Start periodic status updates
+setInterval(updateProjectStatuses, 2000); // Check every 2 seconds

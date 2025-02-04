@@ -30,15 +30,18 @@
                         <td>{{ project.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
                         <td>{{ project.csv_type }}</td>
                         <td>
-                            {% if project.status == 'processing' %}
-                            <span class="badge text-bg-warning">Processing</span>
-                            {% elif project.status == 'completed' %}
-                            <span class="badge text-bg-success">Completed</span>
-                            {% elif project.status == 'error' %}
-                            <span class="badge text-bg-danger" title="{{ project.error_message }}">Error</span>
-                            {% else %}
-                            <span class="badge text-bg-secondary">Pending</span>
+                            <span class="badge text-bg-{{ 
+                                'warning' if project.status == 'processing' else
+                                'success' if project.status == 'completed' else
+                                'danger' if project.status == 'error' else
+                                'secondary' 
+                            }}"
+                            data-project-id="{{ project.id }}"
+                            data-project-status="{{ project.status }}"
+                            {% if project.status == 'error' and project.error_message %}
+                            title="{{ project.error_message }}"
                             {% endif %}
+                            >{{ project.status.capitalize() }}</span>
                         </td>
                         <td>{{ project.frame_count }}</td>
                         <td>{{ project.fps }}</td>
