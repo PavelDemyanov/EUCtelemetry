@@ -66,7 +66,7 @@ def create_frame(values, timestamp, resolution, output_path):
     total_width = 0
     element_widths = []
     for label, value in params:
-        text = f"{label}: {value:.2f}"
+        text = f"{label}: {value}"  # Changed from {value:.2f} to {value}
         text_bbox = draw.textbbox((0, 0), text, font=font)
         text_width = text_bbox[2] - text_bbox[0] + (padding * 2)  # Add padding within black box
         element_widths.append(text_width)
@@ -81,7 +81,7 @@ def create_frame(values, timestamp, resolution, output_path):
 
     # Draw parameters
     for i, ((label, value), element_width) in enumerate(zip(params, element_widths)):
-        text = f"{label}: {value:.2f}"
+        text = f"{label}: {value}"  # Changed from {value:.2f} to {value}
         text_bbox = draw.textbbox((0, 0), text, font=font)
         text_width = text_bbox[2] - text_bbox[0]
         text_height = text_bbox[3] - text_bbox[1]
