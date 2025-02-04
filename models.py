@@ -13,8 +13,6 @@ class Project(db.Model):
     video_file = db.Column(db.String(255))
     codec = db.Column(db.String(10))
     resolution = db.Column(db.String(10))  # 'fullhd' or '4k'
-    timestamps_file = db.Column(db.String(255))  # New field for timestamps file
-    duration = db.Column(db.Float)  # New field for video duration in seconds
 
     def days_until_expiry(self):
         if self.expiry_date:

@@ -3,7 +3,6 @@ import logging
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, jsonify, send_file
 from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
 from werkzeug.utils import secure_filename
 from utils.csv_processor import process_csv_file
 from utils.image_generator import generate_frames
@@ -22,10 +21,8 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs('frames', exist_ok=True)
 os.makedirs('videos', exist_ok=True)
-os.makedirs('timestamps', exist_ok=True)
 
 db = SQLAlchemy(app)
-migrate = Migrate(app, db)
 
 from models import Project
 
@@ -79,19 +76,17 @@ def upload_file():
 def generate_project_frames(project_id):
     project = Project.query.get_or_404(project_id)
     resolution = request.form.get('resolution', 'fullhd')
-
+    
     try:
-        frame_count, timestamps_file, duration = generate_frames(
+        frame_count = generate_frames(
             os.path.join(app.config['UPLOAD_FOLDER'], project.csv_file),
             project_id,
             resolution
         )
-
+        
         project.frame_count = frame_count
-        project.timestamps_file = os.path.basename(timestamps_file)
-        project.duration = duration
         db.session.commit()
-
+        
         return jsonify({'success': True, 'frame_count': frame_count})
     except Exception as e:
         logging.error(f"Error generating frames: {str(e)}")
@@ -102,12 +97,14 @@ def create_project_video(project_id):
     project = Project.query.get_or_404(project_id)
     fps = float(request.form.get('fps', 29.97))
     codec = request.form.get('codec', 'h264')
+    resolution = request.form.get('resolution', 'fullhd')
 
     try:
-        video_path = create_video(project_id, fps, codec)
+        video_path = create_video(project_id, fps, codec, resolution) # Assumed create_video is updated to accept resolution
         project.video_file = os.path.basename(video_path)
         project.fps = fps
         project.codec = codec
+        project.resolution = resolution
         db.session.commit()
 
         return jsonify({'success': True, 'video_path': video_path})
@@ -125,12 +122,13 @@ def list_projects():
 @app.route('/download/<int:project_id>/<type>')
 def download_file(project_id, type):
     project = Project.query.get_or_404(project_id)
-
+    
     if type == 'video' and project.video_file:
         return send_file(f'videos/{project.video_file}')
-    elif type == 'timestamps' and project.timestamps_file:
-        return send_file(f'timestamps/{project.timestamps_file}')
-
+    elif type == 'frames':
+        # TODO: Implement frame download as ZIP
+        pass
+    
     return jsonify({'error': 'File not found'}), 404
 
 @app.route('/delete/<int:project_id>', methods=['POST'])
@@ -148,11 +146,6 @@ def delete_project(project_id):
             video_path = os.path.join('videos', project.video_file)
             if os.path.exists(video_path):
                 os.remove(video_path)
-
-        if project.timestamps_file:
-            timestamp_path = os.path.join('timestamps', project.timestamps_file)
-            if os.path.exists(timestamp_path):
-                os.remove(timestamp_path)
 
         # Delete frames directory if it exists
         frames_dir = f'frames/project_{project_id}'
