@@ -42,29 +42,29 @@ def process_csv_file(file_path):
             df['timestamp'] = df['Date'].apply(parse_timestamp_darnkessbot)
             processed_data = {
                 'timestamp': df['timestamp'],
-                'speed': df['Speed'],
-                'gps': df['GPS Speed'],
-                'voltage': df['Voltage'],
-                'temperature': df['Temperature'],
-                'current': df['Current'],
-                'battery': df['Battery level'],
-                'mileage': df['Total mileage'],
-                'pwm': df['PWM'],
-                'power': df['Power']
+                'speed': df['Speed'].round().astype(int),
+                'gps': df['GPS Speed'].round().astype(int),
+                'voltage': df['Voltage'].round().astype(int),
+                'temperature': df['Temperature'].round().astype(int),
+                'current': df['Current'].round().astype(int),
+                'battery': df['Battery level'].round().astype(int),
+                'mileage': df['Total mileage'].round().astype(int),
+                'pwm': df['PWM'].round().astype(int),
+                'power': df['Power'].round().astype(int)
             }
         else:  # wheellog
             df['timestamp'] = df.apply(lambda x: parse_timestamp_wheellog(x['date'], x['time']), axis=1)
             processed_data = {
                 'timestamp': df['timestamp'],
-                'speed': df['speed'],
-                'gps': df['gps_speed'],
-                'voltage': df['voltage'],
-                'temperature': df['system_temp'],
-                'current': df['current'],
-                'battery': df['battery_level'],
-                'mileage': df['totaldistance'],
-                'pwm': df['pwm'],
-                'power': df['power']
+                'speed': df['speed'].round().astype(int),
+                'gps': df['gps_speed'].round().astype(int),
+                'voltage': df['voltage'].round().astype(int),
+                'temperature': df['system_temp'].round().astype(int),
+                'current': df['current'].round().astype(int),
+                'battery': df['battery_level'].round().astype(int),
+                'mileage': df['totaldistance'].round().astype(int),
+                'pwm': df['pwm'].round().astype(int),
+                'power': df['power'].round().astype(int)
             }
 
         # Create processed data directory if it doesn't exist
