@@ -53,31 +53,44 @@ def create_frame(values, timestamp, resolution, output_path):
         ('Power', values['power'])
     ]
 
-    # Calculate positions
-    x_start = 50
-    y_position = height // 2
-    spacing = width // (len(params) + 1)
+    # Calculate text positions
+    total_height = 0
+    text_heights = []
+    for label, value in params:
+        text = f"{label}: {value}" if isinstance(value, str) else f"{label}: {value:.2f}"
+        text_bbox = draw.textbbox((0, 0), text, font=font)
+        text_height = text_bbox[3] - text_bbox[1] + 20  # Add padding
+        total_height += text_height
+        text_heights.append(text_height)
+
+    # Start drawing from the middle of the screen, adjusted by half of total text height
+    y_position = (height - total_height) // 2
+    x_position = width // 2
 
     # Draw parameters
-    for i, (label, value) in enumerate(params):
-        x = x_start + (i * spacing)
+    for i, ((label, value), text_height) in enumerate(zip(params, text_heights)):
         text = f"{label}: {value}" if isinstance(value, str) else f"{label}: {value:.2f}"
 
-        # Get text size
+        # Get text size for centering
         text_bbox = draw.textbbox((0, 0), text, font=font)
         text_width = text_bbox[2] - text_bbox[0]
-        text_height = text_bbox[3] - text_bbox[1]
+
+        # Calculate centered x position
+        x = x_position - (text_width // 2)
 
         # Draw black background
         padding = 10
         draw.rectangle(
             (x - padding, y_position - padding,
-             x + text_width + padding, y_position + text_height + padding),
+             x + text_width + padding, y_position + (text_height - padding)),
             fill='black'
         )
 
         # Draw white text
         draw.text((x, y_position), text, fill='white', font=font)
+
+        # Move to next line
+        y_position += text_height
 
     # Save frame
     image.save(output_path)
