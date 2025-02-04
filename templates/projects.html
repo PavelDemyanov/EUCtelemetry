@@ -17,6 +17,7 @@
                         <th>FPS</th>
                         <th>Resolution</th>
                         <th>Codec</th>
+                        <th>Duration</th>
                         <th>Expires In</th>
                         <th>Actions</th>
                     </tr>
@@ -31,6 +32,7 @@
                         <td>{{ project.fps }}</td>
                         <td>{{ project.resolution|upper if project.resolution else '-' }}</td>
                         <td>{{ project.codec|upper if project.codec else '-' }}</td>
+                        <td>{{ project.get_duration_str() }}</td>
                         <td>{{ project.days_until_expiry() }} days</td>
                         <td>
                             {% if project.video_file %}

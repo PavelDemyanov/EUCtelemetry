@@ -100,11 +100,12 @@ def create_project_video(project_id):
     resolution = request.form.get('resolution', 'fullhd')
 
     try:
-        video_path = create_video(project_id, fps, codec, resolution) # Assumed create_video is updated to accept resolution
+        video_path = create_video(project_id, fps, codec, resolution)
         project.video_file = os.path.basename(video_path)
         project.fps = fps
         project.codec = codec
         project.resolution = resolution
+        project.video_duration = project.frame_count / fps  # Calculate duration in seconds
         db.session.commit()
 
         return jsonify({'success': True, 'video_path': video_path})
