@@ -72,11 +72,7 @@ document.getElementById('startProcessButton').addEventListener('click', function
     progressDiv.classList.remove('d-none');
     this.disabled = true;
 
-    // Generate frames
-    progressTitle.textContent = 'Generating Frames...';
-    progressBar.style.width = '33%';
-    progressBar.textContent = '33%';
-
+    // Start processing
     fetch(`/generate_frames/${projectId}`, {
         method: 'POST',
         headers: {
@@ -84,40 +80,50 @@ document.getElementById('startProcessButton').addEventListener('click', function
         },
         body: new URLSearchParams({
             'resolution': document.querySelector('input[name="resolution"]:checked').value,
-            'fps': document.querySelector('input[name="fps"]:checked').value
+            'fps': document.querySelector('input[name="fps"]:checked').value,
+            'codec': document.querySelector('input[name="codec"]:checked').value
         })
     })
     .then(response => response.json())
     .then(data => {
         if (data.error) throw new Error(data.error);
 
-        progressTitle.textContent = 'Creating Video...';
-        progressBar.style.width = '66%';
-        progressBar.textContent = '66%';
+        // Start polling for status
+        const checkStatus = () => {
+            fetch(`/project_status/${projectId}`)
+                .then(response => response.json())
+                .then(statusData => {
+                    switch(statusData.status) {
+                        case 'processing':
+                            progressTitle.textContent = 'Processing...';
+                            progressBar.style.width = '50%';
+                            progressBar.textContent = '50%';
+                            setTimeout(checkStatus, 2000);  // Poll every 2 seconds
+                            break;
+                        case 'completed':
+                            progressBar.style.width = '100%';
+                            progressBar.textContent = '100%';
+                            progressTitle.textContent = 'Complete!';
+                            setTimeout(() => {
+                                window.location.href = '/projects';
+                            }, 1000);
+                            break;
+                        case 'error':
+                            throw new Error(statusData.error_message || 'Processing failed');
+                        default:
+                            throw new Error('Unknown status');
+                    }
+                })
+                .catch(error => {
+                    console.error('Status check error:', error);
+                    progressTitle.textContent = 'Error: ' + error.message;
+                    progressBar.classList.add('bg-danger');
+                    this.disabled = false;
+                });
+        };
 
-        return fetch(`/create_video/${projectId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams({
-                'fps': document.querySelector('input[name="fps"]:checked').value,
-                'codec': document.querySelector('input[name="codec"]:checked').value,
-                'resolution': document.querySelector('input[name="resolution"]:checked').value
-            })
-        });
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) throw new Error(data.error);
-
-        progressBar.style.width = '100%';
-        progressBar.textContent = '100%';
-        progressTitle.textContent = 'Complete!';
-
-        setTimeout(() => {
-            window.location.href = '/projects';
-        }, 1000);
+        // Start checking status
+        checkStatus();
     })
     .catch(error => {
         console.error('Error:', error);

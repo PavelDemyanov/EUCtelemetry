@@ -14,6 +14,8 @@ class Project(db.Model):
     codec = db.Column(db.String(10))
     resolution = db.Column(db.String(10))  # 'fullhd' or '4k'
     video_duration = db.Column(db.Float)  # Duration in seconds
+    status = db.Column(db.String(20), default='pending')  # pending, processing, completed, error
+    error_message = db.Column(db.Text)
 
     def days_until_expiry(self):
         if self.expiry_date:

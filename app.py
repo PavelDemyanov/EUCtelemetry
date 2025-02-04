@@ -7,6 +7,7 @@ from extensions import db
 from utils.csv_processor import process_csv_file
 from utils.image_generator import generate_frames
 from utils.video_creator import create_video
+from utils.background_processor import process_project
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -60,7 +61,8 @@ def upload_file():
             csv_file=filename,
             csv_type=csv_type,
             created_at=datetime.now(),
-            expiry_date=datetime.now() + timedelta(days=30)
+            expiry_date=datetime.now() + timedelta(days=30),
+            status='pending' #added status field
         )
         db.session.add(project)
         db.session.commit()
@@ -80,45 +82,26 @@ def generate_project_frames(project_id):
     project = Project.query.get_or_404(project_id)
     resolution = request.form.get('resolution', 'fullhd')
     fps = float(request.form.get('fps', 29.97))
-
-    try:
-        frame_count, duration = generate_frames(
-            os.path.join(app.config['UPLOAD_FOLDER'], project.csv_file),
-            project_id,
-            resolution,
-            fps
-        )
-
-        project.frame_count = frame_count
-        project.video_duration = duration  # Save the actual duration from timestamps
-        project.fps = fps  # Save the user specified fps
-        db.session.commit()
-
-        return jsonify({'success': True, 'frame_count': frame_count, 'duration': duration})
-    except Exception as e:
-        logging.error(f"Error generating frames: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/create_video/<int:project_id>', methods=['POST'])
-def create_project_video(project_id):
-    project = Project.query.get_or_404(project_id)
-    fps = float(request.form.get('fps', 29.97))
     codec = request.form.get('codec', 'h264')
-    resolution = request.form.get('resolution', 'fullhd')
 
     try:
-        video_path = create_video(project_id, fps, codec, resolution)
-        project.video_file = os.path.basename(video_path)
-        project.fps = fps
-        project.codec = codec
-        project.resolution = resolution
-        # Duration is already set when generating frames
-        db.session.commit()
-
-        return jsonify({'success': True, 'video_path': video_path})
+        # Start background processing
+        process_project(project_id, resolution, fps, codec)
+        return jsonify({'success': True, 'message': 'Processing started'})
     except Exception as e:
-        logging.error(f"Error creating video: {str(e)}")
+        logging.error(f"Error starting processing: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/project_status/<int:project_id>')
+def project_status(project_id):
+    project = Project.query.get_or_404(project_id)
+    return jsonify({
+        'status': project.status,
+        'frame_count': project.frame_count,
+        'video_file': project.video_file,
+        'error_message': project.error_message
+    })
+
 
 @app.route('/projects')
 def list_projects():
