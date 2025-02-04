@@ -3,6 +3,7 @@ import logging
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, jsonify, send_file
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 from werkzeug.utils import secure_filename
 from utils.csv_processor import process_csv_file
 from utils.image_generator import generate_frames
@@ -21,9 +22,10 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs('frames', exist_ok=True)
 os.makedirs('videos', exist_ok=True)
-os.makedirs('timestamps', exist_ok=True) # Added timestamps directory
+os.makedirs('timestamps', exist_ok=True)
 
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 
 from models import Project
 
@@ -100,14 +102,12 @@ def create_project_video(project_id):
     project = Project.query.get_or_404(project_id)
     fps = float(request.form.get('fps', 29.97))
     codec = request.form.get('codec', 'h264')
-    resolution = request.form.get('resolution', 'fullhd')
 
     try:
-        video_path = create_video(project_id, fps, codec, resolution) # Assumed create_video is updated to accept resolution
+        video_path = create_video(project_id, fps, codec)
         project.video_file = os.path.basename(video_path)
         project.fps = fps
         project.codec = codec
-        project.resolution = resolution
         db.session.commit()
 
         return jsonify({'success': True, 'video_path': video_path})
@@ -149,11 +149,10 @@ def delete_project(project_id):
             if os.path.exists(video_path):
                 os.remove(video_path)
 
-        if project.timestamps_file: # Added timestamp file deletion
+        if project.timestamps_file:
             timestamp_path = os.path.join('timestamps', project.timestamps_file)
             if os.path.exists(timestamp_path):
                 os.remove(timestamp_path)
-
 
         # Delete frames directory if it exists
         frames_dir = f'frames/project_{project_id}'

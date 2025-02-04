@@ -17,4 +17,5 @@ dependencies = [
     "flask-wtf>=1.2.2",
     "numpy>=2.2.2",
     "twilio>=9.4.4",
+    "flask-migrate>=4.1.0",
 ]
