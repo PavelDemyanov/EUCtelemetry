@@ -132,17 +132,29 @@ def download_file(project_id, type):
 @app.route('/delete/<int:project_id>', methods=['POST'])
 def delete_project(project_id):
     project = Project.query.get_or_404(project_id)
-    
+
     try:
-        # Delete associated files
+        # Delete associated files if they exist
         if project.csv_file:
-            os.remove(os.path.join(app.config['UPLOAD_FOLDER'], project.csv_file))
+            csv_path = os.path.join(app.config['UPLOAD_FOLDER'], project.csv_file)
+            if os.path.exists(csv_path):
+                os.remove(csv_path)
+
         if project.video_file:
-            os.remove(os.path.join('videos', project.video_file))
-        
+            video_path = os.path.join('videos', project.video_file)
+            if os.path.exists(video_path):
+                os.remove(video_path)
+
+        # Delete frames directory if it exists
+        frames_dir = f'frames/project_{project_id}'
+        if os.path.exists(frames_dir):
+            import shutil
+            shutil.rmtree(frames_dir)
+
+        # Delete project from database
         db.session.delete(project)
         db.session.commit()
-        
+
         return jsonify({'success': True})
     except Exception as e:
         logging.error(f"Error deleting project: {str(e)}")
