@@ -13,6 +13,7 @@
                         <th>Name</th>
                         <th>Created</th>
                         <th>Type</th>
+                        <th>Status</th>
                         <th>Frames</th>
                         <th>FPS</th>
                         <th>Resolution</th>
@@ -28,6 +29,17 @@
                         <td>{{ project.name }}</td>
                         <td>{{ project.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
                         <td>{{ project.csv_type }}</td>
+                        <td>
+                            {% if project.status == 'processing' %}
+                            <span class="badge text-bg-warning">Processing</span>
+                            {% elif project.status == 'completed' %}
+                            <span class="badge text-bg-success">Completed</span>
+                            {% elif project.status == 'error' %}
+                            <span class="badge text-bg-danger" title="{{ project.error_message }}">Error</span>
+                            {% else %}
+                            <span class="badge text-bg-secondary">Pending</span>
+                            {% endif %}
+                        </td>
                         <td>{{ project.frame_count }}</td>
                         <td>{{ project.fps }}</td>
                         <td>{{ project.resolution|upper if project.resolution else '-' }}</td>
