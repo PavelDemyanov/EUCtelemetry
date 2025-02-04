@@ -95,7 +95,7 @@ def create_frame(values, timestamp, resolution, output_path):
     # Save frame
     image.save(output_path)
 
-def generate_frames(csv_file, project_id, resolution='fullhd', frame_count=None):
+def generate_frames(csv_file, project_id, resolution='fullhd', fps=29.97):
     try:
         # Create project frames directory
         frames_dir = f'frames/project_{project_id}'
@@ -114,11 +114,10 @@ def generate_frames(csv_file, project_id, resolution='fullhd', frame_count=None)
         T_max = np.max(data['timestamp'])
         duration = T_max - T_min
 
-        # If frame_count not specified, use the number of unique timestamps
-        if frame_count is None:
-            frame_count = len(np.unique(data['timestamp']))
+        # Calculate number of frames based on duration and desired fps
+        frame_count = int(duration * float(fps))
 
-        logging.info(f"Generating {frame_count} frames for duration {duration:.2f} seconds")
+        logging.info(f"Generating {frame_count} frames for duration {duration:.2f} seconds at {fps} fps")
 
         # Generate evenly spaced timestamps for frames
         frame_timestamps = np.linspace(T_min, T_max, frame_count)

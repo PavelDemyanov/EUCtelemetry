@@ -16,12 +16,6 @@ def create_video(project_id, fps=29.97, codec='h264', resolution='fullhd'):
         # Ensure the videos directory exists
         os.makedirs('videos', exist_ok=True)
 
-        # Calculate actual fps needed to match the duration
-        if project.video_duration and project.frame_count:
-            actual_fps = project.frame_count / project.video_duration
-            fps = actual_fps
-            logging.info(f"Adjusted fps to {fps} to match duration of {project.video_duration} seconds")
-
         # Map codec names to FFmpeg encoder names
         codec_map = {
             'h264': 'libx264',
@@ -36,6 +30,8 @@ def create_video(project_id, fps=29.97, codec='h264', resolution='fullhd'):
             width, height = 3840, 2160
         else:  # fullhd
             width, height = 1920, 1080
+
+        logging.info(f"Creating video with fps={fps}, codec={codec}, resolution={resolution}")
 
         # Build ffmpeg command with resolution and quality settings
         stream = (

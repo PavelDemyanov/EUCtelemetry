@@ -77,16 +77,19 @@ def upload_file():
 def generate_project_frames(project_id):
     project = Project.query.get_or_404(project_id)
     resolution = request.form.get('resolution', 'fullhd')
+    fps = float(request.form.get('fps', 29.97))
 
     try:
         frame_count, duration = generate_frames(
             os.path.join(app.config['UPLOAD_FOLDER'], project.csv_file),
             project_id,
             resolution,
+            fps
         )
 
         project.frame_count = frame_count
         project.video_duration = duration  # Save the actual duration from timestamps
+        project.fps = fps  # Save the user specified fps
         db.session.commit()
 
         return jsonify({'success': True, 'frame_count': frame_count, 'duration': duration})
