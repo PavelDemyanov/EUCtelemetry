@@ -5,9 +5,8 @@ from flask import Flask, render_template, request, jsonify, send_file
 from werkzeug.utils import secure_filename
 from extensions import db
 from utils.csv_processor import process_csv_file
-from utils.image_generator import generate_frames, create_frame, find_nearest_values
+from utils.image_generator import generate_frames
 from utils.video_creator import create_video
-import pandas as pd
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -172,45 +171,6 @@ def delete_project(project_id):
         return jsonify({'success': True})
     except Exception as e:
         logging.error(f"Error deleting project: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/generate_preview', methods=['POST'])
-def generate_preview():
-    project_id = request.form.get('project_id')
-    resolution = request.form.get('resolution', 'fullhd')
-
-    try:
-        project = Project.query.get_or_404(project_id)
-
-        # Read the processed CSV file
-        processed_csv = os.path.join('processed_data', f'processed_{project.csv_file}')
-        if not os.path.exists(processed_csv):
-            return jsonify({'error': 'Processed CSV not found'}), 404
-
-        df = pd.read_csv(processed_csv)
-
-        # Get the middle timestamp for preview
-        middle_timestamp = df['timestamp'].iloc[len(df) // 2]
-
-        # Convert DataFrame to dict structure needed by find_nearest_values
-        data = {col: df[col].values for col in df.columns}
-
-        # Get values for the preview frame
-        values = find_nearest_values(data, middle_timestamp)
-
-        # Create a temporary directory for preview if it doesn't exist
-        preview_dir = 'previews'
-        os.makedirs(preview_dir, exist_ok=True)
-
-        # Generate the preview frame
-        preview_path = os.path.join(preview_dir, f'preview_{project_id}.png')
-        create_frame(values, middle_timestamp, resolution, preview_path)
-
-        # Send the preview image
-        return send_file(preview_path, mimetype='image/png')
-
-    except Exception as e:
-        logging.error(f"Error generating preview: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 with app.app_context():
