@@ -35,13 +35,8 @@ def create_frame(values, timestamp, resolution, output_path):
     except:
         font = ImageFont.load_default()
 
-    # Format timestamp
-    dt = datetime.fromtimestamp(timestamp)
-    formatted_time = dt.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
-
-    # Parameters to display
+    # Parameters to display (removed Time)
     params = [
-        ('Time', formatted_time),
         ('Speed', values['speed']),
         ('GPS', values['gps']),
         ('Voltage', values['voltage']),
@@ -53,44 +48,43 @@ def create_frame(values, timestamp, resolution, output_path):
         ('Power', values['power'])
     ]
 
-    # Calculate text positions
-    total_height = 0
-    text_heights = []
+    # Calculate total width of all elements with spacing
+    total_width = 0
+    element_widths = []
     for label, value in params:
-        text = f"{label}: {value}" if isinstance(value, str) else f"{label}: {value:.2f}"
+        text = f"{label}: {value:.2f}"
         text_bbox = draw.textbbox((0, 0), text, font=font)
-        text_height = text_bbox[3] - text_bbox[1] + 20  # Add padding
-        total_height += text_height
-        text_heights.append(text_height)
+        text_width = text_bbox[2] - text_bbox[0] + 20  # Add padding within black box
+        element_widths.append(text_width)
+        total_width += text_width
 
-    # Start drawing from the middle of the screen, adjusted by half of total text height
-    y_position = (height - total_height) // 2
-    x_position = width // 2
+    # Add spacing between elements (20px * (number of spaces between elements))
+    total_width += 20 * (len(params) - 1)
+
+    # Start position (centered horizontally, 20px from top)
+    x_position = (width - total_width) // 2
+    y_position = 20  # Fixed distance from top
 
     # Draw parameters
-    for i, ((label, value), text_height) in enumerate(zip(params, text_heights)):
-        text = f"{label}: {value}" if isinstance(value, str) else f"{label}: {value:.2f}"
-
-        # Get text size for centering
+    for i, ((label, value), element_width) in enumerate(zip(params, element_widths)):
+        text = f"{label}: {value:.2f}"
         text_bbox = draw.textbbox((0, 0), text, font=font)
         text_width = text_bbox[2] - text_bbox[0]
-
-        # Calculate centered x position
-        x = x_position - (text_width // 2)
+        text_height = text_bbox[3] - text_bbox[1]
 
         # Draw black background
         padding = 10
         draw.rectangle(
-            (x - padding, y_position - padding,
-             x + text_width + padding, y_position + (text_height - padding)),
+            (x_position - padding, y_position - padding,
+             x_position + text_width + padding, y_position + text_height + padding),
             fill='black'
         )
 
         # Draw white text
-        draw.text((x, y_position), text, fill='white', font=font)
+        draw.text((x_position, y_position), text, fill='white', font=font)
 
-        # Move to next line
-        y_position += text_height
+        # Move to next position (including 20px spacing)
+        x_position += text_width + padding * 2 + 20
 
     # Save frame
     image.save(output_path)
