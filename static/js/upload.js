@@ -55,7 +55,8 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
             },
             body: new URLSearchParams({
                 'fps': document.getElementById('fps').value,
-                'codec': document.querySelector('input[name="codec"]:checked').value
+                'codec': document.querySelector('input[name="codec"]:checked').value,
+                'resolution': document.querySelector('input[name="resolution"]:checked').value
             })
         });
     })

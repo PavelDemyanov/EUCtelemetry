@@ -15,7 +15,8 @@
                         <th>Type</th>
                         <th>Frames</th>
                         <th>FPS</th>
-                        <th>Video</th>
+                        <th>Resolution</th>
+                        <th>Codec</th>
                         <th>Expires In</th>
                         <th>Actions</th>
                     </tr>
@@ -28,7 +29,8 @@
                         <td>{{ project.csv_type }}</td>
                         <td>{{ project.frame_count }}</td>
                         <td>{{ project.fps }}</td>
-                        <td>{% if project.video_file %}Yes{% else %}No{% endif %}</td>
+                        <td>{{ project.resolution|upper if project.resolution else '-' }}</td>
+                        <td>{{ project.codec|upper if project.codec else '-' }}</td>
                         <td>{{ project.days_until_expiry() }} days</td>
                         <td>
                             {% if project.video_file %}

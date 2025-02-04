@@ -12,7 +12,8 @@ class Project(db.Model):
     fps = db.Column(db.Float, default=29.97)
     video_file = db.Column(db.String(255))
     codec = db.Column(db.String(10))
-    
+    resolution = db.Column(db.String(10))  # 'fullhd' or '4k'
+
     def days_until_expiry(self):
         if self.expiry_date:
             delta = self.expiry_date - datetime.utcnow()

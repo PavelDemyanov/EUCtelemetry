@@ -97,14 +97,16 @@ def create_project_video(project_id):
     project = Project.query.get_or_404(project_id)
     fps = float(request.form.get('fps', 29.97))
     codec = request.form.get('codec', 'h264')
-    
+    resolution = request.form.get('resolution', 'fullhd')
+
     try:
-        video_path = create_video(project_id, fps, codec)
+        video_path = create_video(project_id, fps, codec, resolution) # Assumed create_video is updated to accept resolution
         project.video_file = os.path.basename(video_path)
         project.fps = fps
         project.codec = codec
+        project.resolution = resolution
         db.session.commit()
-        
+
         return jsonify({'success': True, 'video_path': video_path})
     except Exception as e:
         logging.error(f"Error creating video: {str(e)}")
