@@ -21,6 +21,7 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs('frames', exist_ok=True)
 os.makedirs('videos', exist_ok=True)
+os.makedirs('processed_data', exist_ok=True) #Added to handle processed CSV
 
 db = SQLAlchemy(app)
 
@@ -123,13 +124,18 @@ def list_projects():
 @app.route('/download/<int:project_id>/<type>')
 def download_file(project_id, type):
     project = Project.query.get_or_404(project_id)
-    
+
     if type == 'video' and project.video_file:
         return send_file(f'videos/{project.video_file}')
     elif type == 'frames':
         # TODO: Implement frame download as ZIP
         pass
-    
+    elif type == 'processed_csv':
+        processed_csv = os.path.join('processed_data', f'processed_{project.csv_file}') #Corrected path joining
+        if os.path.exists(processed_csv):
+            return send_file(processed_csv, as_attachment=True, 
+                           download_name=f'processed_{project.csv_file}')
+
     return jsonify({'error': 'File not found'}), 404
 
 @app.route('/delete/<int:project_id>', methods=['POST'])

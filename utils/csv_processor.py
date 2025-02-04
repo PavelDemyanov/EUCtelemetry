@@ -1,6 +1,7 @@
 import pandas as pd
 from datetime import datetime
 import logging
+import os
 
 def parse_timestamp_darnkessbot(date_str):
     try:
@@ -24,7 +25,7 @@ def detect_csv_type(df):
                         'Speed', 'PWM', 'Current', 'Voltage', 'Power']
     wheellog_cols = ['power', 'totaldistance', 'time', 'date', 'pwm', 'battery_level', 
                     'speed', 'system_temp', 'current', 'gps_speed', 'voltage']
-    
+
     if all(col in df.columns for col in darnkessbot_cols):
         return 'darnkessbot'
     elif all(col in df.columns for col in wheellog_cols):
@@ -36,7 +37,7 @@ def process_csv_file(file_path):
     try:
         df = pd.read_csv(file_path)
         csv_type = detect_csv_type(df)
-        
+
         if csv_type == 'darnkessbot':
             df['timestamp'] = df['Date'].apply(parse_timestamp_darnkessbot)
             processed_data = {
@@ -65,7 +66,15 @@ def process_csv_file(file_path):
                 'pwm': df['pwm'],
                 'power': df['power']
             }
-        
+
+        # Create processed data directory if it doesn't exist
+        os.makedirs('processed_data', exist_ok=True)
+
+        # Convert processed data to DataFrame and save
+        processed_df = pd.DataFrame(processed_data)
+        processed_csv_path = f'processed_data/processed_{os.path.basename(file_path)}'
+        processed_df.to_csv(processed_csv_path, index=False)
+
         return csv_type, processed_data
     except Exception as e:
         logging.error(f"Error processing CSV file: {e}")

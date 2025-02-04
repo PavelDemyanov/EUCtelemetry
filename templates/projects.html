@@ -35,6 +35,10 @@
                         <td>{{ project.get_duration_str() }}</td>
                         <td>{{ project.days_until_expiry() }} days</td>
                         <td>
+                            <a href="{{ url_for('download_file', project_id=project.id, type='processed_csv') }}" 
+                               class="btn btn-sm btn-info">
+                                <i class="bi bi-download"></i> CSV
+                            </a>
                             {% if project.video_file %}
                             <a href="{{ url_for('download_file', project_id=project.id, type='video') }}" 
                                class="btn btn-sm btn-success">
