@@ -33,6 +33,15 @@ def detect_csv_type(df):
     else:
         raise ValueError("CSV format not recognized")
 
+def clean_numeric_column(series):
+    """Clean numeric column by handling NA and infinite values"""
+    # Replace infinite values with 0
+    series = series.replace([float('inf'), float('-inf')], 0)
+    # Fill NA/NaN values with 0
+    series = series.fillna(0)
+    # Round and convert to integer
+    return series.round().astype(int)
+
 def process_csv_file(file_path):
     try:
         df = pd.read_csv(file_path)
@@ -42,29 +51,29 @@ def process_csv_file(file_path):
             df['timestamp'] = df['Date'].apply(parse_timestamp_darnkessbot)
             processed_data = {
                 'timestamp': df['timestamp'],
-                'speed': df['Speed'].round().astype(int),
-                'gps': df['GPS Speed'].round().astype(int),
-                'voltage': df['Voltage'].round().astype(int),
-                'temperature': df['Temperature'].round().astype(int),
-                'current': df['Current'].round().astype(int),
-                'battery': df['Battery level'].round().astype(int),
-                'mileage': df['Total mileage'].round().astype(int),
-                'pwm': df['PWM'].round().astype(int),
-                'power': df['Power'].round().astype(int)
+                'speed': clean_numeric_column(df['Speed']),
+                'gps': clean_numeric_column(df['GPS Speed']),
+                'voltage': clean_numeric_column(df['Voltage']),
+                'temperature': clean_numeric_column(df['Temperature']),
+                'current': clean_numeric_column(df['Current']),
+                'battery': clean_numeric_column(df['Battery level']),
+                'mileage': clean_numeric_column(df['Total mileage']),
+                'pwm': clean_numeric_column(df['PWM']),
+                'power': clean_numeric_column(df['Power'])
             }
         else:  # wheellog
             df['timestamp'] = df.apply(lambda x: parse_timestamp_wheellog(x['date'], x['time']), axis=1)
             processed_data = {
                 'timestamp': df['timestamp'],
-                'speed': df['speed'].round().astype(int),
-                'gps': df['gps_speed'].round().astype(int),
-                'voltage': df['voltage'].round().astype(int),
-                'temperature': df['system_temp'].round().astype(int),
-                'current': df['current'].round().astype(int),
-                'battery': df['battery_level'].round().astype(int),
-                'mileage': df['totaldistance'].round().astype(int),
-                'pwm': df['pwm'].round().astype(int),
-                'power': df['power'].round().astype(int)
+                'speed': clean_numeric_column(df['speed']),
+                'gps': clean_numeric_column(df['gps_speed']),
+                'voltage': clean_numeric_column(df['voltage']),
+                'temperature': clean_numeric_column(df['system_temp']),
+                'current': clean_numeric_column(df['current']),
+                'battery': clean_numeric_column(df['battery_level']),
+                'mileage': clean_numeric_column(df['totaldistance']),
+                'pwm': clean_numeric_column(df['pwm']),
+                'power': clean_numeric_column(df['power'])
             }
 
         # Create processed data directory if it doesn't exist
