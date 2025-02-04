@@ -2,8 +2,15 @@ from PIL import Image, ImageDraw, ImageFont
 import os
 import logging
 from datetime import datetime
+import numpy as np
 
-def create_frame(data, frame_number, resolution, output_path):
+def find_nearest_timestamp_index(timestamps, target):
+    """Find index of nearest timestamp to target value"""
+    timestamps = np.array(timestamps)
+    idx = (np.abs(timestamps - target)).argmin()
+    return idx
+
+def create_frame(data, timestamp_idx, resolution, output_path):
     # Set resolution
     if resolution == "4k":
         width, height = 3840, 2160
@@ -21,21 +28,21 @@ def create_frame(data, frame_number, resolution, output_path):
         font = ImageFont.load_default()
 
     # Parameters to display
-    timestamp = data['timestamp'][frame_number]
+    timestamp = data['timestamp'][timestamp_idx]
     dt = datetime.fromtimestamp(timestamp)
     formatted_time = dt.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
 
     params = [
         ('Time', formatted_time),
-        ('Speed', data['speed'][frame_number]),
-        ('GPS', data['gps'][frame_number]),
-        ('Voltage', data['voltage'][frame_number]),
-        ('Temp', data['temperature'][frame_number]),
-        ('Current', data['current'][frame_number]),
-        ('Battery', data['battery'][frame_number]),
-        ('Mileage', data['mileage'][frame_number]),
-        ('PWM', data['pwm'][frame_number]),
-        ('Power', data['power'][frame_number])
+        ('Speed', data['speed'][timestamp_idx]),
+        ('GPS', data['gps'][timestamp_idx]),
+        ('Voltage', data['voltage'][timestamp_idx]),
+        ('Temp', data['temperature'][timestamp_idx]),
+        ('Current', data['current'][timestamp_idx]),
+        ('Battery', data['battery'][timestamp_idx]),
+        ('Mileage', data['mileage'][timestamp_idx]),
+        ('PWM', data['pwm'][timestamp_idx]),
+        ('Power', data['power'][timestamp_idx])
     ]
 
     # Calculate positions
@@ -75,20 +82,27 @@ def generate_frames(csv_file, project_id, resolution='fullhd'):
 
         # Process CSV data
         from utils.csv_processor import process_csv_file
-        from datetime import datetime
         _, data = process_csv_file(csv_file)
 
-        # Generate frames - one per timestamp
-        frame_count = len(data['timestamp'])
+        # Get unique timestamps and sort them
+        timestamps = sorted(set(data['timestamp']))
+        total_duration = timestamps[-1] - timestamps[0]
+
+        # Calculate frame count based on timestamps
+        frame_count = len(timestamps)
         logging.info(f"Generating {frame_count} frames based on timestamps")
 
-        for i in range(frame_count):
+        # Generate a frame for each unique timestamp
+        for i, timestamp in enumerate(timestamps):
+            # Find the nearest data point for this timestamp
+            idx = find_nearest_timestamp_index(data['timestamp'], timestamp)
             output_path = f'{frames_dir}/frame_{i:06d}.png'
-            create_frame(data, i, resolution, output_path)
+            create_frame(data, idx, resolution, output_path)
             if i % 100 == 0:  # Log progress every 100 frames
                 logging.info(f"Generated frame {i}/{frame_count}")
 
         logging.info(f"Successfully generated {frame_count} frames")
+        logging.info(f"Total video duration based on timestamps: {total_duration:.2f} seconds")
         return frame_count
     except Exception as e:
         logging.error(f"Error generating frames: {e}")
