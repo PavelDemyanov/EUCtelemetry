@@ -3,6 +3,7 @@ import os
 import logging
 from datetime import datetime
 import numpy as np
+import json
 
 def find_nearest_timestamp_index(timestamps, target):
     """Find index of nearest timestamp to target value"""
@@ -88,6 +89,16 @@ def generate_frames(csv_file, project_id, resolution='fullhd'):
         timestamps = sorted(set(data['timestamp']))
         total_duration = timestamps[-1] - timestamps[0]
 
+        # Save timestamps to a file
+        timestamps_file = f'timestamps/project_{project_id}_timestamps.json'
+        os.makedirs('timestamps', exist_ok=True)
+        with open(timestamps_file, 'w') as f:
+            json.dump({
+                'timestamps': timestamps,
+                'duration': total_duration,
+                'frame_count': len(timestamps)
+            }, f)
+
         # Calculate frame count based on timestamps
         frame_count = len(timestamps)
         logging.info(f"Generating {frame_count} frames based on timestamps")
@@ -103,7 +114,7 @@ def generate_frames(csv_file, project_id, resolution='fullhd'):
 
         logging.info(f"Successfully generated {frame_count} frames")
         logging.info(f"Total video duration based on timestamps: {total_duration:.2f} seconds")
-        return frame_count
+        return frame_count, timestamps_file, total_duration
     except Exception as e:
         logging.error(f"Error generating frames: {e}")
         raise

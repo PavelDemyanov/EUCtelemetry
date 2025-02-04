@@ -17,6 +17,7 @@
                         <th>FPS</th>
                         <th>Resolution</th>
                         <th>Codec</th>
+                        <th>Duration</th>
                         <th>Expires In</th>
                         <th>Actions</th>
                     </tr>
@@ -31,12 +32,19 @@
                         <td>{{ project.fps }}</td>
                         <td>{{ project.resolution|upper if project.resolution else '-' }}</td>
                         <td>{{ project.codec|upper if project.codec else '-' }}</td>
+                        <td>{{ "%.2f"|format(project.duration|float) if project.duration else '-' }}</td>
                         <td>{{ project.days_until_expiry() }} days</td>
                         <td>
                             {% if project.video_file %}
                             <a href="{{ url_for('download_file', project_id=project.id, type='video') }}" 
                                class="btn btn-sm btn-success">
                                 <i class="bi bi-download"></i> Video
+                            </a>
+                            {% endif %}
+                            {% if project.timestamps_file %}
+                            <a href="{{ url_for('download_file', project_id=project.id, type='timestamps') }}" 
+                               class="btn btn-sm btn-info">
+                                <i class="bi bi-download"></i> Timestamps
                             </a>
                             {% endif %}
                             <button onclick="deleteProject({{ project.id }})" 

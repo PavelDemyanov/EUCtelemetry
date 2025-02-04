@@ -21,6 +21,7 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs('frames', exist_ok=True)
 os.makedirs('videos', exist_ok=True)
+os.makedirs('timestamps', exist_ok=True) # Added timestamps directory
 
 db = SQLAlchemy(app)
 
@@ -76,17 +77,19 @@ def upload_file():
 def generate_project_frames(project_id):
     project = Project.query.get_or_404(project_id)
     resolution = request.form.get('resolution', 'fullhd')
-    
+
     try:
-        frame_count = generate_frames(
+        frame_count, timestamps_file, duration = generate_frames(
             os.path.join(app.config['UPLOAD_FOLDER'], project.csv_file),
             project_id,
             resolution
         )
-        
+
         project.frame_count = frame_count
+        project.timestamps_file = os.path.basename(timestamps_file)
+        project.duration = duration
         db.session.commit()
-        
+
         return jsonify({'success': True, 'frame_count': frame_count})
     except Exception as e:
         logging.error(f"Error generating frames: {str(e)}")
@@ -122,13 +125,12 @@ def list_projects():
 @app.route('/download/<int:project_id>/<type>')
 def download_file(project_id, type):
     project = Project.query.get_or_404(project_id)
-    
+
     if type == 'video' and project.video_file:
         return send_file(f'videos/{project.video_file}')
-    elif type == 'frames':
-        # TODO: Implement frame download as ZIP
-        pass
-    
+    elif type == 'timestamps' and project.timestamps_file:
+        return send_file(f'timestamps/{project.timestamps_file}')
+
     return jsonify({'error': 'File not found'}), 404
 
 @app.route('/delete/<int:project_id>', methods=['POST'])
@@ -146,6 +148,12 @@ def delete_project(project_id):
             video_path = os.path.join('videos', project.video_file)
             if os.path.exists(video_path):
                 os.remove(video_path)
+
+        if project.timestamps_file: # Added timestamp file deletion
+            timestamp_path = os.path.join('timestamps', project.timestamps_file)
+            if os.path.exists(timestamp_path):
+                os.remove(timestamp_path)
+
 
         # Delete frames directory if it exists
         frames_dir = f'frames/project_{project_id}'
