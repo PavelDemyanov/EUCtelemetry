@@ -131,3 +131,26 @@ def generate_frames(csv_file, project_id, resolution='fullhd', fps=29.97):
     except Exception as e:
         logging.error(f"Error generating frames: {e}")
         raise
+
+def create_preview_frame(csv_file, project_id, resolution='fullhd'):
+    """Create a preview frame from the first row of data"""
+    try:
+        # Process CSV data
+        from utils.csv_processor import process_csv_file
+        _, data = process_csv_file(csv_file)
+
+        # Create previews directory if it doesn't exist
+        os.makedirs('static/previews', exist_ok=True)
+
+        # Get the first timestamp and corresponding values
+        first_timestamp = data['timestamp'][0]
+        values = find_nearest_values(data, first_timestamp)
+
+        # Generate the frame
+        preview_path = f'static/previews/{project_id}_preview.png'
+        create_frame(values, first_timestamp, resolution, preview_path)
+
+        return preview_path
+    except Exception as e:
+        logging.error(f"Error creating preview frame: {e}")
+        raise

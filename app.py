@@ -1,7 +1,7 @@
 import os
 import logging
 from datetime import datetime, timedelta
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify, send_file, url_for
 from werkzeug.utils import secure_filename
 from extensions import db
 from utils.csv_processor import process_csv_file
@@ -22,6 +22,8 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs('frames', exist_ok=True)
 os.makedirs('videos', exist_ok=True)
 os.makedirs('processed_data', exist_ok=True)
+os.makedirs('previews', exist_ok=True) # Added for previews
+
 
 db.init_app(app)
 
@@ -172,6 +174,29 @@ def delete_project(project_id):
     except Exception as e:
         logging.error(f"Error deleting project: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/preview/<int:project_id>', methods=['POST'])
+def generate_preview(project_id):
+    project = Project.query.get_or_404(project_id)
+    resolution = request.form.get('resolution', 'fullhd')
+
+    try:
+        from utils.image_generator import create_preview_frame
+
+        preview_path = create_preview_frame(
+            os.path.join(app.config['UPLOAD_FOLDER'], project.csv_file),
+            project_id,
+            resolution
+        )
+
+        return jsonify({
+            'success': True,
+            'preview_url': url_for('static', filename=f'previews/{project_id}_preview.png')
+        })
+    except Exception as e:
+        logging.error(f"Error generating preview: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 
 with app.app_context():
     db.create_all()

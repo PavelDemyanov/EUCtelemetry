@@ -48,8 +48,17 @@
                         </div>
                     </div>
 
-                    <button type="submit" class="btn btn-primary" id="uploadButton">Upload and Process</button>
+                    <button type="submit" class="btn btn-primary" id="uploadButton">Upload and Show Preview</button>
                 </form>
+
+                <!-- Preview section -->
+                <div id="previewSection" class="mt-4 d-none">
+                    <h4>Preview</h4>
+                    <div class="preview-image-container mb-3">
+                        <img id="previewImage" class="img-fluid" alt="Preview frame">
+                    </div>
+                    <button type="button" class="btn btn-success" id="startProcessButton">Start Processing</button>
+                </div>
 
                 <div id="progress" class="mt-4 d-none">
                     <h4 id="progressTitle">Processing...</h4>
