@@ -56,11 +56,51 @@
             </table>
         </div>
 
-        {% if projects.has_next %}
-        <div class="text-center mt-3">
-            <a href="{{ url_for('list_projects', page=projects.next_num) }}" 
-               class="btn btn-primary">Show More</a>
-        </div>
+        {% if projects.pages > 1 %}
+        <nav aria-label="Project navigation" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if projects.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('list_projects', page=projects.prev_num) }}">Previous</a>
+                </li>
+                {% endif %}
+
+                {# Always show first page #}
+                {% if projects.page > 2 %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('list_projects', page=1) }}">1</a>
+                </li>
+                {% if projects.page > 3 %}
+                <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+                {% endif %}
+
+                {# Show current page and adjacent pages #}
+                {% for page_num in range(projects.page - 1, projects.page + 2) %}
+                    {% if page_num > 0 and page_num <= projects.pages %}
+                    <li class="page-item {% if page_num == projects.page %}active{% endif %}">
+                        <a class="page-link" href="{{ url_for('list_projects', page=page_num) }}">{{ page_num }}</a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+
+                {# Always show last page #}
+                {% if projects.page < projects.pages - 1 %}
+                {% if projects.page < projects.pages - 2 %}
+                <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('list_projects', page=projects.pages) }}">{{ projects.pages }}</a>
+                </li>
+                {% endif %}
+
+                {% if projects.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('list_projects', page=projects.next_num) }}">Next</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
         {% endif %}
     </div>
 </div>
