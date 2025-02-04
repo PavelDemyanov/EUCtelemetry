@@ -2,8 +2,8 @@ import os
 import logging
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, jsonify, send_file
-from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
+from extensions import db
 from utils.csv_processor import process_csv_file
 from utils.image_generator import generate_frames
 from utils.video_creator import create_video
@@ -21,9 +21,9 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs('frames', exist_ok=True)
 os.makedirs('videos', exist_ok=True)
-os.makedirs('processed_data', exist_ok=True) #Added to handle processed CSV
+os.makedirs('processed_data', exist_ok=True)
 
-db = SQLAlchemy(app)
+db.init_app(app)
 
 from models import Project
 
@@ -35,7 +35,7 @@ def index():
 def upload_file():
     if 'file' not in request.files:
         return jsonify({'error': 'No file provided'}), 400
-    
+
     file = request.files['file']
     if file.filename == '':
         return jsonify({'error': 'No file selected'}), 400
@@ -51,7 +51,7 @@ def upload_file():
 
         # Process CSV file
         csv_type, data = process_csv_file(file_path)
-        
+
         # Create project
         project = Project(
             name=project_name,
@@ -77,14 +77,12 @@ def upload_file():
 def generate_project_frames(project_id):
     project = Project.query.get_or_404(project_id)
     resolution = request.form.get('resolution', 'fullhd')
-    frame_count = request.form.get('frame_count', type=int)  # Get frame count from request
 
     try:
         frame_count, duration = generate_frames(
             os.path.join(app.config['UPLOAD_FOLDER'], project.csv_file),
             project_id,
             resolution,
-            frame_count
         )
 
         project.frame_count = frame_count
@@ -134,7 +132,7 @@ def download_file(project_id, type):
         # TODO: Implement frame download as ZIP
         pass
     elif type == 'processed_csv':
-        processed_csv = os.path.join('processed_data', f'processed_{project.csv_file}') #Corrected path joining
+        processed_csv = os.path.join('processed_data', f'processed_{project.csv_file}')
         if os.path.exists(processed_csv):
             return send_file(processed_csv, as_attachment=True, 
                            download_name=f'processed_{project.csv_file}')
