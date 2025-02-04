@@ -84,7 +84,7 @@ document.getElementById('startProcessButton').addEventListener('click', function
         },
         body: new URLSearchParams({
             'resolution': document.querySelector('input[name="resolution"]:checked').value,
-            'fps': document.getElementById('fps').value
+            'fps': document.querySelector('input[name="fps"]:checked').value
         })
     })
     .then(response => response.json())
@@ -101,7 +101,7 @@ document.getElementById('startProcessButton').addEventListener('click', function
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
             body: new URLSearchParams({
-                'fps': document.getElementById('fps').value,
+                'fps': document.querySelector('input[name="fps"]:checked').value,
                 'codec': document.querySelector('input[name="codec"]:checked').value,
                 'resolution': document.querySelector('input[name="resolution"]:checked').value
             })
