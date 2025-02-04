@@ -6,8 +6,7 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
     const progressDiv = document.getElementById('progress');
     const progressBar = progressDiv.querySelector('.progress-bar');
     const progressTitle = document.getElementById('progressTitle');
-    let tempId;
-    let projectData = {};
+    let projectId;
 
     // Show progress for upload
     progressDiv.classList.remove('d-none');
@@ -25,22 +24,16 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
     .then(data => {
         if (data.error) throw new Error(data.error);
 
-        tempId = data.temp_id;
-        projectData = {
-            csv_type: data.csv_type,
-            original_filename: data.original_filename,
-            project_name: formData.get('project_name')
-        };
+        projectId = data.project_id;
 
         // Get preview frame
-        return fetch(`/preview/${tempId}`, {
+        return fetch(`/preview/${projectId}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
             body: new URLSearchParams({
-                'resolution': document.querySelector('input[name="resolution"]:checked').value,
-                'filename': data.original_filename
+                'resolution': document.querySelector('input[name="resolution"]:checked').value
             })
         });
     })
@@ -56,10 +49,8 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
         // Re-enable form
         document.querySelectorAll('input, button').forEach(el => el.disabled = false);
 
-        // Store temp ID for the start processing button
-        document.getElementById('startProcessButton').dataset.tempId = tempId;
-        // Store project data
-        document.getElementById('startProcessButton').dataset.projectData = JSON.stringify(projectData);
+        // Store project ID for the start processing button
+        document.getElementById('startProcessButton').dataset.projectId = projectId;
     })
     .catch(error => {
         console.error('Error:', error);
@@ -72,8 +63,7 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
 
 // Handle start processing button click
 document.getElementById('startProcessButton').addEventListener('click', function() {
-    const tempId = this.dataset.tempId;
-    const projectData = JSON.parse(this.dataset.projectData);
+    const projectId = this.dataset.projectId;
     const progressDiv = document.getElementById('progress');
     const progressBar = progressDiv.querySelector('.progress-bar');
     const progressTitle = document.getElementById('progressTitle');
@@ -87,7 +77,7 @@ document.getElementById('startProcessButton').addEventListener('click', function
     progressBar.style.width = '33%';
     progressBar.textContent = '33%';
 
-    fetch(`/generate_frames/${tempId}`, {
+    fetch(`/generate_frames/${projectId}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
@@ -101,15 +91,11 @@ document.getElementById('startProcessButton').addEventListener('click', function
     .then(data => {
         if (data.error) throw new Error(data.error);
 
-        // Store frame count and duration for the final step
-        projectData.frame_count = data.frame_count;
-        projectData.duration = data.duration;
-
         progressTitle.textContent = 'Creating Video...';
         progressBar.style.width = '66%';
         progressBar.textContent = '66%';
 
-        return fetch(`/create_video/${tempId}`, {
+        return fetch(`/create_video/${projectId}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -117,11 +103,7 @@ document.getElementById('startProcessButton').addEventListener('click', function
             body: new URLSearchParams({
                 'fps': document.querySelector('input[name="fps"]:checked').value,
                 'codec': document.querySelector('input[name="codec"]:checked').value,
-                'resolution': document.querySelector('input[name="resolution"]:checked').value,
-                'project_name': projectData.project_name,
-                'csv_type': projectData.csv_type,
-                'frame_count': projectData.frame_count,
-                'duration': projectData.duration
+                'resolution': document.querySelector('input[name="resolution"]:checked').value
             })
         });
     })
