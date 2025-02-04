@@ -19,23 +19,31 @@ def find_nearest_values(data, timestamp):
     return result
 
 def create_frame(values, timestamp, resolution, output_path):
-    # Set resolution
+    # Base resolution (Full HD)
+    base_width, base_height = 1920, 1080
+
+    # Set resolution and calculate scale factor
     if resolution == "4k":
         width, height = 3840, 2160
+        scale_factor = 2.0
     else:  # fullhd
         width, height = 1920, 1080
+        scale_factor = 1.0
 
     # Create image with blue background
     image = Image.new('RGB', (width, height), (0, 0, 255))
     draw = ImageDraw.Draw(image)
 
-    # Load font
+    # Calculate scaled font size (32 is base size for Full HD)
+    font_size = int(32 * scale_factor)
+
+    # Load font with scaled size
     try:
-        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 32)
+        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
     except:
         font = ImageFont.load_default()
 
-    # Parameters to display (removed Time)
+    # Parameters to display
     params = [
         ('Speed', values['speed']),
         ('GPS', values['gps']),
@@ -48,22 +56,28 @@ def create_frame(values, timestamp, resolution, output_path):
         ('Power', values['power'])
     ]
 
-    # Calculate total width of all elements with spacing
+    # Scale base padding and spacing
+    base_padding = 10
+    base_spacing = 20
+    padding = int(base_padding * scale_factor)
+    spacing = int(base_spacing * scale_factor)
+
+    # Calculate total width of all elements with scaled spacing
     total_width = 0
     element_widths = []
     for label, value in params:
         text = f"{label}: {value:.2f}"
         text_bbox = draw.textbbox((0, 0), text, font=font)
-        text_width = text_bbox[2] - text_bbox[0] + 20  # Add padding within black box
+        text_width = text_bbox[2] - text_bbox[0] + (padding * 2)  # Add padding within black box
         element_widths.append(text_width)
         total_width += text_width
 
-    # Add spacing between elements (20px * (number of spaces between elements))
-    total_width += 20 * (len(params) - 1)
+    # Add scaled spacing between elements
+    total_width += spacing * (len(params) - 1)
 
-    # Start position (centered horizontally, 20px from top)
+    # Start position (centered horizontally, scaled spacing from top)
     x_position = (width - total_width) // 2
-    y_position = 20  # Fixed distance from top
+    y_position = spacing  # Scaled distance from top
 
     # Draw parameters
     for i, ((label, value), element_width) in enumerate(zip(params, element_widths)):
@@ -72,8 +86,7 @@ def create_frame(values, timestamp, resolution, output_path):
         text_width = text_bbox[2] - text_bbox[0]
         text_height = text_bbox[3] - text_bbox[1]
 
-        # Draw black background
-        padding = 10
+        # Draw black background with scaled padding
         draw.rectangle(
             (x_position - padding, y_position - padding,
              x_position + text_width + padding, y_position + text_height + padding),
@@ -83,8 +96,8 @@ def create_frame(values, timestamp, resolution, output_path):
         # Draw white text
         draw.text((x_position, y_position), text, fill='white', font=font)
 
-        # Move to next position (including 20px spacing)
-        x_position += text_width + padding * 2 + 20
+        # Move to next position (including scaled spacing)
+        x_position += text_width + (padding * 2) + spacing
 
     # Save frame
     image.save(output_path)
