@@ -19,7 +19,7 @@ def find_nearest_values(data, timestamp):
             result[column] = data[column][idx]
     return result
 
-def create_frame(values, timestamp, resolution, output_path, text_settings=None):
+def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_settings=None):
     """
     Create a frame with customizable text display settings
 
@@ -86,27 +86,32 @@ def create_frame(values, timestamp, resolution, output_path, text_settings=None)
         ('Power', values['power'])
     ]
 
-    # Calculate total width of all elements with scaled spacing
+    # Calculate total width of all elements
     total_width = 0
     element_widths = []
-    text_heights = []  # Store text heights for box calculation
+    text_heights = []
     for label, value in params:
         text = f"{label}: {value}"
         text_bbox = draw.textbbox((0, 0), text, font=font)
         text_width = text_bbox[2] - text_bbox[0]
         text_height = text_bbox[3] - text_bbox[1]
-        element_widths.append(text_width)
+        # Add padding to element width
+        element_width = text_width + (2 * top_padding)  # Padding on both sides
+        element_widths.append(element_width)
         text_heights.append(text_height)
-        total_width += text_width
+        total_width += element_width
 
-    # Add scaled spacing between elements
+    # Add spacing between elements to total width
     total_width += spacing * (len(params) - 1)
 
-    # Calculate vertical position based on percentage
-    y_position = int(height * vertical_position / 100)
+    # Calculate starting x position to center all elements
+    start_x = (width - total_width) // 2
 
-    # Start position (centered horizontally)
-    x_position = (width - total_width) // 2
+    # Calculate vertical position based on percentage
+    y_position = int((height * vertical_position) / 100)
+
+    # Current x position
+    x_position = start_x
 
     # Draw parameters in a horizontal line
     max_text_height = max(text_heights)
@@ -116,21 +121,22 @@ def create_frame(values, timestamp, resolution, output_path, text_settings=None)
         text_width = text_bbox[2] - text_bbox[0]
         text_height = text_bbox[3] - text_bbox[1]
 
-        # Calculate vertical centering of text within box
-        text_y = y_position + (box_height - text_height) // 2
+        # Calculate text position within box
+        text_x = x_position + top_padding  # Add padding before text
+        text_y = y_position + (box_height - text_height) // 2  # Center text vertically in box
 
-        # Draw black background box with fixed height
+        # Draw black background box
         draw.rectangle(
-            (x_position - top_padding, y_position,
-             x_position + text_width + top_padding, y_position + box_height),
+            [x_position, y_position, 
+             x_position + element_width, y_position + box_height],
             fill='black'
         )
 
         # Draw white text
-        draw.text((x_position, text_y), text, fill='white', font=font)
+        draw.text((text_x, text_y), text, fill='white', font=font)
 
-        # Move to next position horizontally (including scaled spacing)
-        x_position += text_width + spacing + (top_padding * 2)
+        # Move to next position
+        x_position += element_width + spacing
 
     # Save frame
     image.save(output_path)

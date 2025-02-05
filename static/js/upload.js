@@ -117,7 +117,7 @@ document.getElementById('projectName').addEventListener('input', function() {
 });
 
 // Add event listeners for text display settings
-const textSettings = ['topPadding', 'bottomPadding', 'spacing', 'fontSize'];
+const textSettings = ['verticalPosition', 'topPadding', 'bottomPadding', 'spacing', 'fontSize'];
 textSettings.forEach(setting => {
     const input = document.getElementById(setting);
     const valueDisplay = document.getElementById(setting + 'Value');
@@ -157,7 +157,7 @@ document.getElementById('startProcessButton').addEventListener('click', function
         bottom_padding: document.getElementById('bottomPadding').value,
         spacing: document.getElementById('spacing').value,
         font_size: document.getElementById('fontSize').value,
-        vertical_position: document.getElementById('verticalPosition').value //Added vertical_position
+        vertical_position: document.getElementById('verticalPosition').value 
     };
 
     // Start processing
