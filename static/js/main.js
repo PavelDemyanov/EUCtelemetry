@@ -55,5 +55,5 @@ function updateProjectStatuses() {
     });
 }
 
-// Start periodic status updates
-setInterval(updateProjectStatuses, 2000); // Check every 2 seconds
+// Start periodic status updates every 2 seconds
+setInterval(updateProjectStatuses, 2000);

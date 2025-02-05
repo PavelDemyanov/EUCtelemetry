@@ -11,7 +11,11 @@
                 <form id="uploadForm">
                     <div class="mb-3">
                         <label for="projectName" class="form-label">Project Name</label>
-                        <input type="text" class="form-control" id="projectName" name="project_name" placeholder="Leave empty for auto-generation">
+                        <input type="text" class="form-control" id="projectName" name="project_name" 
+                               placeholder="Leave empty for auto-generation">
+                        <div id="projectNameFeedback" class="invalid-feedback">
+                            Project name can only contain letters and numbers (max 7 characters)
+                        </div>
                     </div>
 
                     <div class="mb-3">

@@ -7,11 +7,11 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
     // Client-side validation
     if (projectName) {
         if (projectName.length > 7) {
-            alert('Project name must not exceed 7 characters');
+            projectNameInput.classList.add('is-invalid');
             return;
         }
         if (!/^[\w\d]+$/.test(projectName)) {
-            alert('Project name can only contain letters and numbers');
+            projectNameInput.classList.add('is-invalid');
             return;
         }
     }
@@ -74,6 +74,23 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
         // Re-enable form
         document.querySelectorAll('input, button').forEach(el => el.disabled = false);
     });
+});
+
+// Add real-time validation for project name input
+document.getElementById('projectName').addEventListener('input', function() {
+    const value = this.value.trim();
+
+    if (value === '') {
+        // Empty value is valid (will generate automatic name)
+        this.classList.remove('is-invalid');
+        return;
+    }
+
+    if (value.length > 7 || !/^[\w\d]+$/.test(value)) {
+        this.classList.add('is-invalid');
+    } else {
+        this.classList.remove('is-invalid');
+    }
 });
 
 // Handle start processing button click
