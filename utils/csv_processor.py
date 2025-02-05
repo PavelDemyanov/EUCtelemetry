@@ -33,6 +33,36 @@ def detect_csv_type(df):
     else:
         raise ValueError("CSV format not recognized")
 
+def process_mileage(series, csv_type):
+    """Process mileage values based on CSV type"""
+    try:
+        # Convert to numeric, replacing any non-numeric values with NaN
+        series = pd.to_numeric(series, errors='coerce')
+
+        # Fill NaN values with 0
+        series = series.fillna(0)
+
+        if len(series) == 0:
+            return series
+
+        # Get the first value
+        first_value = series.iloc[0]
+
+        # Calculate differences from first value
+        processed = series - first_value
+
+        if csv_type == 'wheellog':
+            # Remove last 3 digits by integer division
+            processed = (processed / 1000).astype(int)
+
+        # Make first value 0
+        processed.iloc[0] = 0
+
+        return processed
+    except Exception as e:
+        logging.error(f"Error processing mileage: {e}")
+        raise
+
 def clean_numeric_column(series):
     """Clean numeric column by handling NA and infinite values"""
     # Replace infinite values with 0
@@ -57,7 +87,7 @@ def process_csv_file(file_path):
                 'temperature': clean_numeric_column(df['Temperature']),
                 'current': clean_numeric_column(df['Current']),
                 'battery': clean_numeric_column(df['Battery level']),
-                'mileage': clean_numeric_column(df['Total mileage']),
+                'mileage': process_mileage(df['Total mileage'], csv_type),
                 'pwm': clean_numeric_column(df['PWM']),
                 'power': clean_numeric_column(df['Power'])
             }
@@ -71,7 +101,7 @@ def process_csv_file(file_path):
                 'temperature': clean_numeric_column(df['system_temp']),
                 'current': clean_numeric_column(df['current']),
                 'battery': clean_numeric_column(df['battery_level']),
-                'mileage': clean_numeric_column(df['totaldistance']),
+                'mileage': process_mileage(df['totaldistance'], csv_type),
                 'pwm': clean_numeric_column(df['pwm']),
                 'power': clean_numeric_column(df['power'])
             }
