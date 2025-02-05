@@ -11,10 +11,6 @@
     white-space: nowrap;
 }
 
-.table td:first-child {
-    min-width: 200px;  /* Больше места для названия проекта */
-}
-
 .table td:last-child {
     min-width: 150px;  /* Больше места для кнопок */
 }
