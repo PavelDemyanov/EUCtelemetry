@@ -89,17 +89,23 @@
                             <h5 class="mb-0">Text Display Settings</h5>
                         </div>
                         <div class="card-body">
-                            <div class="mb-3">
-                                <label for="verticalPosition" class="form-label">Vertical Position</label>
-                                <input type="range" class="form-range" id="verticalPosition" name="vertical_position" 
-                                       min="10" max="90" value="50" step="1">
-                                <div class="text-muted small">Current: <span id="verticalPositionValue">50</span>%</div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="borderRadius" class="form-label">Corner Radius</label>
-                                <input type="range" class="form-range" id="borderRadius" name="border_radius" 
-                                       min="0" max="20" value="0" step="1">
-                                <div class="text-muted small">Current: <span id="borderRadiusValue">0</span>px</div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="verticalPosition" class="form-label">Vertical Position</label>
+                                        <input type="range" class="form-range" id="verticalPosition" name="vertical_position" 
+                                               min="0" max="100" value="50" step="1">
+                                        <div class="text-muted small">Current: <span id="verticalPositionValue">50</span>%</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="borderRadius" class="form-label">Corner Radius</label>
+                                        <input type="range" class="form-range" id="borderRadius" name="border_radius" 
+                                               min="0" max="20" value="0" step="1">
+                                        <div class="text-muted small">Current: <span id="borderRadiusValue">0</span>px</div>
+                                    </div>
+                                </div>
                             </div>
                             <div class="row">
                                 <div class="col-md-6">

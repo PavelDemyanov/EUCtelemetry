@@ -148,9 +148,11 @@ def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_
                 fill='black'
             )
 
-        # Center text horizontally and vertically within the box
+        # Center text horizontally and align to baseline vertically within the box
         text_x = x_position + (element_width - text_width) // 2
-        text_y = y_position + (box_height - max_text_height) // 2
+        # Align text to baseline: move up from bottom by a small offset
+        baseline_offset = int(max_text_height * 0.2)  # 20% от высоты текста для отступа снизу
+        text_y = y_position + box_height - max_text_height - baseline_offset
 
         # Draw white text
         draw.text((text_x, text_y), text, fill='white', font=font)
