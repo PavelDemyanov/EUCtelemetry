@@ -103,10 +103,10 @@ def create_frame(values, timestamp, resolution, output_path):
     # Save frame
     image.save(output_path)
 
-def generate_frames(csv_file, project_id, resolution='fullhd', fps=29.97):
+def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97):
     try:
-        # Create project frames directory
-        frames_dir = f'frames/project_{project_id}'
+        # Create project frames directory using folder_number
+        frames_dir = f'frames/project_{folder_number}'
         if os.path.exists(frames_dir):
             shutil.rmtree(frames_dir)  # Clean up existing frames
         os.makedirs(frames_dir, exist_ok=True)

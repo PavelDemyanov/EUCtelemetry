@@ -16,6 +16,7 @@ class Project(db.Model):
     video_duration = db.Column(db.Float)  # Duration in seconds
     status = db.Column(db.String(20), default='pending')  # pending, processing, completed, error
     error_message = db.Column(db.Text)
+    folder_number = db.Column(db.Integer)  # New field for storing unique folder number
 
     def days_until_expiry(self):
         if self.expiry_date:
@@ -30,3 +31,27 @@ class Project(db.Model):
         minutes = int(self.video_duration // 60)
         seconds = int(self.video_duration % 60)
         return f"{minutes}:{seconds:02d}"
+
+    @classmethod
+    def get_next_folder_number(cls):
+        """Find the next available folder number"""
+        import os
+        # Get all existing folder numbers from the frames directory
+        existing_folders = set()
+        if os.path.exists('frames'):
+            for folder in os.listdir('frames'):
+                if folder.startswith('project_') and folder[8:].isdigit():
+                    existing_folders.add(int(folder[8:]))
+
+        # Get all folder numbers from the database
+        db_folders = set(p.folder_number for p in cls.query.all() if p.folder_number is not None)
+
+        # Combine both sets
+        all_used_numbers = existing_folders.union(db_folders)
+
+        # Find the first available number
+        next_number = 1
+        while next_number in all_used_numbers:
+            next_number += 1
+
+        return next_number

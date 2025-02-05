@@ -4,14 +4,10 @@ import logging
 from extensions import db
 from models import Project
 
-def create_video(project_id, fps=29.97, codec='h264', resolution='fullhd'):
+def create_video(folder_number, fps=29.97, codec='h264', resolution='fullhd'):
     try:
-        project = Project.query.get(project_id)
-        if not project:
-            raise ValueError("Project not found")
-
-        frames_dir = f'frames/project_{project_id}'
-        output_file = f'videos/project_{project_id}.mp4'
+        frames_dir = f'frames/project_{folder_number}'
+        output_file = f'videos/project_{folder_number}.mp4'
 
         # Ensure the videos directory exists
         os.makedirs('videos', exist_ok=True)

@@ -21,10 +21,14 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264'):
                     return
 
                 project.status = 'processing'
+
+                # Get unique folder number if not already assigned
+                if project.folder_number is None:
+                    project.folder_number = Project.get_next_folder_number()
                 db.session.commit()
 
-                # Create and clean project directory
-                frames_dir = f'frames/project_{project_id}'
+                # Create and clean project directory using unique folder number
+                frames_dir = f'frames/project_{project.folder_number}'
                 if os.path.exists(frames_dir):
                     shutil.rmtree(frames_dir)
                 os.makedirs(frames_dir, exist_ok=True)
@@ -32,7 +36,7 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264'):
                 # Generate frames
                 frame_count, duration = generate_frames(
                     os.path.join('uploads', project.csv_file),
-                    project_id,
+                    project.folder_number,  # Use folder_number instead of project_id
                     resolution,
                     fps
                 )
@@ -43,7 +47,7 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264'):
                 db.session.commit()
 
                 # Create video
-                video_path = create_video(project_id, fps, codec, resolution)
+                video_path = create_video(project.folder_number, fps, codec, resolution)  # Use folder_number
 
                 # Update project with video info
                 project.video_file = os.path.basename(video_path)
