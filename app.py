@@ -114,11 +114,11 @@ def generate_project_frames(project_id):
             'top_padding': int(data.get('top_padding', 10)),
             'bottom_padding': int(data.get('bottom_padding', 30)),
             'spacing': int(data.get('spacing', 20)),
-            'font_size': int(data.get('font_size', 26))
+            'font_size': int(data.get('font_size', 26)),
+            'border_radius': int(data.get('border_radius', 0))
         }
 
         # Start background processing with text settings
-        from utils.background_processor import process_project
         process_project(project_id, resolution, fps, codec, text_settings)
 
         return jsonify({'success': True, 'message': 'Processing started'})
@@ -211,13 +211,13 @@ def generate_preview(project_id):
         data = request.get_json() if request.is_json else {}
         resolution = data.get('resolution', 'fullhd')
         text_settings = {
+            'vertical_position': int(data.get('vertical_position', 50)),
             'top_padding': int(data.get('top_padding', 10)),
-            'bottom_padding': int(data.get('bottom_padding', 10)),
+            'bottom_padding': int(data.get('bottom_padding', 30)),
             'spacing': int(data.get('spacing', 20)),
-            'font_size': int(data.get('font_size', 26))
+            'font_size': int(data.get('font_size', 26)),
+            'border_radius': int(data.get('border_radius', 0))
         }
-
-        from utils.image_generator import create_preview_frame
 
         preview_path = create_preview_frame(
             os.path.join(app.config['UPLOAD_FOLDER'], project.csv_file),

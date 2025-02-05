@@ -34,6 +34,7 @@ def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_
             - bottom_padding: Total height of the black box
             - spacing: Space between text blocks
             - font_size: Base font size before scaling
+            - border_radius: Corner radius in pixels
     """
     # Base resolution (Full HD)
     base_width, base_height = 1920, 1080
@@ -61,11 +62,13 @@ def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_
     base_box_height = int(text_settings.get('bottom_padding', 30))
     base_spacing = int(text_settings.get('spacing', 20))
     vertical_position = int(text_settings.get('vertical_position', 50))
+    base_border_radius = int(text_settings.get('border_radius', 0))
 
-    # Scale padding and spacing
+    # Scale padding, spacing, and border radius
     top_padding = int(base_top_padding * scale_factor)
     box_height = int(base_box_height * scale_factor)
     spacing = int(base_spacing * scale_factor)
+    border_radius = int(base_border_radius * scale_factor)
 
     # Load font with scaled size
     try:
@@ -123,14 +126,27 @@ def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_
     for i, ((label, value), element_width, text_width) in enumerate(zip(params, element_widths, text_widths)):
         text = f"{label}: {value}"
 
-        # Draw black background box
-        box_coords = [
-            x_position,
-            y_position,
-            x_position + element_width,
-            y_position + box_height
-        ]
-        draw.rectangle(box_coords, fill='black')
+        if border_radius > 0:
+            # Create a new image for the box with an alpha channel
+            box_img = Image.new('RGBA', (element_width, box_height), (0, 0, 0, 0))
+            box_draw = ImageDraw.Draw(box_img)
+
+            # Draw rounded rectangle
+            box_draw.rounded_rectangle(
+                [0, 0, element_width, box_height],
+                radius=border_radius,
+                fill='black'
+            )
+
+            # Paste the box onto the main image
+            image.paste(box_img, (x_position, y_position), box_img)
+        else:
+            # Draw regular rectangle if no border radius
+            draw.rectangle(
+                [x_position, y_position,
+                 x_position + element_width, y_position + box_height],
+                fill='black'
+            )
 
         # Center text horizontally and vertically within the box
         text_x = x_position + (element_width - text_width) // 2

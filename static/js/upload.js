@@ -117,7 +117,7 @@ document.getElementById('projectName').addEventListener('input', function() {
 });
 
 // Add event listeners for text display settings
-const textSettings = ['verticalPosition', 'topPadding', 'bottomPadding', 'spacing', 'fontSize'];
+const textSettings = ['verticalPosition', 'topPadding', 'bottomPadding', 'spacing', 'fontSize', 'borderRadius'];
 textSettings.forEach(setting => {
     const input = document.getElementById(setting);
     const valueDisplay = document.getElementById(setting + 'Value');
@@ -138,7 +138,8 @@ textSettings.forEach(setting => {
                     top_padding: document.getElementById('topPadding').value,
                     bottom_padding: document.getElementById('bottomPadding').value,
                     spacing: document.getElementById('spacing').value,
-                    font_size: document.getElementById('fontSize').value
+                    font_size: document.getElementById('fontSize').value,
+                    border_radius: document.getElementById('borderRadius').value
                 };
 
                 // Update preview with all current settings
