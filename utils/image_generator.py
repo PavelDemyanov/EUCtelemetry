@@ -97,11 +97,11 @@ def create_frame(values, timestamp, resolution, output_path, text_settings=None)
     # Add scaled spacing between elements
     total_width += spacing * (len(params) - 1)
 
-    # Start position (centered horizontally, scaled spacing from top)
+    # Start position (centered horizontally, at specified distance from top)
     x_position = (width - total_width) // 2
-    y_position = padding_top  # Scaled distance from top
+    y_position = height // 2  # Центрируем вертикально
 
-    # Draw parameters
+    # Draw parameters in a horizontal line
     for i, ((label, value), element_width) in enumerate(zip(params, element_widths)):
         text = f"{label}: {value}"
         text_bbox = draw.textbbox((0, 0), text, font=font)
@@ -118,9 +118,8 @@ def create_frame(values, timestamp, resolution, output_path, text_settings=None)
         # Draw white text
         draw.text((x_position, y_position), text, fill='white', font=font)
 
-        # Move to next position (including scaled spacing)
-        y_position += text_height + spacing + padding_top + padding_bottom
-
+        # Move to next position horizontally (including scaled spacing)
+        x_position += text_width + padding_top + padding_bottom + spacing
 
     # Save frame
     image.save(output_path)
