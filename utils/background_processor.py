@@ -7,7 +7,7 @@ from utils.image_generator import generate_frames
 from utils.video_creator import create_video
 import os
 
-def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264'):
+def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', text_settings=None):
     """Process project in background thread"""
     def _process():
         from app import app  # Import app here to avoid circular import
@@ -33,12 +33,13 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264'):
                     shutil.rmtree(frames_dir)
                 os.makedirs(frames_dir, exist_ok=True)
 
-                # Generate frames
+                # Generate frames with text settings
                 frame_count, duration = generate_frames(
                     os.path.join('uploads', project.csv_file),
-                    project.folder_number,  # Use folder_number instead of project_id
+                    project.folder_number,
                     resolution,
-                    fps
+                    fps,
+                    text_settings
                 )
 
                 project.frame_count = frame_count
@@ -47,7 +48,7 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264'):
                 db.session.commit()
 
                 # Create video
-                video_path = create_video(project.folder_number, fps, codec, resolution)  # Use folder_number
+                video_path = create_video(project.folder_number, fps, codec, resolution)
 
                 # Update project with video info
                 project.video_file = os.path.basename(video_path)

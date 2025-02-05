@@ -19,7 +19,21 @@ def find_nearest_values(data, timestamp):
             result[column] = data[column][idx]
     return result
 
-def create_frame(values, timestamp, resolution, output_path):
+def create_frame(values, timestamp, resolution, output_path, text_settings=None):
+    """
+    Create a frame with customizable text display settings
+
+    Args:
+        values: Dictionary containing values to display
+        timestamp: Timestamp for the frame
+        resolution: 'fullhd' or '4k'
+        output_path: Where to save the frame
+        text_settings: Dictionary containing display settings:
+            - top_padding: Padding above text
+            - bottom_padding: Padding below text
+            - spacing: Space between text blocks
+            - font_size: Base font size before scaling
+    """
     # Base resolution (Full HD)
     base_width, base_height = 1920, 1080
 
@@ -35,8 +49,21 @@ def create_frame(values, timestamp, resolution, output_path):
     image = Image.new('RGB', (width, height), (0, 0, 255))
     draw = ImageDraw.Draw(image)
 
-    # Calculate scaled font size (26 is base size for Full HD - reduced by 20% from original 32)
-    font_size = int(26 * scale_factor)
+    # Get text settings with defaults
+    if text_settings is None:
+        text_settings = {}
+
+    # Apply text settings with defaults
+    base_font_size = int(text_settings.get('font_size', 26))
+    font_size = int(base_font_size * scale_factor)
+    base_top_padding = int(text_settings.get('top_padding', 10))
+    base_bottom_padding = int(text_settings.get('bottom_padding', 10))
+    base_spacing = int(text_settings.get('spacing', 20))
+
+    # Scale padding and spacing
+    padding_top = int(base_top_padding * scale_factor)
+    padding_bottom = int(base_bottom_padding * scale_factor)
+    spacing = int(base_spacing * scale_factor)
 
     # Load font with scaled size
     try:
@@ -57,19 +84,13 @@ def create_frame(values, timestamp, resolution, output_path):
         ('Power', values['power'])
     ]
 
-    # Scale base padding and spacing
-    base_padding = 10
-    base_spacing = 20
-    padding = int(base_padding * scale_factor)
-    spacing = int(base_spacing * scale_factor)
-
     # Calculate total width of all elements with scaled spacing
     total_width = 0
     element_widths = []
     for label, value in params:
-        text = f"{label}: {value}"  # Changed from {value:.2f} to {value}
+        text = f"{label}: {value}"
         text_bbox = draw.textbbox((0, 0), text, font=font)
-        text_width = text_bbox[2] - text_bbox[0] + (padding * 2)  # Add padding within black box
+        text_width = text_bbox[2] - text_bbox[0] + (padding_top + padding_bottom)  # Add padding
         element_widths.append(text_width)
         total_width += text_width
 
@@ -78,19 +99,19 @@ def create_frame(values, timestamp, resolution, output_path):
 
     # Start position (centered horizontally, scaled spacing from top)
     x_position = (width - total_width) // 2
-    y_position = spacing  # Scaled distance from top
+    y_position = padding_top  # Scaled distance from top
 
     # Draw parameters
     for i, ((label, value), element_width) in enumerate(zip(params, element_widths)):
-        text = f"{label}: {value}"  # Changed from {value:.2f} to {value}
+        text = f"{label}: {value}"
         text_bbox = draw.textbbox((0, 0), text, font=font)
         text_width = text_bbox[2] - text_bbox[0]
         text_height = text_bbox[3] - text_bbox[1]
 
         # Draw black background with scaled padding
         draw.rectangle(
-            (x_position - padding, y_position - padding,
-             x_position + text_width + padding, y_position + text_height + padding),
+            (x_position - padding_top, y_position - padding_top,
+             x_position + text_width + padding_bottom, y_position + text_height + padding_bottom),
             fill='black'
         )
 
@@ -98,12 +119,13 @@ def create_frame(values, timestamp, resolution, output_path):
         draw.text((x_position, y_position), text, fill='white', font=font)
 
         # Move to next position (including scaled spacing)
-        x_position += text_width + (padding * 2) + spacing
+        y_position += text_height + spacing + padding_top + padding_bottom
+
 
     # Save frame
     image.save(output_path)
 
-def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97):
+def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, text_settings=None):
     try:
         # Create project frames directory using folder_number
         frames_dir = f'frames/project_{folder_number}'
@@ -137,7 +159,7 @@ def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97):
             # Find nearest values for this timestamp
             values = find_nearest_values(data, timestamp)
             output_path = f'{frames_dir}/frame_{i:06d}.png'
-            create_frame(values, timestamp, resolution, output_path)
+            create_frame(values, timestamp, resolution, output_path, text_settings)
             if i % 100 == 0:  # Log progress every 100 frames
                 logging.info(f"Generated frame {i}/{frame_count}")
 
@@ -148,7 +170,7 @@ def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97):
         logging.error(f"Error generating frames: {e}")
         raise
 
-def create_preview_frame(csv_file, project_id, resolution='fullhd'):
+def create_preview_frame(csv_file, project_id, resolution='fullhd', text_settings=None):
     """Create a preview frame from the first row of data"""
     try:
         # Process CSV data
@@ -167,8 +189,8 @@ def create_preview_frame(csv_file, project_id, resolution='fullhd'):
         first_timestamp = data['timestamp'][0]
         values = find_nearest_values(data, first_timestamp)
 
-        # Generate the frame
-        create_frame(values, first_timestamp, resolution, preview_path)
+        # Generate the frame with text settings
+        create_frame(values, first_timestamp, resolution, preview_path, text_settings)
 
         return preview_path
     except Exception as e:

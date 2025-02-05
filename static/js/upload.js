@@ -40,17 +40,39 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
         if (data.error) throw new Error(data.error);
 
         projectId = data.project_id;
+        updatePreview(projectId);
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        progressTitle.textContent = 'Error: ' + error.message;
+        progressBar.classList.add('bg-danger');
+        // Re-enable form
+        document.querySelectorAll('input, button').forEach(el => el.disabled = false);
+    });
+});
 
-        // Get preview frame
-        return fetch(`/preview/${projectId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams({
-                'resolution': document.querySelector('input[name="resolution"]:checked').value
-            })
-        });
+// Function to update preview with current settings
+function updatePreview(projectId) {
+    const previewSection = document.getElementById('previewSection');
+    const progressDiv = document.getElementById('progress');
+    const progressBar = progressDiv.querySelector('.progress-bar');
+    const progressTitle = document.getElementById('progressTitle');
+
+    // Get current values
+    const settings = {
+        resolution: document.querySelector('input[name="resolution"]:checked').value,
+        top_padding: document.getElementById('topPadding').value,
+        bottom_padding: document.getElementById('bottomPadding').value,
+        spacing: document.getElementById('spacing').value,
+        font_size: document.getElementById('fontSize').value
+    };
+
+    fetch(`/preview/${projectId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(settings)
     })
     .then(response => response.json())
     .then(data => {
@@ -59,7 +81,7 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
         // Show preview
         progressDiv.classList.add('d-none');
         previewSection.classList.remove('d-none');
-        document.getElementById('previewImage').src = data.preview_url;
+        document.getElementById('previewImage').src = data.preview_url + '?t=' + new Date().getTime();
 
         // Re-enable form
         document.querySelectorAll('input, button').forEach(el => el.disabled = false);
@@ -74,7 +96,7 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
         // Re-enable form
         document.querySelectorAll('input, button').forEach(el => el.disabled = false);
     });
-});
+}
 
 // Add real-time validation for project name input
 document.getElementById('projectName').addEventListener('input', function() {
@@ -93,6 +115,27 @@ document.getElementById('projectName').addEventListener('input', function() {
     }
 });
 
+// Add event listeners for text display settings
+const textSettings = ['topPadding', 'bottomPadding', 'spacing', 'fontSize'];
+textSettings.forEach(setting => {
+    const input = document.getElementById(setting);
+    const valueDisplay = document.getElementById(setting + 'Value');
+
+    input.addEventListener('input', function() {
+        // Update value display
+        valueDisplay.textContent = this.value;
+
+        // Debounce the preview update
+        clearTimeout(this.timeout);
+        this.timeout = setTimeout(() => {
+            const projectId = document.getElementById('startProcessButton').dataset.projectId;
+            if (projectId) {
+                updatePreview(projectId);
+            }
+        }, 300);
+    });
+});
+
 // Handle start processing button click
 document.getElementById('startProcessButton').addEventListener('click', function() {
     const projectId = this.dataset.projectId;
@@ -104,17 +147,24 @@ document.getElementById('startProcessButton').addEventListener('click', function
     progressDiv.classList.remove('d-none');
     this.disabled = true;
 
+    // Get all current settings
+    const settings = {
+        resolution: document.querySelector('input[name="resolution"]:checked').value,
+        fps: document.querySelector('input[name="fps"]:checked').value,
+        codec: document.querySelector('input[name="codec"]:checked').value,
+        top_padding: document.getElementById('topPadding').value,
+        bottom_padding: document.getElementById('bottomPadding').value,
+        spacing: document.getElementById('spacing').value,
+        font_size: document.getElementById('fontSize').value
+    };
+
     // Start processing
     fetch(`/generate_frames/${projectId}`, {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
+            'Content-Type': 'application/json',
         },
-        body: new URLSearchParams({
-            'resolution': document.querySelector('input[name="resolution"]:checked').value,
-            'fps': document.querySelector('input[name="fps"]:checked').value,
-            'codec': document.querySelector('input[name="codec"]:checked').value
-        })
+        body: JSON.stringify(settings)
     })
     .then(response => response.json())
     .then(data => {

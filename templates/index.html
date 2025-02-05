@@ -75,6 +75,50 @@
                         </div>
                     </div>
 
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h5 class="mb-0">Text Display Settings</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="topPadding" class="form-label">Top Padding</label>
+                                        <input type="range" class="form-range" id="topPadding" name="top_padding" 
+                                               min="0" max="50" value="10" step="1">
+                                        <div class="text-muted small">Current: <span id="topPaddingValue">10</span>px</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="bottomPadding" class="form-label">Bottom Padding</label>
+                                        <input type="range" class="form-range" id="bottomPadding" name="bottom_padding" 
+                                               min="0" max="50" value="10" step="1">
+                                        <div class="text-muted small">Current: <span id="bottomPaddingValue">10</span>px</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="spacing" class="form-label">Spacing Between Items</label>
+                                        <input type="range" class="form-range" id="spacing" name="spacing" 
+                                               min="0" max="100" value="20" step="1">
+                                        <div class="text-muted small">Current: <span id="spacingValue">20</span>px</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="fontSize" class="form-label">Font Size</label>
+                                        <input type="range" class="form-range" id="fontSize" name="font_size" 
+                                               min="12" max="72" value="26" step="1">
+                                        <div class="text-muted small">Current: <span id="fontSizeValue">26</span>px</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <button type="submit" class="btn btn-primary" id="uploadButton">Upload and Show Preview</button>
                 </form>
 

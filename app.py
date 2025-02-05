@@ -7,7 +7,7 @@ from flask import Flask, render_template, request, jsonify, send_file, url_for
 from werkzeug.utils import secure_filename
 from extensions import db
 from utils.csv_processor import process_csv_file
-from utils.image_generator import generate_frames
+from utils.image_generator import generate_frames, create_preview_frame
 from utils.video_creator import create_video
 from utils.background_processor import process_project
 
@@ -100,13 +100,26 @@ def upload_file():
 @app.route('/generate_frames/<int:project_id>', methods=['POST'])
 def generate_project_frames(project_id):
     project = Project.query.get_or_404(project_id)
-    resolution = request.form.get('resolution', 'fullhd')
-    fps = float(request.form.get('fps', 29.97))
-    codec = request.form.get('codec', 'h264')
 
     try:
-        # Start background processing
-        process_project(project_id, resolution, fps, codec)
+        # Get settings from request
+        data = request.get_json() if request.is_json else {}
+        resolution = data.get('resolution', 'fullhd')
+        fps = float(data.get('fps', 29.97))
+        codec = data.get('codec', 'h264')
+
+        # Get text display settings
+        text_settings = {
+            'top_padding': int(data.get('top_padding', 10)),
+            'bottom_padding': int(data.get('bottom_padding', 10)),
+            'spacing': int(data.get('spacing', 20)),
+            'font_size': int(data.get('font_size', 26))
+        }
+
+        # Start background processing with text settings
+        from utils.background_processor import process_project
+        process_project(project_id, resolution, fps, codec, text_settings)
+
         return jsonify({'success': True, 'message': 'Processing started'})
     except Exception as e:
         logging.error(f"Error starting processing: {str(e)}")
@@ -191,15 +204,25 @@ def delete_project(project_id):
 @app.route('/preview/<int:project_id>', methods=['POST'])
 def generate_preview(project_id):
     project = Project.query.get_or_404(project_id)
-    resolution = request.form.get('resolution', 'fullhd')
 
     try:
+        # Get text display settings from request
+        data = request.get_json() if request.is_json else {}
+        resolution = data.get('resolution', 'fullhd')
+        text_settings = {
+            'top_padding': int(data.get('top_padding', 10)),
+            'bottom_padding': int(data.get('bottom_padding', 10)),
+            'spacing': int(data.get('spacing', 20)),
+            'font_size': int(data.get('font_size', 26))
+        }
+
         from utils.image_generator import create_preview_frame
 
         preview_path = create_preview_frame(
             os.path.join(app.config['UPLOAD_FOLDER'], project.csv_file),
             project_id,
-            resolution
+            resolution,
+            text_settings
         )
 
         return jsonify({
@@ -209,7 +232,6 @@ def generate_preview(project_id):
     except Exception as e:
         logging.error(f"Error generating preview: {str(e)}")
         return jsonify({'error': str(e)}), 500
-
 
 with app.app_context():
     db.create_all()
