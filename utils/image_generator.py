@@ -1,5 +1,5 @@
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import os
 import logging
 from datetime import datetime
@@ -10,18 +10,36 @@ def find_nearest_values(data, timestamp):
     result = {}
     for column in ['speed', 'gps', 'voltage', 'temperature', 'current', 
                   'battery', 'mileage', 'pwm', 'power']:
-        # Find the last value before or equal to the timestamp
         mask = data['timestamp'] <= timestamp
-        if not any(mask):  # If no previous value exists
+        if not any(mask):
             result[column] = 0
         else:
-            idx = np.where(mask)[0][-1]  # Get the last index where mask is True
+            idx = np.where(mask)[0][-1]
             result[column] = data[column][idx]
     return result
 
+def create_rounded_box(width, height, radius):
+    """Create a rounded rectangle with simple PIL approach"""
+    # Create a new image with transparency
+    image = Image.new('RGBA', (width, height), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+
+    # Draw rounded rectangle
+    draw.rounded_rectangle(
+        [(0, 0), (width-1, height-1)],
+        radius=radius,
+        fill=(0, 0, 0, 255),  # Black with full opacity
+        outline=None
+    )
+
+    # Apply slight blur for smoother edges
+    image = image.filter(ImageFilter.GaussianBlur(radius=0.5))
+
+    return image
+
 def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_settings=None):
     """Create a frame with customizable text display settings"""
-    # Set resolution and calculate scale factor
+    # Set resolution
     if resolution == "4k":
         width, height = 3840, 2160
         scale_factor = 2.0
@@ -29,14 +47,18 @@ def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_
         width, height = 1920, 1080
         scale_factor = 1.0
 
-    # Create initial image with blue background (RGBA)
-    image = Image.new('RGBA', (width, height), (0, 0, 255, 255))
+    # Create background layer with solid blue color
+    background = Image.new('RGBA', (width, height), (0, 0, 255, 255))
+
+    # Create transparent overlay for boxes and text
+    overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay)
 
     # Get text settings with defaults
     if text_settings is None:
         text_settings = {}
 
-    # Apply text settings with defaults and scaling
+    # Scale all settings according to resolution
     base_font_size = int(text_settings.get('font_size', 26))
     font_size = int(base_font_size * scale_factor)
     base_top_padding = int(text_settings.get('top_padding', 14))
@@ -45,11 +67,13 @@ def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_
     vertical_position = int(text_settings.get('vertical_position', 1))
     base_border_radius = int(text_settings.get('border_radius', 13))
 
-    # Scale padding, spacing, and border radius
+    # Scale padding, spacing and border radius
     top_padding = int(base_top_padding * scale_factor)
     box_height = int(base_box_height * scale_factor)
     spacing = int(base_spacing * scale_factor)
     border_radius = int(base_border_radius * scale_factor)
+
+    logging.info(f"Creating frame with border_radius={border_radius}, box_height={box_height}")
 
     # Load font
     try:
@@ -70,18 +94,17 @@ def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_
         ('Power', values['power'])
     ]
 
-    # Calculate text dimensions and total width
+    # Calculate dimensions
     element_widths = []
     text_widths = []
     text_heights = []
     total_width = 0
 
-    draw = ImageDraw.Draw(image)
     for label, value in params:
         text = f"{label}: {value}"
-        text_bbox = draw.textbbox((0, 0), text, font=font)
-        text_width = text_bbox[2] - text_bbox[0]
-        text_height = text_bbox[3] - text_bbox[1]
+        bbox = draw.textbbox((0, 0), text, font=font)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
 
         element_width = text_width + (2 * top_padding)
         element_widths.append(element_width)
@@ -98,30 +121,17 @@ def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_
     box_vertical_center = y_position + (box_height // 2)
     text_baseline_y = box_vertical_center - (max_text_height // 2)
 
-    # Create a new RGBA image for compositing
-    composite_image = Image.new('RGBA', (width, height), (0, 0, 0, 0))
+    # Draw boxes and text
     x_position = start_x
-
-    # Draw each parameter box and text
     for i, ((label, value), element_width, text_width) in enumerate(zip(params, element_widths, text_widths)):
-        text = f"{label}: {value}"
+        # Create rounded rectangle box
+        box = create_rounded_box(element_width, box_height, border_radius)
 
-        # Create separate image for the rounded rectangle
-        box_image = Image.new('RGBA', (element_width, box_height), (0, 0, 0, 0))
-        box_draw = ImageDraw.Draw(box_image)
-
-        # Draw rounded rectangle with explicit coordinates
-        box_draw.rounded_rectangle(
-            ((0, 0), (element_width - 1, box_height - 1)),
-            radius=border_radius,
-            fill=(0, 0, 0, 255)
-        )
-
-        # Composite the box onto our working image
-        composite_image.paste(box_image, (x_position, y_position), box_image)
+        # Paste box onto overlay
+        overlay.paste(box, (x_position, y_position), box)
 
         # Add text
-        draw = ImageDraw.Draw(composite_image)
+        text = f"{label}: {value}"
         text_x = x_position + ((element_width - text_width) // 2)
         baseline_offset = int(max_text_height * 0.2)
         text_y = text_baseline_y - baseline_offset
@@ -129,15 +139,16 @@ def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_
 
         x_position += element_width + spacing
 
-    # Composite the elements onto the blue background
-    final_image = Image.alpha_composite(image, composite_image)
+    # Combine background and overlay
+    result = Image.alpha_composite(background, overlay)
 
-    # Convert to RGB for saving
     if output_path:
-        final_image = final_image.convert('RGB')
-        final_image.save(output_path, 'PNG')
+        # Convert to RGB for PNG output
+        result_rgb = result.convert('RGB')
+        result_rgb.save(output_path, format='PNG', quality=100)
+        logging.info(f"Saved frame to {output_path} with border_radius={border_radius}")
 
-    return final_image
+    return result
 
 def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, text_settings=None):
     """Generate video frames with text overlay"""
@@ -191,6 +202,7 @@ def create_preview_frame(csv_file, project_id, resolution='fullhd', text_setting
         values = find_nearest_values(data, first_timestamp)
 
         create_frame(values, first_timestamp, resolution, preview_path, text_settings)
+        logging.info(f"Created preview frame at {preview_path}")
         return preview_path
 
     except Exception as e:
