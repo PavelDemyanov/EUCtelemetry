@@ -5,20 +5,37 @@ import os
 
 def parse_timestamp_darnkessbot(date_str):
     try:
+        # Check if input is float
+        if isinstance(date_str, float):
+            return None
+
+        # Convert to string if needed
+        date_str = str(date_str).strip()
+
+        # Try to parse the date string
         dt = datetime.strptime(date_str, '%d.%m.%Y %H:%M:%S.%f')
         return dt.timestamp()
-    except ValueError as e:
+    except (ValueError, TypeError) as e:
         logging.error(f"Error parsing darnkessbot timestamp: {e}")
-        raise
+        return None
 
 def parse_timestamp_wheellog(date_str, time_str):
     try:
+        # Check if either input is float
+        if isinstance(date_str, float) or isinstance(time_str, float):
+            return None
+
+        # Convert to strings if needed
+        date_str = str(date_str).strip()
+        time_str = str(time_str).strip()
+
+        # Try to parse the date
         dt_str = f"{date_str} {time_str}"
         dt = datetime.strptime(dt_str, '%Y-%m-%d %H:%M:%S.%f')
         return dt.timestamp()
-    except ValueError as e:
+    except (ValueError, TypeError) as e:
         logging.error(f"Error parsing wheellog timestamp: {e}")
-        raise
+        return None
 
 def detect_csv_type(df):
     darnkessbot_cols = ['Date', 'Temperature', 'GPS Speed', 'Total mileage', 'Battery level', 
@@ -81,7 +98,13 @@ def process_csv_file(file_path):
         csv_type = detect_csv_type(df)
 
         if csv_type == 'darnkessbot':
+            # Parse timestamps and create a mask for valid timestamps
             df['timestamp'] = df['Date'].apply(parse_timestamp_darnkessbot)
+            valid_timestamp_mask = df['timestamp'].notna()
+
+            # Filter out rows with invalid timestamps
+            df = df[valid_timestamp_mask]
+
             processed_data = {
                 'timestamp': df['timestamp'],
                 'speed': clean_numeric_column(df['Speed']),
@@ -95,7 +118,13 @@ def process_csv_file(file_path):
                 'power': clean_numeric_column(df['Power'])
             }
         else:  # wheellog
+            # Parse timestamps and create a mask for valid timestamps
             df['timestamp'] = df.apply(lambda x: parse_timestamp_wheellog(x['date'], x['time']), axis=1)
+            valid_timestamp_mask = df['timestamp'].notna()
+
+            # Filter out rows with invalid timestamps
+            df = df[valid_timestamp_mask]
+
             processed_data = {
                 'timestamp': df['timestamp'],
                 'speed': clean_numeric_column(df['speed']),
