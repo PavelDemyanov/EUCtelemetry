@@ -25,8 +25,8 @@ def validate_project_name(name):
     """Проверяет валидность имени проекта"""
     if not name:
         return False
-    # Проверяем длину и допустимые символы (буквы и цифры на любом языке)
-    return len(name) <= 7 and bool(re.match(r'^[\p{L}\p{N}]+$', name, re.UNICODE))
+    # Проверяем длину и допустимые символы (буквы и цифры)
+    return len(name) <= 7 and bool(re.match(r'^[а-яА-ЯёЁa-zA-Z0-9]+$', name))
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'
