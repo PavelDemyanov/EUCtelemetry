@@ -132,19 +132,25 @@ def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_
         text = f"{label}: {value}"
 
         if border_radius > 0:
-            # Create a new image for the box with an alpha channel
-            box_img = Image.new('RGBA', (element_width, box_height), (0, 0, 0, 0))
-            box_draw = ImageDraw.Draw(box_img)
+            # Create a mask for rounded rectangle
+            mask = Image.new('L', (element_width, box_height), 0)
+            mask_draw = ImageDraw.Draw(mask)
 
-            # Draw rounded rectangle
-            box_draw.rounded_rectangle(
-                (0, 0, element_width, box_height),
+            # Draw rounded rectangle on mask
+            mask_draw.rounded_rectangle(
+                (0, 0, element_width-1, box_height-1),  # Subtract 1 to avoid edge artifacts
                 radius=border_radius,
-                fill='black'
+                fill=255
             )
 
-            # Paste the box onto the main image
-            image.paste(box_img, (x_position, y_position), box_img)
+            # Create black box
+            black_box = Image.new('RGB', (element_width, box_height), 'black')
+
+            # Apply mask to black box
+            black_box.putalpha(mask)
+
+            # Paste black box onto main image using itself as mask
+            image.paste(black_box, (x_position, y_position), mask)
         else:
             # Draw regular rectangle if no border radius
             draw.rectangle(
@@ -167,7 +173,10 @@ def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_
         x_position += element_width + spacing
 
     # Save frame
-    image.save(output_path)
+    if output_path:
+        image.save(output_path, 'PNG')
+
+    return image
 
 def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, text_settings=None):
     try:
