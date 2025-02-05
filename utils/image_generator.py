@@ -121,8 +121,13 @@ def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_
     # Current x position
     x_position = start_x
 
-    # Draw parameters
+    # Calculate max text height and adjust positioning
     max_text_height = max(text_heights)
+    text_block_height = max_text_height  # Height of actual text without padding
+    box_vertical_center = y_position + (box_height // 2)  # Center point of the box
+    text_baseline_y = box_vertical_center - (text_block_height // 2) 
+
+    # Draw parameters
     for i, ((label, value), element_width, text_width) in enumerate(zip(params, element_widths, text_widths)):
         text = f"{label}: {value}"
 
@@ -133,7 +138,7 @@ def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_
 
             # Draw rounded rectangle
             box_draw.rounded_rectangle(
-                [0, 0, element_width, box_height],
+                (0, 0, element_width, box_height),
                 radius=border_radius,
                 fill='black'
             )
@@ -143,16 +148,17 @@ def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_
         else:
             # Draw regular rectangle if no border radius
             draw.rectangle(
-                [x_position, y_position,
-                 x_position + element_width, y_position + box_height],
+                (x_position, y_position,
+                 x_position + element_width, y_position + box_height),
                 fill='black'
             )
 
-        # Center text horizontally and align to baseline vertically within the box
+        # Center text horizontally
         text_x = x_position + (element_width - text_width) // 2
-        # Align text to baseline: move up from bottom by a small offset
+
+        # Align text to baseline and center vertically
         baseline_offset = int(max_text_height * 0.2)  # 20% от высоты текста для отступа снизу
-        text_y = y_position + box_height - max_text_height - baseline_offset
+        text_y = text_baseline_y - baseline_offset
 
         # Draw white text
         draw.text((text_x, text_y), text, fill='white', font=font)
