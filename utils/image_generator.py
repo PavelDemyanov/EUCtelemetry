@@ -54,13 +54,13 @@ def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_
     if text_settings is None:
         text_settings = {}
 
-    # Apply text settings with defaults
+    # Apply text settings with defaults and scaling
     base_font_size = int(text_settings.get('font_size', 26))
     font_size = int(base_font_size * scale_factor)
     base_top_padding = int(text_settings.get('top_padding', 10))
-    base_box_height = int(text_settings.get('bottom_padding', 30))  # Общая высота плашки
+    base_box_height = int(text_settings.get('bottom_padding', 30))
     base_spacing = int(text_settings.get('spacing', 20))
-    vertical_position = int(text_settings.get('vertical_position', 50))  # Позиция по вертикали в процентах
+    vertical_position = int(text_settings.get('vertical_position', 50))
 
     # Scale padding and spacing
     top_padding = int(base_top_padding * scale_factor)
@@ -86,44 +86,42 @@ def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_
         ('Power', values['power'])
     ]
 
-    # Calculate total width of all elements
+    # Calculate widths and total width needed
     total_width = 0
     element_widths = []
+    text_widths = []
     text_heights = []
+
     for label, value in params:
         text = f"{label}: {value}"
         text_bbox = draw.textbbox((0, 0), text, font=font)
         text_width = text_bbox[2] - text_bbox[0]
         text_height = text_bbox[3] - text_bbox[1]
-        # Add padding to element width
-        element_width = text_width + (2 * top_padding)  # Padding on both sides
+
+        # Width of black box includes padding on both sides
+        element_width = text_width + (2 * top_padding)
+
         element_widths.append(element_width)
+        text_widths.append(text_width)
         text_heights.append(text_height)
         total_width += element_width
 
-    # Add spacing between elements to total width
+    # Add spacing between elements
     total_width += spacing * (len(params) - 1)
 
-    # Calculate starting x position to center all elements
+    # Calculate starting x position to center all elements horizontally
     start_x = (width - total_width) // 2
 
-    # Calculate vertical position based on percentage
-    y_position = int((height * vertical_position) / 100)
+    # Calculate y position based on vertical_position percentage
+    y_position = (height * vertical_position) // 100
 
     # Current x position
     x_position = start_x
 
-    # Draw parameters in a horizontal line
+    # Draw parameters
     max_text_height = max(text_heights)
-    for i, ((label, value), element_width) in enumerate(zip(params, element_widths)):
+    for i, ((label, value), element_width, text_width) in enumerate(zip(params, element_widths, text_widths)):
         text = f"{label}: {value}"
-        text_bbox = draw.textbbox((0, 0), text, font=font)
-        text_width = text_bbox[2] - text_bbox[0]
-        text_height = text_bbox[3] - text_bbox[1]
-
-        # Calculate text position within box
-        text_x = x_position + top_padding  # Add padding before text
-        text_y = y_position + (box_height - text_height) // 2  # Center text vertically in box
 
         # Draw black background box
         draw.rectangle(
@@ -131,6 +129,11 @@ def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_
              x_position + element_width, y_position + box_height],
             fill='black'
         )
+
+        # Center text horizontally within the black box
+        text_x = x_position + (element_width - text_width) // 2
+        # Center text vertically within the black box
+        text_y = y_position + (box_height - max_text_height) // 2
 
         # Draw white text
         draw.text((text_x, text_y), text, fill='white', font=font)
