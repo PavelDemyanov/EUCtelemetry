@@ -29,8 +29,9 @@ def create_frame(values, timestamp, resolution, output_path, text_settings=None)
         resolution: 'fullhd' or '4k'
         output_path: Where to save the frame
         text_settings: Dictionary containing display settings:
+            - vertical_position: Vertical position percentage (0-100)
             - top_padding: Padding above text
-            - bottom_padding: Padding below text
+            - bottom_padding: Total height of the black box
             - spacing: Space between text blocks
             - font_size: Base font size before scaling
     """
@@ -57,12 +58,13 @@ def create_frame(values, timestamp, resolution, output_path, text_settings=None)
     base_font_size = int(text_settings.get('font_size', 26))
     font_size = int(base_font_size * scale_factor)
     base_top_padding = int(text_settings.get('top_padding', 10))
-    base_bottom_padding = int(text_settings.get('bottom_padding', 10))
+    base_box_height = int(text_settings.get('bottom_padding', 30))  # Общая высота плашки
     base_spacing = int(text_settings.get('spacing', 20))
+    vertical_position = int(text_settings.get('vertical_position', 50))  # Позиция по вертикали в процентах
 
     # Scale padding and spacing
-    padding_top = int(base_top_padding * scale_factor)
-    padding_bottom = int(base_bottom_padding * scale_factor)
+    top_padding = int(base_top_padding * scale_factor)
+    box_height = int(base_box_height * scale_factor)
     spacing = int(base_spacing * scale_factor)
 
     # Load font with scaled size
@@ -87,39 +89,48 @@ def create_frame(values, timestamp, resolution, output_path, text_settings=None)
     # Calculate total width of all elements with scaled spacing
     total_width = 0
     element_widths = []
+    text_heights = []  # Store text heights for box calculation
     for label, value in params:
         text = f"{label}: {value}"
         text_bbox = draw.textbbox((0, 0), text, font=font)
-        text_width = text_bbox[2] - text_bbox[0] + (padding_top + padding_bottom)  # Add padding
+        text_width = text_bbox[2] - text_bbox[0]
+        text_height = text_bbox[3] - text_bbox[1]
         element_widths.append(text_width)
+        text_heights.append(text_height)
         total_width += text_width
 
     # Add scaled spacing between elements
     total_width += spacing * (len(params) - 1)
 
-    # Start position (centered horizontally, at specified distance from top)
+    # Calculate vertical position based on percentage
+    y_position = int(height * vertical_position / 100)
+
+    # Start position (centered horizontally)
     x_position = (width - total_width) // 2
-    y_position = height // 2  # Центрируем вертикально
 
     # Draw parameters in a horizontal line
+    max_text_height = max(text_heights)
     for i, ((label, value), element_width) in enumerate(zip(params, element_widths)):
         text = f"{label}: {value}"
         text_bbox = draw.textbbox((0, 0), text, font=font)
         text_width = text_bbox[2] - text_bbox[0]
         text_height = text_bbox[3] - text_bbox[1]
 
-        # Draw black background with scaled padding
+        # Calculate vertical centering of text within box
+        text_y = y_position + (box_height - text_height) // 2
+
+        # Draw black background box with fixed height
         draw.rectangle(
-            (x_position - padding_top, y_position - padding_top,
-             x_position + text_width + padding_bottom, y_position + text_height + padding_bottom),
+            (x_position - top_padding, y_position,
+             x_position + text_width + top_padding, y_position + box_height),
             fill='black'
         )
 
         # Draw white text
-        draw.text((x_position, y_position), text, fill='white', font=font)
+        draw.text((x_position, text_y), text, fill='white', font=font)
 
         # Move to next position horizontally (including scaled spacing)
-        x_position += text_width + padding_top + padding_bottom + spacing
+        x_position += text_width + spacing + (top_padding * 2)
 
     # Save frame
     image.save(output_path)

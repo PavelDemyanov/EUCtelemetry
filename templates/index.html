@@ -85,12 +85,17 @@
                         <img id="previewImage" class="img-fluid" alt="Preview frame">
                     </div>
 
-                    <!-- Text Display Settings moved here -->
                     <div class="card mb-3">
                         <div class="card-header">
                             <h5 class="mb-0">Text Display Settings</h5>
                         </div>
                         <div class="card-body">
+                            <div class="mb-3">
+                                <label for="verticalPosition" class="form-label">Vertical Position</label>
+                                <input type="range" class="form-range" id="verticalPosition" name="vertical_position" 
+                                       min="10" max="90" value="50" step="1">
+                                <div class="text-muted small">Current: <span id="verticalPositionValue">50</span>%</div>
+                            </div>
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
@@ -102,10 +107,10 @@
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="bottomPadding" class="form-label">Bottom Padding</label>
+                                        <label for="bottomPadding" class="form-label">Box Height</label>
                                         <input type="range" class="form-range" id="bottomPadding" name="bottom_padding" 
-                                               min="0" max="50" value="10" step="1">
-                                        <div class="text-muted small">Current: <span id="bottomPaddingValue">10</span>px</div>
+                                               min="0" max="100" value="30" step="1">
+                                        <div class="text-muted small">Current: <span id="bottomPaddingValue">30</span>px</div>
                                     </div>
                                 </div>
                             </div>

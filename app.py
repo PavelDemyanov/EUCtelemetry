@@ -110,8 +110,9 @@ def generate_project_frames(project_id):
 
         # Get text display settings
         text_settings = {
+            'vertical_position': int(data.get('vertical_position', 50)),
             'top_padding': int(data.get('top_padding', 10)),
-            'bottom_padding': int(data.get('bottom_padding', 10)),
+            'bottom_padding': int(data.get('bottom_padding', 30)),
             'spacing': int(data.get('spacing', 20)),
             'font_size': int(data.get('font_size', 26))
         }

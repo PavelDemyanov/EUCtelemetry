@@ -61,6 +61,7 @@ function updatePreview(projectId) {
     // Get current values
     const settings = {
         resolution: document.querySelector('input[name="resolution"]:checked').value,
+        vertical_position: document.getElementById('verticalPosition').value,
         top_padding: document.getElementById('topPadding').value,
         bottom_padding: document.getElementById('bottomPadding').value,
         spacing: document.getElementById('spacing').value,
@@ -155,7 +156,8 @@ document.getElementById('startProcessButton').addEventListener('click', function
         top_padding: document.getElementById('topPadding').value,
         bottom_padding: document.getElementById('bottomPadding').value,
         spacing: document.getElementById('spacing').value,
-        font_size: document.getElementById('fontSize').value
+        font_size: document.getElementById('fontSize').value,
+        vertical_position: document.getElementById('verticalPosition').value //Added vertical_position
     };
 
     // Start processing
