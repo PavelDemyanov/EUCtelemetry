@@ -87,6 +87,23 @@ def upload_file():
         db.session.add(project)
         db.session.commit()
 
+        # Create initial preview with default settings
+        default_settings = {
+            'vertical_position': 1,
+            'top_padding': 14,
+            'bottom_padding': 47,
+            'spacing': 10,
+            'font_size': 26,
+            'border_radius': 13
+        }
+
+        preview_path = create_preview_frame(
+            os.path.join(app.config['UPLOAD_FOLDER'], project.csv_file),
+            project.id,
+            'fullhd',
+            default_settings
+        )
+
         return jsonify({
             'success': True,
             'project_id': project.id,
