@@ -1,6 +1,21 @@
 document.getElementById('uploadForm').addEventListener('submit', function(e) {
     e.preventDefault();
 
+    const projectNameInput = document.getElementById('projectName');
+    const projectName = projectNameInput.value.trim();
+
+    // Client-side validation
+    if (projectName) {
+        if (projectName.length > 7) {
+            alert('Project name must not exceed 7 characters');
+            return;
+        }
+        if (!/^[\w\d]+$/.test(projectName)) {
+            alert('Project name can only contain letters and numbers');
+            return;
+        }
+    }
+
     const formData = new FormData(this);
     const previewSection = document.getElementById('previewSection');
     const progressDiv = document.getElementById('progress');

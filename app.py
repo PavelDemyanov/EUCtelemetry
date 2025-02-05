@@ -1,5 +1,7 @@
 import os
 import logging
+import random
+import re
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, jsonify, send_file, url_for
 from werkzeug.utils import secure_filename
@@ -12,6 +14,20 @@ from utils.background_processor import process_project
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
 
+# Символы для генерации имени проекта
+PROJECT_NAME_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+
+def generate_project_name():
+    """Генерирует случайное имя проекта длиной 5 символов"""
+    return ''.join(random.choice(PROJECT_NAME_CHARS) for _ in range(5))
+
+def validate_project_name(name):
+    """Проверяет валидность имени проекта"""
+    if not name:
+        return False
+    # Проверяем длину и допустимые символы (буквы и цифры на любом языке)
+    return len(name) <= 7 and bool(re.match(r'^[\w\d]+$', name, re.UNICODE))
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///projects.db'
@@ -23,8 +39,7 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs('frames', exist_ok=True)
 os.makedirs('videos', exist_ok=True)
 os.makedirs('processed_data', exist_ok=True)
-os.makedirs('previews', exist_ok=True) # Added for previews
-
+os.makedirs('previews', exist_ok=True)
 
 db.init_app(app)
 
@@ -43,9 +58,14 @@ def upload_file():
     if file.filename == '':
         return jsonify({'error': 'No file selected'}), 400
 
-    project_name = request.form.get('project_name', '')
-    if not project_name:
-        project_name = f"project_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    project_name = request.form.get('project_name', '').strip()
+
+    # Валидация пользовательского имени или генерация нового
+    if project_name:
+        if not validate_project_name(project_name):
+            return jsonify({'error': 'Invalid project name. Use up to 7 letters or numbers.'}), 400
+    else:
+        project_name = generate_project_name()
 
     try:
         filename = secure_filename(file.filename)
@@ -62,7 +82,7 @@ def upload_file():
             csv_type=csv_type,
             created_at=datetime.now(),
             expiry_date=datetime.now() + timedelta(days=30),
-            status='pending' #added status field
+            status='pending'
         )
         db.session.add(project)
         db.session.commit()
