@@ -45,6 +45,9 @@ def process_mileage(series, csv_type):
         if len(series) == 0:
             return series
 
+        # Round all values to integers first
+        series = series.round().astype(int)
+
         # Get the first value
         first_value = series.iloc[0]
 
