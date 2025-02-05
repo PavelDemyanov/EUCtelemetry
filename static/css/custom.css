@@ -9,7 +9,6 @@
 .table td, .table th {
     vertical-align: middle;
     white-space: nowrap;
-    min-width: 100px;
 }
 
 .table td:first-child {
