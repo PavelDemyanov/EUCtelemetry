@@ -10,7 +10,7 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
             projectNameInput.classList.add('is-invalid');
             return;
         }
-        if (!/^[\w\d]+$/.test(projectName)) {
+        if (!/^[\p{L}\p{N}]+$/u.test(projectName)) {
             projectNameInput.classList.add('is-invalid');
             return;
         }
@@ -86,7 +86,7 @@ document.getElementById('projectName').addEventListener('input', function() {
         return;
     }
 
-    if (value.length > 7 || !/^[\w\d]+$/.test(value)) {
+    if (value.length > 7 || !/^[\p{L}\p{N}]+$/u.test(value)) {
         this.classList.add('is-invalid');
     } else {
         this.classList.remove('is-invalid');
