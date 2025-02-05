@@ -20,25 +20,7 @@ def find_nearest_values(data, timestamp):
     return result
 
 def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_settings=None):
-    """
-    Create a frame with customizable text display settings
-
-    Args:
-        values: Dictionary containing values to display
-        timestamp: Timestamp for the frame
-        resolution: 'fullhd' or '4k'
-        output_path: Where to save the frame
-        text_settings: Dictionary containing display settings:
-            - vertical_position: Vertical position percentage (0-100)
-            - top_padding: Padding above text
-            - bottom_padding: Total height of the black box
-            - spacing: Space between text blocks
-            - font_size: Base font size before scaling
-            - border_radius: Corner radius in pixels
-    """
-    # Base resolution (Full HD)
-    base_width, base_height = 1920, 1080
-
+    """Create a frame with customizable text display settings"""
     # Set resolution and calculate scale factor
     if resolution == "4k":
         width, height = 3840, 2160
@@ -47,9 +29,8 @@ def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_
         width, height = 1920, 1080
         scale_factor = 1.0
 
-    # Create image with blue background
-    image = Image.new('RGB', (width, height), (0, 0, 255))
-    draw = ImageDraw.Draw(image)
+    # Create initial image with blue background (RGBA)
+    image = Image.new('RGBA', (width, height), (0, 0, 255, 255))
 
     # Get text settings with defaults
     if text_settings is None:
@@ -58,11 +39,11 @@ def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_
     # Apply text settings with defaults and scaling
     base_font_size = int(text_settings.get('font_size', 26))
     font_size = int(base_font_size * scale_factor)
-    base_top_padding = int(text_settings.get('top_padding', 10))
-    base_box_height = int(text_settings.get('bottom_padding', 30))
-    base_spacing = int(text_settings.get('spacing', 20))
-    vertical_position = int(text_settings.get('vertical_position', 50))
-    base_border_radius = int(text_settings.get('border_radius', 13))  # Default to 13px
+    base_top_padding = int(text_settings.get('top_padding', 14))
+    base_box_height = int(text_settings.get('bottom_padding', 47))
+    base_spacing = int(text_settings.get('spacing', 10))
+    vertical_position = int(text_settings.get('vertical_position', 1))
+    base_border_radius = int(text_settings.get('border_radius', 13))
 
     # Scale padding, spacing, and border radius
     top_padding = int(base_top_padding * scale_factor)
@@ -70,7 +51,7 @@ def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_
     spacing = int(base_spacing * scale_factor)
     border_radius = int(base_border_radius * scale_factor)
 
-    # Load font with scaled size
+    # Load font
     try:
         font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
     except:
@@ -89,155 +70,129 @@ def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_
         ('Power', values['power'])
     ]
 
-    # Calculate widths and total width needed
-    total_width = 0
+    # Calculate text dimensions and total width
     element_widths = []
     text_widths = []
     text_heights = []
+    total_width = 0
 
+    draw = ImageDraw.Draw(image)
     for label, value in params:
         text = f"{label}: {value}"
         text_bbox = draw.textbbox((0, 0), text, font=font)
         text_width = text_bbox[2] - text_bbox[0]
         text_height = text_bbox[3] - text_bbox[1]
 
-        # Width of black box includes padding on both sides
         element_width = text_width + (2 * top_padding)
-
         element_widths.append(element_width)
         text_widths.append(text_width)
         text_heights.append(text_height)
         total_width += element_width
 
-    # Add spacing between elements
     total_width += spacing * (len(params) - 1)
-
-    # Calculate starting x position to center all elements horizontally
     start_x = (width - total_width) // 2
-
-    # Calculate y position based on vertical_position percentage
     y_position = int((height * vertical_position) / 100)
 
-    # Current x position
+    # Calculate text positioning
+    max_text_height = max(text_heights)
+    box_vertical_center = y_position + (box_height // 2)
+    text_baseline_y = box_vertical_center - (max_text_height // 2)
+
+    # Create a new RGBA image for compositing
+    composite_image = Image.new('RGBA', (width, height), (0, 0, 0, 0))
     x_position = start_x
 
-    # Calculate max text height and adjust positioning
-    max_text_height = max(text_heights)
-    text_block_height = max_text_height  # Height of actual text without padding
-    box_vertical_center = y_position + (box_height // 2)  # Center point of the box
-    text_baseline_y = box_vertical_center - (text_block_height // 2) 
-
-    # Draw parameters
+    # Draw each parameter box and text
     for i, ((label, value), element_width, text_width) in enumerate(zip(params, element_widths, text_widths)):
         text = f"{label}: {value}"
 
-        # Create a mask for rounded rectangle
-        mask = Image.new('L', (element_width, box_height), 0)
-        mask_draw = ImageDraw.Draw(mask)
+        # Create separate image for the rounded rectangle
+        box_image = Image.new('RGBA', (element_width, box_height), (0, 0, 0, 0))
+        box_draw = ImageDraw.Draw(box_image)
 
-        # Draw rounded rectangle on mask
-        mask_draw.rounded_rectangle(
-            (0, 0, element_width-1, box_height-1),  # Subtract 1 to avoid edge artifacts
+        # Draw rounded rectangle with explicit coordinates
+        box_draw.rounded_rectangle(
+            ((0, 0), (element_width - 1, box_height - 1)),
             radius=border_radius,
-            fill=255
+            fill=(0, 0, 0, 255)
         )
 
-        # Create black box
-        black_box = Image.new('RGB', (element_width, box_height), 'black')
+        # Composite the box onto our working image
+        composite_image.paste(box_image, (x_position, y_position), box_image)
 
-        # Apply mask to black box
-        black_box.putalpha(mask)
-
-        # Paste black box onto main image using itself as mask
-        image.paste(black_box, (x_position, y_position), mask)
-
-        # Center text horizontally
-        text_x = x_position + (element_width - text_width) // 2
-
-        # Align text to baseline and center vertically
-        baseline_offset = int(max_text_height * 0.2)  # 20% от высоты текста для отступа снизу
+        # Add text
+        draw = ImageDraw.Draw(composite_image)
+        text_x = x_position + ((element_width - text_width) // 2)
+        baseline_offset = int(max_text_height * 0.2)
         text_y = text_baseline_y - baseline_offset
+        draw.text((text_x, text_y), text, fill=(255, 255, 255, 255), font=font)
 
-        # Draw white text
-        draw.text((text_x, text_y), text, fill='white', font=font)
-
-        # Move to next position
         x_position += element_width + spacing
 
-    # Save frame
-    if output_path:
-        image.save(output_path, 'PNG')
+    # Composite the elements onto the blue background
+    final_image = Image.alpha_composite(image, composite_image)
 
-    return image
+    # Convert to RGB for saving
+    if output_path:
+        final_image = final_image.convert('RGB')
+        final_image.save(output_path, 'PNG')
+
+    return final_image
 
 def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, text_settings=None):
+    """Generate video frames with text overlay"""
     try:
-        # Create project frames directory using folder_number
         frames_dir = f'frames/project_{folder_number}'
         if os.path.exists(frames_dir):
-            shutil.rmtree(frames_dir)  # Clean up existing frames
+            shutil.rmtree(frames_dir)
         os.makedirs(frames_dir, exist_ok=True)
 
-        # Process CSV data
         from utils.csv_processor import process_csv_file
         _, data = process_csv_file(csv_file)
 
-        # Convert data to numpy arrays for efficient operations
         for key in data:
             data[key] = np.array(data[key])
 
-        # Find T_min and T_max
         T_min = np.min(data['timestamp'])
         T_max = np.max(data['timestamp'])
         duration = T_max - T_min
-
-        # Calculate number of frames based on duration and desired fps
         frame_count = int(duration * float(fps))
 
-        logging.info(f"Generating {frame_count} frames for duration {duration:.2f} seconds at {fps} fps")
-
-        # Generate evenly spaced timestamps for frames
+        logging.info(f"Generating {frame_count} frames at {fps} fps")
         frame_timestamps = np.linspace(T_min, T_max, frame_count)
 
-        # Generate a frame for each timestamp
         for i, timestamp in enumerate(frame_timestamps):
-            # Find nearest values for this timestamp
             values = find_nearest_values(data, timestamp)
             output_path = f'{frames_dir}/frame_{i:06d}.png'
             create_frame(values, timestamp, resolution, output_path, text_settings)
-            if i % 100 == 0:  # Log progress every 100 frames
+            if i % 100 == 0:
                 logging.info(f"Generated frame {i}/{frame_count}")
 
         logging.info(f"Successfully generated {frame_count} frames")
-        logging.info(f"Total video duration based on timestamps: {duration:.2f} seconds")
         return frame_count, duration
+
     except Exception as e:
-        logging.error(f"Error generating frames: {e}")
+        logging.error(f"Error generating frames: {str(e)}")
         raise
 
 def create_preview_frame(csv_file, project_id, resolution='fullhd', text_settings=None):
     """Create a preview frame from the first row of data"""
     try:
-        # Process CSV data
         from utils.csv_processor import process_csv_file
         _, data = process_csv_file(csv_file)
 
-        # Create previews directory if it doesn't exist
         os.makedirs('static/previews', exist_ok=True)
-
-        # Remove old preview if exists
         preview_path = f'static/previews/{project_id}_preview.png'
+
         if os.path.exists(preview_path):
             os.remove(preview_path)
 
-        # Get the first timestamp and corresponding values
         first_timestamp = data['timestamp'][0]
         values = find_nearest_values(data, first_timestamp)
 
-        # Generate the frame with text settings
         create_frame(values, first_timestamp, resolution, preview_path, text_settings)
-
         return preview_path
+
     except Exception as e:
-        logging.error(f"Error creating preview frame: {e}")
+        logging.error(f"Error creating preview frame: {str(e)}")
         raise
