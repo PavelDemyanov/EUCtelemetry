@@ -158,6 +158,11 @@ def delete_project(project_id):
             if os.path.exists(csv_path):
                 os.remove(csv_path)
 
+        # Delete preview file if exists
+        preview_path = os.path.join('static/previews', f'{project_id}_preview.png')
+        if os.path.exists(preview_path):
+            os.remove(preview_path)
+
         if project.video_file:
             video_path = os.path.join('videos', project.video_file)
             if os.path.exists(video_path):
@@ -168,6 +173,11 @@ def delete_project(project_id):
         if os.path.exists(frames_dir):
             import shutil
             shutil.rmtree(frames_dir)
+
+        # Delete processed CSV file if exists
+        processed_csv = os.path.join('processed_data', f'processed_{project.csv_file}')
+        if os.path.exists(processed_csv):
+            os.remove(processed_csv)
 
         # Delete project from database
         db.session.delete(project)

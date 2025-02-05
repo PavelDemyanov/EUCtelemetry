@@ -3,6 +3,7 @@ from PIL import Image, ImageDraw, ImageFont
 import os
 import logging
 from datetime import datetime
+import shutil
 
 def find_nearest_values(data, timestamp):
     """Find the nearest value before the given timestamp for each column"""
@@ -106,6 +107,8 @@ def generate_frames(csv_file, project_id, resolution='fullhd', fps=29.97):
     try:
         # Create project frames directory
         frames_dir = f'frames/project_{project_id}'
+        if os.path.exists(frames_dir):
+            shutil.rmtree(frames_dir)  # Clean up existing frames
         os.makedirs(frames_dir, exist_ok=True)
 
         # Process CSV data
@@ -155,12 +158,16 @@ def create_preview_frame(csv_file, project_id, resolution='fullhd'):
         # Create previews directory if it doesn't exist
         os.makedirs('static/previews', exist_ok=True)
 
+        # Remove old preview if exists
+        preview_path = f'static/previews/{project_id}_preview.png'
+        if os.path.exists(preview_path):
+            os.remove(preview_path)
+
         # Get the first timestamp and corresponding values
         first_timestamp = data['timestamp'][0]
         values = find_nearest_values(data, first_timestamp)
 
         # Generate the frame
-        preview_path = f'static/previews/{project_id}_preview.png'
         create_frame(values, first_timestamp, resolution, preview_path)
 
         return preview_path

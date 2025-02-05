@@ -1,5 +1,6 @@
 import threading
 import logging
+import shutil
 from extensions import db
 from utils.csv_processor import process_csv_file
 from utils.image_generator import generate_frames
@@ -10,7 +11,7 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264'):
     """Process project in background thread"""
     def _process():
         from app import app  # Import app here to avoid circular import
-        
+
         with app.app_context():
             try:
                 from models import Project
@@ -21,6 +22,12 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264'):
 
                 project.status = 'processing'
                 db.session.commit()
+
+                # Create and clean project directory
+                frames_dir = f'frames/project_{project_id}'
+                if os.path.exists(frames_dir):
+                    shutil.rmtree(frames_dir)
+                os.makedirs(frames_dir, exist_ok=True)
 
                 # Generate frames
                 frame_count, duration = generate_frames(
@@ -37,7 +44,7 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264'):
 
                 # Create video
                 video_path = create_video(project_id, fps, codec, resolution)
-                
+
                 # Update project with video info
                 project.video_file = os.path.basename(video_path)
                 project.codec = codec
