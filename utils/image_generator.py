@@ -62,7 +62,7 @@ def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_
     base_box_height = int(text_settings.get('bottom_padding', 30))
     base_spacing = int(text_settings.get('spacing', 20))
     vertical_position = int(text_settings.get('vertical_position', 50))
-    base_border_radius = int(text_settings.get('border_radius', 0))
+    base_border_radius = int(text_settings.get('border_radius', 13))  # Default to 13px
 
     # Scale padding, spacing, and border radius
     top_padding = int(base_top_padding * scale_factor)
@@ -131,33 +131,25 @@ def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_
     for i, ((label, value), element_width, text_width) in enumerate(zip(params, element_widths, text_widths)):
         text = f"{label}: {value}"
 
-        if border_radius > 0:
-            # Create a mask for rounded rectangle
-            mask = Image.new('L', (element_width, box_height), 0)
-            mask_draw = ImageDraw.Draw(mask)
+        # Create a mask for rounded rectangle
+        mask = Image.new('L', (element_width, box_height), 0)
+        mask_draw = ImageDraw.Draw(mask)
 
-            # Draw rounded rectangle on mask
-            mask_draw.rounded_rectangle(
-                (0, 0, element_width-1, box_height-1),  # Subtract 1 to avoid edge artifacts
-                radius=border_radius,
-                fill=255
-            )
+        # Draw rounded rectangle on mask
+        mask_draw.rounded_rectangle(
+            (0, 0, element_width-1, box_height-1),  # Subtract 1 to avoid edge artifacts
+            radius=border_radius,
+            fill=255
+        )
 
-            # Create black box
-            black_box = Image.new('RGB', (element_width, box_height), 'black')
+        # Create black box
+        black_box = Image.new('RGB', (element_width, box_height), 'black')
 
-            # Apply mask to black box
-            black_box.putalpha(mask)
+        # Apply mask to black box
+        black_box.putalpha(mask)
 
-            # Paste black box onto main image using itself as mask
-            image.paste(black_box, (x_position, y_position), mask)
-        else:
-            # Draw regular rectangle if no border radius
-            draw.rectangle(
-                (x_position, y_position,
-                 x_position + element_width, y_position + box_height),
-                fill='black'
-            )
+        # Paste black box onto main image using itself as mask
+        image.paste(black_box, (x_position, y_position), mask)
 
         # Center text horizontally
         text_x = x_position + (element_width - text_width) // 2
