@@ -113,7 +113,7 @@ def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_
     start_x = (width - total_width) // 2
 
     # Calculate y position based on vertical_position percentage
-    y_position = (height * vertical_position) // 100
+    y_position = int((height * vertical_position) / 100)
 
     # Current x position
     x_position = start_x
@@ -124,15 +124,16 @@ def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_
         text = f"{label}: {value}"
 
         # Draw black background box
-        draw.rectangle(
-            [x_position, y_position, 
-             x_position + element_width, y_position + box_height],
-            fill='black'
-        )
+        box_coords = [
+            x_position,
+            y_position,
+            x_position + element_width,
+            y_position + box_height
+        ]
+        draw.rectangle(box_coords, fill='black')
 
-        # Center text horizontally within the black box
+        # Center text horizontally and vertically within the box
         text_x = x_position + (element_width - text_width) // 2
-        # Center text vertically within the black box
         text_y = y_position + (box_height - max_text_height) // 2
 
         # Draw white text

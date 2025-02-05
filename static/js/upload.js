@@ -131,7 +131,32 @@ textSettings.forEach(setting => {
         this.timeout = setTimeout(() => {
             const projectId = document.getElementById('startProcessButton').dataset.projectId;
             if (projectId) {
-                updatePreview(projectId);
+                // Get current values for all settings
+                const settings = {
+                    resolution: document.querySelector('input[name="resolution"]:checked').value,
+                    vertical_position: document.getElementById('verticalPosition').value,
+                    top_padding: document.getElementById('topPadding').value,
+                    bottom_padding: document.getElementById('bottomPadding').value,
+                    spacing: document.getElementById('spacing').value,
+                    font_size: document.getElementById('fontSize').value
+                };
+
+                // Update preview with all current settings
+                fetch(`/preview/${projectId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(settings)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) throw new Error(data.error);
+                    document.getElementById('previewImage').src = data.preview_url + '?t=' + new Date().getTime();
+                })
+                .catch(error => {
+                    console.error('Error updating preview:', error);
+                });
             }
         }, 300);
     });
