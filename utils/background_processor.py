@@ -22,6 +22,9 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
 
                 project.status = 'processing'
 
+                # Log text settings for debugging
+                logging.info(f"Processing project {project_id} with text settings: {text_settings}")
+
                 # Get unique folder number if not already assigned
                 if project.folder_number is None:
                     project.folder_number = Project.get_next_folder_number()
@@ -39,8 +42,11 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     project.folder_number,
                     resolution,
                     fps,
-                    text_settings
+                    text_settings  # Pass text settings to generate_frames
                 )
+
+                # Log after frame generation
+                logging.info(f"Generated {frame_count} frames with text settings: {text_settings}")
 
                 project.frame_count = frame_count
                 project.video_duration = duration

@@ -65,8 +65,11 @@ function updatePreview(projectId) {
         top_padding: document.getElementById('topPadding').value,
         bottom_padding: document.getElementById('bottomPadding').value,
         spacing: document.getElementById('spacing').value,
-        font_size: document.getElementById('fontSize').value
+        font_size: document.getElementById('fontSize').value,
+        border_radius: document.getElementById('borderRadius').value  // Ensure this is included
     };
+
+    console.log('Sending preview settings:', settings);  // Debug log
 
     fetch(`/preview/${projectId}`, {
         method: 'POST',
@@ -179,12 +182,15 @@ document.getElementById('startProcessButton').addEventListener('click', function
         resolution: document.querySelector('input[name="resolution"]:checked').value,
         fps: document.querySelector('input[name="fps"]:checked').value,
         codec: document.querySelector('input[name="codec"]:checked').value,
+        vertical_position: document.getElementById('verticalPosition').value,
         top_padding: document.getElementById('topPadding').value,
         bottom_padding: document.getElementById('bottomPadding').value,
         spacing: document.getElementById('spacing').value,
         font_size: document.getElementById('fontSize').value,
-        vertical_position: document.getElementById('verticalPosition').value 
+        border_radius: document.getElementById('borderRadius').value  // Make sure this is included
     };
+
+    console.log('Sending processing settings:', settings);  // Debug log
 
     // Start processing
     fetch(`/generate_frames/${projectId}`, {
