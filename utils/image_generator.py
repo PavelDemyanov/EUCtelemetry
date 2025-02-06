@@ -87,18 +87,18 @@ def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_
     except:
         font = ImageFont.load_default()
 
-    # Parameters to display
+    # Parameters to display with units
     params = [
-        ('Speed', values['speed']),
-        ('Max Speed', values['max_speed']),  # Add max speed display
-        ('GPS', values['gps']),
-        ('Voltage', values['voltage']),
-        ('Temp', values['temperature']),
-        ('Current', values['current']),
-        ('Battery', values['battery']),
-        ('Mileage', values['mileage']),
-        ('PWM', values['pwm']),
-        ('Power', values['power'])
+        ('Speed', f"{values['speed']} km/h"),
+        ('Max Speed', f"{values['max_speed']} km/h"),
+        ('GPS', f"{values['gps']} km/h"),
+        ('Voltage', f"{values['voltage']} V"),
+        ('Temp', f"{values['temperature']} °C"),
+        ('Current', f"{values['current']} A"),
+        ('Battery', f"{values['battery']} %"),
+        ('Mileage', f"{values['mileage']} km"),
+        ('PWM', f"{values['pwm']} %"),
+        ('Power', f"{values['power']} W")
     ]
 
     # Calculate dimensions
