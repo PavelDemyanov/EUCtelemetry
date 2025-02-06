@@ -145,14 +145,31 @@ def process_csv_file(file_path, folder_number=None):
         # Use folder_number to create unique filename if provided
         base_name = os.path.basename(file_path)
         if folder_number is not None:
-            processed_csv_path = f'processed_data/project_{folder_number}_{base_name}'
+            # Find a unique filename by incrementing a counter if necessary
+            counter = 1
+            base_processed_name = f'project_{folder_number}_{base_name}'
+            processed_csv_path = os.path.join('processed_data', base_processed_name)
+
+            while os.path.exists(processed_csv_path):
+                base_processed_name = f'project_{folder_number}_{counter}_{base_name}'
+                processed_csv_path = os.path.join('processed_data', base_processed_name)
+                counter += 1
         else:
-            processed_csv_path = f'processed_data/processed_{base_name}'
+            # For backwards compatibility and testing
+            counter = 1
+            base_processed_name = f'processed_{base_name}'
+            processed_csv_path = os.path.join('processed_data', base_processed_name)
+
+            while os.path.exists(processed_csv_path):
+                base_processed_name = f'processed_{counter}_{base_name}'
+                processed_csv_path = os.path.join('processed_data', base_processed_name)
+                counter += 1
 
         # Convert processed data to DataFrame and save
         processed_df = pd.DataFrame(processed_data)
         processed_df.to_csv(processed_csv_path, index=False)
 
+        logging.info(f"Saved processed CSV to {processed_csv_path}")
         return csv_type, processed_data
     except Exception as e:
         logging.error(f"Error processing CSV file: {e}")
