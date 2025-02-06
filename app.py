@@ -72,14 +72,11 @@ def upload_file():
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(file_path)
 
-        # Process CSV file
-        csv_type, data = process_csv_file(file_path)
-
         # Create project with a unique folder number
         project = Project(
             name=project_name,
             csv_file=filename,
-            csv_type=csv_type,
+            csv_type='pending',  # Will be determined during processing
             created_at=datetime.now(),
             expiry_date=datetime.now() + timedelta(days=30),
             status='pending',
@@ -95,7 +92,7 @@ def upload_file():
             'bottom_padding': 47,
             'spacing': 10,
             'font_size': 26,
-            'border_radius': 13  # Explicitly set default border radius
+            'border_radius': 13
         }
 
         preview_path = create_preview_frame(
@@ -107,8 +104,7 @@ def upload_file():
 
         return jsonify({
             'success': True,
-            'project_id': project.id,
-            'csv_type': csv_type
+            'project_id': project.id
         })
 
     except Exception as e:

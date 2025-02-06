@@ -36,16 +36,21 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     shutil.rmtree(frames_dir)
                 os.makedirs(frames_dir, exist_ok=True)
 
-                # Process CSV file with folder number for unique processed file
-                process_csv_file(os.path.join('uploads', project.csv_file), project.folder_number)
+                # Process CSV file to detect type and create processed version
+                csv_file = os.path.join('uploads', project.csv_file)
+                csv_type, _ = process_csv_file(csv_file, project.folder_number)
 
-                # Generate frames with text settings
+                # Update project CSV type
+                project.csv_type = csv_type
+                db.session.commit()
+
+                # Generate frames
                 frame_count, duration = generate_frames(
-                    os.path.join('uploads', project.csv_file),
+                    csv_file,
                     project.folder_number,
                     resolution,
                     fps,
-                    text_settings  # Pass text settings to generate_frames
+                    text_settings
                 )
 
                 # Log after frame generation
@@ -69,9 +74,11 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
             except Exception as e:
                 logging.error(f"Error processing project {project_id}: {str(e)}")
                 try:
-                    project.status = 'error'
-                    project.error_message = str(e)
-                    db.session.commit()
+                    project = Project.query.get(project_id)
+                    if project:
+                        project.status = 'error'
+                        project.error_message = str(e)
+                        db.session.commit()
                 except Exception as db_error:
                     logging.error(f"Error updating project status: {str(db_error)}")
 

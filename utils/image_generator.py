@@ -1,49 +1,51 @@
 import numpy as np
+import pandas as pd
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import os
 import logging
 from datetime import datetime
 import shutil
 
-def find_nearest_values(data, timestamp):
-    """Find the nearest value before the given timestamp for each column and max speed up to this point"""
+def find_nearest_values(df, timestamp):
+    """Find the nearest value before the given timestamp for each column"""
     result = {}
-    for column in ['speed', 'gps', 'voltage', 'temperature', 'current', 
-                  'battery', 'mileage', 'pwm', 'power']:
-        mask = data['timestamp'] <= timestamp
-        if not any(mask):
-            result[column] = 0
-        else:
-            idx = np.where(mask)[0][-1]
-            result[column] = data[column][idx]
+    # Convert relevant columns to numeric
+    numeric_columns = ['speed', 'gps', 'voltage', 'temperature', 'current', 
+                      'battery', 'mileage', 'pwm', 'power']
 
+    for column in numeric_columns:
+        df[column] = pd.to_numeric(df[column], errors='coerce')
+
+    # Find values at or before timestamp
+    mask = df['timestamp'] <= timestamp
+    if not any(mask):
+        return {col: 0 for col in numeric_columns}
+
+    last_idx = df[mask].index[-1]
+
+    for column in numeric_columns:
+        result[column] = int(df.loc[last_idx, column])
+        if column == 'speed':
             # Calculate max speed up to this point
-            if column == 'speed':
-                speed_values = data['speed'][data['timestamp'] <= timestamp]
-                result['max_speed'] = int(np.max(speed_values)) if len(speed_values) > 0 else 0
+            speed_values = df.loc[mask, 'speed']
+            result['max_speed'] = int(speed_values.max()) if not speed_values.empty else 0
 
     return result
 
 def create_rounded_box(width, height, radius):
-    """Create a rounded rectangle with simple PIL approach"""
-    # Create a new image with transparency
+    """Create a rounded rectangle"""
     image = Image.new('RGBA', (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(image)
-
-    # Draw rounded rectangle
     draw.rounded_rectangle(
         [(0, 0), (width-1, height-1)],
         radius=radius,
-        fill=(0, 0, 0, 255),  # Black with full opacity
+        fill=(0, 0, 0, 255),
         outline=None
     )
-
-    # Apply slight blur for smoother edges
     image = image.filter(ImageFilter.GaussianBlur(radius=0.5))
-
     return image
 
-def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_settings=None):
+def create_frame(values, resolution='fullhd', output_path=None, text_settings=None):
     """Create a frame with customizable text display settings"""
     # Set resolution
     if resolution == "4k":
@@ -53,33 +55,19 @@ def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_
         width, height = 1920, 1080
         scale_factor = 1.0
 
-    # Create background layer with solid blue color
+    # Create background layer
     background = Image.new('RGBA', (width, height), (0, 0, 255, 255))
-
-    # Create transparent overlay for boxes and text
     overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
 
-    # Get text settings with defaults
-    if text_settings is None:
-        text_settings = {}
-
-    # Scale all settings according to resolution
-    base_font_size = int(text_settings.get('font_size', 26))
-    font_size = int(base_font_size * scale_factor)
-    base_top_padding = int(text_settings.get('top_padding', 14))
-    base_box_height = int(text_settings.get('bottom_padding', 47))
-    base_spacing = int(text_settings.get('spacing', 10))
+    # Scale settings according to resolution
+    text_settings = text_settings or {}
+    font_size = int(text_settings.get('font_size', 26) * scale_factor)
+    top_padding = int(text_settings.get('top_padding', 14) * scale_factor)
+    box_height = int(text_settings.get('bottom_padding', 47) * scale_factor)
+    spacing = int(text_settings.get('spacing', 10) * scale_factor)
     vertical_position = int(text_settings.get('vertical_position', 1))
-    base_border_radius = int(text_settings.get('border_radius', 13))
-
-    # Scale padding, spacing and border radius
-    top_padding = int(base_top_padding * scale_factor)
-    box_height = int(base_box_height * scale_factor)
-    spacing = int(base_spacing * scale_factor)
-    border_radius = int(base_border_radius * scale_factor)
-
-    logging.info(f"Creating frame with border_radius={border_radius}, box_height={box_height}")
+    border_radius = int(text_settings.get('border_radius', 13) * scale_factor)
 
     # Load font
     try:
@@ -87,7 +75,7 @@ def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_
     except:
         font = ImageFont.load_default()
 
-    # Parameters to display with units
+    # Parameters to display
     params = [
         ('Speed', f"{values['speed']} km/h"),
         ('Max Speed', f"{values['max_speed']} km/h"),
@@ -108,12 +96,11 @@ def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_
     total_width = 0
 
     for label, value in params:
-        text = f"{label}: {value}"
-        bbox = draw.textbbox((0, 0), text, font=font)
+        bbox = draw.textbbox((0, 0), f"{label}: {value}", font=font)
         text_width = bbox[2] - bbox[0]
         text_height = bbox[3] - bbox[1]
-
         element_width = text_width + (2 * top_padding)
+
         element_widths.append(element_width)
         text_widths.append(text_width)
         text_heights.append(text_height)
@@ -123,7 +110,7 @@ def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_
     start_x = (width - total_width) // 2
     y_position = int((height * vertical_position) / 100)
 
-    # Calculate text positioning
+    # Position text
     max_text_height = max(text_heights)
     box_vertical_center = y_position + (box_height // 2)
     text_baseline_y = box_vertical_center - (max_text_height // 2)
@@ -131,13 +118,9 @@ def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_
     # Draw boxes and text
     x_position = start_x
     for i, ((label, value), element_width, text_width) in enumerate(zip(params, element_widths, text_widths)):
-        # Create rounded rectangle box
         box = create_rounded_box(element_width, box_height, border_radius)
-
-        # Paste box onto overlay
         overlay.paste(box, (x_position, y_position), box)
 
-        # Add text
         text = f"{label}: {value}"
         text_x = x_position + ((element_width - text_width) // 2)
         baseline_offset = int(max_text_height * 0.2)
@@ -146,16 +129,51 @@ def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_
 
         x_position += element_width + spacing
 
-    # Combine background and overlay
+    # Combine layers and save
     result = Image.alpha_composite(background, overlay)
 
     if output_path:
-        # Convert to RGB for PNG output
         result_rgb = result.convert('RGB')
         result_rgb.save(output_path, format='PNG', quality=100)
-        logging.info(f"Saved frame to {output_path} with border_radius={border_radius}")
+        logging.info(f"Saved frame to {output_path}")
 
     return result
+
+def create_preview_frame(csv_file, project_id, resolution='fullhd', text_settings=None):
+    """Create a preview frame from the data point with maximum speed"""
+    try:
+        # Read CSV directly
+        df = pd.read_csv(csv_file)
+
+        # Create timestamps based on CSV type
+        if 'Date' in df.columns:  # darnkessbot
+            df['timestamp'] = pd.to_datetime(df['Date'], format='%d.%m.%Y %H:%M:%S.%f').astype(np.int64) // 10**9
+        else:  # wheellog
+            df['timestamp'] = pd.to_datetime(df['date'] + ' ' + df['time']).astype(np.int64) // 10**9
+
+        # Ensure preview directory exists
+        os.makedirs('static/previews', exist_ok=True)
+        preview_path = f'static/previews/{project_id}_preview.png'
+
+        if os.path.exists(preview_path):
+            os.remove(preview_path)
+
+        # Find point with maximum speed
+        df['speed'] = pd.to_numeric(df['speed'], errors='coerce')
+        max_speed_idx = df['speed'].idxmax()
+        max_speed_timestamp = df.loc[max_speed_idx, 'timestamp']
+
+        # Get values at maximum speed point
+        values = find_nearest_values(df, max_speed_timestamp)
+
+        # Create and save preview frame
+        create_frame(values, resolution, preview_path, text_settings)
+        logging.info(f"Created preview frame at {preview_path}")
+        return preview_path
+
+    except Exception as e:
+        logging.error(f"Error creating preview frame: {e}")
+        raise
 
 def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, text_settings=None):
     """Generate video frames with text overlay"""
@@ -165,14 +183,18 @@ def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, tex
             shutil.rmtree(frames_dir)
         os.makedirs(frames_dir, exist_ok=True)
 
-        from utils.csv_processor import process_csv_file
-        _, data = process_csv_file(csv_file)
+        # Read CSV directly
+        df = pd.read_csv(csv_file)
 
-        for key in data:
-            data[key] = np.array(data[key])
+        # Create timestamps based on CSV type
+        if 'Date' in df.columns:  # darnkessbot
+            df['timestamp'] = pd.to_datetime(df['Date'], format='%d.%m.%Y %H:%M:%S.%f').astype(np.int64) // 10**9
+        else:  # wheellog
+            df['timestamp'] = pd.to_datetime(df['date'] + ' ' + df['time']).astype(np.int64) // 10**9
 
-        T_min = np.min(data['timestamp'])
-        T_max = np.max(data['timestamp'])
+        # Calculate frame timestamps
+        T_min = df['timestamp'].min()
+        T_max = df['timestamp'].max()
         duration = T_max - T_min
         frame_count = int(duration * float(fps))
 
@@ -180,9 +202,9 @@ def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, tex
         frame_timestamps = np.linspace(T_min, T_max, frame_count)
 
         for i, timestamp in enumerate(frame_timestamps):
-            values = find_nearest_values(data, timestamp)
+            values = find_nearest_values(df, timestamp)
             output_path = f'{frames_dir}/frame_{i:06d}.png'
-            create_frame(values, timestamp, resolution, output_path, text_settings)
+            create_frame(values, resolution, output_path, text_settings)
             if i % 100 == 0:
                 logging.info(f"Generated frame {i}/{frame_count}")
 
@@ -190,43 +212,5 @@ def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, tex
         return frame_count, duration
 
     except Exception as e:
-        logging.error(f"Error generating frames: {str(e)}")
-        raise
-
-def create_preview_frame(csv_file, project_id, resolution='fullhd', text_settings=None):
-    """Create a preview frame from the data point with maximum speed"""
-    try:
-        from utils.csv_processor import process_csv_file
-        _, data = process_csv_file(csv_file)
-
-        os.makedirs('static/previews', exist_ok=True)
-        preview_path = f'static/previews/{project_id}_preview.png'
-
-        if os.path.exists(preview_path):
-            os.remove(preview_path)
-
-        # Convert speed data to list and find max speed index
-        speed_list = data['speed'].tolist()
-        max_speed_idx = speed_list.index(max(speed_list))
-        max_speed_timestamp = data['timestamp'][max_speed_idx]
-
-        values = find_nearest_values({
-            'timestamp': data['timestamp'],
-            'speed': data['speed'],
-            'gps': data['gps'],
-            'voltage': data['voltage'],
-            'temperature': data['temperature'],
-            'current': data['current'],
-            'battery': data['battery'],
-            'mileage': data['mileage'],
-            'pwm': data['pwm'],
-            'power': data['power']
-        }, max_speed_timestamp)
-
-        create_frame(values, max_speed_timestamp, resolution, preview_path, text_settings)
-        logging.info(f"Created preview frame at {preview_path} with max speed: {values['speed']} km/h")
-        return preview_path
-
-    except Exception as e:
-        logging.error(f"Error creating preview frame: {str(e)}")
+        logging.error(f"Error generating frames: {e}")
         raise
