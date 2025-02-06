@@ -38,16 +38,33 @@ def parse_timestamp_wheellog(date_str, time_str):
         return None
 
 def detect_csv_type(df):
-    darnkessbot_cols = ['Date', 'Temperature', 'GPS Speed', 'Total mileage', 'Battery level', 
-                        'Speed', 'PWM', 'Current', 'Voltage', 'Power']
-    wheellog_cols = ['power', 'totaldistance', 'time', 'date', 'pwm', 'battery_level', 
-                    'speed', 'system_temp', 'current', 'gps_speed', 'voltage']
+    """Detect CSV type based on column names"""
+    logging.info(f"Detecting CSV type. Available columns: {df.columns.tolist()}")
 
-    if all(col in df.columns for col in darnkessbot_cols):
+    # Define required columns for each type
+    darnkessbot_cols = ['Date', 'Temperature', 'GPS Speed', 'Total mileage', 'Battery level', 
+                      'Speed', 'PWM', 'Current', 'Voltage', 'Power']
+    wheellog_cols = ['date', 'time', 'speed', 'totaldistance', 'battery_level', 
+                   'pwm', 'voltage', 'current', 'power', 'gps_speed', 'system_temp']
+
+    # Check if all required columns exist for each type
+    is_darnkessbot = all(col in df.columns for col in darnkessbot_cols)
+    is_wheellog = all(col in df.columns for col in wheellog_cols)
+
+    logging.info(f"CSV type detection results - DarknessBot: {is_darnkessbot}, WheelLog: {is_wheellog}")
+
+    if is_darnkessbot:
         return 'darnkessbot'
-    elif all(col in df.columns for col in wheellog_cols):
+    elif is_wheellog:
         return 'wheellog'
     else:
+        # Log which columns are missing for each type
+        if not is_darnkessbot:
+            missing_darnkessbot = [col for col in darnkessbot_cols if col not in df.columns]
+            logging.info(f"Missing DarknessBot columns: {missing_darnkessbot}")
+        if not is_wheellog:
+            missing_wheellog = [col for col in wheellog_cols if col not in df.columns]
+            logging.info(f"Missing WheelLog columns: {missing_wheellog}")
         raise ValueError("CSV format not recognized")
 
 def process_mileage(series, csv_type):
@@ -125,7 +142,11 @@ def process_csv_file(file_path, folder_number=None):
 
         # If file doesn't exist, process the CSV
         df = pd.read_csv(file_path)
+        logging.info(f"Processing new CSV file: {file_path}")
+        logging.info(f"CSV columns: {df.columns.tolist()}")
+
         csv_type = detect_csv_type(df)
+        logging.info(f"Detected CSV type: {csv_type}")
 
         if csv_type == 'darnkessbot':
             # Parse timestamps and create a mask for valid timestamps
