@@ -27,7 +27,9 @@
                     {% for project in projects.items %}
                     <tr>
                         <td>{{ project.name }}</td>
-                        <td>{{ project.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td data-timestamp="{{ project.created_at.timestamp() }}">
+                            {{ project.created_at.strftime('%Y-%m-%d %H:%M') }}
+                        </td>
                         <td>{{ project.csv_type }}</td>
                         <td>
                             <span class="badge text-bg-{{ 
@@ -123,4 +125,14 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Convert UTC timestamps to local time
+    document.querySelectorAll('td[data-timestamp]').forEach(function(td) {
+        const timestamp = parseFloat(td.dataset.timestamp);
+        const date = new Date(timestamp * 1000); // Convert to milliseconds
+        td.textContent = date.toLocaleString();
+    });
+});
+</script>
 {% endblock %}
