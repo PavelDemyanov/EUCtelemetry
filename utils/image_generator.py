@@ -6,28 +6,69 @@ import logging
 from datetime import datetime
 import shutil
 
-def find_nearest_values(df, timestamp):
+def detect_csv_type(df):
+    """Detect CSV type based on column names"""
+    if 'Date' in df.columns and 'Speed' in df.columns:
+        return 'darnkessbot'
+    elif 'date' in df.columns and 'speed' in df.columns:
+        return 'wheellog'
+    else:
+        raise ValueError("Unknown CSV format")
+
+def get_column_name(csv_type, base_name):
+    """Get the correct column name based on CSV type"""
+    column_mapping = {
+        'darnkessbot': {
+            'speed': 'Speed',
+            'gps': 'GPS Speed',
+            'voltage': 'Voltage',
+            'temperature': 'Temperature',
+            'current': 'Current',
+            'battery': 'Battery level',
+            'mileage': 'Total mileage',
+            'pwm': 'PWM',
+            'power': 'Power'
+        },
+        'wheellog': {
+            'speed': 'speed',
+            'gps': 'gps_speed',
+            'voltage': 'voltage',
+            'temperature': 'system_temp',
+            'current': 'current',
+            'battery': 'battery_level',
+            'mileage': 'totaldistance',
+            'pwm': 'pwm',
+            'power': 'power'
+        }
+    }
+    return column_mapping[csv_type][base_name]
+
+def find_nearest_values(df, timestamp, csv_type):
     """Find the nearest value before the given timestamp for each column"""
     result = {}
-    # Convert relevant columns to numeric
-    numeric_columns = ['speed', 'gps', 'voltage', 'temperature', 'current', 
-                      'battery', 'mileage', 'pwm', 'power']
+    # Define base column names
+    base_columns = ['speed', 'gps', 'voltage', 'temperature', 'current', 
+                   'battery', 'mileage', 'pwm', 'power']
 
-    for column in numeric_columns:
-        df[column] = pd.to_numeric(df[column], errors='coerce')
+    # Get actual column names for this CSV type
+    columns = {base: get_column_name(csv_type, base) for base in base_columns}
+
+    # Convert relevant columns to numeric
+    for base_name, actual_name in columns.items():
+        df[actual_name] = pd.to_numeric(df[actual_name], errors='coerce')
 
     # Find values at or before timestamp
     mask = df['timestamp'] <= timestamp
     if not any(mask):
-        return {col: 0 for col in numeric_columns}
+        return {col: 0 for col in base_columns + ['max_speed']}
 
     last_idx = df[mask].index[-1]
 
-    for column in numeric_columns:
-        result[column] = int(df.loc[last_idx, column])
-        if column == 'speed':
+    for base_name, actual_name in columns.items():
+        result[base_name] = int(df.loc[last_idx, actual_name])
+        if base_name == 'speed':
             # Calculate max speed up to this point
-            speed_values = df.loc[mask, 'speed']
+            speed_values = df.loc[mask, actual_name]
             result['max_speed'] = int(speed_values.max()) if not speed_values.empty else 0
 
     return result
@@ -145,11 +186,17 @@ def create_preview_frame(csv_file, project_id, resolution='fullhd', text_setting
         # Read CSV directly
         df = pd.read_csv(csv_file)
 
+        # Detect CSV type
+        csv_type = detect_csv_type(df)
+        logging.info(f"Detected CSV type: {csv_type}")
+
         # Create timestamps based on CSV type
-        if 'Date' in df.columns:  # darnkessbot
+        if csv_type == 'darnkessbot':
             df['timestamp'] = pd.to_datetime(df['Date'], format='%d.%m.%Y %H:%M:%S.%f').astype(np.int64) // 10**9
+            speed_col = 'Speed'
         else:  # wheellog
             df['timestamp'] = pd.to_datetime(df['date'] + ' ' + df['time']).astype(np.int64) // 10**9
+            speed_col = 'speed'
 
         # Ensure preview directory exists
         os.makedirs('static/previews', exist_ok=True)
@@ -159,12 +206,12 @@ def create_preview_frame(csv_file, project_id, resolution='fullhd', text_setting
             os.remove(preview_path)
 
         # Find point with maximum speed
-        df['speed'] = pd.to_numeric(df['speed'], errors='coerce')
-        max_speed_idx = df['speed'].idxmax()
+        df[speed_col] = pd.to_numeric(df[speed_col], errors='coerce')
+        max_speed_idx = df[speed_col].idxmax()
         max_speed_timestamp = df.loc[max_speed_idx, 'timestamp']
 
         # Get values at maximum speed point
-        values = find_nearest_values(df, max_speed_timestamp)
+        values = find_nearest_values(df, max_speed_timestamp, csv_type)
 
         # Create and save preview frame
         create_frame(values, resolution, preview_path, text_settings)
@@ -186,8 +233,12 @@ def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, tex
         # Read CSV directly
         df = pd.read_csv(csv_file)
 
+        # Detect CSV type
+        csv_type = detect_csv_type(df)
+        logging.info(f"Detected CSV type: {csv_type}")
+
         # Create timestamps based on CSV type
-        if 'Date' in df.columns:  # darnkessbot
+        if csv_type == 'darnkessbot':
             df['timestamp'] = pd.to_datetime(df['Date'], format='%d.%m.%Y %H:%M:%S.%f').astype(np.int64) // 10**9
         else:  # wheellog
             df['timestamp'] = pd.to_datetime(df['date'] + ' ' + df['time']).astype(np.int64) // 10**9
@@ -202,7 +253,7 @@ def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, tex
         frame_timestamps = np.linspace(T_min, T_max, frame_count)
 
         for i, timestamp in enumerate(frame_timestamps):
-            values = find_nearest_values(df, timestamp)
+            values = find_nearest_values(df, timestamp, csv_type)
             output_path = f'{frames_dir}/frame_{i:06d}.png'
             create_frame(values, resolution, output_path, text_settings)
             if i % 100 == 0:
