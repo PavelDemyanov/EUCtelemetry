@@ -205,11 +205,23 @@ def create_preview_frame(csv_file, project_id, resolution='fullhd', text_setting
         if os.path.exists(preview_path):
             os.remove(preview_path)
 
-        # Find the timestamp where speed is maximum
-        max_speed_idx = data['speed'].index(max(data['speed']))
+        # Convert speed data to list and find max speed index
+        speed_list = data['speed'].tolist()
+        max_speed_idx = speed_list.index(max(speed_list))
         max_speed_timestamp = data['timestamp'][max_speed_idx]
 
-        values = find_nearest_values(data, max_speed_timestamp)
+        values = find_nearest_values({
+            'timestamp': data['timestamp'],
+            'speed': data['speed'],
+            'gps': data['gps'],
+            'voltage': data['voltage'],
+            'temperature': data['temperature'],
+            'current': data['current'],
+            'battery': data['battery'],
+            'mileage': data['mileage'],
+            'pwm': data['pwm'],
+            'power': data['power']
+        }, max_speed_timestamp)
 
         create_frame(values, max_speed_timestamp, resolution, preview_path, text_settings)
         logging.info(f"Created preview frame at {preview_path} with max speed: {values['speed']} km/h")
