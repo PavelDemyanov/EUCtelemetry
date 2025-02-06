@@ -170,7 +170,7 @@ def download_file(project_id, type):
         # TODO: Implement frame download as ZIP
         pass
     elif type == 'processed_csv':
-        processed_csv = os.path.join('processed_data', f'processed_{project.csv_file}')
+        processed_csv = os.path.join('processed_data', f'project_{project.folder_number}_{project.csv_file}')
         if os.path.exists(processed_csv):
             return send_file(processed_csv, as_attachment=True, 
                            download_name=f'processed_{project.csv_file}')
