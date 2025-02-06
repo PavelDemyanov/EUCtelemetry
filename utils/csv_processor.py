@@ -95,6 +95,29 @@ def clean_numeric_column(series):
 def process_csv_file(file_path, folder_number=None):
     """Process CSV file and save processed data with unique project identifier"""
     try:
+        # Create processed data directory if it doesn't exist
+        os.makedirs('processed_data', exist_ok=True)
+
+        # Check if processed file already exists
+        if folder_number is not None:
+            processed_csv_path = os.path.join('processed_data', f'project_{folder_number}_{os.path.basename(file_path)}')
+            if os.path.exists(processed_csv_path):
+                # Load existing processed data
+                processed_df = pd.read_csv(processed_csv_path)
+                return 'darnkessbot' if 'Date' in processed_df.columns else 'wheellog', {
+                    'timestamp': processed_df['timestamp'].tolist(),
+                    'speed': processed_df['speed'].tolist(),
+                    'gps': processed_df['gps'].tolist(),
+                    'voltage': processed_df['voltage'].tolist(),
+                    'temperature': processed_df['temperature'].tolist(),
+                    'current': processed_df['current'].tolist(),
+                    'battery': processed_df['battery'].tolist(),
+                    'mileage': processed_df['mileage'].tolist(),
+                    'pwm': processed_df['pwm'].tolist(),
+                    'power': processed_df['power'].tolist()
+                }
+
+        # If file doesn't exist, process the CSV
         df = pd.read_csv(file_path)
         csv_type = detect_csv_type(df)
 
@@ -139,37 +162,12 @@ def process_csv_file(file_path, folder_number=None):
                 'power': clean_numeric_column(df['power'])
             }
 
-        # Create processed data directory if it doesn't exist
-        os.makedirs('processed_data', exist_ok=True)
-
-        # Use folder_number to create unique filename if provided
-        base_name = os.path.basename(file_path)
+        # Save processed data if folder_number is provided
         if folder_number is not None:
-            # Find a unique filename by incrementing a counter if necessary
-            counter = 1
-            base_processed_name = f'project_{folder_number}_{base_name}'
-            processed_csv_path = os.path.join('processed_data', base_processed_name)
+            processed_df = pd.DataFrame(processed_data)
+            processed_df.to_csv(processed_csv_path, index=False)
+            logging.info(f"Saved processed CSV to {processed_csv_path}")
 
-            while os.path.exists(processed_csv_path):
-                base_processed_name = f'project_{folder_number}_{counter}_{base_name}'
-                processed_csv_path = os.path.join('processed_data', base_processed_name)
-                counter += 1
-        else:
-            # For backwards compatibility and testing
-            counter = 1
-            base_processed_name = f'processed_{base_name}'
-            processed_csv_path = os.path.join('processed_data', base_processed_name)
-
-            while os.path.exists(processed_csv_path):
-                base_processed_name = f'processed_{counter}_{base_name}'
-                processed_csv_path = os.path.join('processed_data', base_processed_name)
-                counter += 1
-
-        # Convert processed data to DataFrame and save
-        processed_df = pd.DataFrame(processed_data)
-        processed_df.to_csv(processed_csv_path, index=False)
-
-        logging.info(f"Saved processed CSV to {processed_csv_path}")
         return csv_type, processed_data
     except Exception as e:
         logging.error(f"Error processing CSV file: {e}")
