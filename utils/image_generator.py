@@ -195,17 +195,28 @@ def create_preview_frame(csv_file, project_id, resolution='fullhd', text_setting
                 raise ValueError(f"Project {project_id} not found")
 
             # Process CSV file with folder number for unique processed file
-            csv_type, data = process_csv_file(csv_file, project.folder_number)
+            csv_type, processed_data = process_csv_file(csv_file, project.folder_number)
 
-            # Convert data to pandas DataFrame
-            df = pd.DataFrame(data)
+            # Convert processed data to DataFrame
+            df = pd.DataFrame(processed_data)
 
-            # Find point with maximum speed
+            # Find point with maximum speed (speed column is already normalized in processed data)
             max_speed_idx = df['speed'].idxmax()
             max_speed_timestamp = df.loc[max_speed_idx, 'timestamp']
 
             # Get values at maximum speed point
-            values = find_nearest_values(df, max_speed_timestamp, csv_type)
+            values = {
+                'speed': int(df.loc[max_speed_idx, 'speed']),
+                'max_speed': int(df['speed'].max()),
+                'gps': int(df.loc[max_speed_idx, 'gps']),
+                'voltage': int(df.loc[max_speed_idx, 'voltage']),
+                'temperature': int(df.loc[max_speed_idx, 'temperature']),
+                'current': int(df.loc[max_speed_idx, 'current']),
+                'battery': int(df.loc[max_speed_idx, 'battery']),
+                'mileage': int(df.loc[max_speed_idx, 'mileage']),
+                'pwm': int(df.loc[max_speed_idx, 'pwm']),
+                'power': int(df.loc[max_speed_idx, 'power'])
+            }
 
             # Ensure preview directory exists and create preview
             os.makedirs('static/previews', exist_ok=True)
