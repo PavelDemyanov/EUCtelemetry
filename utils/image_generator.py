@@ -194,7 +194,7 @@ def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, tex
         raise
 
 def create_preview_frame(csv_file, project_id, resolution='fullhd', text_settings=None):
-    """Create a preview frame from the first row of data"""
+    """Create a preview frame from the data point with maximum speed"""
     try:
         from utils.csv_processor import process_csv_file
         _, data = process_csv_file(csv_file)
@@ -205,11 +205,14 @@ def create_preview_frame(csv_file, project_id, resolution='fullhd', text_setting
         if os.path.exists(preview_path):
             os.remove(preview_path)
 
-        first_timestamp = data['timestamp'][0]
-        values = find_nearest_values(data, first_timestamp)
+        # Find the timestamp where speed is maximum
+        max_speed_idx = data['speed'].index(max(data['speed']))
+        max_speed_timestamp = data['timestamp'][max_speed_idx]
 
-        create_frame(values, first_timestamp, resolution, preview_path, text_settings)
-        logging.info(f"Created preview frame at {preview_path}")
+        values = find_nearest_values(data, max_speed_timestamp)
+
+        create_frame(values, max_speed_timestamp, resolution, preview_path, text_settings)
+        logging.info(f"Created preview frame at {preview_path} with max speed: {values['speed']} km/h")
         return preview_path
 
     except Exception as e:
