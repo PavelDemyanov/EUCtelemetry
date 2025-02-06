@@ -75,14 +75,15 @@ def upload_file():
         # Process CSV file
         csv_type, data = process_csv_file(file_path)
 
-        # Create project
+        # Create project with a unique folder number
         project = Project(
             name=project_name,
             csv_file=filename,
             csv_type=csv_type,
             created_at=datetime.now(),
             expiry_date=datetime.now() + timedelta(days=30),
-            status='pending'
+            status='pending',
+            folder_number=Project.get_next_folder_number()  # Get a unique folder number
         )
         db.session.add(project)
         db.session.commit()
@@ -202,7 +203,7 @@ def delete_project(project_id):
                 os.remove(video_path)
 
         # Delete frames directory if it exists
-        frames_dir = f'frames/project_{project_id}'
+        frames_dir = f'frames/project_{project.folder_number}'
         if os.path.exists(frames_dir):
             import shutil
             shutil.rmtree(frames_dir)
