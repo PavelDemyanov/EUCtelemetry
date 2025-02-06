@@ -126,17 +126,14 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
     vertical_position = int(text_settings.get('vertical_position', 1))
     border_radius = int(text_settings.get('border_radius', 13) * scale_factor)
 
-    # Load font
+    # Load SF UI Display Bold font
     try:
         font = ImageFont.truetype("fonts/sf-ui-display-bold.otf", font_size)
+        logging.info("Successfully loaded SF UI Display Bold font")
     except Exception as e:
-        logging.error(f"Error loading custom font: {e}")
-        try:
-            # Fallback to system font if custom font fails
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
-        except:
-            logging.error("Failed to load fallback font, using default")
-            font = ImageFont.load_default()
+        logging.error(f"Critical error loading SF UI Display Bold font: {e}")
+        logging.error("Font 'fonts/sf-ui-display-bold.otf' is required for text rendering")
+        raise ValueError("Required font 'SF UI Display Bold' could not be loaded")
 
     # Parameters to display
     params = [
