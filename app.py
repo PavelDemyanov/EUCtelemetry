@@ -127,8 +127,14 @@ def generate_project_frames(project_id):
         # Get settings from request
         data = request.get_json() if request.is_json else {}
         resolution = data.get('resolution', 'fullhd')
-        fps = float(data.get('fps', 29.97))
+        fps = float(data.get('fps', 29.97))  # Get FPS from request
         codec = data.get('codec', 'h264')
+
+        # Update project settings immediately
+        project.fps = fps
+        project.resolution = resolution
+        project.codec = codec
+        db.session.commit()
 
         # Get text display settings with explicit defaults
         text_settings = {
@@ -137,10 +143,10 @@ def generate_project_frames(project_id):
             'bottom_padding': int(data.get('bottom_padding', 30)),
             'spacing': int(data.get('spacing', 20)),
             'font_size': int(data.get('font_size', 26)),
-            'border_radius': int(data.get('border_radius', 13))  # Ensure border_radius is included
+            'border_radius': int(data.get('border_radius', 13))
         }
 
-        logging.info(f"Starting processing with settings: {text_settings}")  # Add logging
+        logging.info(f"Starting processing with settings: {text_settings}")
 
         # Start background processing with text settings
         process_project(project_id, resolution, fps, codec, text_settings)

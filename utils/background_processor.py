@@ -21,6 +21,10 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     return
 
                 project.status = 'processing'
+                project.fps = fps  # Save FPS value immediately
+                project.resolution = resolution
+                project.codec = codec
+                db.session.commit()
 
                 # Log text settings for debugging
                 logging.info(f"Processing project {project_id} with text settings: {text_settings}")
@@ -58,7 +62,6 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
 
                 project.frame_count = frame_count
                 project.video_duration = duration
-                project.fps = fps
                 db.session.commit()
 
                 # Create video
@@ -66,8 +69,6 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
 
                 # Update project with video info
                 project.video_file = os.path.basename(video_path)
-                project.codec = codec
-                project.resolution = resolution
                 project.status = 'completed'
                 db.session.commit()
 
