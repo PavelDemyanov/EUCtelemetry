@@ -1,30 +1,3 @@
-# EUC Telemetry Visualization Tool
-
-A Flask web application that converts sensor data from Electric Unicycle (EUC) into dynamic video visualizations with advanced processing capabilities.
-
-[English](#english) | [Русский](#русский)
-
-## English
-
-### Features
-- Process and visualize EUC sensor data
-- Generate dynamic video visualizations
-- Support for multiple data formats
-- Concurrent project processing
-- Real-time data visualization
-- Multilingual support
-
-### System Requirements
-- Python 3.8 or higher
-- FFmpeg
-- 2GB RAM minimum
-- 1GB free disk space
-
-### Installation Instructions
-
-#### macOS (Apple Silicon)
-1. Install Homebrew if not already installed:
-```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
@@ -33,9 +6,14 @@ A Flask web application that converts sensor data from Electric Unicycle (EUC) i
 brew install ffmpeg
 ```
 
-3. Install Python dependencies:
+3. Install UV package manager:
 ```bash
-pip3 install pillow email-validator flask-login gunicorn flask-wtf flask psycopg2-binary werkzeug ffmpeg-python flask-sqlalchemy pandas numpy
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+4. Clone the repository and install dependencies:
+```bash
+uv pip install -r requirements.txt
 ```
 
 #### Linux
@@ -49,9 +27,14 @@ sudo apt-get update
 sudo apt-get install -y ffmpeg python3-pip python3-venv
 ```
 
-3. Install Python dependencies:
+3. Install UV package manager:
 ```bash
-pip3 install pillow email-validator flask-login gunicorn flask-wtf flask psycopg2-binary werkzeug ffmpeg-python flask-sqlalchemy pandas numpy
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+4. Clone the repository and install dependencies:
+```bash
+uv pip install -r requirements.txt
 ```
 
 #### Windows
@@ -61,9 +44,14 @@ pip3 install pillow email-validator flask-login gunicorn flask-wtf flask psycopg
    - Download from [FFmpeg official website](https://ffmpeg.org/download.html)
    - Add FFmpeg to system PATH
 
-3. Install Python dependencies:
+3. Install UV package manager:
 ```bash
-pip install pillow email-validator flask-login gunicorn flask-wtf flask psycopg2-binary werkzeug ffmpeg-python flask-sqlalchemy pandas numpy
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+4. Clone the repository and install dependencies:
+```bash
+uv pip install -r requirements.txt
 ```
 
 ### Usage
@@ -105,9 +93,14 @@ python main.py
 brew install ffmpeg
 ```
 
-3. Установите зависимости Python:
+3. Установите менеджер пакетов UV:
 ```bash
-pip3 install pillow email-validator flask-login gunicorn flask-wtf flask psycopg2-binary werkzeug ffmpeg-python flask-sqlalchemy pandas numpy
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+4. Клонируйте репозиторий и установите зависимости:
+```bash
+uv pip install -r requirements.txt
 ```
 
 #### Linux
@@ -121,9 +114,14 @@ sudo apt-get update
 sudo apt-get install -y ffmpeg python3-pip python3-venv
 ```
 
-3. Установите зависимости Python:
+3. Установите менеджер пакетов UV:
 ```bash
-pip3 install pillow email-validator flask-login gunicorn flask-wtf flask psycopg2-binary werkzeug ffmpeg-python flask-sqlalchemy pandas numpy
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+4. Клонируйте репозиторий и установите зависимости:
+```bash
+uv pip install -r requirements.txt
 ```
 
 #### Windows
@@ -133,17 +131,17 @@ pip3 install pillow email-validator flask-login gunicorn flask-wtf flask psycopg
    - Скачайте с [официального сайта FFmpeg](https://ffmpeg.org/download.html)
    - Добавьте FFmpeg в системную переменную PATH
 
-3. Установите зависимости Python:
+3. Установите менеджер пакетов UV:
 ```bash
-pip install pillow email-validator flask-login gunicorn flask-wtf flask psycopg2-binary werkzeug ffmpeg-python flask-sqlalchemy pandas numpy
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+4. Клонируйте репозиторий и установите зависимости:
+```bash
+uv pip install -r requirements.txt
 ```
 
 ### Использование
 1. Запустите приложение:
 ```bash
 python main.py
-```
-2. Откройте веб-браузер и перейдите по адресу `http://localhost:5000`
-3. Загрузите ваши данные телеметрии EUC
-4. Дождитесь завершения обработки
-5. Скачайте или просмотрите вашу визуализацию
