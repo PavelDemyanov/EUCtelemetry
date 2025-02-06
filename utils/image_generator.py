@@ -6,7 +6,7 @@ from datetime import datetime
 import shutil
 
 def find_nearest_values(data, timestamp):
-    """Find the nearest value before the given timestamp for each column"""
+    """Find the nearest value before the given timestamp for each column and max speed up to this point"""
     result = {}
     for column in ['speed', 'gps', 'voltage', 'temperature', 'current', 
                   'battery', 'mileage', 'pwm', 'power']:
@@ -16,6 +16,12 @@ def find_nearest_values(data, timestamp):
         else:
             idx = np.where(mask)[0][-1]
             result[column] = data[column][idx]
+
+            # Calculate max speed up to this point
+            if column == 'speed':
+                speed_values = data['speed'][data['timestamp'] <= timestamp]
+                result['max_speed'] = int(np.max(speed_values)) if len(speed_values) > 0 else 0
+
     return result
 
 def create_rounded_box(width, height, radius):
@@ -84,6 +90,7 @@ def create_frame(values, timestamp, resolution='fullhd', output_path=None, text_
     # Parameters to display
     params = [
         ('Speed', values['speed']),
+        ('Max Speed', values['max_speed']),  # Add max speed display
         ('GPS', values['gps']),
         ('Voltage', values['voltage']),
         ('Temp', values['temperature']),
