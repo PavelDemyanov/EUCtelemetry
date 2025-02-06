@@ -224,8 +224,8 @@ def create_preview_frame(csv_file, project_id, resolution='fullhd', text_setting
             values = find_nearest_values(df, max_speed_timestamp)
 
             # Ensure preview directory exists and create preview
-            os.makedirs('static/previews', exist_ok=True)
-            preview_path = f'static/previews/{project_id}_preview.png'
+            os.makedirs('previews', exist_ok=True)
+            preview_path = f'previews/{project_id}_preview.png'
 
             if os.path.exists(preview_path):
                 os.remove(preview_path)

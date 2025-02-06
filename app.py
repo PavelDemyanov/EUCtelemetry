@@ -3,7 +3,7 @@ import logging
 import random
 import re
 from datetime import datetime, timedelta
-from flask import Flask, render_template, request, jsonify, send_file, url_for
+from flask import Flask, render_template, request, jsonify, send_file, url_for, send_from_directory
 from werkzeug.utils import secure_filename
 from extensions import db
 from utils.csv_processor import process_csv_file
@@ -197,7 +197,7 @@ def delete_project(project_id):
                 os.remove(csv_path)
 
         # Delete preview file if exists
-        preview_path = os.path.join('static/previews', f'{project_id}_preview.png')
+        preview_path = os.path.join('previews', f'{project_id}_preview.png')
         if os.path.exists(preview_path):
             os.remove(preview_path)
 
@@ -212,7 +212,7 @@ def delete_project(project_id):
             import shutil
             shutil.rmtree(frames_dir)
 
-        # Delete processed CSV file if exists (with unique folder number)
+        # Delete processed CSV file if exists
         if project.csv_file:
             processed_csv = os.path.join('processed_data', f'project_{project.folder_number}_{project.csv_file}')
             if os.path.exists(processed_csv):
@@ -226,6 +226,10 @@ def delete_project(project_id):
     except Exception as e:
         logging.error(f"Error deleting project: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/previews/<path:filename>')
+def serve_preview(filename):
+    return send_from_directory('previews', filename)
 
 @app.route('/preview/<int:project_id>', methods=['POST'])
 def generate_preview(project_id):
@@ -241,10 +245,10 @@ def generate_preview(project_id):
             'bottom_padding': int(data.get('bottom_padding', 30)),
             'spacing': int(data.get('spacing', 20)),
             'font_size': int(data.get('font_size', 26)),
-            'border_radius': int(data.get('border_radius', 13))  # Use same default as in upload
+            'border_radius': int(data.get('border_radius', 13))
         }
 
-        logging.info(f"Generating preview with settings: {text_settings}")  # Add logging
+        logging.info(f"Generating preview with settings: {text_settings}")
 
         preview_path = create_preview_frame(
             os.path.join(app.config['UPLOAD_FOLDER'], project.csv_file),
@@ -255,7 +259,7 @@ def generate_preview(project_id):
 
         return jsonify({
             'success': True,
-            'preview_url': url_for('static', filename=f'previews/{project_id}_preview.png')
+            'preview_url': url_for('serve_preview', filename=f'{project_id}_preview.png')
         })
     except Exception as e:
         logging.error(f"Error generating preview: {str(e)}")
