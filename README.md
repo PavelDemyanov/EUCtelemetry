@@ -1,20 +1,28 @@
-pip install uv
-```
+# EUC Telemetry Visualization Tool
 
-2. Clone the repository:
-```bash
-git clone https://github.com/PavelDemyanov/EUCtelemetry.git
-cd EUCtelemetry
-```
+A Flask web application that converts sensor data from Electric Unicycle (EUC) into dynamic video visualizations with advanced processing capabilities.
 
-3. Install dependencies using UV:
-```bash
-uv pip sync
-```
+[English](#english) | [Русский](#русский)
 
-#### Option 2: Traditional Installation
+## English
 
-##### macOS (Apple Silicon)
+### Features
+- Process and visualize EUC sensor data
+- Generate dynamic video visualizations
+- Support for multiple data formats
+- Concurrent project processing
+- Real-time data visualization
+- Multilingual support
+
+### System Requirements
+- Python 3.8 or higher
+- FFmpeg
+- 2GB RAM minimum
+- 1GB free disk space
+
+### Installation Instructions
+
+#### macOS (Apple Silicon)
 1. Install Homebrew if not already installed:
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -30,7 +38,7 @@ brew install ffmpeg
 pip3 install pillow email-validator flask-login gunicorn flask-wtf flask psycopg2-binary werkzeug ffmpeg-python flask-sqlalchemy pandas numpy
 ```
 
-##### Linux
+#### Linux
 1. Update package list:
 ```bash
 sudo apt-get update
@@ -46,7 +54,7 @@ sudo apt-get install -y ffmpeg python3-pip python3-venv
 pip3 install pillow email-validator flask-login gunicorn flask-wtf flask psycopg2-binary werkzeug ffmpeg-python flask-sqlalchemy pandas numpy
 ```
 
-##### Windows
+#### Windows
 1. Install Python 3.8 or higher from [python.org](https://python.org)
 
 2. Download and install FFmpeg:
@@ -86,29 +94,7 @@ python main.py
 
 ### Инструкции по установке
 
-#### Вариант 1: Использование UV (Рекомендуется)
-
-UV - это быстрый установщик и решатель зависимостей для Python. Это рекомендуемый метод установки.
-
-1. Установите UV:
-```bash
-pip install uv
-```
-
-2. Клонируйте репозиторий:
-```bash
-git clone https://github.com/PavelDemyanov/EUCtelemetry.git
-cd EUCtelemetry
-```
-
-3. Установите зависимости с помощью UV:
-```bash
-uv pip sync
-```
-
-#### Вариант 2: Традиционная установка
-
-##### macOS (Apple Silicon)
+#### macOS (Apple Silicon)
 1. Установите Homebrew, если он ещё не установлен:
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -124,7 +110,7 @@ brew install ffmpeg
 pip3 install pillow email-validator flask-login gunicorn flask-wtf flask psycopg2-binary werkzeug ffmpeg-python flask-sqlalchemy pandas numpy
 ```
 
-##### Linux
+#### Linux
 1. Обновите список пакетов:
 ```bash
 sudo apt-get update
@@ -140,7 +126,7 @@ sudo apt-get install -y ffmpeg python3-pip python3-venv
 pip3 install pillow email-validator flask-login gunicorn flask-wtf flask psycopg2-binary werkzeug ffmpeg-python flask-sqlalchemy pandas numpy
 ```
 
-##### Windows
+#### Windows
 1. Установите Python 3.8 или выше с сайта [python.org](https://python.org)
 
 2. Скачайте и установите FFmpeg:
@@ -156,3 +142,8 @@ pip install pillow email-validator flask-login gunicorn flask-wtf flask psycopg2
 1. Запустите приложение:
 ```bash
 python main.py
+```
+2. Откройте веб-браузер и перейдите по адресу `http://localhost:5000`
+3. Загрузите ваши данные телеметрии EUC
+4. Дождитесь завершения обработки
+5. Скачайте или просмотрите вашу визуализацию
