@@ -92,7 +92,8 @@ def clean_numeric_column(series):
     # Round and convert to integer
     return series.round().astype(int)
 
-def process_csv_file(file_path):
+def process_csv_file(file_path, folder_number=None):
+    """Process CSV file and save processed data with unique project identifier"""
     try:
         df = pd.read_csv(file_path)
         csv_type = detect_csv_type(df)
@@ -141,9 +142,15 @@ def process_csv_file(file_path):
         # Create processed data directory if it doesn't exist
         os.makedirs('processed_data', exist_ok=True)
 
+        # Use folder_number to create unique filename if provided
+        base_name = os.path.basename(file_path)
+        if folder_number is not None:
+            processed_csv_path = f'processed_data/project_{folder_number}_{base_name}'
+        else:
+            processed_csv_path = f'processed_data/processed_{base_name}'
+
         # Convert processed data to DataFrame and save
         processed_df = pd.DataFrame(processed_data)
-        processed_csv_path = f'processed_data/processed_{os.path.basename(file_path)}'
         processed_df.to_csv(processed_csv_path, index=False)
 
         return csv_type, processed_data

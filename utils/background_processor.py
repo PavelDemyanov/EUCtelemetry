@@ -36,6 +36,9 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     shutil.rmtree(frames_dir)
                 os.makedirs(frames_dir, exist_ok=True)
 
+                # Process CSV file with folder number for unique processed file
+                process_csv_file(os.path.join('uploads', project.csv_file), project.folder_number)
+
                 # Generate frames with text settings
                 frame_count, duration = generate_frames(
                     os.path.join('uploads', project.csv_file),

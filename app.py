@@ -208,10 +208,11 @@ def delete_project(project_id):
             import shutil
             shutil.rmtree(frames_dir)
 
-        # Delete processed CSV file if exists
-        processed_csv = os.path.join('processed_data', f'processed_{project.csv_file}')
-        if os.path.exists(processed_csv):
-            os.remove(processed_csv)
+        # Delete processed CSV file if exists (with unique folder number)
+        if project.csv_file:
+            processed_csv = os.path.join('processed_data', f'project_{project.folder_number}_{project.csv_file}')
+            if os.path.exists(processed_csv):
+                os.remove(processed_csv)
 
         # Delete project from database
         db.session.delete(project)
