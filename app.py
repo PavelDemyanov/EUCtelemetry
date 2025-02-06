@@ -72,15 +72,23 @@ def upload_file():
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(file_path)
 
-        # Create project with a unique folder number
+        # Determine CSV type immediately after upload
+        try:
+            from utils.csv_processor import process_csv_file
+            csv_type, _ = process_csv_file(file_path)
+        except Exception as e:
+            logging.error(f"Error determining CSV type: {str(e)}")
+            csv_type = 'unknown'
+
+        # Create project with a unique folder number and detected CSV type
         project = Project(
             name=project_name,
             csv_file=filename,
-            csv_type='pending',  # Will be determined during processing
+            csv_type=csv_type,  # Use detected type instead of 'pending'
             created_at=datetime.now(),
             expiry_date=datetime.now() + timedelta(days=30),
             status='pending',
-            folder_number=Project.get_next_folder_number()  # Get a unique folder number
+            folder_number=Project.get_next_folder_number()
         )
         db.session.add(project)
         db.session.commit()
