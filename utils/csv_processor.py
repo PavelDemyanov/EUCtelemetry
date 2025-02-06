@@ -98,24 +98,30 @@ def process_csv_file(file_path, folder_number=None):
         # Create processed data directory if it doesn't exist
         os.makedirs('processed_data', exist_ok=True)
 
-        # Check if processed file already exists
+        # Define processed file path
+        processed_csv_path = None
         if folder_number is not None:
             processed_csv_path = os.path.join('processed_data', f'project_{folder_number}_{os.path.basename(file_path)}')
-            if os.path.exists(processed_csv_path):
-                # Load existing processed data
-                processed_df = pd.read_csv(processed_csv_path)
-                return 'darnkessbot' if 'Date' in processed_df.columns else 'wheellog', {
-                    'timestamp': processed_df['timestamp'].tolist(),
-                    'speed': processed_df['speed'].tolist(),
-                    'gps': processed_df['gps'].tolist(),
-                    'voltage': processed_df['voltage'].tolist(),
-                    'temperature': processed_df['temperature'].tolist(),
-                    'current': processed_df['current'].tolist(),
-                    'battery': processed_df['battery'].tolist(),
-                    'mileage': processed_df['mileage'].tolist(),
-                    'pwm': processed_df['pwm'].tolist(),
-                    'power': processed_df['power'].tolist()
-                }
+
+        # Check if processed file already exists
+        if processed_csv_path and os.path.exists(processed_csv_path):
+            # Load existing processed data
+            logging.info(f"Loading existing processed CSV from {processed_csv_path}")
+            df = pd.read_csv(processed_csv_path)
+            csv_type = 'darnkessbot' if 'Date' in df.columns else 'wheellog'
+
+            return csv_type, {
+                'timestamp': df['timestamp'].tolist(),
+                'speed': df['speed'].tolist(),
+                'gps': df['gps'].tolist(),
+                'voltage': df['voltage'].tolist(),
+                'temperature': df['temperature'].tolist(),
+                'current': df['current'].tolist(),
+                'battery': df['battery'].tolist(),
+                'mileage': df['mileage'].tolist(),
+                'pwm': df['pwm'].tolist(),
+                'power': df['power'].tolist()
+            }
 
         # If file doesn't exist, process the CSV
         df = pd.read_csv(file_path)
@@ -163,12 +169,13 @@ def process_csv_file(file_path, folder_number=None):
             }
 
         # Save processed data if folder_number is provided
-        if folder_number is not None:
+        if processed_csv_path:
             processed_df = pd.DataFrame(processed_data)
             processed_df.to_csv(processed_csv_path, index=False)
             logging.info(f"Saved processed CSV to {processed_csv_path}")
 
         return csv_type, processed_data
+
     except Exception as e:
         logging.error(f"Error processing CSV file: {e}")
         raise

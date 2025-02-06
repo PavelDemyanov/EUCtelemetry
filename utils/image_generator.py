@@ -197,26 +197,15 @@ def create_preview_frame(csv_file, project_id, resolution='fullhd', text_setting
             # Process CSV file with folder number for unique processed file
             csv_type, processed_data = process_csv_file(csv_file, project.folder_number)
 
-            # Convert processed data to DataFrame
+            # Convert to DataFrame for easier manipulation
             df = pd.DataFrame(processed_data)
 
-            # Find point with maximum speed (speed column is already normalized in processed data)
+            # Find timestamp with maximum speed
             max_speed_idx = df['speed'].idxmax()
             max_speed_timestamp = df.loc[max_speed_idx, 'timestamp']
 
-            # Get values at maximum speed point
-            values = {
-                'speed': int(df.loc[max_speed_idx, 'speed']),
-                'max_speed': int(df['speed'].max()),
-                'gps': int(df.loc[max_speed_idx, 'gps']),
-                'voltage': int(df.loc[max_speed_idx, 'voltage']),
-                'temperature': int(df.loc[max_speed_idx, 'temperature']),
-                'current': int(df.loc[max_speed_idx, 'current']),
-                'battery': int(df.loc[max_speed_idx, 'battery']),
-                'mileage': int(df.loc[max_speed_idx, 'mileage']),
-                'pwm': int(df.loc[max_speed_idx, 'pwm']),
-                'power': int(df.loc[max_speed_idx, 'power'])
-            }
+            # Get values at maximum speed point using find_nearest_values
+            values = find_nearest_values(df, max_speed_timestamp, csv_type)
 
             # Ensure preview directory exists and create preview
             os.makedirs('static/previews', exist_ok=True)
@@ -242,22 +231,14 @@ def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, tex
             shutil.rmtree(frames_dir)
         os.makedirs(frames_dir, exist_ok=True)
 
-        # Read CSV directly
-        df = pd.read_csv(csv_file)
-
-        # Detect CSV type
-        csv_type = detect_csv_type(df)
-        logging.info(f"Detected CSV type: {csv_type}")
-
-        # Create timestamps based on CSV type
-        if csv_type == 'darnkessbot':
-            df['timestamp'] = pd.to_datetime(df['Date'], format='%d.%m.%Y %H:%M:%S.%f').astype(np.int64) // 10**9
-        else:  # wheellog
-            df['timestamp'] = pd.to_datetime(df['date'] + ' ' + df['time']).astype(np.int64) // 10**9
+        # Process CSV file - will reuse existing processed file if available
+        csv_type, processed_data = process_csv_file(csv_file, folder_number)
+        df = pd.DataFrame(processed_data)
 
         # Calculate frame timestamps
-        T_min = df['timestamp'].min()
-        T_max = df['timestamp'].max()
+        timestamps = df['timestamp'].astype(float)
+        T_min = timestamps.min()
+        T_max = timestamps.max()
         duration = T_max - T_min
         frame_count = int(duration * float(fps))
 
