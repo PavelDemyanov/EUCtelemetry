@@ -1,33 +1,3 @@
-# EUC Video Telemetry Generator
-
-A Flask web application that converts sensor data from Electric Unicycle (EUC) into dynamic video visualizations with telemetry overlay.
-
-[Русская версия ниже / Russian version below](#русская-версия)
-
-## Features
-
-- Support for DarknessBot and WheelLog CSV formats
-- Real-time preview of telemetry overlay
-- Customizable text position and styling
-- Multiple video quality options (Full HD / 4K)
-- Various FPS settings (14.985, 15, 29.97, 30, 59.94, 60)
-- H.264 and H.265 video codec support
-- Concurrent project processing
-- Project management system
-
-## System Requirements
-
-- Python 3.8 or higher
-- FFmpeg
-- 4GB RAM minimum (8GB recommended for 4K processing)
-- 10GB free disk space for processing
-
-## Installation Instructions
-
-### macOS (Apple Silicon)
-
-1. Install Homebrew if not already installed:
-```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
@@ -38,7 +8,7 @@ brew install python@3.11 ffmpeg
 
 3. Clone the repository and navigate to the project directory:
 ```bash
-git clone [repository-url]
+git clone https://github.com/PavelDemyanov/EUCtelemetry.git
 cd euc-video-telemetry
 ```
 
@@ -63,7 +33,7 @@ sudo apt install python3-pip python3-venv ffmpeg
 
 2. Clone the repository and navigate to the project directory:
 ```bash
-git clone [repository-url]
+git clone https://github.com/PavelDemyanov/EUCtelemetry.git
 cd euc-video-telemetry
 ```
 
@@ -86,7 +56,7 @@ pip install flask pillow werkzeug flask-wtf sqlalchemy ffmpeg-python flask-sqlal
 
 3. Clone the repository and navigate to the project directory:
 ```bash
-git clone [repository-url]
+git clone https://github.com/PavelDemyanov/EUCtelemetry.git
 cd euc-video-telemetry
 ```
 
@@ -163,7 +133,7 @@ brew install python@3.11 ffmpeg
 
 3. Клонируйте репозиторий и перейдите в директорию проекта:
 ```bash
-git clone [repository-url]
+git clone https://github.com/PavelDemyanov/EUCtelemetry.git
 cd euc-video-telemetry
 ```
 
@@ -188,7 +158,7 @@ sudo apt install python3-pip python3-venv ffmpeg
 
 2. Клонируйте репозиторий и перейдите в директорию проекта:
 ```bash
-git clone [repository-url]
+git clone https://github.com/PavelDemyanov/EUCtelemetry.git
 cd euc-video-telemetry
 ```
 
@@ -211,7 +181,7 @@ pip install flask pillow werkzeug flask-wtf sqlalchemy ffmpeg-python flask-sqlal
 
 3. Клонируйте репозиторий и перейдите в директорию проекта:
 ```bash
-git clone [repository-url]
+git clone https://github.com/PavelDemyanov/EUCtelemetry.git
 cd euc-video-telemetry
 ```
 
@@ -244,4 +214,3 @@ python main.py
 3. Откройте веб-браузер и перейдите по адресу:
 ```
 http://localhost:5000
-```
