@@ -199,12 +199,12 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
 def create_preview_frame(csv_file, project_id, resolution='fullhd', text_settings=None):
     """Create a preview frame from the data point with maximum speed"""
     try:
-        # Process CSV file and save processed version
+        # Importing here to avoid circular imports
         from utils.csv_processor import process_csv_file
         from models import Project
+        from flask import current_app
 
         # Get project to access folder number
-        from flask import current_app
         with current_app.app_context():
             project = Project.query.get(project_id)
             if not project:
@@ -221,7 +221,7 @@ def create_preview_frame(csv_file, project_id, resolution='fullhd', text_setting
             max_speed_timestamp = df.loc[max_speed_idx, 'timestamp']
 
             # Get values at maximum speed point using find_nearest_values
-            values = find_nearest_values(df, max_speed_timestamp, csv_type)
+            values = find_nearest_values(df, max_speed_timestamp)
 
             # Ensure preview directory exists and create preview
             os.makedirs('static/previews', exist_ok=True)
@@ -247,6 +247,9 @@ def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, tex
             shutil.rmtree(frames_dir)
         os.makedirs(frames_dir, exist_ok=True)
 
+        # Importing here to avoid circular imports
+        from utils.csv_processor import process_csv_file
+
         # Process CSV file - will reuse existing processed file if available
         csv_type, processed_data = process_csv_file(csv_file, folder_number)
         df = pd.DataFrame(processed_data)
@@ -262,7 +265,7 @@ def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, tex
         frame_timestamps = np.linspace(T_min, T_max, frame_count)
 
         for i, timestamp in enumerate(frame_timestamps):
-            values = find_nearest_values(df, timestamp, csv_type)
+            values = find_nearest_values(df, timestamp)
             output_path = f'{frames_dir}/frame_{i:06d}.png'
             create_frame(values, resolution, output_path, text_settings)
             if i % 100 == 0:
