@@ -1,31 +1,3 @@
-# CSV to Video Converter
-
-A Flask web application that converts CSV data from wheel/motorcycle sensors into dynamic video visualizations.
-
-[Русская версия ниже | Russian version below](#csv-в-видео-конвертер)
-
-## Features
-
-- Upload and process CSV files from DarknessBot or WheelLog
-- Real-time preview of video frames
-- Customizable text display settings
-- Multiple resolution options (Full HD, 4K)
-- Various FPS settings (14.985, 15, 29.97, 30, 59.94, 60)
-- Support for H.264 and H.265 codecs
-- Project management with status tracking
-
-## Requirements
-
-- Python 3.11 or higher
-- FFmpeg
-- Git
-
-## Installation
-
-### Unix/Linux
-
-1. Install system dependencies:
-```bash
 # Debian/Ubuntu
 sudo apt update
 sudo apt install python3.11 python3-pip ffmpeg git
@@ -39,8 +11,8 @@ sudo pacman -S python ffmpeg git
 
 2. Clone the repository:
 ```bash
-git clone <repository-url>
-cd csv-to-video-converter
+git clone https://github.com/PavelDemyanov/EUCtelemetry.git
+cd EUCtelemetry
 ```
 
 3. Install Python dependencies:
@@ -67,8 +39,8 @@ brew install python@3.11 ffmpeg git
 
 3. Clone the repository:
 ```bash
-git clone <repository-url>
-cd csv-to-video-converter
+git clone https://github.com/PavelDemyanov/EUCtelemetry.git
+cd EUCtelemetry
 ```
 
 4. Install Python dependencies:
@@ -95,8 +67,8 @@ python3 main.py
 
 4. Open Command Prompt as Administrator:
 ```cmd
-git clone <repository-url>
-cd csv-to-video-converter
+git clone https://github.com/PavelDemyanov/EUCtelemetry.git
+cd EUCtelemetry
 pip install -r requirements.txt
 python main.py
 ```
@@ -107,7 +79,7 @@ The application will be available at `http://localhost:5000`
 
 # CSV в Видео Конвертер
 
-Веб-приложение на Flask для конвертации CSV данных с датчиков колеса/мотоцикла в динамические видео визуализации.
+Веб-приложение на Flask для конвертации CSV данных с датчиков колеса/мотоцикла в динамические видео визуализации. Создает видео из CSV файла, сгенерированного DarknessBot и WheelLog, на синем фоне, что удобно для наложения на видео вашей поездки.
 
 ## Возможности
 
@@ -144,8 +116,8 @@ sudo pacman -S python ffmpeg git
 
 2. Клонирование репозитория:
 ```bash
-git clone <repository-url>
-cd csv-to-video-converter
+git clone https://github.com/PavelDemyanov/EUCtelemetry.git
+cd EUCtelemetry
 ```
 
 3. Установка Python зависимостей:
@@ -172,8 +144,8 @@ brew install python@3.11 ffmpeg git
 
 3. Клонирование репозитория:
 ```bash
-git clone <repository-url>
-cd csv-to-video-converter
+git clone https://github.com/PavelDemyanov/EUCtelemetry.git
+cd EUCtelemetry
 ```
 
 4. Установка Python зависимостей:
@@ -200,10 +172,7 @@ python3 main.py
 
 4. Откройте командную строку от имени администратора:
 ```cmd
-git clone <repository-url>
-cd csv-to-video-converter
+git clone https://github.com/PavelDemyanov/EUCtelemetry.git
+cd EUCtelemetry
 pip install -r requirements.txt
 python main.py
-```
-
-Приложение будет доступно по адресу `http://localhost:5000`
