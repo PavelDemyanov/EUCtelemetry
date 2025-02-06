@@ -128,9 +128,15 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
 
     # Load font
     try:
-        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
-    except:
-        font = ImageFont.load_default()
+        font = ImageFont.truetype("fonts/sf-ui-display-bold.otf", font_size)
+    except Exception as e:
+        logging.error(f"Error loading custom font: {e}")
+        try:
+            # Fallback to system font if custom font fails
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
+        except:
+            logging.error("Failed to load fallback font, using default")
+            font = ImageFont.load_default()
 
     # Parameters to display
     params = [
