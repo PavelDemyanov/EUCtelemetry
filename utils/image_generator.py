@@ -43,35 +43,51 @@ def get_column_name(csv_type, base_name):
     }
     return column_mapping[csv_type][base_name]
 
-def find_nearest_values(df, timestamp, csv_type):
+def find_nearest_values(df, timestamp, csv_type=None):
     """Find the nearest value before the given timestamp for each column"""
-    result = {}
-    # Define base column names
-    base_columns = ['speed', 'gps', 'voltage', 'temperature', 'current', 
-                   'battery', 'mileage', 'pwm', 'power']
+    # CSV type parameter is kept for backwards compatibility but not used anymore
+    # as we're working with already processed data with normalized column names
 
-    # Get actual column names for this CSV type
-    columns = {base: get_column_name(csv_type, base) for base in base_columns}
+    try:
+        # Find values at or before timestamp
+        mask = df['timestamp'] <= timestamp
+        if not any(mask):
+            return {
+                'speed': 0,
+                'max_speed': 0,
+                'gps': 0,
+                'voltage': 0,
+                'temperature': 0,
+                'current': 0,
+                'battery': 0,
+                'mileage': 0,
+                'pwm': 0,
+                'power': 0
+            }
 
-    # Convert relevant columns to numeric
-    for base_name, actual_name in columns.items():
-        df[actual_name] = pd.to_numeric(df[actual_name], errors='coerce')
+        last_idx = df[mask].index[-1]
 
-    # Find values at or before timestamp
-    mask = df['timestamp'] <= timestamp
-    if not any(mask):
-        return {col: 0 for col in base_columns + ['max_speed']}
+        # Get all values at the found index
+        result = {
+            'speed': int(df.loc[last_idx, 'speed']),
+            'gps': int(df.loc[last_idx, 'gps']),
+            'voltage': int(df.loc[last_idx, 'voltage']),
+            'temperature': int(df.loc[last_idx, 'temperature']),
+            'current': int(df.loc[last_idx, 'current']),
+            'battery': int(df.loc[last_idx, 'battery']),
+            'mileage': int(df.loc[last_idx, 'mileage']),
+            'pwm': int(df.loc[last_idx, 'pwm']),
+            'power': int(df.loc[last_idx, 'power'])
+        }
 
-    last_idx = df[mask].index[-1]
+        # Calculate max speed up to this point
+        result['max_speed'] = int(df.loc[mask, 'speed'].max())
 
-    for base_name, actual_name in columns.items():
-        result[base_name] = int(df.loc[last_idx, actual_name])
-        if base_name == 'speed':
-            # Calculate max speed up to this point
-            speed_values = df.loc[mask, actual_name]
-            result['max_speed'] = int(speed_values.max()) if not speed_values.empty else 0
+        return result
 
-    return result
+    except Exception as e:
+        logging.error(f"Error in find_nearest_values: {e}")
+        raise
 
 def create_rounded_box(width, height, radius):
     """Create a rounded rectangle"""
