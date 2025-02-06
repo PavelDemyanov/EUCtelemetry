@@ -40,13 +40,9 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     shutil.rmtree(frames_dir)
                 os.makedirs(frames_dir, exist_ok=True)
 
-                # Process CSV file to detect type and create processed version
+                # Process CSV file using existing project csv_type
                 csv_file = os.path.join('uploads', project.csv_file)
-                csv_type, _ = process_csv_file(csv_file, project.folder_number)
-
-                # Update project CSV type
-                project.csv_type = csv_type
-                db.session.commit()
+                _, _ = process_csv_file(csv_file, project.folder_number, project.csv_type)
 
                 # Generate frames
                 frame_count, duration = generate_frames(

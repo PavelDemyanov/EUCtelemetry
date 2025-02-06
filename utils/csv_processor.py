@@ -109,7 +109,7 @@ def clean_numeric_column(series):
     # Round and convert to integer
     return series.round().astype(int)
 
-def process_csv_file(file_path, folder_number=None):
+def process_csv_file(file_path, folder_number=None, existing_csv_type=None):
     """Process CSV file and save processed data with unique project identifier"""
     try:
         # Create processed data directory if it doesn't exist
@@ -125,7 +125,7 @@ def process_csv_file(file_path, folder_number=None):
             # Load existing processed data
             logging.info(f"Loading existing processed CSV from {processed_csv_path}")
             df = pd.read_csv(processed_csv_path)
-            csv_type = 'darnkessbot' if 'Date' in df.columns else 'wheellog'
+            csv_type = existing_csv_type or ('darnkessbot' if 'Date' in df.columns else 'wheellog')
 
             return csv_type, {
                 'timestamp': df['timestamp'].tolist(),
@@ -145,8 +145,11 @@ def process_csv_file(file_path, folder_number=None):
         logging.info(f"Processing new CSV file: {file_path}")
         logging.info(f"CSV columns: {df.columns.tolist()}")
 
-        csv_type = detect_csv_type(df)
-        logging.info(f"Detected CSV type: {csv_type}")
+        # Use existing type if provided, otherwise detect
+        csv_type = existing_csv_type
+        if csv_type is None:
+            csv_type = detect_csv_type(df)
+            logging.info(f"Detected CSV type: {csv_type}")
 
         if csv_type == 'darnkessbot':
             # Parse timestamps and create a mask for valid timestamps
