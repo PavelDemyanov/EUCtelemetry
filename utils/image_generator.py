@@ -128,16 +128,9 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
 
     # Load font
     try:
-        # Try to load the local SF UI Display Bold font
-        font = ImageFont.truetype("fonts/sf-ui-display-bold.otf", font_size)
+        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
     except:
-        try:
-            # Fallback to system DejaVu Sans Bold font if local font fails
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
-        except:
-            # If both fonts fail, use default font
-            font = ImageFont.load_default()
-            logging.warning("Could not load custom fonts, using default font")
+        font = ImageFont.load_default()
 
     # Parameters to display
     params = [
