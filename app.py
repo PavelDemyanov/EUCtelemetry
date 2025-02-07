@@ -38,12 +38,14 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
-# Ensure upload directories exist
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-os.makedirs('frames', exist_ok=True)
-os.makedirs('videos', exist_ok=True)
-os.makedirs('processed_data', exist_ok=True)
-os.makedirs('previews', exist_ok=True)
+# Create required directories with proper error handling
+for directory in ['uploads', 'frames', 'videos', 'processed_data', 'previews']:
+    try:
+        os.makedirs(directory, exist_ok=True)
+        logging.info(f"Ensuring directory exists: {directory}")
+    except Exception as e:
+        logging.error(f"Error creating directory {directory}: {str(e)}")
+        raise
 
 db.init_app(app)
 
