@@ -18,4 +18,5 @@ dependencies = [
     "numpy>=2.2.2",
     "trafilatura>=2.0.0",
     "sqlalchemy>=2.0.37",
+    "flask-migrate>=4.1.0",
 ]
