@@ -19,6 +19,7 @@
                         <th>Resolution</th>
                         <th>Codec</th>
                         <th>Duration</th>
+                        <th>Processing Time</th>
                         <th>Expires In</th>
                         <th>Actions</th>
                     </tr>
@@ -50,6 +51,7 @@
                         <td>{{ project.resolution|upper if project.resolution else '-' }}</td>
                         <td>{{ project.codec|upper if project.codec else '-' }}</td>
                         <td>{{ project.get_duration_str() }}</td>
+                        <td>{{ project.get_processing_time_str() }}</td>
                         <td>{{ project.days_until_expiry() }} days</td>
                         <td>
                             <a href="{{ url_for('download_file', project_id=project.id, type='processed_csv') }}" 
