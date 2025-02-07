@@ -6,6 +6,7 @@ from utils.csv_processor import process_csv_file
 from utils.image_generator import generate_frames
 from utils.video_creator import create_video
 import os
+from datetime import datetime
 
 def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', text_settings=None):
     """Process project in background thread"""
@@ -21,9 +22,10 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     return
 
                 project.status = 'processing'
-                project.fps = fps  # Save FPS value immediately
+                project.fps = float(fps)  # Convert to float explicitly
                 project.resolution = resolution
                 project.codec = codec
+                project.processing_started_at = datetime.now()
                 db.session.commit()
 
                 # Log text settings for debugging
@@ -53,19 +55,18 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     text_settings
                 )
 
-                # Log after frame generation
-                logging.info(f"Generated {frame_count} frames with text settings: {text_settings}")
-
-                project.frame_count = frame_count
-                project.video_duration = duration
+                # Convert numpy values to Python native types
+                project.frame_count = int(frame_count)
+                project.video_duration = float(duration)
                 db.session.commit()
 
                 # Create video
                 video_path = create_video(project.folder_number, fps, codec, resolution)
 
-                # Update project with video info
+                # Update project with video info and completion time
                 project.video_file = os.path.basename(video_path)
                 project.status = 'completed'
+                project.processing_completed_at = datetime.now()
                 db.session.commit()
 
             except Exception as e:
@@ -75,6 +76,7 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     if project:
                         project.status = 'error'
                         project.error_message = str(e)
+                        project.processing_completed_at = datetime.now()  # Set completion time even for errors
                         db.session.commit()
                 except Exception as db_error:
                     logging.error(f"Error updating project status: {str(db_error)}")
