@@ -1,23 +1,3 @@
-# EUC Telemetry Visualizer
-
-A Flask web application for converting EUC (electric unicycle) sensor data into dynamic, visually engaging video visualizations with advanced processing capabilities.
-
-## Program Description
-
-The EUC Telemetry Visualizer is a web-based application that:
-- Processes CSV files containing EUC sensor data
-- Supports both Darknessbot and WheelLog data formats
-- Generates dynamic video visualizations of telemetry data
-- Provides customizable visualization parameters (text size, padding, etc.)
-- Offers real-time preview before video generation
-- Manages projects with a PostgreSQL database
-- Supports FullHD and 4K video output
-- Features asynchronous background processing
-- Includes multilingual interface support
-
-## Project Structure
-
-```
 ├── app.py                    # Main Flask application file
 ├── models.py                 # SQLAlchemy database models
 ├── extensions.py             # Flask extensions (database)
@@ -35,6 +15,34 @@ The EUC Telemetry Visualizer is a web-based application that:
 ├── videos/                   # Output videos
 └── previews/                 # Preview images
 ```
+
+## Dependencies
+
+The project uses the following Python packages:
+
+Core dependencies:
+- Flask (>=3.1.0) - Web framework
+- Flask-SQLAlchemy (>=3.1.1) - Database ORM
+- Flask-Login (>=0.6.3) - User authentication
+- Flask-WTF (>=1.2.2) - Form handling
+
+Data processing:
+- Pandas (>=2.2.3) - Data manipulation
+- NumPy (>=2.2.2) - Numerical computations
+
+Media processing:
+- Pillow (>=11.1.0) - Image processing
+- ffmpeg-python (>=0.2.0) - Video generation
+
+Database:
+- SQLAlchemy (>=2.0.37) - SQL toolkit
+- psycopg2-binary (>=2.9.10) - PostgreSQL adapter
+
+Utilities:
+- Email-validator (>=2.2.0) - Email validation
+- Werkzeug (>=3.1.3) - WSGI utilities
+- Gunicorn (>=23.0.0) - WSGI HTTP Server
+- Trafilatura (>=2.0.0) - Web scraping
 
 ## Installation Guide
 
@@ -59,7 +67,7 @@ python3 -m venv venv
 source venv/bin/activate
 
 # 6. Install Python dependencies
-pip install -r requirements.txt
+pip install .
 
 # 7. Create database
 createdb euc_visualizer
@@ -88,7 +96,7 @@ python3 -m venv venv
 source venv/bin/activate
 
 # 6. Install Python dependencies
-pip install -r requirements.txt
+pip install .
 
 # 7. Create database
 sudo -u postgres createdb euc_visualizer
@@ -112,7 +120,7 @@ cd EUCtelemetry
 ```powershell
 python -m venv venv
 .\venv\Scripts\activate
-pip install -r requirements.txt
+pip install .
 ```
 
 4. Create database:
@@ -174,11 +182,39 @@ The application will be available at http://localhost:5000
 │   ├── css/                  # Таблицы стилей
 │   └── js/                   # JavaScript файлы
 ├── templates/                # HTML шаблоны
-├── uploads/                  # Хранение CSV файлов
+├── uploads/                  # Загруженные CSV файлы
 ├── frames/                   # Сгенерированные кадры
 ├── videos/                   # Готовые видео
-└── previews/                 # Изображения предпросмотра
+└── previews/                 # Предпросмотры проектов
 ```
+
+## Зависимости
+
+Проект использует следующие Python пакеты:
+
+Основные зависимости:
+- Flask (>=3.1.0) - Веб-фреймворк
+- Flask-SQLAlchemy (>=3.1.1) - ORM для базы данных
+- Flask-Login (>=0.6.3) - Аутентификация пользователей
+- Flask-WTF (>=1.2.2) - Обработка форм
+
+Обработка данных:
+- Pandas (>=2.2.3) - Манипуляция данными
+- NumPy (>=2.2.2) - Численные вычисления
+
+Обработка медиа:
+- Pillow (>=11.1.0) - Обработка изображений
+- ffmpeg-python (>=0.2.0) - Генерация видео
+
+База данных:
+- SQLAlchemy (>=2.0.37) - SQL инструментарий
+- psycopg2-binary (>=2.9.10) - Адаптер PostgreSQL
+
+Утилиты:
+- Email-validator (>=2.2.0) - Валидация email
+- Werkzeug (>=3.1.3) - WSGI утилиты
+- Gunicorn (>=23.0.0) - WSGI HTTP сервер
+- Trafilatura (>=2.0.0) - Веб-скрапинг
 
 ## Руководство по установке
 
@@ -203,7 +239,7 @@ python3 -m venv venv
 source venv/bin/activate
 
 # 6. Установка Python зависимостей
-pip install -r requirements.txt
+pip install .
 
 # 7. Создание базы данных
 createdb euc_visualizer
@@ -232,7 +268,7 @@ python3 -m venv venv
 source venv/bin/activate
 
 # 6. Установка Python зависимостей
-pip install -r requirements.txt
+pip install .
 
 # 7. Создание базы данных
 sudo -u postgres createdb euc_visualizer
@@ -256,7 +292,7 @@ cd EUCtelemetry
 ```powershell
 python -m venv venv
 .\venv\Scripts\activate
-pip install -r requirements.txt
+pip install .
 ```
 
 4. Создание базы данных:
@@ -280,6 +316,3 @@ flask db upgrade
 3. Запуск приложения:
 ```bash
 flask run
-```
-
-Приложение будет доступно по адресу http://localhost:5000
