@@ -29,8 +29,12 @@ def validate_project_name(name):
     return len(name) <= 7 and bool(re.match(r'^[\w\d]+$', name, re.UNICODE))
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key-here'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///projects.db'
+app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'your-secret-key-here')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_recycle': 300,
+    'pool_pre_ping': True,
+}
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
@@ -74,7 +78,6 @@ def upload_file():
 
         # Determine CSV type immediately after upload
         try:
-            from utils.csv_processor import process_csv_file
             csv_type, _ = process_csv_file(file_path)
         except Exception as e:
             logging.error(f"Error determining CSV type: {str(e)}")
@@ -134,6 +137,7 @@ def generate_project_frames(project_id):
         project.fps = fps
         project.resolution = resolution
         project.codec = codec
+        project.processing_started_at = datetime.now()  # Record start time
         db.session.commit()
 
         # Get text display settings with explicit defaults
@@ -163,9 +167,9 @@ def project_status(project_id):
         'status': project.status,
         'frame_count': project.frame_count,
         'video_file': project.video_file,
-        'error_message': project.error_message
+        'error_message': project.error_message,
+        'processing_time': project.get_processing_time_str()  # Add processing time
     })
-
 
 @app.route('/projects')
 def list_projects():

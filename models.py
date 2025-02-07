@@ -17,6 +17,8 @@ class Project(db.Model):
     status = db.Column(db.String(20), default='pending')  # pending, processing, completed, error
     error_message = db.Column(db.Text)
     folder_number = db.Column(db.Integer)  # New field for storing unique folder number
+    processing_started_at = db.Column(db.DateTime)  # When processing started
+    processing_completed_at = db.Column(db.DateTime)  # When processing completed
 
     def days_until_expiry(self):
         if self.expiry_date:
@@ -30,6 +32,15 @@ class Project(db.Model):
             return '-'
         minutes = int(self.video_duration // 60)
         seconds = int(self.video_duration % 60)
+        return f"{minutes}:{seconds:02d}"
+
+    def get_processing_time_str(self):
+        """Return formatted processing time string"""
+        if not self.processing_started_at or not self.processing_completed_at:
+            return '-'
+        delta = self.processing_completed_at - self.processing_started_at
+        minutes = int(delta.total_seconds() // 60)
+        seconds = int(delta.total_seconds() % 60)
         return f"{minutes}:{seconds:02d}"
 
     @classmethod
