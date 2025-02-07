@@ -1,33 +1,30 @@
 # EUC Data Visualizer Dependencies
 
 # Web Framework
-flask==3.0.0
-flask-sqlalchemy==3.1.1
-flask-migrate==4.0.5
-flask-login==0.6.3
-flask-wtf==1.2.1
+flask
+flask-sqlalchemy
+flask-migrate
+flask-login
+flask-wtf
 
 # Database
-psycopg2-binary==2.9.9
-sqlalchemy==2.0.25
+psycopg2-binary
+sqlalchemy
 
 # Data Processing
-pandas==2.1.4
-numpy==1.24.3
+pandas
+numpy
 
 # Image and Video Processing
-pillow==10.2.0
-ffmpeg-python==0.2.0
+pillow
+ffmpeg-python
 
 # Data Validation
-email-validator==2.1.0.post1
+email-validator
 
 # Development Server
-gunicorn==21.2.0
-werkzeug==3.0.1
+gunicorn
+werkzeug
 
 # Web Scraping (Optional)
-trafilatura==1.6.2
-
-Note: These versions are compatible with Python 3.11
-To install these dependencies, use the package manager tool in your development environment.
+trafilatura
