@@ -7,6 +7,28 @@ from datetime import datetime
 import shutil
 from utils.hardware_detection import is_apple_silicon
 import multiprocessing
+import ctypes
+
+# Global Metal context and device for hardware acceleration
+_metal_context = None
+_metal_device = None
+
+def _initialize_metal():
+    """Initialize Metal context and device if available"""
+    global _metal_context, _metal_device
+    if is_apple_silicon() and _metal_context is None:
+        try:
+            from Quartz import CIContext, CIImage
+            from Metal import MTLCreateSystemDefaultDevice
+
+            _metal_device = MTLCreateSystemDefaultDevice()
+            if _metal_device:
+                _metal_context = CIContext.contextWithMTLDevice_(_metal_device)
+                logging.info("Successfully initialized Metal context and device")
+                return True
+        except Exception as e:
+            logging.warning(f"Failed to initialize Metal: {e}")
+    return False
 
 # Global font cache
 _font_cache = {}
@@ -59,22 +81,31 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
     # Try to use hardware acceleration if available
     if is_apple_silicon():
         try:
-            from rubicon.objc import ObjCClass, CGImage
-            import ctypes
+            if _initialize_metal():
+                from Quartz import CIImage, CGImageRef
+                import Cocoa
 
-            # Create Core Graphics context
-            CIContext = ObjCClass('CIContext')
-            CIImage = ObjCClass('CIImage')
+                # Convert PIL image to CGImage
+                raw_data = background.tobytes()
+                data_provider = Cocoa.NSData.dataWithBytes_length_(raw_data, len(raw_data))
 
-            # Convert PIL image to CGImage
-            raw_data = background.tobytes()
-            ci_image = CIImage.imageWithData_(raw_data)
-            if ci_image:
-                context = CIContext.contextWithOptions_(None)
-                cg_image = context.createCGImage_fromRect_(ci_image, ((0, 0), (width, height)))
-                if cg_image:
-                    background = Image.frombytes('RGBA', (width, height), cg_image.data)
-                    logging.info("Successfully used Metal acceleration for image generation")
+                # Create CIImage from raw data
+                ci_image = CIImage.imageWithData_(data_provider)
+                if ci_image and _metal_context:
+                    # Create CGImage using Metal context
+                    cg_image = _metal_context.createCGImage_fromRect_(ci_image, ((0, 0), (width, height)))
+                    if cg_image:
+                        # Convert back to PIL Image
+                        buffer = ctypes.create_string_buffer(width * height * 4)
+                        cg_image.getData_bytesPerRow_bytesPerComponent_bitsPerComponent_bitsPerPixel_(
+                            buffer,
+                            width * 4,
+                            1,
+                            8,
+                            32
+                        )
+                        background = Image.frombuffer('RGBA', (width, height), buffer, 'raw', 'RGBA', 0, 1)
+                        logging.info("Successfully used Metal acceleration for image generation")
         except Exception as e:
             logging.warning(f"Metal acceleration not available, falling back to CPU: {e}")
 
