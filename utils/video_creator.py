@@ -50,20 +50,33 @@ def create_video(folder_number, fps=29.97, codec='h264', resolution='fullhd', pr
                     '-hwaccel', 'videotoolbox',
                     '-hwaccel_output_format', 'videotoolbox_vld'
                 ])
-                encoder = 'hevc_videotoolbox'  # Use VideoToolbox hardware encoder
+                encoder = 'hevc_videotoolbox'  # Use VideoToolbox hardware encoder for HEVC
 
             # Configure hardware encoder settings
             command.extend([
                 '-r', str(fps),
                 '-i', f'{frames_dir}/frame_%06d.png',
                 '-c:v', encoder,
+                '-allow_sw', '1',  # Allow software fallback if needed
                 '-b:v', bitrate,
                 '-maxrate', bitrate,
                 '-bufsize', bitrate,
+                '-profile:v', 'main',  # Use main profile for better compatibility
                 '-pix_fmt', 'yuv420p',
-                '-s', f'{width}x{height}',
-                '-tag:v', 'avc1'  # Ensure compatibility
+                '-s', f'{width}x{height}'
             ])
+
+            # Add specific settings for HEVC/H265
+            if codec == 'h265':
+                command.extend([
+                    '-tag:v', 'hvc1',  # Use proper HEVC tag for better compatibility
+                    '-alpha_quality', '0',  # Disable alpha channel encoding
+                    '-vtag', 'hvc1'  # Additional tag for HEVC
+                ])
+            else:
+                command.extend([
+                    '-tag:v', 'avc1'  # Use proper H.264 tag
+                ])
         else:
             # Software encoding configuration
             command.extend([
@@ -83,11 +96,15 @@ def create_video(folder_number, fps=29.97, codec='h264', resolution='fullhd', pr
             else:  # h265
                 command.extend([
                     '-preset', 'medium',
-                    '-crf', '28'  # HEVC typically uses higher CRF values
+                    '-crf', '28',  # HEVC typically uses higher CRF values
+                    '-tag:v', 'hvc1'  # Use proper HEVC tag
                 ])
 
         # Add output file
         command.append(output_file)
+
+        # Log the complete ffmpeg command for debugging
+        logging.info(f"FFmpeg command: {' '.join(command)}")
 
         # Get total frame count for progress calculation
         frame_files = [f for f in os.listdir(frames_dir) if f.startswith('frame_') and f.endswith('.png')]
@@ -98,28 +115,34 @@ def create_video(folder_number, fps=29.97, codec='h264', resolution='fullhd', pr
             command,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            universal_newlines=True
+            universal_newlines=True,
+            bufsize=1
         )
 
         # Track progress
         frame_pattern = re.compile(r'frame=\s*(\d+)')
         current_frame = 0
+        error_output = []
 
         # Read stderr line by line
-        for line in process.stderr:
-            if line is not None:  # Add None check
-                frame_match = frame_pattern.search(line)
-                if frame_match:
-                    current_frame = int(frame_match.group(1))
-                    if progress_callback:
-                        progress_callback(current_frame, total_frames, 'video')
+        while True:
+            line = process.stderr.readline()
+            if not line and process.poll() is not None:
+                break
 
-        # Wait for process to complete
-        process.wait()
+            error_output.append(line)
+            frame_match = frame_pattern.search(line)
+            if frame_match:
+                current_frame = int(frame_match.group(1))
+                if progress_callback:
+                    progress_callback(current_frame, total_frames, 'video')
+            logging.debug(f"FFmpeg output: {line.strip()}")
 
+        # Check process return code
         if process.returncode != 0:
-            error_output = process.stderr.read() if process.stderr else "No error output available"
-            raise Exception(f"FFmpeg encoding failed: {error_output}")
+            error_msg = ''.join(error_output)
+            logging.error(f"FFmpeg error output: {error_msg}")
+            raise Exception(f"FFmpeg encoding failed: {error_msg}")
 
         # Ensure 100% progress for video encoding
         if progress_callback:
