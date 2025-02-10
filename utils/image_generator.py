@@ -15,8 +15,156 @@ def _get_font(font_path, size):
     """Cache and return font instances"""
     cache_key = f"{font_path}_{size}"
     if cache_key not in _font_cache:
-        _font_cache[cache_key] = ImageFont.truetype(font_path, size)
+        try:
+            _font_cache[cache_key] = ImageFont.truetype(font_path, size)
+            logging.debug(f"Cached font {font_path} at size {size}")
+        except Exception as e:
+            logging.error(f"Error loading font {font_path}: {e}")
+            raise ValueError(f"Could not load font {font_path}")
     return _font_cache[cache_key]
+
+# Cache for rounded box images
+_box_cache = {}
+
+def create_rounded_box(width, height, radius):
+    """Create a rounded rectangle with caching"""
+    cache_key = f"{width}_{height}_{radius}"
+    if cache_key not in _box_cache:
+        image = Image.new('RGBA', (width, height), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(image)
+        draw.rounded_rectangle(
+            [(0, 0), (width - 1, height - 1)],
+            radius=radius,
+            fill=(0, 0, 0, 255),
+            outline=None
+        )
+        image = image.filter(ImageFilter.GaussianBlur(radius=0.5))
+        _box_cache[cache_key] = image
+        logging.debug(f"Created and cached rounded box {cache_key}")
+    return _box_cache[cache_key].copy()
+
+def create_frame(values, resolution='fullhd', output_path=None, text_settings=None):
+    """Create a frame with hardware acceleration and caching"""
+    # Set resolution
+    if resolution == "4k":
+        width, height = 3840, 2160
+        scale_factor = 2.0
+    else:  # fullhd
+        width, height = 1920, 1080
+        scale_factor = 1.0
+
+    # Create background layer
+    background = Image.new('RGBA', (width, height), (0, 0, 255, 255))
+
+    # Try to use hardware acceleration if available
+    if is_apple_silicon():
+        try:
+            from rubicon.objc import ObjCClass, CGImage
+            import ctypes
+
+            # Create Core Graphics context
+            CIContext = ObjCClass('CIContext')
+            CIImage = ObjCClass('CIImage')
+
+            # Convert PIL image to CGImage
+            raw_data = background.tobytes()
+            ci_image = CIImage.imageWithData_(raw_data)
+            if ci_image:
+                context = CIContext.contextWithOptions_(None)
+                cg_image = context.createCGImage_fromRect_(ci_image, ((0, 0), (width, height)))
+                if cg_image:
+                    background = Image.frombytes('RGBA', (width, height), cg_image.data)
+                    logging.info("Successfully used Metal acceleration for image generation")
+        except Exception as e:
+            logging.warning(f"Metal acceleration not available, falling back to CPU: {e}")
+
+    overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay)
+
+    # Scale settings according to resolution
+    text_settings = text_settings or {}
+    font_size = int(text_settings.get('font_size', 26) * scale_factor)
+    top_padding = int(text_settings.get('top_padding', 14) * scale_factor)
+    box_height = int(text_settings.get('bottom_padding', 47) * scale_factor)
+    spacing = int(text_settings.get('spacing', 10) * scale_factor)
+    vertical_position = int(text_settings.get('vertical_position', 1))
+    border_radius = int(text_settings.get('border_radius', 13) * scale_factor)
+
+    try:
+        font = _get_font("fonts/sf-ui-display-bold.otf", font_size)
+    except Exception as e:
+        logging.error(f"Error loading font: {e}")
+        raise
+
+    # Parameters to display
+    params = [
+        ('Speed', f"{values['speed']} km/h"),
+        ('Max Speed', f"{values['max_speed']} km/h"),
+        ('GPS', f"{values['gps']} km/h"),
+        ('Voltage', f"{values['voltage']} V"),
+        ('Temp', f"{values['temperature']} °C"),
+        ('Current', f"{values['current']} A"),
+        ('Battery', f"{values['battery']} %"),
+        ('Mileage', f"{values['mileage']} km"),
+        ('PWM', f"{values['pwm']} %"),
+        ('Power', f"{values['power']} W")
+    ]
+
+    # Calculate dimensions
+    element_widths = []
+    text_widths = []
+    text_heights = []
+    total_width = 0
+
+    for label, value in params:
+        bbox = draw.textbbox((0, 0), f"{label}: {value}", font=font)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+        element_width = text_width + (2 * top_padding)
+
+        element_widths.append(element_width)
+        text_widths.append(text_width)
+        text_heights.append(text_height)
+        total_width += element_width
+
+    total_width += spacing * (len(params) - 1)
+    start_x = (width - total_width) // 2
+    y_position = int((height * vertical_position) / 100)
+
+    # Position text
+    max_text_height = max(text_heights)
+    box_vertical_center = y_position + (box_height // 2)
+    text_baseline_y = box_vertical_center - (max_text_height // 2)
+
+    # Draw boxes and text
+    x_position = start_x
+    for i, ((label, value), element_width, text_width) in enumerate(zip(params, element_widths, text_widths)):
+        box = create_rounded_box(element_width, box_height, border_radius)
+        overlay.paste(box, (x_position, y_position), box)
+
+        text = f"{label}: {value}"
+        text_x = x_position + ((element_width - text_width) // 2)
+        baseline_offset = int(max_text_height * 0.2)
+        text_y = text_baseline_y - baseline_offset
+        draw.text((text_x, text_y), text, fill=(255, 255, 255, 255), font=font)
+
+        x_position += element_width + spacing
+
+    # Combine layers
+    result = Image.alpha_composite(background, overlay)
+
+    if output_path:
+        result_rgb = result.convert('RGB')
+        # Optimize PNG compression based on hardware
+        if is_apple_silicon():
+            result_rgb.save(output_path, format='PNG', quality=95,
+                          optimize=True, compression_level=3,
+                          num_threads=multiprocessing.cpu_count())
+        else:
+            result_rgb.save(output_path, format='PNG', quality=95)
+        logging.debug(f"Saved frame to {output_path}")
+
+    return result
 
 def detect_csv_type(df):
     """Detect CSV type based on column names"""
@@ -97,142 +245,6 @@ def find_nearest_values(df, timestamp, csv_type=None):
     except Exception as e:
         logging.error(f"Error in find_nearest_values: {e}")
         raise
-
-# Cache for rounded box images
-_box_cache = {}
-
-def create_rounded_box(width, height, radius):
-    """Create a rounded rectangle with caching"""
-    cache_key = f"{width}_{height}_{radius}"
-    if cache_key not in _box_cache:
-        image = Image.new('RGBA', (width, height), (0, 0, 0, 0))
-        draw = ImageDraw.Draw(image)
-        draw.rounded_rectangle(
-            [(0, 0), (width-1, height-1)],
-            radius=radius,
-            fill=(0, 0, 0, 255),
-            outline=None
-        )
-        image = image.filter(ImageFilter.GaussianBlur(radius=0.5))
-        _box_cache[cache_key] = image
-    return _box_cache[cache_key].copy()
-
-def create_frame(values, resolution='fullhd', output_path=None, text_settings=None):
-    """Create a frame with hardware acceleration and caching"""
-    # Set resolution
-    if resolution == "4k":
-        width, height = 3840, 2160
-        scale_factor = 2.0
-    else:  # fullhd
-        width, height = 1920, 1080
-        scale_factor = 1.0
-
-    # Create background layer with hardware acceleration if available
-    if is_apple_silicon():
-        try:
-            import Quartz
-            import CoreImage
-            background = Image.new('RGBA', (width, height), (0, 0, 255, 255))
-            ci_image = CoreImage.CIImage.imageWithCGImage_(background.tobytes())
-            ci_context = CoreImage.CIContext.contextWithMTLDevice_(None)
-            background = Image.frombytes('RGBA', (width, height), ci_context.render_(ci_image))
-            logging.info("Using Metal acceleration for image generation")
-        except ImportError:
-            background = Image.new('RGBA', (width, height), (0, 0, 255, 255))
-            logging.warning("Metal acceleration not available, falling back to CPU")
-    else:
-        background = Image.new('RGBA', (width, height), (0, 0, 255, 255))
-
-    overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(overlay)
-
-    # Scale settings according to resolution
-    text_settings = text_settings or {}
-    font_size = int(text_settings.get('font_size', 26) * scale_factor)
-    top_padding = int(text_settings.get('top_padding', 14) * scale_factor)
-    box_height = int(text_settings.get('bottom_padding', 47) * scale_factor)
-    spacing = int(text_settings.get('spacing', 10) * scale_factor)
-    vertical_position = int(text_settings.get('vertical_position', 1))
-    border_radius = int(text_settings.get('border_radius', 13) * scale_factor)
-
-    # Load font from cache
-    try:
-        font = _get_font("fonts/sf-ui-display-bold.otf", font_size)
-        logging.debug("Using cached font")
-    except Exception as e:
-        logging.error(f"Critical error loading font: {e}")
-        raise ValueError("Required font could not be loaded")
-
-    # Parameters to display
-    params = [
-        ('Speed', f"{values['speed']} km/h"),
-        ('Max Speed', f"{values['max_speed']} km/h"),
-        ('GPS', f"{values['gps']} km/h"),
-        ('Voltage', f"{values['voltage']} V"),
-        ('Temp', f"{values['temperature']} °C"),
-        ('Current', f"{values['current']} A"),
-        ('Battery', f"{values['battery']} %"),
-        ('Mileage', f"{values['mileage']} km"),
-        ('PWM', f"{values['pwm']} %"),
-        ('Power', f"{values['power']} W")
-    ]
-
-    # Calculate dimensions
-    element_widths = []
-    text_widths = []
-    text_heights = []
-    total_width = 0
-
-    for label, value in params:
-        bbox = draw.textbbox((0, 0), f"{label}: {value}", font=font)
-        text_width = bbox[2] - bbox[0]
-        text_height = bbox[3] - bbox[1]
-        element_width = text_width + (2 * top_padding)
-
-        element_widths.append(element_width)
-        text_widths.append(text_width)
-        text_heights.append(text_height)
-        total_width += element_width
-
-    total_width += spacing * (len(params) - 1)
-    start_x = (width - total_width) // 2
-    y_position = int((height * vertical_position) / 100)
-
-    # Position text
-    max_text_height = max(text_heights)
-    box_vertical_center = y_position + (box_height // 2)
-    text_baseline_y = box_vertical_center - (max_text_height // 2)
-
-    # Draw boxes and text
-    x_position = start_x
-    for i, ((label, value), element_width, text_width) in enumerate(zip(params, element_widths, text_widths)):
-        # Use cached rounded box
-        box = create_rounded_box(element_width, box_height, border_radius)
-        overlay.paste(box, (x_position, y_position), box)
-
-        text = f"{label}: {value}"
-        text_x = x_position + ((element_width - text_width) // 2)
-        baseline_offset = int(max_text_height * 0.2)
-        text_y = text_baseline_y - baseline_offset
-        draw.text((text_x, text_y), text, fill=(255, 255, 255, 255), font=font)
-
-        x_position += element_width + spacing
-
-    # Combine layers
-    result = Image.alpha_composite(background, overlay)
-
-    if output_path:
-        result_rgb = result.convert('RGB')
-        # Optimize PNG compression based on hardware
-        if is_apple_silicon():
-            result_rgb.save(output_path, format='PNG', quality=95,
-                          optimize=True, compression_level=3,
-                          num_threads=multiprocessing.cpu_count())
-        else:
-            result_rgb.save(output_path, format='PNG', quality=95)
-        logging.debug(f"Saved frame to {output_path}")
-
-    return result
 
 def create_preview_frame(csv_file, project_id, resolution='fullhd', text_settings=None):
     """Create a preview frame from the data point with maximum speed"""

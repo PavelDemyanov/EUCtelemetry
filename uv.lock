@@ -786,6 +786,7 @@ dependencies = [
     { name = "pandas" },
     { name = "pillow" },
     { name = "psycopg2-binary" },
+    { name = "rubicon-objc" },
     { name = "sqlalchemy" },
     { name = "trafilatura" },
     { name = "werkzeug" },
@@ -805,9 +806,19 @@ requires-dist = [
     { name = "pandas", specifier = ">=2.2.3" },
     { name = "pillow", specifier = ">=11.1.0" },
     { name = "psycopg2-binary", specifier = ">=2.9.10" },
+    { name = "rubicon-objc", specifier = ">=0.5.0" },
     { name = "sqlalchemy", specifier = ">=2.0.37" },
     { name = "trafilatura", specifier = ">=2.0.0" },
     { name = "werkzeug", specifier = ">=3.1.3" },
+]
+
+[[package]]
+name = "rubicon-objc"
+version = "0.5.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d3/13/586c9baa985eae0f718029506b40ca41295d51a546567414b2bcf8ccacef/rubicon_objc-0.5.0.tar.gz", hash = "sha256:18f075649780d95df53d483642068c767d7d2cfbbf075ddef124a44b40b6d92e", size = 173652 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6d/30/5b2407b8762ed882e5732e19c485b9ea2f07d35462615a3212638bab66c2/rubicon_objc-0.5.0-py3-none-any.whl", hash = "sha256:a9c2a605120d6e5be327d3f42a71b60963125987e116f51846757b5e110854fa", size = 62711 },
 ]
 
 [[package]]
