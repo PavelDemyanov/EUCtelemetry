@@ -219,7 +219,8 @@ document.getElementById('startProcessButton').addEventListener('click', function
                                 'Encoding video...';
                             progressBar.style.width = `${progress}%`;
                             progressBar.textContent = `${progress.toFixed(1)}%`;
-                            setTimeout(checkStatus, 1000);  // Poll every second
+                            // Poll more frequently during frame creation (every 200ms)
+                            setTimeout(checkStatus, progress <= 50 ? 200 : 1000);
                             break;
                         case 'completed':
                             progressBar.style.width = '100%';
