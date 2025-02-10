@@ -68,10 +68,10 @@ function updatePreview(projectId) {
         bottom_padding: document.getElementById('bottomPadding').value,
         spacing: document.getElementById('spacing').value,
         font_size: document.getElementById('fontSize').value,
-        border_radius: document.getElementById('borderRadius').value  // Ensure this is included
+        border_radius: document.getElementById('borderRadius').value
     };
 
-    console.log('Sending preview settings:', settings);  // Debug log
+    console.log('Sending preview settings:', settings);
 
     fetch(`/preview/${projectId}`, {
         method: 'POST',
@@ -181,6 +181,9 @@ document.getElementById('startProcessButton').addEventListener('click', function
     videoProcessingInfo.classList.remove('d-none');
     this.disabled = true;
 
+    // Set initial background processing message
+    videoProcessingInfo.textContent = "You can close your browser and come back later - the video processing will continue in the background. Alternatively, you can go to the Projects section to monitor the progress there.";
+
     // Get all current settings
     const settings = {
         resolution: document.querySelector('input[name="resolution"]:checked').value,
@@ -224,11 +227,8 @@ document.getElementById('startProcessButton').addEventListener('click', function
                                 'Encoding video...';
                             progressBar.style.width = `${progress}%`;
                             progressBar.textContent = `${progress.toFixed(1)}%`;
-                            // Show both processing status and time
-                            const processingStatus = progress <= 50 ? 
-                                'Creating PNG frames for video visualization...' : 
-                                'Encoding frames into final video...';
-                            videoProcessingInfo.textContent = processingStatus;
+                            // Show processing stage below the main message
+                            videoProcessingInfo.textContent = "You can close your browser and come back later - the video processing will continue in the background. Alternatively, you can go to the Projects section to monitor the progress there.";
                             if (statusData.processing_time) {
                                 videoProcessingInfo.textContent += `\nProcessing time: ${statusData.processing_time}`;
                             }
@@ -251,7 +251,7 @@ document.getElementById('startProcessButton').addEventListener('click', function
 
                         case 'pending':
                             progressTitle.textContent = 'Waiting to start...';
-                            videoProcessingInfo.textContent = 'Preparing to process video...';
+                            videoProcessingInfo.textContent = "You can close your browser and come back later - the video processing will continue in the background. Alternatively, you can go to the Projects section to monitor the progress there.";
                             setTimeout(checkStatus, 500);
                             break;
 
@@ -275,7 +275,7 @@ document.getElementById('startProcessButton').addEventListener('click', function
                     console.error('Status check error:', error);
                     progressTitle.textContent = 'Error checking status: ' + error.message;
                     progressBar.classList.add('bg-danger');
-                    videoProcessingInfo.classList.add('d-none');
+                    videoProcessingInfo.textContent = 'An error occurred while checking the processing status.';
                     this.disabled = false;
                 });
         };
@@ -287,7 +287,7 @@ document.getElementById('startProcessButton').addEventListener('click', function
         console.error('Error:', error);
         progressTitle.textContent = 'Error: ' + error.message;
         progressBar.classList.add('bg-danger');
-        videoProcessingInfo.classList.add('d-none');
+        videoProcessingInfo.textContent = 'An error occurred while starting the video processing.';
         this.disabled = false;
     });
 });
