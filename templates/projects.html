@@ -46,12 +46,12 @@
                             {% endif %}
                             >{{ project.status.capitalize() }}
                             {% if project.status == 'processing' %}
-                            ({{ "%.1f"|format(project.progress) }}%)
+                            ({{ "%d"|format(project.progress) }}%)
                             {% endif %}
                             </span>
                         </td>
                         <td>{{ project.frame_count }}</td>
-                        <td>{{ project.fps if project.video_file else '-' }}</td>
+                        <td>{{ project.fps }}</td>
                         <td>{{ project.resolution|upper if project.resolution else '-' }}</td>
                         <td>{{ project.codec|upper if project.codec else '-' }}</td>
                         <td>{{ project.get_duration_str() }}</td>

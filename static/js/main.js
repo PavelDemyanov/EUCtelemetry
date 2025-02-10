@@ -72,7 +72,7 @@ function updateProjectStatuses() {
 
                     // Update progress if processing
                     if (data.status === 'processing' && data.progress !== undefined) {
-                        statusBadge.textContent = `${data.status.charAt(0).toUpperCase() + data.status.slice(1)} (${data.progress.toFixed(1)}%)`;
+                        statusBadge.textContent = `${data.status.charAt(0).toUpperCase() + data.status.slice(1)} (${Math.round(data.progress)}%)`;
                     }
                 })
                 .catch(error => console.error('Error updating status:', error));
