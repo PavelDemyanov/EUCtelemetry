@@ -21,10 +21,12 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
     const progressDiv = document.getElementById('progress');
     const progressBar = progressDiv.querySelector('.progress-bar');
     const progressTitle = document.getElementById('progressTitle');
+    const videoProcessingInfo = document.getElementById('videoProcessingInfo');
     let projectId;
 
-    // Show progress for upload
+    // Show progress for upload, but not the video processing info
     progressDiv.classList.remove('d-none');
+    videoProcessingInfo.classList.add('d-none');  // Ensure video processing info is hidden
     progressTitle.textContent = 'Uploading CSV...';
 
     // Disable form
@@ -172,9 +174,11 @@ document.getElementById('startProcessButton').addEventListener('click', function
     const progressDiv = document.getElementById('progress');
     const progressBar = progressDiv.querySelector('.progress-bar');
     const progressTitle = document.getElementById('progressTitle');
+    const videoProcessingInfo = document.getElementById('videoProcessingInfo');
 
-    // Show progress bar
+    // Show progress bar and processing info
     progressDiv.classList.remove('d-none');
+    videoProcessingInfo.classList.remove('d-none');
     this.disabled = true;
 
     // Get all current settings
@@ -235,6 +239,7 @@ document.getElementById('startProcessButton').addEventListener('click', function
                     console.error('Status check error:', error);
                     progressTitle.textContent = 'Error: ' + error.message;
                     progressBar.classList.add('bg-danger');
+                    videoProcessingInfo.classList.add('d-none');  // Hide info message on error
                     this.disabled = false;
                 });
         };
@@ -246,6 +251,7 @@ document.getElementById('startProcessButton').addEventListener('click', function
         console.error('Error:', error);
         progressTitle.textContent = 'Error: ' + error.message;
         progressBar.classList.add('bg-danger');
+        videoProcessingInfo.classList.add('d-none');  // Hide info message on error
         this.disabled = false;
     });
 });
