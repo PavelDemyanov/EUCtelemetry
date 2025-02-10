@@ -224,9 +224,13 @@ document.getElementById('startProcessButton').addEventListener('click', function
                                 'Encoding video...';
                             progressBar.style.width = `${progress}%`;
                             progressBar.textContent = `${progress.toFixed(1)}%`;
-                            // Update processing time if available
+                            // Show both processing status and time
+                            const processingStatus = progress <= 50 ? 
+                                'Creating PNG frames for video visualization...' : 
+                                'Encoding frames into final video...';
+                            videoProcessingInfo.textContent = processingStatus;
                             if (statusData.processing_time) {
-                                videoProcessingInfo.textContent = `Processing time: ${statusData.processing_time}`;
+                                videoProcessingInfo.textContent += `\nProcessing time: ${statusData.processing_time}`;
                             }
                             // Poll more frequently during frame creation (every 200ms)
                             setTimeout(checkStatus, progress <= 50 ? 200 : 1000);
@@ -236,8 +240,9 @@ document.getElementById('startProcessButton').addEventListener('click', function
                             progressBar.style.width = '100%';
                             progressBar.textContent = '100%';
                             progressTitle.textContent = 'Complete!';
+                            videoProcessingInfo.textContent = 'Video processing completed successfully!';
                             if (statusData.processing_time) {
-                                videoProcessingInfo.textContent = `Total processing time: ${statusData.processing_time}`;
+                                videoProcessingInfo.textContent += `\nTotal processing time: ${statusData.processing_time}`;
                             }
                             setTimeout(() => {
                                 window.location.href = '/projects';
@@ -246,6 +251,7 @@ document.getElementById('startProcessButton').addEventListener('click', function
 
                         case 'pending':
                             progressTitle.textContent = 'Waiting to start...';
+                            videoProcessingInfo.textContent = 'Preparing to process video...';
                             setTimeout(checkStatus, 500);
                             break;
 
@@ -253,7 +259,7 @@ document.getElementById('startProcessButton').addEventListener('click', function
                             const errorMsg = statusData.error_message || 'Processing failed';
                             progressTitle.textContent = 'Error: ' + errorMsg;
                             progressBar.classList.add('bg-danger');
-                            videoProcessingInfo.classList.add('d-none');
+                            videoProcessingInfo.textContent = 'An error occurred during video processing.';
                             this.disabled = false;
                             break;
 
@@ -261,7 +267,7 @@ document.getElementById('startProcessButton').addEventListener('click', function
                             console.error('Unexpected status:', statusData.status);
                             progressTitle.textContent = 'Error: Unexpected status';
                             progressBar.classList.add('bg-danger');
-                            videoProcessingInfo.classList.add('d-none');
+                            videoProcessingInfo.textContent = 'An unexpected error occurred.';
                             this.disabled = false;
                     }
                 })
