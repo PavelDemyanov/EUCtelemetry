@@ -31,3 +31,4 @@ trafilatura==1.6.2
 
 Note: These versions are compatible with Python 3.11
 To install these dependencies, use the package manager tool in your development environment.
+flask-migrate

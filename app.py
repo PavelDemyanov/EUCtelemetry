@@ -5,6 +5,7 @@ import re
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, jsonify, send_file, url_for, send_from_directory
 from werkzeug.utils import secure_filename
+from flask_migrate import Migrate
 from extensions import db
 from utils.csv_processor import process_csv_file
 from utils.image_generator import generate_frames, create_preview_frame
@@ -14,18 +15,17 @@ from utils.background_processor import process_project
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
 
-# Символы для генерации имени проекта
+# Project name characters
 PROJECT_NAME_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
 
 def generate_project_name():
-    """Генерирует случайное имя проекта длиной 5 символов"""
+    """Generate a random 5-character project name"""
     return ''.join(random.choice(PROJECT_NAME_CHARS) for _ in range(5))
 
 def validate_project_name(name):
-    """Проверяет валидность имени проекта"""
+    """Validate project name"""
     if not name:
         return False
-    # Проверяем длину и допустимые символы (буквы любого языка и цифры)
     return len(name) <= 7 and bool(re.match(r'^[\w\d]+$', name, re.UNICODE))
 
 app = Flask(__name__)
@@ -48,8 +48,9 @@ for directory in ['uploads', 'frames', 'videos', 'processed_data', 'previews']:
         raise
 
 db.init_app(app)
+migrate = Migrate(app, db)  # Initialize Flask-Migrate
 
-from models import Project
+from models import Project  # Import models after db initialization
 
 @app.route('/')
 def index():
