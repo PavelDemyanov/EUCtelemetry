@@ -71,7 +71,7 @@
                             {% if project.status == 'processing' %}
                             <button onclick="stopProject({{ project.id }})" 
                                     class="btn btn-sm btn-warning">
-                                <i class="bi bi-stop-circle"></i> Остановить
+                                <i class="bi bi-stop-circle"></i> Stop
                             </button>
                             {% else %}
                             <button onclick="deleteProject({{ project.id }})" 

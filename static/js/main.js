@@ -1,5 +1,5 @@
 function stopProject(projectId) {
-    if (confirm('Вы уверены, что хотите остановить и удалить этот проект?')) {
+    if (confirm('Are you sure you want to stop and delete this project?')) {
         fetch(`/stop/${projectId}`, {
             method: 'POST',
         })
@@ -8,18 +8,18 @@ function stopProject(projectId) {
             if (data.success) {
                 location.reload();
             } else {
-                alert('Ошибка при остановке проекта: ' + data.error);
+                alert('Error stopping project: ' + data.error);
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Ошибка при остановке проекта');
+            alert('Error stopping project');
         });
     }
 }
 
 function deleteProject(projectId) {
-    if (confirm('Вы уверены, что хотите удалить этот проект?')) {
+    if (confirm('Are you sure you want to delete this project?')) {
         fetch(`/delete/${projectId}`, {
             method: 'POST',
         })
@@ -28,12 +28,12 @@ function deleteProject(projectId) {
             if (data.success) {
                 location.reload();
             } else {
-                alert('Ошибка удаления проекта: ' + data.error);
+                alert('Error deleting project: ' + data.error);
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Ошибка удаления проекта');
+            alert('Error deleting project');
         });
     }
 }
