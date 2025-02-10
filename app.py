@@ -279,5 +279,57 @@ def generate_preview(project_id):
         logging.error(f"Error generating preview: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/stop/<int:project_id>', methods=['POST'])
+def stop_project(project_id):
+    project = Project.query.get_or_404(project_id)
+
+    try:
+        if project.status == 'processing':
+            # Force status to error to stop processing
+            project.status = 'error'
+            project.error_message = 'Process stopped by user'
+            project.processing_completed_at = datetime.now()
+            db.session.commit()
+
+            # Delete associated files
+            if project.csv_file:
+                csv_path = os.path.join(app.config['UPLOAD_FOLDER'], project.csv_file)
+                if os.path.exists(csv_path):
+                    os.remove(csv_path)
+
+            # Delete preview file if exists
+            preview_path = os.path.join('previews', f'{project_id}_preview.png')
+            if os.path.exists(preview_path):
+                os.remove(preview_path)
+
+            if project.video_file:
+                video_path = os.path.join('videos', project.video_file)
+                if os.path.exists(video_path):
+                    os.remove(video_path)
+
+            # Delete frames directory if it exists
+            frames_dir = f'frames/project_{project.folder_number}'
+            if os.path.exists(frames_dir):
+                import shutil
+                shutil.rmtree(frames_dir)
+
+            # Delete processed CSV file if exists
+            if project.csv_file:
+                processed_csv = os.path.join('processed_data', f'project_{project.folder_number}_{project.csv_file}')
+                if os.path.exists(processed_csv):
+                    os.remove(processed_csv)
+
+            # Delete project from database
+            db.session.delete(project)
+            db.session.commit()
+
+            return jsonify({'success': True})
+        else:
+            return jsonify({'error': 'Project is not in processing state'}), 400
+
+    except Exception as e:
+        logging.error(f"Error stopping project: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 with app.app_context():
     db.create_all()

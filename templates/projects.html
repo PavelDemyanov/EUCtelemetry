@@ -68,10 +68,17 @@
                                 <i class="bi bi-download"></i> Video
                             </a>
                             {% endif %}
+                            {% if project.status == 'processing' %}
+                            <button onclick="stopProject({{ project.id }})" 
+                                    class="btn btn-sm btn-warning">
+                                <i class="bi bi-stop-circle"></i> Остановить
+                            </button>
+                            {% else %}
                             <button onclick="deleteProject({{ project.id }})" 
                                     class="btn btn-sm btn-danger">
                                 <i class="bi bi-trash"></i>
                             </button>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
