@@ -8,6 +8,16 @@ import shutil
 from utils.hardware_detection import is_apple_silicon
 import multiprocessing
 
+# Global font cache
+_font_cache = {}
+
+def _get_font(font_path, size):
+    """Cache and return font instances"""
+    cache_key = f"{font_path}_{size}"
+    if cache_key not in _font_cache:
+        _font_cache[cache_key] = ImageFont.truetype(font_path, size)
+    return _font_cache[cache_key]
+
 def detect_csv_type(df):
     """Detect CSV type based on column names"""
     if 'Date' in df.columns and 'Speed' in df.columns:
@@ -47,9 +57,6 @@ def get_column_name(csv_type, base_name):
 
 def find_nearest_values(df, timestamp, csv_type=None):
     """Find the nearest value before the given timestamp for each column"""
-    # CSV type parameter is kept for backwards compatibility but not used anymore
-    # as we're working with already processed data with normalized column names
-
     try:
         # Find values at or before timestamp
         mask = df['timestamp'] <= timestamp
@@ -91,21 +98,27 @@ def find_nearest_values(df, timestamp, csv_type=None):
         logging.error(f"Error in find_nearest_values: {e}")
         raise
 
+# Cache for rounded box images
+_box_cache = {}
+
 def create_rounded_box(width, height, radius):
-    """Create a rounded rectangle"""
-    image = Image.new('RGBA', (width, height), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(image)
-    draw.rounded_rectangle(
-        [(0, 0), (width-1, height-1)],
-        radius=radius,
-        fill=(0, 0, 0, 255),
-        outline=None
-    )
-    image = image.filter(ImageFilter.GaussianBlur(radius=0.5))
-    return image
+    """Create a rounded rectangle with caching"""
+    cache_key = f"{width}_{height}_{radius}"
+    if cache_key not in _box_cache:
+        image = Image.new('RGBA', (width, height), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(image)
+        draw.rounded_rectangle(
+            [(0, 0), (width-1, height-1)],
+            radius=radius,
+            fill=(0, 0, 0, 255),
+            outline=None
+        )
+        image = image.filter(ImageFilter.GaussianBlur(radius=0.5))
+        _box_cache[cache_key] = image
+    return _box_cache[cache_key].copy()
 
 def create_frame(values, resolution='fullhd', output_path=None, text_settings=None):
-    """Create a frame with customizable text display settings"""
+    """Create a frame with hardware acceleration and caching"""
     # Set resolution
     if resolution == "4k":
         width, height = 3840, 2160
@@ -116,20 +129,20 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
 
     # Create background layer with hardware acceleration if available
     if is_apple_silicon():
-        # Use Metal-accelerated Core Image on Apple Silicon
         try:
             import Quartz
             import CoreImage
             background = Image.new('RGBA', (width, height), (0, 0, 255, 255))
-            # Convert to Core Image format for hardware acceleration
             ci_image = CoreImage.CIImage.imageWithCGImage_(background.tobytes())
-            ci_context = CoreImage.CIContext.contextWithMTLDevice_(None)  # Use default Metal device
+            ci_context = CoreImage.CIContext.contextWithMTLDevice_(None)
             background = Image.frombytes('RGBA', (width, height), ci_context.render_(ci_image))
+            logging.info("Using Metal acceleration for image generation")
         except ImportError:
-            # Fall back to standard PIL if Core Image is not available
             background = Image.new('RGBA', (width, height), (0, 0, 255, 255))
+            logging.warning("Metal acceleration not available, falling back to CPU")
     else:
         background = Image.new('RGBA', (width, height), (0, 0, 255, 255))
+
     overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
 
@@ -142,14 +155,13 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
     vertical_position = int(text_settings.get('vertical_position', 1))
     border_radius = int(text_settings.get('border_radius', 13) * scale_factor)
 
-    # Load SF UI Display Bold font
+    # Load font from cache
     try:
-        font = ImageFont.truetype("fonts/sf-ui-display-bold.otf", font_size)
-        logging.info("Successfully loaded SF UI Display Bold font")
+        font = _get_font("fonts/sf-ui-display-bold.otf", font_size)
+        logging.debug("Using cached font")
     except Exception as e:
-        logging.error(f"Critical error loading SF UI Display Bold font: {e}")
-        logging.error("Font 'fonts/sf-ui-display-bold.otf' is required for text rendering")
-        raise ValueError("Required font 'SF UI Display Bold' could not be loaded")
+        logging.error(f"Critical error loading font: {e}")
+        raise ValueError("Required font could not be loaded")
 
     # Parameters to display
     params = [
@@ -194,6 +206,7 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
     # Draw boxes and text
     x_position = start_x
     for i, ((label, value), element_width, text_width) in enumerate(zip(params, element_widths, text_widths)):
+        # Use cached rounded box
         box = create_rounded_box(element_width, box_height, border_radius)
         overlay.paste(box, (x_position, y_position), box)
 
@@ -205,19 +218,19 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
 
         x_position += element_width + spacing
 
-    # Combine layers and save
+    # Combine layers
     result = Image.alpha_composite(background, overlay)
 
     if output_path:
         result_rgb = result.convert('RGB')
-        # Use multiple processes for PNG compression on Apple Silicon
+        # Optimize PNG compression based on hardware
         if is_apple_silicon():
-            result_rgb.save(output_path, format='PNG', quality=100, 
-                          optimize=True, compression_level=1,  # Lower compression for speed
-                          num_threads=multiprocessing.cpu_count())  # Use all available cores
+            result_rgb.save(output_path, format='PNG', quality=95,
+                          optimize=True, compression_level=3,
+                          num_threads=multiprocessing.cpu_count())
         else:
-            result_rgb.save(output_path, format='PNG', quality=100)
-        logging.info(f"Saved frame to {output_path}")
+            result_rgb.save(output_path, format='PNG', quality=95)
+        logging.debug(f"Saved frame to {output_path}")
 
     return result
 

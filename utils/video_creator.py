@@ -1,4 +1,3 @@
-import ffmpeg
 import os
 import logging
 from extensions import db
@@ -27,17 +26,19 @@ def create_video(folder_number, fps=29.97, codec='h264', resolution='fullhd', pr
         # Set video parameters based on resolution
         if resolution == '4k':
             width, height = 3840, 2160
+            bitrate = '20M'  # Higher bitrate for 4K
         else:  # fullhd
             width, height = 1920, 1080
+            bitrate = '8M'  # Standard bitrate for 1080p
 
         logging.info(f"Creating video with fps={fps}, codec={codec}, resolution={resolution}")
 
         # Build ffmpeg command with hardware acceleration if available
         command = ['ffmpeg', '-y']  # Overwrite output file
 
-        # Check for Apple Silicon
+        # Check for Apple Silicon and configure hardware acceleration
         if is_apple_silicon():
-            logging.info("Using Apple Silicon hardware acceleration")
+            logging.info("Using Apple Silicon hardware acceleration (VideoToolbox)")
             if codec == 'h264':
                 command.extend([
                     '-hwaccel', 'videotoolbox',
@@ -51,22 +52,39 @@ def create_video(folder_number, fps=29.97, codec='h264', resolution='fullhd', pr
                 ])
                 encoder = 'hevc_videotoolbox'  # Use VideoToolbox hardware encoder
 
-        # Add input options
-        command.extend([
-            '-r', str(fps),
-            '-i', f'{frames_dir}/frame_%06d.png',
-            '-c:v', encoder,
-            '-pix_fmt', 'yuv420p',
-            '-s', f'{width}x{height}'
-        ])
-
-        # Add codec-specific options
-        if not is_apple_silicon():
-            # Software encoding quality settings
-            command.extend(['-crf', '23' if codec == 'h264' else '28'])
+            # Configure hardware encoder settings
+            command.extend([
+                '-r', str(fps),
+                '-i', f'{frames_dir}/frame_%06d.png',
+                '-c:v', encoder,
+                '-b:v', bitrate,
+                '-maxrate', bitrate,
+                '-bufsize', bitrate,
+                '-pix_fmt', 'yuv420p',
+                '-s', f'{width}x{height}',
+                '-tag:v', 'avc1'  # Ensure compatibility
+            ])
         else:
-            # Hardware encoding quality settings
-            command.extend(['-b:v', '8M' if resolution == '4k' else '4M'])
+            # Software encoding configuration
+            command.extend([
+                '-r', str(fps),
+                '-i', f'{frames_dir}/frame_%06d.png',
+                '-c:v', encoder,
+                '-pix_fmt', 'yuv420p',
+                '-s', f'{width}x{height}'
+            ])
+
+            # Add codec-specific quality settings for software encoding
+            if codec == 'h264':
+                command.extend([
+                    '-preset', 'medium',  # Balance between speed and quality
+                    '-crf', '23'  # Constant Rate Factor (lower = better quality)
+                ])
+            else:  # h265
+                command.extend([
+                    '-preset', 'medium',
+                    '-crf', '28'  # HEVC typically uses higher CRF values
+                ])
 
         # Add output file
         command.append(output_file)
@@ -87,18 +105,21 @@ def create_video(folder_number, fps=29.97, codec='h264', resolution='fullhd', pr
         frame_pattern = re.compile(r'frame=\s*(\d+)')
         current_frame = 0
 
+        # Read stderr line by line
         for line in process.stderr:
-            frame_match = frame_pattern.search(line)
-            if frame_match:
-                current_frame = int(frame_match.group(1))
-                if progress_callback:
-                    progress_callback(current_frame, total_frames, 'video')
+            if line is not None:  # Add None check
+                frame_match = frame_pattern.search(line)
+                if frame_match:
+                    current_frame = int(frame_match.group(1))
+                    if progress_callback:
+                        progress_callback(current_frame, total_frames, 'video')
 
         # Wait for process to complete
         process.wait()
 
         if process.returncode != 0:
-            raise Exception("FFmpeg encoding failed")
+            error_output = process.stderr.read() if process.stderr else "No error output available"
+            raise Exception(f"FFmpeg encoding failed: {error_output}")
 
         # Ensure 100% progress for video encoding
         if progress_callback:
