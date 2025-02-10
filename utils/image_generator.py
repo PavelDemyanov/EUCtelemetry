@@ -5,6 +5,8 @@ import os
 import logging
 from datetime import datetime
 import shutil
+from utils.hardware_detection import is_apple_silicon
+import multiprocessing
 
 def detect_csv_type(df):
     """Detect CSV type based on column names"""
@@ -112,8 +114,22 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
         width, height = 1920, 1080
         scale_factor = 1.0
 
-    # Create background layer
-    background = Image.new('RGBA', (width, height), (0, 0, 255, 255))
+    # Create background layer with hardware acceleration if available
+    if is_apple_silicon():
+        # Use Metal-accelerated Core Image on Apple Silicon
+        try:
+            import Quartz
+            import CoreImage
+            background = Image.new('RGBA', (width, height), (0, 0, 255, 255))
+            # Convert to Core Image format for hardware acceleration
+            ci_image = CoreImage.CIImage.imageWithCGImage_(background.tobytes())
+            ci_context = CoreImage.CIContext.contextWithMTLDevice_(None)  # Use default Metal device
+            background = Image.frombytes('RGBA', (width, height), ci_context.render_(ci_image))
+        except ImportError:
+            # Fall back to standard PIL if Core Image is not available
+            background = Image.new('RGBA', (width, height), (0, 0, 255, 255))
+    else:
+        background = Image.new('RGBA', (width, height), (0, 0, 255, 255))
     overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
 
@@ -194,7 +210,13 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
 
     if output_path:
         result_rgb = result.convert('RGB')
-        result_rgb.save(output_path, format='PNG', quality=100)
+        # Use multiple processes for PNG compression on Apple Silicon
+        if is_apple_silicon():
+            result_rgb.save(output_path, format='PNG', quality=100, 
+                          optimize=True, compression_level=1,  # Lower compression for speed
+                          num_threads=multiprocessing.cpu_count())  # Use all available cores
+        else:
+            result_rgb.save(output_path, format='PNG', quality=100)
         logging.info(f"Saved frame to {output_path}")
 
     return result

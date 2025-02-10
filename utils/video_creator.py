@@ -5,6 +5,7 @@ from extensions import db
 from models import Project
 import subprocess
 import re
+from utils.hardware_detection import is_apple_silicon
 
 def create_video(folder_number, fps=29.97, codec='h264', resolution='fullhd', progress_callback=None):
     try:
@@ -31,18 +32,44 @@ def create_video(folder_number, fps=29.97, codec='h264', resolution='fullhd', pr
 
         logging.info(f"Creating video with fps={fps}, codec={codec}, resolution={resolution}")
 
-        # Build ffmpeg command
-        command = [
-            'ffmpeg',
-            '-y',  # Overwrite output file
+        # Build ffmpeg command with hardware acceleration if available
+        command = ['ffmpeg', '-y']  # Overwrite output file
+
+        # Check for Apple Silicon
+        if is_apple_silicon():
+            logging.info("Using Apple Silicon hardware acceleration")
+            if codec == 'h264':
+                command.extend([
+                    '-hwaccel', 'videotoolbox',
+                    '-hwaccel_output_format', 'videotoolbox_vld'
+                ])
+                encoder = 'h264_videotoolbox'  # Use VideoToolbox hardware encoder
+            elif codec == 'h265':
+                command.extend([
+                    '-hwaccel', 'videotoolbox',
+                    '-hwaccel_output_format', 'videotoolbox_vld'
+                ])
+                encoder = 'hevc_videotoolbox'  # Use VideoToolbox hardware encoder
+
+        # Add input options
+        command.extend([
             '-r', str(fps),
             '-i', f'{frames_dir}/frame_%06d.png',
             '-c:v', encoder,
             '-pix_fmt', 'yuv420p',
-            '-s', f'{width}x{height}',
-            '-crf', '23' if codec == 'h264' else '28',
-            output_file
-        ]
+            '-s', f'{width}x{height}'
+        ])
+
+        # Add codec-specific options
+        if not is_apple_silicon():
+            # Software encoding quality settings
+            command.extend(['-crf', '23' if codec == 'h264' else '28'])
+        else:
+            # Hardware encoding quality settings
+            command.extend(['-b:v', '8M' if resolution == '4k' else '4M'])
+
+        # Add output file
+        command.append(output_file)
 
         # Get total frame count for progress calculation
         frame_files = [f for f in os.listdir(frames_dir) if f.startswith('frame_') and f.endswith('.png')]

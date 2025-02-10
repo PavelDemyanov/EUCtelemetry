@@ -5,6 +5,7 @@ from extensions import db
 from utils.csv_processor import process_csv_file
 from utils.image_generator import generate_frames
 from utils.video_creator import create_video
+from utils.hardware_detection import get_hardware_info
 import os
 from datetime import datetime
 
@@ -21,6 +22,10 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     logging.error(f"Project {project_id} not found")
                     return
 
+                # Log hardware information at the start of processing
+                hardware_info = get_hardware_info()
+                logging.info(f"Starting project processing with hardware configuration: {hardware_info}")
+
                 project.status = 'processing'
                 project.fps = float(fps)  # Convert to float explicitly
                 project.resolution = resolution
@@ -28,9 +33,6 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                 project.processing_started_at = datetime.now()
                 project.progress = 0  # Initialize progress
                 db.session.commit()
-
-                # Log text settings for debugging
-                logging.info(f"Processing project {project_id} with text settings: {text_settings}")
 
                 # Get unique folder number if not already assigned
                 if project.folder_number is None:
