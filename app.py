@@ -103,9 +103,9 @@ def upload_file():
         default_settings = {
             'vertical_position': 1,
             'top_padding': 14,
-            'bottom_padding': 47,
+            'bottom_padding': 41,  # Changed from 47 to 41
             'spacing': 10,
-            'font_size': 26,
+            'font_size': 22,  # Changed from 26 to 22
             'border_radius': 13
         }
 
