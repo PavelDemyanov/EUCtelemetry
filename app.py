@@ -105,7 +105,7 @@ def upload_file():
             'top_padding': 14,
             'bottom_padding': 41,
             'spacing': 10,
-            'font_size': 22,
+            'font_size': 21,
             'border_radius': 13
         }
 
@@ -149,7 +149,7 @@ def generate_project_frames(project_id):
             'top_padding': int(data.get('top_padding', 10)),
             'bottom_padding': int(data.get('bottom_padding', 41)),
             'spacing': int(data.get('spacing', 20)),
-            'font_size': int(data.get('font_size', 22)),
+            'font_size': int(data.get('font_size', 21)),
             'border_radius': int(data.get('border_radius', 13))
         }
 
@@ -258,7 +258,7 @@ def generate_preview(project_id):
             'top_padding': int(data.get('top_padding', 10)),
             'bottom_padding': int(data.get('bottom_padding', 41)),
             'spacing': int(data.get('spacing', 20)),
-            'font_size': int(data.get('font_size', 22)),
+            'font_size': int(data.get('font_size', 21)),
             'border_radius': int(data.get('border_radius', 13))
         }
 
