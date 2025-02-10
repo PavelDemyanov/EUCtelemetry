@@ -87,36 +87,6 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
     # Create background layer
     background = Image.new('RGBA', (width, height), (0, 0, 255, 255))
 
-    # Try to use hardware acceleration if available
-    if _metal_context or _initialize_metal():
-        try:
-            from Quartz import CIImage
-            import Cocoa
-
-            # Convert PIL image to CGImage
-            raw_data = background.tobytes()
-            data_provider = Cocoa.NSData.dataWithBytes_length_(raw_data, len(raw_data))
-
-            # Create CIImage from raw data
-            ci_image = CIImage.imageWithData_(data_provider)
-            if ci_image and _metal_context:
-                # Create CGImage using Metal context
-                cg_image = _metal_context.createCGImage_fromRect_(ci_image, ((0, 0), (width, height)))
-                if cg_image:
-                    # Convert back to PIL Image
-                    buffer = ctypes.create_string_buffer(width * height * 4)
-                    cg_image.getData_bytesPerRow_bytesPerComponent_bitsPerComponent_bitsPerPixel_(
-                        buffer,
-                        width * 4,
-                        1,
-                        8,
-                        32
-                    )
-                    background = Image.frombuffer('RGBA', (width, height), buffer, 'raw', 'RGBA', 0, 1)
-        except Exception as e:
-            if not _metal_initialized:
-                logging.warning(f"Metal acceleration failed, falling back to CPU: {e}")
-
     overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
 
@@ -194,12 +164,8 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
 
     if output_path:
         result_rgb = result.convert('RGB')
-        # Optimize PNG compression based on hardware
-        if is_apple_silicon():
-            result_rgb.save(output_path, format='PNG', quality=95,
-                              optimize=True, compression_level=3)
-        else:
-            result_rgb.save(output_path, format='PNG', quality=95)
+        # Save with appropriate quality settings
+        result_rgb.save(output_path, format='PNG', quality=95, optimize=True)
         logging.debug(f"Saved frame to {output_path}")
 
     return result
@@ -213,6 +179,10 @@ def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, tex
         os.makedirs(frames_dir, exist_ok=True)
 
         from utils.csv_processor import process_csv_file
+        from flask import current_app
+
+        # Get the application context once
+        app = current_app._get_current_object()
 
         csv_type, processed_data = process_csv_file(csv_file, folder_number)
         df = pd.DataFrame(processed_data)
@@ -242,28 +212,30 @@ def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, tex
 
         def process_frame(i, timestamp):
             nonlocal completed_frames
-            idx = np.searchsorted(ts_array, timestamp, side='right') - 1
-            if idx < 0:
-                values = {key: 0 for key in ['speed', 'max_speed', 'gps', 'voltage', 'temperature',
-                                          'current', 'battery', 'mileage', 'pwm', 'power']}
-            else:
-                values = {key: int(arr[idx]) for key, arr in zip(
-                    ['speed', 'gps', 'voltage', 'temperature', 'current', 'battery', 'mileage', 'pwm', 'power'],
-                    [speed_array, gps_array, voltage_array, temperature_array, current_array, battery_array,
-                     mileage_array, pwm_array, power_array]
-                )}
-                values['max_speed'] = int(max_speed_array[idx])
+            # Use the app context in each worker thread
+            with app.app_context():
+                idx = np.searchsorted(ts_array, timestamp, side='right') - 1
+                if idx < 0:
+                    values = {key: 0 for key in ['speed', 'max_speed', 'gps', 'voltage', 'temperature',
+                                              'current', 'battery', 'mileage', 'pwm', 'power']}
+                else:
+                    values = {key: int(arr[idx]) for key, arr in zip(
+                        ['speed', 'gps', 'voltage', 'temperature', 'current', 'battery', 'mileage', 'pwm', 'power'],
+                        [speed_array, gps_array, voltage_array, temperature_array, current_array, battery_array,
+                         mileage_array, pwm_array, power_array]
+                    )}
+                    values['max_speed'] = int(max_speed_array[idx])
 
-            output_path = f'{frames_dir}/frame_{i:06d}.png'
-            create_frame(values, resolution, output_path, text_settings)
+                output_path = f'{frames_dir}/frame_{i:06d}.png'
+                create_frame(values, resolution, output_path, text_settings)
 
-            with frames_lock:
-                nonlocal completed_frames
-                completed_frames += 1
-                if progress_callback and (completed_frames % batch_size == 0 or completed_frames == frame_count):
-                    progress = (completed_frames / frame_count) * 50  # 0-50% for frame generation
-                    progress_callback(completed_frames, frame_count, 'frames')
-                    logging.info(f"Progress updated: {progress:.1f}%")
+                with frames_lock:
+                    nonlocal completed_frames
+                    completed_frames += 1
+                    if progress_callback and (completed_frames % batch_size == 0 or completed_frames == frame_count):
+                        progress = (completed_frames / frame_count) * 50  # 0-50% for frame generation
+                        progress_callback(completed_frames, frame_count, 'frames')
+                        logging.info(f"Progress updated: {progress:.1f}%")
 
         # Process frames in smaller batches for more frequent progress updates
         max_workers = os.cpu_count() or 4
