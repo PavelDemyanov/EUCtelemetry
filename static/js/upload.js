@@ -187,10 +187,8 @@ document.getElementById('startProcessButton').addEventListener('click', function
         bottom_padding: document.getElementById('bottomPadding').value,
         spacing: document.getElementById('spacing').value,
         font_size: document.getElementById('fontSize').value,
-        border_radius: document.getElementById('borderRadius').value  // Make sure this is included
+        border_radius: document.getElementById('borderRadius').value
     };
-
-    console.log('Sending processing settings:', settings);  // Debug log
 
     // Start processing
     fetch(`/generate_frames/${projectId}`, {
@@ -211,10 +209,13 @@ document.getElementById('startProcessButton').addEventListener('click', function
                 .then(statusData => {
                     switch(statusData.status) {
                         case 'processing':
-                            progressTitle.textContent = 'Processing...';
-                            progressBar.style.width = '50%';
-                            progressBar.textContent = '50%';
-                            setTimeout(checkStatus, 2000);  // Poll every 2 seconds
+                            const progress = statusData.progress || 0;
+                            progressTitle.textContent = progress <= 50 ? 
+                                'Creating frames...' : 
+                                'Encoding video...';
+                            progressBar.style.width = `${progress}%`;
+                            progressBar.textContent = `${progress.toFixed(1)}%`;
+                            setTimeout(checkStatus, 1000);  // Poll every second
                             break;
                         case 'completed':
                             progressBar.style.width = '100%';

@@ -26,6 +26,7 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                 project.resolution = resolution
                 project.codec = codec
                 project.processing_started_at = datetime.now()
+                project.progress = 0  # Initialize progress
                 db.session.commit()
 
                 # Log text settings for debugging
@@ -46,13 +47,27 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                 csv_file = os.path.join('uploads', project.csv_file)
                 _, _ = process_csv_file(csv_file, project.folder_number, project.csv_type)
 
-                # Generate frames
+                def progress_callback(current_frame, total_frames, stage='frames'):
+                    """Update progress in database"""
+                    if stage == 'frames':
+                        # Frame generation progress (0-50%)
+                        progress = (current_frame / total_frames) * 50
+                    else:
+                        # Video encoding progress (50-100%)
+                        progress = 50 + (current_frame / total_frames) * 50
+
+                    project.progress = progress
+                    db.session.commit()
+                    logging.info(f"Progress updated: {progress:.1f}%")
+
+                # Generate frames with progress tracking
                 frame_count, duration = generate_frames(
                     csv_file,
                     project.folder_number,
                     resolution,
                     fps,
-                    text_settings
+                    text_settings,
+                    progress_callback
                 )
 
                 # Convert numpy values to Python native types
@@ -60,12 +75,19 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                 project.video_duration = float(duration)
                 db.session.commit()
 
-                # Create video
-                video_path = create_video(project.folder_number, fps, codec, resolution)
+                # Create video with progress tracking
+                video_path = create_video(
+                    project.folder_number,
+                    fps,
+                    codec,
+                    resolution,
+                    progress_callback
+                )
 
                 # Update project with video info and completion time
                 project.video_file = os.path.basename(video_path)
                 project.status = 'completed'
+                project.progress = 100  # Ensure progress is 100% when completed
                 project.processing_completed_at = datetime.now()
                 db.session.commit()
 

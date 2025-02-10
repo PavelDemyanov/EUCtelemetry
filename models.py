@@ -19,6 +19,7 @@ class Project(db.Model):
     folder_number = db.Column(db.Integer)  # New field for storing unique folder number
     processing_started_at = db.Column(db.DateTime)  # When processing started
     processing_completed_at = db.Column(db.DateTime)  # When processing completed
+    progress = db.Column(db.Float, default=0)  # Progress percentage from 0 to 100
 
     def days_until_expiry(self):
         if self.expiry_date:

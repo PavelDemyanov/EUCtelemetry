@@ -44,7 +44,11 @@
                             {% if project.status == 'error' and project.error_message %}
                             title="{{ project.error_message }}"
                             {% endif %}
-                            >{{ project.status.capitalize() }}</span>
+                            >{{ project.status.capitalize() }}
+                            {% if project.status == 'processing' %}
+                            ({{ "%.1f"|format(project.progress) }}%)
+                            {% endif %}
+                            </span>
                         </td>
                         <td>{{ project.frame_count }}</td>
                         <td>{{ project.fps if project.video_file else '-' }}</td>

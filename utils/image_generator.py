@@ -242,7 +242,7 @@ def create_preview_frame(csv_file, project_id, resolution='fullhd', text_setting
         logging.error(f"Error creating preview frame: {e}")
         raise
 
-def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, text_settings=None):
+def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, text_settings=None, progress_callback=None):
     """Generate video frames with text overlay"""
     try:
         frames_dir = f'frames/project_{folder_number}'
@@ -271,8 +271,14 @@ def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, tex
             values = find_nearest_values(df, timestamp)
             output_path = f'{frames_dir}/frame_{i:06d}.png'
             create_frame(values, resolution, output_path, text_settings)
-            if i % 100 == 0:
+            if i % 10 == 0:  # Update progress every 10 frames
+                if progress_callback:
+                    progress_callback(i, frame_count, 'frames')
                 logging.info(f"Generated frame {i}/{frame_count}")
+
+        # Ensure 100% progress for frame generation
+        if progress_callback:
+            progress_callback(frame_count, frame_count, 'frames')
 
         logging.info(f"Successfully generated {frame_count} frames")
         return frame_count, duration
