@@ -12,11 +12,16 @@ import ctypes
 # Global Metal context and device for hardware acceleration
 _metal_context = None
 _metal_device = None
+_metal_initialized = False
 
 def _initialize_metal():
     """Initialize Metal context and device if available"""
-    global _metal_context, _metal_device
-    if is_apple_silicon() and _metal_context is None:
+    global _metal_context, _metal_device, _metal_initialized
+
+    if _metal_initialized:
+        return _metal_context is not None
+
+    if is_apple_silicon() and not _metal_initialized:
         try:
             from Quartz import CIContext, CIImage
             from Metal import MTLCreateSystemDefaultDevice
@@ -25,9 +30,11 @@ def _initialize_metal():
             if _metal_device:
                 _metal_context = CIContext.contextWithMTLDevice_(_metal_device)
                 logging.info("Successfully initialized Metal context and device")
+                _metal_initialized = True
                 return True
         except Exception as e:
             logging.warning(f"Failed to initialize Metal: {e}")
+            _metal_initialized = True
     return False
 
 # Global font cache
@@ -79,35 +86,34 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
     background = Image.new('RGBA', (width, height), (0, 0, 255, 255))
 
     # Try to use hardware acceleration if available
-    if is_apple_silicon():
+    if _metal_context or _initialize_metal():
         try:
-            if _initialize_metal():
-                from Quartz import CIImage, CGImageRef
-                import Cocoa
+            from Quartz import CIImage
+            import Cocoa
 
-                # Convert PIL image to CGImage
-                raw_data = background.tobytes()
-                data_provider = Cocoa.NSData.dataWithBytes_length_(raw_data, len(raw_data))
+            # Convert PIL image to CGImage
+            raw_data = background.tobytes()
+            data_provider = Cocoa.NSData.dataWithBytes_length_(raw_data, len(raw_data))
 
-                # Create CIImage from raw data
-                ci_image = CIImage.imageWithData_(data_provider)
-                if ci_image and _metal_context:
-                    # Create CGImage using Metal context
-                    cg_image = _metal_context.createCGImage_fromRect_(ci_image, ((0, 0), (width, height)))
-                    if cg_image:
-                        # Convert back to PIL Image
-                        buffer = ctypes.create_string_buffer(width * height * 4)
-                        cg_image.getData_bytesPerRow_bytesPerComponent_bitsPerComponent_bitsPerPixel_(
-                            buffer,
-                            width * 4,
-                            1,
-                            8,
-                            32
-                        )
-                        background = Image.frombuffer('RGBA', (width, height), buffer, 'raw', 'RGBA', 0, 1)
-                        logging.info("Successfully used Metal acceleration for image generation")
+            # Create CIImage from raw data
+            ci_image = CIImage.imageWithData_(data_provider)
+            if ci_image and _metal_context:
+                # Create CGImage using Metal context
+                cg_image = _metal_context.createCGImage_fromRect_(ci_image, ((0, 0), (width, height)))
+                if cg_image:
+                    # Convert back to PIL Image
+                    buffer = ctypes.create_string_buffer(width * height * 4)
+                    cg_image.getData_bytesPerRow_bytesPerComponent_bitsPerComponent_bitsPerPixel_(
+                        buffer,
+                        width * 4,
+                        1,
+                        8,
+                        32
+                    )
+                    background = Image.frombuffer('RGBA', (width, height), buffer, 'raw', 'RGBA', 0, 1)
         except Exception as e:
-            logging.warning(f"Metal acceleration not available, falling back to CPU: {e}")
+            if not _metal_initialized:
+                logging.warning(f"Metal acceleration failed, falling back to CPU: {e}")
 
     overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
