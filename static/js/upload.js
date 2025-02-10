@@ -211,6 +211,11 @@ document.getElementById('startProcessButton').addEventListener('click', function
             fetch(`/project_status/${projectId}`)
                 .then(response => response.json())
                 .then(statusData => {
+                    // Ensure we have a valid status
+                    if (!statusData.status) {
+                        throw new Error('No status received from server');
+                    }
+
                     switch(statusData.status) {
                         case 'processing':
                             const progress = statusData.progress || 0;
@@ -219,28 +224,52 @@ document.getElementById('startProcessButton').addEventListener('click', function
                                 'Encoding video...';
                             progressBar.style.width = `${progress}%`;
                             progressBar.textContent = `${progress.toFixed(1)}%`;
+                            // Update processing time if available
+                            if (statusData.processing_time) {
+                                videoProcessingInfo.textContent = `Processing time: ${statusData.processing_time}`;
+                            }
                             // Poll more frequently during frame creation (every 200ms)
                             setTimeout(checkStatus, progress <= 50 ? 200 : 1000);
                             break;
+
                         case 'completed':
                             progressBar.style.width = '100%';
                             progressBar.textContent = '100%';
                             progressTitle.textContent = 'Complete!';
+                            if (statusData.processing_time) {
+                                videoProcessingInfo.textContent = `Total processing time: ${statusData.processing_time}`;
+                            }
                             setTimeout(() => {
                                 window.location.href = '/projects';
                             }, 1000);
                             break;
+
+                        case 'pending':
+                            progressTitle.textContent = 'Waiting to start...';
+                            setTimeout(checkStatus, 500);
+                            break;
+
                         case 'error':
-                            throw new Error(statusData.error_message || 'Processing failed');
+                            const errorMsg = statusData.error_message || 'Processing failed';
+                            progressTitle.textContent = 'Error: ' + errorMsg;
+                            progressBar.classList.add('bg-danger');
+                            videoProcessingInfo.classList.add('d-none');
+                            this.disabled = false;
+                            break;
+
                         default:
-                            throw new Error('Unknown status');
+                            console.error('Unexpected status:', statusData.status);
+                            progressTitle.textContent = 'Error: Unexpected status';
+                            progressBar.classList.add('bg-danger');
+                            videoProcessingInfo.classList.add('d-none');
+                            this.disabled = false;
                     }
                 })
                 .catch(error => {
                     console.error('Status check error:', error);
-                    progressTitle.textContent = 'Error: ' + error.message;
+                    progressTitle.textContent = 'Error checking status: ' + error.message;
                     progressBar.classList.add('bg-danger');
-                    videoProcessingInfo.classList.add('d-none');  // Hide info message on error
+                    videoProcessingInfo.classList.add('d-none');
                     this.disabled = false;
                 });
         };
@@ -252,7 +281,7 @@ document.getElementById('startProcessButton').addEventListener('click', function
         console.error('Error:', error);
         progressTitle.textContent = 'Error: ' + error.message;
         progressBar.classList.add('bg-danger');
-        videoProcessingInfo.classList.add('d-none');  // Hide info message on error
+        videoProcessingInfo.classList.add('d-none');
         this.disabled = false;
     });
 });
