@@ -105,6 +105,15 @@
                         </div>
                     </div>
 
+                    <button type="submit" class="btn btn-primary" id="uploadButton">Upload and Show Preview</button>
+                </form>
+
+                <div id="previewSection" class="mt-4 d-none">
+                    <h4>Preview</h4>
+                    <div class="preview-image-container mb-3">
+                        <img id="previewImage" class="img-fluid" alt="Preview frame">
+                    </div>
+
                     <div class="card mb-3">
                         <div class="card-header">
                             <h5 class="mb-0">Text Display Settings</h5>
@@ -141,8 +150,8 @@
                                     <div class="mb-3">
                                         <label for="bottomPadding" class="form-label">Box Height</label>
                                         <input type="range" class="form-range" id="bottomPadding" name="bottom_padding" 
-                                               min="0" max="100" value="41" step="1">
-                                        <div class="text-muted small">Current: <span id="bottomPaddingValue">41</span>px</div>
+                                               min="0" max="100" value="47" step="1">
+                                        <div class="text-muted small">Current: <span id="bottomPaddingValue">47</span>px</div>
                                     </div>
                                 </div>
                             </div>
@@ -159,24 +168,14 @@
                                     <div class="mb-3">
                                         <label for="fontSize" class="form-label">Font Size</label>
                                         <input type="range" class="form-range" id="fontSize" name="font_size" 
-                                               min="12" max="72" value="21" step="1">
-                                        <div class="text-muted small">Current: <span id="fontSizeValue">21</span>px</div>
+                                               min="12" max="72" value="26" step="1">
+                                        <div class="text-muted small">Current: <span id="fontSizeValue">26</span>px</div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <button type="submit" class="btn btn-primary" id="uploadButton">Upload and Show Preview</button>
-                </form>
-
-                <div id="previewSection" class="mt-4 d-none">
-                    <h4>Preview</h4>
-                    <div class="preview-image-container mb-3">
-                        <img id="previewImage" class="img-fluid" alt="Preview frame">
-                    </div>
-
-                    
                     <button type="button" class="btn btn-success" id="startProcessButton">Start Processing</button>
                 </div>
 

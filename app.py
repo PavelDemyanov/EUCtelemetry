@@ -103,9 +103,9 @@ def upload_file():
         default_settings = {
             'vertical_position': 1,
             'top_padding': 14,
-            'bottom_padding': 41,
+            'bottom_padding': 47,
             'spacing': 10,
-            'font_size': 21,
+            'font_size': 26,
             'border_radius': 13
         }
 
@@ -147,9 +147,9 @@ def generate_project_frames(project_id):
         text_settings = {
             'vertical_position': int(data.get('vertical_position', 50)),
             'top_padding': int(data.get('top_padding', 10)),
-            'bottom_padding': int(data.get('bottom_padding', 41)),
+            'bottom_padding': int(data.get('bottom_padding', 30)),
             'spacing': int(data.get('spacing', 20)),
-            'font_size': int(data.get('font_size', 21)),
+            'font_size': int(data.get('font_size', 26)),
             'border_radius': int(data.get('border_radius', 13))
         }
 
@@ -256,9 +256,9 @@ def generate_preview(project_id):
         text_settings = {
             'vertical_position': int(data.get('vertical_position', 50)),
             'top_padding': int(data.get('top_padding', 10)),
-            'bottom_padding': int(data.get('bottom_padding', 41)),
+            'bottom_padding': int(data.get('bottom_padding', 30)),
             'spacing': int(data.get('spacing', 20)),
-            'font_size': int(data.get('font_size', 21)),
+            'font_size': int(data.get('font_size', 26)),
             'border_radius': int(data.get('border_radius', 13))
         }
 
