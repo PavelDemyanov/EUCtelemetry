@@ -229,9 +229,6 @@ document.getElementById('startProcessButton').addEventListener('click', function
                             progressBar.textContent = `${progress.toFixed(1)}%`;
                             // Show processing stage below the main message
                             videoProcessingInfo.textContent = "You can close your browser and come back later - the video processing will continue in the background. Alternatively, you can go to the Projects section to monitor the progress there.";
-                            if (statusData.processing_time) {
-                                videoProcessingInfo.textContent += `\nProcessing time: ${statusData.processing_time}`;
-                            }
                             // Poll more frequently during frame creation (every 200ms)
                             setTimeout(checkStatus, progress <= 50 ? 200 : 1000);
                             break;
@@ -241,9 +238,6 @@ document.getElementById('startProcessButton').addEventListener('click', function
                             progressBar.textContent = '100%';
                             progressTitle.textContent = 'Complete!';
                             videoProcessingInfo.textContent = 'Video processing completed successfully!';
-                            if (statusData.processing_time) {
-                                videoProcessingInfo.textContent += `\nTotal processing time: ${statusData.processing_time}`;
-                            }
                             setTimeout(() => {
                                 window.location.href = '/projects';
                             }, 1000);
