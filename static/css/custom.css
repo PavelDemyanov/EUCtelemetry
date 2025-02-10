@@ -22,3 +22,22 @@
 .btn-sm {
     margin: 0.2rem;
 }
+
+/* Custom badge styles for speed indicators */
+.badge.text-bg-success {
+    background-color: rgba(25, 135, 84, 0.15) !important;
+    color: #198754 !important;
+    font-weight: 500;
+}
+
+.badge.text-bg-warning {
+    background-color: rgba(255, 193, 7, 0.15) !important;
+    color: #ffc107 !important;
+    font-weight: 500;
+}
+
+.badge.text-bg-danger {
+    background-color: rgba(220, 53, 69, 0.15) !important;
+    color: #dc3545 !important;
+    font-weight: 500;
+}
