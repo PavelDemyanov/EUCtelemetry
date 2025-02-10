@@ -51,16 +51,19 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
 
                 def progress_callback(current_frame, total_frames, stage='frames'):
                     """Update progress in database"""
-                    if stage == 'frames':
-                        # Frame generation progress (0-50%)
-                        progress = (current_frame / total_frames) * 50
-                    else:
-                        # Video encoding progress (50-100%)
-                        progress = 50 + (current_frame / total_frames) * 50
+                    try:
+                        if stage == 'frames':
+                            # Frame generation progress (0-50%)
+                            progress = (current_frame / total_frames) * 50
+                        else:
+                            # Video encoding progress (50-100%)
+                            progress = 50 + (current_frame / total_frames) * 50
 
-                    project.progress = progress
-                    db.session.commit()
-                    logging.info(f"Progress updated: {progress:.1f}%")
+                        project.progress = progress
+                        db.session.commit()
+                        logging.info(f"Progress updated: {progress:.1f}%")
+                    except Exception as e:
+                        logging.error(f"Error updating progress: {e}")
 
                 # Generate frames with progress tracking
                 frame_count, duration = generate_frames(
