@@ -5,29 +5,24 @@ import os
 import logging
 import shutil
 import concurrent.futures
-import multiprocessing
-from utils.hardware_detection import is_apple_silicon
-import ctypes
 import threading
 from functools import lru_cache
+from utils.hardware_detection import is_apple_silicon
 
-# Global Metal context and device for hardware acceleration
+# Если используется Metal, можно инициализировать его, но если он не дает выигрыша — код работает по CPU.
+# Здесь пример инициализации Metal (если потребуется), но далее он не используется для отрисовки через PIL.
 _metal_context = None
 _metal_device = None
 _metal_initialized = False
 
 def _initialize_metal():
-    """Initialize Metal context and device if available"""
     global _metal_context, _metal_device, _metal_initialized
-
     if _metal_initialized:
         return _metal_context is not None
-
     if is_apple_silicon() and not _metal_initialized:
         try:
-            from Quartz import CIContext, CIImage
+            from Quartz import CIContext
             from Metal import MTLCreateSystemDefaultDevice
-
             _metal_device = MTLCreateSystemDefaultDevice()
             if _metal_device:
                 _metal_context = CIContext.contextWithMTLDevice_(_metal_device)
@@ -39,11 +34,11 @@ def _initialize_metal():
             _metal_initialized = True
     return False
 
-# Global font cache
+# --- Функции для кэширования шрифта и закругленных блоков ---
+
 _font_cache = {}
 
 def _get_font(font_path, size):
-    """Get font from cache or load it"""
     cache_key = f"{font_path}_{size}"
     if cache_key not in _font_cache:
         try:
@@ -54,11 +49,9 @@ def _get_font(font_path, size):
             raise ValueError(f"Could not load font {font_path}")
     return _font_cache[cache_key]
 
-# Cache for rounded box images
 _box_cache = {}
 
 def create_rounded_box(width, height, radius):
-    """Create a rounded rectangle with caching"""
     cache_key = f"{width}_{height}_{radius}"
     if cache_key not in _box_cache:
         image = Image.new('RGBA', (width, height), (0, 0, 0, 0))
@@ -66,17 +59,17 @@ def create_rounded_box(width, height, radius):
         draw.rounded_rectangle(
             [(0, 0), (width - 1, height - 1)],
             radius=radius,
-            fill=(0, 0, 0, 255),
-            outline=None
+            fill=(0, 0, 0, 255)
         )
         image = image.filter(ImageFilter.GaussianBlur(radius=0.5))
         _box_cache[cache_key] = image
         logging.debug(f"Created and cached rounded box {cache_key}")
     return _box_cache[cache_key].copy()
 
+# --- Функция создания кадра (PNG) ---
+
 def create_frame(values, resolution='fullhd', output_path=None, text_settings=None):
-    """Create a frame with hardware acceleration and caching"""
-    # Set resolution
+    # Определяем разрешение и масштаб
     if resolution == "4k":
         width, height = 3840, 2160
         scale_factor = 2.0
@@ -84,13 +77,11 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
         width, height = 1920, 1080
         scale_factor = 1.0
 
-    # Create background layer
+    # Создаем фон и оверлей
     background = Image.new('RGBA', (width, height), (0, 0, 255, 255))
-
     overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
 
-    # Scale settings according to resolution
     text_settings = text_settings or {}
     font_size = int(text_settings.get('font_size', 26) * scale_factor)
     top_padding = int(text_settings.get('top_padding', 14) * scale_factor)
@@ -105,7 +96,7 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
         logging.error(f"Error loading font: {e}")
         raise
 
-    # Parameters to display
+    # Формируем параметры для вывода текста
     params = [
         ('Speed', f"{values['speed']} km/h"),
         ('Max Speed', f"{values['max_speed']} km/h"),
@@ -119,18 +110,17 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
         ('Power', f"{values['power']} W")
     ]
 
-    # Calculate dimensions
     element_widths = []
     text_widths = []
     text_heights = []
     total_width = 0
 
+    # Вычисляем размеры для каждого текстового элемента
     for label, value in params:
         bbox = draw.textbbox((0, 0), f"{label}: {value}", font=font)
         text_width = bbox[2] - bbox[0]
         text_height = bbox[3] - bbox[1]
         element_width = text_width + (2 * top_padding)
-
         element_widths.append(element_width)
         text_widths.append(text_width)
         text_heights.append(text_height)
@@ -140,38 +130,46 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
     start_x = (width - total_width) // 2
     y_position = int((height * vertical_position) / 100)
 
-    # Position text
     max_text_height = max(text_heights)
     box_vertical_center = y_position + (box_height // 2)
     text_baseline_y = box_vertical_center - (max_text_height // 2)
 
-    # Draw boxes and text
+    # Рисуем каждый текстовый блок с закругленным фоном
     x_position = start_x
     for i, ((label, value), element_width, text_width) in enumerate(zip(params, element_widths, text_widths)):
         box = create_rounded_box(element_width, box_height, border_radius)
         overlay.paste(box, (x_position, y_position), box)
-
         text = f"{label}: {value}"
         text_x = x_position + ((element_width - text_width) // 2)
         baseline_offset = int(max_text_height * 0.2)
         text_y = text_baseline_y - baseline_offset
         draw.text((text_x, text_y), text, fill=(255, 255, 255, 255), font=font)
-
         x_position += element_width + spacing
 
-    # Combine layers
+    # Компонуем итоговое изображение
     result = Image.alpha_composite(background, overlay)
 
     if output_path:
-        result_rgb = result.convert('RGB')
-        # Save with appropriate quality settings
-        result_rgb.save(output_path, format='PNG', quality=95, optimize=True)
+        result.convert('RGB').save(output_path, format='PNG', quality=95, optimize=True)
         logging.debug(f"Saved frame to {output_path}")
 
     return result
 
+# --- Функция генерации кадров с обновлением прогресс-бара ---
+
 def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, text_settings=None, progress_callback=None):
-    """Generate frames for video with overlaid text"""
+    """
+    Генерирует кадры для видео с наложением текста.
+    
+    Параметры:
+      csv_file: путь к CSV файлу
+      folder_number: номер проекта/папки
+      resolution: 'fullhd' или '4k'
+      fps: частота кадров
+      text_settings: настройки для текста (словарь)
+      progress_callback: функция обратного вызова, принимающая (completed_frames, total_frames, 'frames')
+                         для обновления прогресс-бара
+    """
     try:
         frames_dir = f'frames/project_{folder_number}'
         if os.path.exists(frames_dir):
@@ -179,15 +177,10 @@ def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, tex
         os.makedirs(frames_dir, exist_ok=True)
 
         from utils.csv_processor import process_csv_file
-        from flask import current_app
-
-        # Get the application context once
-        app = current_app._get_current_object()
-
         csv_type, processed_data = process_csv_file(csv_file, folder_number)
         df = pd.DataFrame(processed_data)
 
-        # Convert needed columns to NumPy arrays for faster lookup
+        # Преобразуем нужные столбцы в массивы NumPy для быстрого поиска
         ts_array = df['timestamp'].to_numpy()
         speed_array = df['speed'].to_numpy(dtype=int)
         gps_array = df['gps'].to_numpy(dtype=int)
@@ -207,58 +200,33 @@ def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, tex
         frame_timestamps = np.linspace(T_min, T_max, frame_count)
 
         completed_frames = 0
-        frames_lock = threading.Lock()
+        lock = threading.Lock()
 
         def process_frame(i, timestamp):
             nonlocal completed_frames
-            # Use the app context in each worker thread
-            with app.app_context():
-                idx = np.searchsorted(ts_array, timestamp, side='right') - 1
-                if idx < 0:
-                    values = {key: 0 for key in ['speed', 'max_speed', 'gps', 'voltage', 'temperature',
+            idx = np.searchsorted(ts_array, timestamp, side='right') - 1
+            if idx < 0:
+                values = {key: 0 for key in ['speed', 'max_speed', 'gps', 'voltage', 'temperature',
                                               'current', 'battery', 'mileage', 'pwm', 'power']}
-                else:
-                    values = {key: int(arr[idx]) for key, arr in zip(
-                        ['speed', 'gps', 'voltage', 'temperature', 'current', 'battery', 'mileage', 'pwm', 'power'],
-                        [speed_array, gps_array, voltage_array, temperature_array, current_array, battery_array,
-                         mileage_array, pwm_array, power_array]
-                    )}
-                    values['max_speed'] = int(max_speed_array[idx])
+            else:
+                values = {key: int(arr[idx]) for key, arr in zip(
+                    ['speed', 'gps', 'voltage', 'temperature', 'current', 'battery', 'mileage', 'pwm', 'power'],
+                    [speed_array, gps_array, voltage_array, temperature_array, current_array, battery_array,
+                     mileage_array, pwm_array, power_array]
+                )}
+                values['max_speed'] = int(max_speed_array[idx])
+            output_path = f'{frames_dir}/frame_{i:06d}.png'
+            create_frame(values, resolution, output_path, text_settings)
+            with lock:
+                completed_frames += 1
+                # Обновляем прогресс каждые 10 кадров или при завершении всех
+                if progress_callback and (completed_frames % 10 == 0 or completed_frames == frame_count):
+                    progress_callback(completed_frames, frame_count, 'frames')
 
-                output_path = f'{frames_dir}/frame_{i:06d}.png'
-                create_frame(values, resolution, output_path, text_settings)
-
-                with frames_lock:
-                    nonlocal completed_frames
-                    completed_frames += 1
-                    if progress_callback:
-                        # Update progress for every frame
-                        progress = (completed_frames / frame_count) * 50  # 0-50% for frame generation
-                        progress_callback(completed_frames, frame_count, 'frames')
-                        if completed_frames % 5 == 0:  # Log every 5 frames
-                            logging.info(f"Progress updated: {progress:.1f}%")
-
-        # Process frames in smaller chunks for better progress tracking
         max_workers = os.cpu_count() or 4
-        chunk_size = 5  # Process 5 frames at a time for smoother progress updates
-
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-            # Submit frames in chunks
-            for i in range(0, frame_count, chunk_size):
-                chunk_frames = list(range(i, min(i + chunk_size, frame_count)))
-                chunk_timestamps = frame_timestamps[i:i + chunk_size]
-
-                # Submit chunk of frames
-                futures = [executor.submit(process_frame, j, ts) 
-                         for j, ts in zip(chunk_frames, chunk_timestamps)]
-
-                # Wait for chunk to complete
-                for future in concurrent.futures.as_completed(futures):
-                    try:
-                        future.result()
-                    except Exception as e:
-                        logging.error(f"Error processing frame: {str(e)}")
-                        raise
+            futures = [executor.submit(process_frame, i, ts) for i, ts in enumerate(frame_timestamps)]
+            concurrent.futures.wait(futures)
 
         logging.info(f"Successfully generated {frame_count} frames")
         return frame_count, (T_max - T_min)
@@ -267,50 +235,29 @@ def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, tex
         logging.error(f"Error in generate_frames: {e}")
         raise
 
-@lru_cache(maxsize=8)
-def get_font(font_size):
-    """
-    Loads and caches the SF UI Display Bold font of the specified size.
-    """
-    try:
-        font = ImageFont.truetype("fonts/sf-ui-display-bold.otf", font_size)
-        logging.debug("Loaded SF UI Display Bold font (cached)")
-        return font
-    except Exception as e:
-        logging.error(f"Error loading font: {e}")
-        raise ValueError("Font 'SF UI Display Bold' is required")
+# --- Прочие функции (create_preview_frame, find_nearest_values, get_column_name, detect_csv_type) ---
 
-@lru_cache(maxsize=256)
-def create_rounded_box(width, height, radius):
-    """
-    Creates an image with a rounded rectangle and caches it.
-    """
-    image = Image.new('RGBA', (width, height), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(image)
-    draw.rounded_rectangle(
-        [(0, 0), (width - 1, height - 1)],
-        radius=radius,
-        fill=(0, 0, 0, 255)
-    )
-    image = image.filter(ImageFilter.GaussianBlur(radius=0.5))
-    logging.debug(f"Created and cached rounded box {width}_{height}_{radius}")
-    return image
-
-def detect_csv_type(df):
-    """
-    Determines the type of CSV based on column names.
-    """
-    if 'Date' in df.columns and 'Speed' in df.columns:
-        return 'darnkessbot'
-    elif 'date' in df.columns and 'speed' in df.columns:
-        return 'wheellog'
-    else:
-        raise ValueError("Unknown CSV format")
+def find_nearest_values(df, timestamp):
+    mask = df['timestamp'] <= timestamp
+    if not mask.any():
+        return {key: 0 for key in ['speed','max_speed','gps','voltage','temperature',
+                                   'current','battery','mileage','pwm','power']}
+    last_idx = df[mask].index[-1]
+    result = {
+        'speed': int(df.loc[last_idx, 'speed']),
+        'gps': int(df.loc[last_idx, 'gps']),
+        'voltage': int(df.loc[last_idx, 'voltage']),
+        'temperature': int(df.loc[last_idx, 'temperature']),
+        'current': int(df.loc[last_idx, 'current']),
+        'battery': int(df.loc[last_idx, 'battery']),
+        'mileage': int(df.loc[last_idx, 'mileage']),
+        'pwm': int(df.loc[last_idx, 'pwm']),
+        'power': int(df.loc[last_idx, 'power'])
+    }
+    result['max_speed'] = int(df.loc[mask, 'speed'].max())
+    return result
 
 def get_column_name(csv_type, base_name):
-    """
-    Returns the correct column name for the specified CSV type.
-    """
     column_mapping = {
         'darnkessbot': {
             'speed': 'Speed',
@@ -337,33 +284,15 @@ def get_column_name(csv_type, base_name):
     }
     return column_mapping[csv_type][base_name]
 
-def find_nearest_values(df, timestamp):
-    """
-    Finds the nearest values before the given timestamp for each column.
-    """
-    mask = df['timestamp'] <= timestamp
-    if not mask.any():
-        return {key: 0 for key in ['speed', 'max_speed', 'gps', 'voltage', 'temperature',
-                                   'current', 'battery', 'mileage', 'pwm', 'power']}
-    last_idx = df[mask].index[-1]
-    result = {
-        'speed': int(df.loc[last_idx, 'speed']),
-        'gps': int(df.loc[last_idx, 'gps']),
-        'voltage': int(df.loc[last_idx, 'voltage']),
-        'temperature': int(df.loc[last_idx, 'temperature']),
-        'current': int(df.loc[last_idx, 'current']),
-        'battery': int(df.loc[last_idx, 'battery']),
-        'mileage': int(df.loc[last_idx, 'mileage']),
-        'pwm': int(df.loc[last_idx, 'pwm']),
-        'power': int(df.loc[last_idx, 'power'])
-    }
-    result['max_speed'] = int(df.loc[mask, 'speed'].max())
-    return result
+def detect_csv_type(df):
+    if 'Date' in df.columns and 'Speed' in df.columns:
+        return 'darnkessbot'
+    elif 'date' in df.columns and 'speed' in df.columns:
+        return 'wheellog'
+    else:
+        raise ValueError("Unknown CSV format")
 
 def create_preview_frame(csv_file, project_id, resolution='fullhd', text_settings=None):
-    """
-    Creates a preview frame from the point with the maximum speed.
-    """
     try:
         from utils.csv_processor import process_csv_file
         from models import Project
@@ -373,19 +302,15 @@ def create_preview_frame(csv_file, project_id, resolution='fullhd', text_setting
             project = Project.query.get(project_id)
             if not project:
                 raise ValueError(f"Project {project_id} not found")
-
             csv_type, processed_data = process_csv_file(csv_file, project.folder_number)
             df = pd.DataFrame(processed_data)
-
             max_speed_idx = df['speed'].idxmax()
             max_speed_timestamp = df.loc[max_speed_idx, 'timestamp']
             values = find_nearest_values(df, max_speed_timestamp)
-
             os.makedirs('previews', exist_ok=True)
             preview_path = f'previews/{project_id}_preview.png'
             if os.path.exists(preview_path):
                 os.remove(preview_path)
-
             create_frame(values, resolution, preview_path, text_settings)
             logging.info(f"Created preview frame: {preview_path}")
             return preview_path
