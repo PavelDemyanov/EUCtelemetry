@@ -52,16 +52,20 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                 def progress_callback(current_frame, total_frames, stage='frames'):
                     """Update progress in database"""
                     try:
-                        if stage == 'frames':
-                            # Frame generation progress (0-50%)
-                            progress = (current_frame / total_frames) * 50
-                        else:
-                            # Video encoding progress (50-100%)
-                            progress = 50 + (current_frame / total_frames) * 50
+                        with app.app_context():  # Ensure we have application context
+                            # Reload project to avoid stale data
+                            project = Project.query.get(project_id)
+                            if project:
+                                if stage == 'frames':
+                                    # Frame generation progress (0-50%)
+                                    progress = (current_frame / total_frames) * 50
+                                else:
+                                    # Video encoding progress (50-100%)
+                                    progress = 50 + (current_frame / total_frames) * 50
 
-                        project.progress = progress
-                        db.session.commit()
-                        logging.info(f"Progress updated: {progress:.1f}%")
+                                project.progress = progress
+                                db.session.commit()
+                                logging.info(f"Progress updated in DB: {progress:.1f}% for stage: {stage}")
                     except Exception as e:
                         logging.error(f"Error updating progress: {e}")
 
@@ -99,12 +103,13 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
             except Exception as e:
                 logging.error(f"Error processing project {project_id}: {str(e)}")
                 try:
-                    project = Project.query.get(project_id)
-                    if project:
-                        project.status = 'error'
-                        project.error_message = str(e)
-                        project.processing_completed_at = datetime.now()  # Set completion time even for errors
-                        db.session.commit()
+                    with app.app_context():
+                        project = Project.query.get(project_id)
+                        if project:
+                            project.status = 'error'
+                            project.error_message = str(e)
+                            project.processing_completed_at = datetime.now()
+                            db.session.commit()
                 except Exception as db_error:
                     logging.error(f"Error updating project status: {str(db_error)}")
 
