@@ -208,7 +208,6 @@ def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, tex
 
         completed_frames = 0
         frames_lock = threading.Lock()
-        batch_size = max(1, frame_count // 100)  # Update progress every 1% of frames
 
         def process_frame(i, timestamp):
             nonlocal completed_frames
@@ -232,26 +231,34 @@ def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, tex
                 with frames_lock:
                     nonlocal completed_frames
                     completed_frames += 1
-                    if progress_callback and (completed_frames % batch_size == 0 or completed_frames == frame_count):
+                    if progress_callback:
+                        # Update progress for every frame
                         progress = (completed_frames / frame_count) * 50  # 0-50% for frame generation
                         progress_callback(completed_frames, frame_count, 'frames')
-                        logging.info(f"Progress updated: {progress:.1f}%")
+                        if completed_frames % 5 == 0:  # Log every 5 frames
+                            logging.info(f"Progress updated: {progress:.1f}%")
 
-        # Process frames in smaller batches for more frequent progress updates
+        # Process frames in smaller chunks for better progress tracking
         max_workers = os.cpu_count() or 4
-        batch_frames = []
+        chunk_size = 5  # Process 5 frames at a time for smoother progress updates
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-            # Submit all frame generation tasks
-            futures = [executor.submit(process_frame, i, ts) for i, ts in enumerate(frame_timestamps)]
+            # Submit frames in chunks
+            for i in range(0, frame_count, chunk_size):
+                chunk_frames = list(range(i, min(i + chunk_size, frame_count)))
+                chunk_timestamps = frame_timestamps[i:i + chunk_size]
 
-            # Wait for all frames to complete while monitoring progress
-            for future in concurrent.futures.as_completed(futures):
-                try:
-                    future.result()  # Get the result to propagate any exceptions
-                except Exception as e:
-                    logging.error(f"Error processing frame: {str(e)}")
-                    raise
+                # Submit chunk of frames
+                futures = [executor.submit(process_frame, j, ts) 
+                         for j, ts in zip(chunk_frames, chunk_timestamps)]
+
+                # Wait for chunk to complete
+                for future in concurrent.futures.as_completed(futures):
+                    try:
+                        future.result()
+                    except Exception as e:
+                        logging.error(f"Error processing frame: {str(e)}")
+                        raise
 
         logging.info(f"Successfully generated {frame_count} frames")
         return frame_count, (T_max - T_min)
