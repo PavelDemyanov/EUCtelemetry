@@ -213,18 +213,13 @@ document.getElementById('startProcessButton').addEventListener('click', function
                 .then(statusData => {
                     switch(statusData.status) {
                         case 'processing':
-                            // Ensure progress is a valid number
-                            const progress = typeof statusData.progress === 'number' ? 
-                                Math.round(statusData.progress) : 0;
-
+                            const progress = statusData.progress || 0;
                             progressTitle.textContent = progress <= 50 ? 
                                 'Creating frames...' : 
                                 'Encoding video...';
                             progressBar.style.width = `${progress}%`;
-                            progressBar.textContent = `${progress}%`;
-
-                            // Continue polling
-                            setTimeout(checkStatus, 1000);
+                            progressBar.textContent = `${progress.toFixed(1)}%`;
+                            setTimeout(checkStatus, 1000);  // Poll every second
                             break;
                         case 'completed':
                             progressBar.style.width = '100%';
@@ -234,19 +229,10 @@ document.getElementById('startProcessButton').addEventListener('click', function
                                 window.location.href = '/projects';
                             }, 1000);
                             break;
-                        case 'pending':
-                            progressTitle.textContent = 'Waiting to start...';
-                            progressBar.style.width = '0%';
-                            progressBar.textContent = '0%';
-                            setTimeout(checkStatus, 1000);
-                            break;
                         case 'error':
                             throw new Error(statusData.error_message || 'Processing failed');
                         default:
-                            if (!statusData.status) {
-                                throw new Error('Status information not available');
-                            }
-                            throw new Error(`Unexpected status: ${statusData.status}`);
+                            throw new Error('Unknown status');
                     }
                 })
                 .catch(error => {

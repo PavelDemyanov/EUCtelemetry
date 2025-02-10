@@ -44,54 +44,38 @@ function updateProjectStatuses() {
         const projectId = statusBadge.dataset.projectId;
         const currentStatus = statusBadge.dataset.projectStatus;
 
-        // Only check status for processing or pending projects
+        // Only check status for processing projects
         if (currentStatus === 'processing' || currentStatus === 'pending') {
             fetch(`/project_status/${projectId}`)
                 .then(response => response.json())
                 .then(data => {
-                    // Validate status data
-                    const validStatus = data.status && typeof data.status === 'string';
-                    const status = validStatus ? data.status : 'error';
+                    if (data.status !== currentStatus) {
+                        // Update the badge class and text based on new status
+                        statusBadge.className = 'badge text-bg-' + 
+                            (data.status === 'completed' ? 'success' : 
+                             data.status === 'processing' ? 'warning' : 
+                             data.status === 'error' ? 'danger' : 'secondary');
 
-                    // Update badge class and text only if status changed
-                    if (status !== currentStatus) {
-                        // Map status to Bootstrap contextual class
-                        const statusClasses = {
-                            'completed': 'success',
-                            'processing': 'warning',
-                            'pending': 'secondary',
-                            'error': 'danger'
-                        };
+                        statusBadge.textContent = data.status.charAt(0).toUpperCase() + data.status.slice(1);
+                        statusBadge.dataset.projectStatus = data.status;
 
-                        // Get appropriate Bootstrap class or default to 'secondary'
-                        const bootstrapClass = statusClasses[status] || 'secondary';
-
-                        // Update badge
-                        statusBadge.className = `badge text-bg-${bootstrapClass}`;
-                        statusBadge.textContent = status.charAt(0).toUpperCase() + status.slice(1);
-                        statusBadge.dataset.projectStatus = status;
-
-                        // Handle error message tooltip
-                        if (status === 'error' && data.error_message) {
+                        // If project completed or errored, add/update error message tooltip
+                        if (data.status === 'error' && data.error_message) {
                             statusBadge.title = data.error_message;
                         }
 
-                        // Refresh page on completion
-                        if (status === 'completed') {
+                        // Refresh the page if status changed to completed to show new download buttons
+                        if (data.status === 'completed') {
                             setTimeout(() => location.reload(), 1000);
                         }
                     }
 
                     // Update progress if processing
-                    if (status === 'processing' && typeof data.progress === 'number') {
-                        const progress = Math.round(data.progress);
-                        statusBadge.textContent = `${status.charAt(0).toUpperCase() + status.slice(1)} (${progress}%)`;
+                    if (data.status === 'processing' && data.progress !== undefined) {
+                        statusBadge.textContent = `${data.status.charAt(0).toUpperCase() + data.status.slice(1)} (${Math.round(data.progress)}%)`;
                     }
                 })
-                .catch(error => {
-                    console.error('Error updating status:', error);
-                    // Don't change the badge on error, maintain current state
-                });
+                .catch(error => console.error('Error updating status:', error));
         }
     });
 }
