@@ -29,16 +29,16 @@ class Project(db.Model):
         return 0
 
     def time_until_expiry(self):
-        """Return formatted time until expiry (e.g., '23 hours 45 minutes')"""
+        """Return formatted time until expiry (e.g., '23h 45m')"""
         if self.expiry_date:
             delta = self.expiry_date - datetime.utcnow()
             total_seconds = max(0, delta.total_seconds())
             hours = int(total_seconds // 3600)
             minutes = int((total_seconds % 3600) // 60)
             if hours > 0:
-                return f"{hours} hours {minutes} minutes"
+                return f"{hours}h {minutes}m"
             elif minutes > 0:
-                return f"{minutes} minutes"
+                return f"{minutes}m"
             else:
                 return "expiring"
         return "expired"
