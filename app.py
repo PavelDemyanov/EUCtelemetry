@@ -171,7 +171,8 @@ def project_status(project_id):
         'frame_count': project.frame_count,
         'video_file': project.video_file,
         'error_message': project.error_message,
-        'processing_time': project.get_processing_time_str()  # Add processing time
+        'progress': project.progress,  # Add progress to the response
+        'processing_time': project.get_processing_time_str()
     })
 
 @app.route('/projects')
