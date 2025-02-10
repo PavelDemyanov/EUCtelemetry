@@ -238,13 +238,14 @@ def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, tex
 
         completed_frames = 0
         frames_lock = threading.Lock()
+        batch_size = max(1, frame_count // 100)  # Update progress every 1% of frames
 
         def process_frame(i, timestamp):
             nonlocal completed_frames
             idx = np.searchsorted(ts_array, timestamp, side='right') - 1
             if idx < 0:
                 values = {key: 0 for key in ['speed', 'max_speed', 'gps', 'voltage', 'temperature',
-                                              'current', 'battery', 'mileage', 'pwm', 'power']}
+                                          'current', 'battery', 'mileage', 'pwm', 'power']}
             else:
                 values = {key: int(arr[idx]) for key, arr in zip(
                     ['speed', 'gps', 'voltage', 'temperature', 'current', 'battery', 'mileage', 'pwm', 'power'],
@@ -257,15 +258,28 @@ def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, tex
             create_frame(values, resolution, output_path, text_settings)
 
             with frames_lock:
+                nonlocal completed_frames
                 completed_frames += 1
-                if progress_callback:
+                if progress_callback and (completed_frames % batch_size == 0 or completed_frames == frame_count):
                     progress = (completed_frames / frame_count) * 50  # 0-50% for frame generation
                     progress_callback(completed_frames, frame_count, 'frames')
+                    logging.info(f"Progress updated: {progress:.1f}%")
 
+        # Process frames in smaller batches for more frequent progress updates
         max_workers = os.cpu_count() or 4
+        batch_frames = []
+
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all frame generation tasks
             futures = [executor.submit(process_frame, i, ts) for i, ts in enumerate(frame_timestamps)]
-            concurrent.futures.wait(futures)
+
+            # Wait for all frames to complete while monitoring progress
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    future.result()  # Get the result to propagate any exceptions
+                except Exception as e:
+                    logging.error(f"Error processing frame: {str(e)}")
+                    raise
 
         logging.info(f"Successfully generated {frame_count} frames")
         return frame_count, (T_max - T_min)

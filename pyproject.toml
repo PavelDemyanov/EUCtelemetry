@@ -20,4 +20,6 @@ dependencies = [
     "sqlalchemy>=2.0.37",
     "flask-migrate>=4.1.0",
     "rubicon-objc>=0.5.0",
+    "openai>=1.61.1",
+    "anthropic>=0.45.2",
 ]
