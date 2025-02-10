@@ -1,5 +1,5 @@
 from extensions import db
-from datetime import datetime
+from datetime import datetime, timedelta
 
 class Project(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -22,10 +22,26 @@ class Project(db.Model):
     progress = db.Column(db.Float, default=0)  # Progress percentage from 0 to 100
 
     def days_until_expiry(self):
+        """DEPRECATED: Use time_until_expiry instead"""
         if self.expiry_date:
             delta = self.expiry_date - datetime.utcnow()
             return max(0, delta.days)
         return 0
+
+    def time_until_expiry(self):
+        """Return formatted time until expiry (e.g., '23 hours 45 minutes')"""
+        if self.expiry_date:
+            delta = self.expiry_date - datetime.utcnow()
+            total_seconds = max(0, delta.total_seconds())
+            hours = int(total_seconds // 3600)
+            minutes = int((total_seconds % 3600) // 60)
+            if hours > 0:
+                return f"{hours} hours {minutes} minutes"
+            elif minutes > 0:
+                return f"{minutes} minutes"
+            else:
+                return "expiring"
+        return "expired"
 
     def get_duration_str(self):
         """Return formatted duration string (e.g., '1:23' for 83 seconds)"""

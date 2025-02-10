@@ -92,7 +92,7 @@ def upload_file():
             csv_file=filename,
             csv_type=csv_type,  # Use detected type instead of 'pending'
             created_at=datetime.now(),
-            expiry_date=datetime.now() + timedelta(days=30),
+            expiry_date=datetime.now() + timedelta(hours=48),
             status='pending',
             folder_number=Project.get_next_folder_number()
         )

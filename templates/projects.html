@@ -56,7 +56,7 @@
                         <td>{{ project.codec|upper if project.codec else '-' }}</td>
                         <td>{{ project.get_duration_str() }}</td>
                         <td>{{ project.get_processing_time_str() }}</td>
-                        <td>{{ project.days_until_expiry() }} days</td>
+                        <td>{{ project.time_until_expiry() }}</td>
                         <td>
                             <a href="{{ url_for('download_file', project_id=project.id, type='processed_csv') }}" 
                                class="btn btn-sm btn-info">
