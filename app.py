@@ -564,5 +564,65 @@ def stop_project(project_id):
         logging.error(f"Error stopping project: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/change_password', methods=['POST'])
+@login_required
+def change_password():
+    form = ChangePasswordForm()
+    if form.validate_on_submit():
+        if current_user.check_password(form.current_password.data):
+            current_user.set_password(form.new_password.data)
+            db.session.commit()
+            flash('Your password has been updated')
+        else:
+            flash('Current password is incorrect')
+    return redirect(url_for('profile'))
+
+@app.route('/forgot_password', methods=['GET', 'POST'])
+def forgot_password():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    form = ForgotPasswordForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first()
+        if user:
+            token = user.generate_password_reset_token()
+            reset_link = url_for('reset_password', token=token, _external=True)
+            reset_html = f"""
+            <h2>Password Reset Request</h2>
+            <p>Hello {user.name},</p>
+            <p>You have requested to reset your password. Please click the link below to set a new password:</p>
+            <p><a href="{reset_link}">{reset_link}</a></p>
+            <p>This link will expire in 24 hours.</p>
+            <p>If you did not request this reset, please ignore this email.</p>
+            <p>Best regards,<br>EUCTelemetry Team</p>
+            """
+            if send_email(user.email, "Password Reset Request", reset_html):
+                flash('Check your email for password reset instructions')
+            else:
+                flash('Error sending password reset email. Please try again later.')
+        else:
+            flash('Check your email for password reset instructions')  # Security through obscurity
+        return redirect(url_for('login'))
+    return render_template('forgot_password.html', form=form)
+
+@app.route('/reset_password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    user = User.query.filter_by(password_reset_token=token).first()
+    if not user or not user.can_reset_password():
+        flash('Invalid or expired password reset link')
+        return redirect(url_for('login'))
+
+    form = ResetPasswordForm()
+    if form.validate_on_submit():
+        user.set_password(form.password.data)
+        user.password_reset_token = None
+        user.password_reset_sent_at = None
+        db.session.commit()
+        flash('Your password has been reset')
+        return redirect(url_for('login'))
+    return render_template('reset_password.html', form=form)
+
 with app.app_context():
     db.create_all()
