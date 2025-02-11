@@ -14,6 +14,7 @@ from utils.video_creator import create_video
 from utils.background_processor import process_project
 from forms import LoginForm, RegistrationForm, ProfileForm
 from models import User, Project
+from utils.email_sender import send_email
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -87,12 +88,35 @@ def register():
         if User.query.filter_by(email=form.email.data).first():
             flash('Этот email уже зарегистрирован')
             return redirect(url_for('register'))
+
         user = User(email=form.email.data, name=form.name.data)
         user.set_password(form.password.data)
         db.session.add(user)
-        db.session.commit()
-        flash('Поздравляем с успешной регистрацией!')
-        return redirect(url_for('login'))
+
+        try:
+            db.session.commit()
+
+            # Send welcome email
+            welcome_html = f"""
+            <h2>Добро пожаловать в EUCTelemetry!</h2>
+            <p>Здравствуйте, {user.name}!</p>
+            <p>Ваша регистрация успешно завершена. Теперь вы можете создавать проекты и обрабатывать данные телеметрии вашего моноколеса.</p>
+            <p>С наилучшими пожеланиями,<br>Команда EUCTelemetry</p>
+            """
+
+            if send_email(user.email, "Добро пожаловать в EUCTelemetry!", welcome_html):
+                flash('Поздравляем с успешной регистрацией! Проверьте вашу почту.')
+            else:
+                flash('Регистрация успешна, но возникла проблема с отправкой приветственного письма.')
+
+            return redirect(url_for('login'))
+
+        except Exception as e:
+            db.session.rollback()
+            logging.error(f"Registration error: {str(e)}")
+            flash('Произошла ошибка при регистрации. Пожалуйста, попробуйте позже.')
+            return redirect(url_for('register'))
+
     return render_template('register.html', form=form)
 
 @app.route('/logout')
