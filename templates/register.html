@@ -9,7 +9,7 @@
             </div>
             <div class="card-body">
                 <form method="POST" action="{{ url_for('register') }}">
-                    {{ form.hidden_tag() }}
+                    {{ form.csrf_token }}  {# Важно: Добавляем CSRF токен здесь #}
                     <div class="mb-3">
                         {{ form.email.label(class="form-label") }}
                         {{ form.email(class="form-control") }}

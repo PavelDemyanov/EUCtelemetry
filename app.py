@@ -33,14 +33,16 @@ def validate_project_name(name):
     return len(name) <= 7 and bool(re.match(r'^[\w\d]+$', name, re.UNICODE))
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'your-secret-key-here')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'postgresql://your_default_username:your_default_password@localhost/euc_telemetry')
+# Set a strong secret key for CSRF protection
+app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', os.urandom(32))
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_recycle': 300,
     'pool_pre_ping': True,
 }
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+app.config['WTF_CSRF_ENABLED'] = True  # Enable CSRF protection
 
 # Initialize Flask-Login
 login_manager = LoginManager()
