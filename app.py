@@ -234,6 +234,8 @@ def delete_account():
 
 @app.route('/')
 def index():
+    if not current_user.is_authenticated:
+        return redirect(url_for('home'))
     return render_template('index.html')
 
 @app.route('/home')
