@@ -2,6 +2,7 @@ from extensions import db
 from datetime import datetime, timedelta
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+import secrets
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -10,6 +11,9 @@ class User(UserMixin, db.Model):
     name = db.Column(db.String(64))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_active = db.Column(db.Boolean, default=True)
+    is_email_confirmed = db.Column(db.Boolean, default=False)
+    email_confirmation_token = db.Column(db.String(100), unique=True)
+    email_confirmation_sent_at = db.Column(db.DateTime)
     projects = db.relationship('Project', backref='user', lazy=True)
 
     def set_password(self, password):
@@ -17,6 +21,11 @@ class User(UserMixin, db.Model):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+    def generate_email_confirmation_token(self):
+        self.email_confirmation_token = secrets.token_urlsafe(32)
+        self.email_confirmation_sent_at = datetime.utcnow()
+        return self.email_confirmation_token
 
 class Project(db.Model):
     id = db.Column(db.Integer, primary_key=True)

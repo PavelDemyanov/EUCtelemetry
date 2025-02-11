@@ -77,6 +77,9 @@ def login():
         if user is None or not user.check_password(form.password.data):
             flash('Неверный email или пароль')
             return redirect(url_for('login'))
+        if not user.is_email_confirmed:
+            flash('Пожалуйста, подтвердите ваш email адрес перед входом.')
+            return redirect(url_for('login'))
         login_user(user)
         return redirect(url_for('index'))
     return render_template('login.html', form=form)
@@ -93,23 +96,29 @@ def register():
 
         user = User(email=form.email.data, name=form.name.data)
         user.set_password(form.password.data)
+        confirmation_token = user.generate_email_confirmation_token()
         db.session.add(user)
 
         try:
             db.session.commit()
 
-            # Send welcome email
-            welcome_html = f"""
-            <h2>Добро пожаловать в EUCTelemetry!</h2>
+            # Send confirmation email
+            confirmation_link = url_for('confirm_email', token=confirmation_token, _external=True)
+            confirmation_html = f"""
+            <h2>Подтверждение регистрации в EUCTelemetry</h2>
             <p>Здравствуйте, {user.name}!</p>
-            <p>Ваша регистрация успешно завершена. Теперь вы можете создавать проекты и обрабатывать данные телеметрии вашего моноколеса.</p>
+            <p>Для завершения регистрации, пожалуйста, перейдите по следующей ссылке:</p>
+            <p><a href="{confirmation_link}">{confirmation_link}</a></p>
+            <p>Ссылка действительна в течение 24 часов.</p>
             <p>С наилучшими пожеланиями,<br>Команда EUCTelemetry</p>
             """
 
-            if send_email(user.email, "Добро пожаловать в EUCTelemetry!", welcome_html):
-                flash('Поздравляем с успешной регистрацией! Проверьте вашу почту.')
+            if send_email(user.email, "Подтвердите ваш email адрес", confirmation_html):
+                flash('Для завершения регистрации проверьте вашу почту и перейдите по ссылке в письме.')
             else:
-                flash('Регистрация успешна, но возникла проблема с отправкой приветственного письма.')
+                flash('Произошла ошибка при отправке письма для подтверждения. Попробуйте зарегистрироваться снова.')
+                db.session.delete(user)
+                db.session.commit()
 
             return redirect(url_for('login'))
 
@@ -120,6 +129,28 @@ def register():
             return redirect(url_for('register'))
 
     return render_template('register.html', form=form)
+
+@app.route('/confirm/<token>')
+def confirm_email(token):
+    user = User.query.filter_by(email_confirmation_token=token).first()
+
+    if not user:
+        flash('Недействительная ссылка подтверждения.')
+        return redirect(url_for('login'))
+
+    # Check if token is expired (24 hours)
+    if user.email_confirmation_sent_at < datetime.utcnow() - timedelta(days=1):
+        flash('Срок действия ссылки для подтверждения истек. Пожалуйста, зарегистрируйтесь снова.')
+        db.session.delete(user)
+        db.session.commit()
+        return redirect(url_for('register'))
+
+    user.is_email_confirmed = True
+    user.email_confirmation_token = None
+    db.session.commit()
+
+    flash('Ваш email успешно подтвержден! Теперь вы можете войти.')
+    return redirect(url_for('login'))
 
 @app.route('/logout')
 @login_required
