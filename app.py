@@ -236,6 +236,14 @@ def delete_account():
 def index():
     return render_template('index.html')
 
+@app.route('/home')
+def home():
+    return render_template('home.html')
+
+@app.route('/about')
+def about():
+    return render_template('about.html')
+
 @app.route('/upload', methods=['POST'])
 @login_required
 def upload_file():
