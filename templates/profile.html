@@ -8,6 +8,11 @@
                 <h2 class="card-title">Profile Settings</h2>
             </div>
             <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control" value="{{ current_user.email }}" readonly disabled>
+                    <small class="text-muted">Email cannot be changed</small>
+                </div>
                 <form method="POST" action="{{ url_for('profile') }}">
                     {{ profile_form.csrf_token }}
                     <div class="mb-3">
@@ -18,20 +23,13 @@
                         {% endfor %}
                     </div>
                     <div class="mb-3">
-                        {{ profile_form.email.label(class="form-label") }}
-                        {{ profile_form.email(class="form-control") }}
-                        {% for error in profile_form.email.errors %}
-                        <span class="text-danger">{{ error }}</span>
-                        {% endfor %}
-                    </div>
-                    <div class="mb-3">
                         {{ profile_form.submit(class="btn btn-primary") }}
                     </div>
                 </form>
             </div>
         </div>
 
-        <div class="card">
+        <div class="card mb-4">
             <div class="card-header">
                 <h2 class="card-title">Change Password</h2>
             </div>
@@ -61,6 +59,30 @@
                     </div>
                     <div class="mb-3">
                         {{ password_form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h2 class="card-title">Delete Account</h2>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <strong>Warning!</strong> This action cannot be undone. All your data will be permanently deleted.
+                </div>
+                <form method="POST" action="{{ url_for('delete_account') }}" id="deleteAccountForm">
+                    {{ delete_form.csrf_token }}
+                    <div class="mb-3">
+                        {{ delete_form.password.label(class="form-label") }}
+                        {{ delete_form.password(class="form-control") }}
+                        {% for error in delete_form.password.errors %}
+                        <span class="text-danger">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        {{ delete_form.submit(class="btn btn-danger", onclick="return confirm('Are you sure you want to delete your account? This action cannot be undone.');") }}
                     </div>
                 </form>
             </div>

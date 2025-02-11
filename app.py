@@ -13,7 +13,7 @@ from utils.image_generator import generate_frames, create_preview_frame
 from utils.video_creator import create_video
 from utils.background_processor import process_project
 from forms import (LoginForm, RegistrationForm, ProfileForm, 
-                  ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm)
+                  ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm, DeleteAccountForm)
 from models import User, Project
 from utils.email_sender import send_email
 
@@ -163,6 +163,7 @@ def logout():
 def profile():
     profile_form = ProfileForm(obj=current_user)
     password_form = ChangePasswordForm()
+    delete_form = DeleteAccountForm()
 
     if profile_form.validate_on_submit():
         current_user.name = profile_form.name.data
@@ -175,70 +176,62 @@ def profile():
         flash('Profile updated successfully')
         return redirect(url_for('profile'))
 
-    return render_template('profile.html', profile_form=profile_form, password_form=password_form)
+    return render_template('profile.html', 
+                         profile_form=profile_form, 
+                         password_form=password_form,
+                         delete_form=delete_form)
 
-@app.route('/change_password', methods=['POST'])
+@app.route('/delete_account', methods=['POST'])
 @login_required
-def change_password():
-    form = ChangePasswordForm()
+def delete_account():
+    form = DeleteAccountForm()
     if form.validate_on_submit():
-        if current_user.check_password(form.current_password.data):
-            current_user.set_password(form.new_password.data)
+        if current_user.check_password(form.password.data):
+            # Delete all user's projects first
+            projects = Project.query.filter_by(user_id=current_user.id).all()
+            for project in projects:
+                # Delete project files
+                if project.csv_file:
+                    csv_path = os.path.join(app.config['UPLOAD_FOLDER'], project.csv_file)
+                    if os.path.exists(csv_path):
+                        os.remove(csv_path)
+
+                # Delete preview file
+                preview_path = os.path.join('previews', f'{project.id}_preview.png')
+                if os.path.exists(preview_path):
+                    os.remove(preview_path)
+
+                if project.video_file:
+                    video_path = os.path.join('videos', project.video_file)
+                    if os.path.exists(video_path):
+                        os.remove(video_path)
+
+                # Delete frames directory
+                frames_dir = f'frames/project_{project.folder_number}'
+                if os.path.exists(frames_dir):
+                    import shutil
+                    shutil.rmtree(frames_dir)
+
+                # Delete processed CSV file
+                if project.csv_file:
+                    processed_csv = os.path.join('processed_data', f'project_{project.folder_number}_{project.csv_file}')
+                    if os.path.exists(processed_csv):
+                        os.remove(processed_csv)
+
+            # Delete all projects from database
+            Project.query.filter_by(user_id=current_user.id).delete()
+
+            # Delete the user
+            db.session.delete(current_user)
             db.session.commit()
-            flash('Your password has been updated')
+
+            flash('Your account has been successfully deleted')
+            return redirect(url_for('index'))
         else:
-            flash('Current password is incorrect')
+            flash('Incorrect password')
     return redirect(url_for('profile'))
 
-@app.route('/forgot_password', methods=['GET', 'POST'])
-def forgot_password():
-    if current_user.is_authenticated:
-        return redirect(url_for('index'))
-    form = ForgotPasswordForm()
-    if form.validate_on_submit():
-        user = User.query.filter_by(email=form.email.data).first()
-        if user:
-            token = user.generate_password_reset_token()
-            reset_link = url_for('reset_password', token=token, _external=True)
-            reset_html = f"""
-            <h2>Password Reset Request</h2>
-            <p>Hello {user.name},</p>
-            <p>You have requested to reset your password. Please click the link below to set a new password:</p>
-            <p><a href="{reset_link}">{reset_link}</a></p>
-            <p>This link will expire in 24 hours.</p>
-            <p>If you did not request this reset, please ignore this email.</p>
-            <p>Best regards,<br>EUCTelemetry Team</p>
-            """
-            if send_email(user.email, "Password Reset Request", reset_html):
-                flash('Check your email for password reset instructions')
-            else:
-                flash('Error sending password reset email. Please try again later.')
-        else:
-            flash('Check your email for password reset instructions')  # Security through obscurity
-        return redirect(url_for('login'))
-    return render_template('forgot_password.html', form=form)
 
-@app.route('/reset_password/<token>', methods=['GET', 'POST'])
-def reset_password(token):
-    if current_user.is_authenticated:
-        return redirect(url_for('index'))
-    user = User.query.filter_by(password_reset_token=token).first()
-    if not user or not user.can_reset_password():
-        flash('Invalid or expired password reset link')
-        return redirect(url_for('login'))
-
-    form = ResetPasswordForm()
-    if form.validate_on_submit():
-        user.set_password(form.password.data)
-        user.password_reset_token = None
-        user.password_reset_sent_at = None
-        db.session.commit()
-        flash('Your password has been reset')
-        return redirect(url_for('login'))
-    return render_template('reset_password.html', form=form)
-
-
-# Existing routes with added authentication
 @app.route('/')
 def index():
     return render_template('index.html')

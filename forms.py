@@ -17,7 +17,6 @@ class RegistrationForm(FlaskForm):
 
 class ProfileForm(FlaskForm):
     name = StringField('Name', validators=[DataRequired(), Length(min=2, max=64)])
-    email = StringField('Email', validators=[DataRequired(), Email()])
     submit = SubmitField('Save Changes')
 
 class ChangePasswordForm(FlaskForm):
@@ -31,6 +30,10 @@ class ChangePasswordForm(FlaskForm):
         EqualTo('new_password', message='Passwords must match')
     ])
     submit = SubmitField('Change Password')
+
+class DeleteAccountForm(FlaskForm):
+    password = PasswordField('Current Password', validators=[DataRequired()])
+    submit = SubmitField('Delete Account')
 
 class ForgotPasswordForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
