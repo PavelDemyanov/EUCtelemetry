@@ -67,7 +67,7 @@ def upload_file():
 
     project_name = request.form.get('project_name', '').strip()
 
-    # Валидация пользовательского имени или генерация нового
+    # Validate project name
     if project_name:
         if not validate_project_name(project_name):
             return jsonify({'error': 'Invalid project name. Use up to 7 letters or numbers.'}), 400
@@ -79,18 +79,46 @@ def upload_file():
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(file_path)
 
-        # Determine CSV type immediately after upload
+        # Try to detect CSV type and validate format
         try:
-            csv_type, _ = process_csv_file(file_path)
-        except Exception as e:
-            logging.error(f"Error determining CSV type: {str(e)}")
-            csv_type = 'unknown'
+            import pandas as pd
+            # Try reading with different encodings
+            try:
+                df = pd.read_csv(file_path, encoding='utf-8')
+            except UnicodeDecodeError:
+                try:
+                    df = pd.read_csv(file_path, encoding='latin1')
+                except:
+                    os.remove(file_path)
+                    return jsonify({'error': 'Invalid file encoding. Please ensure your CSV file is properly encoded.'}), 400
 
-        # Create project with a unique folder number and detected CSV type
+            # Check for DarknessBot format
+            darkness_bot_columns = {'Date', 'Speed', 'GPS Speed', 'Voltage', 'Temperature', 
+                                  'Current', 'Battery level', 'Total mileage', 'PWM', 'Power'}
+            # Check for WheelLog format
+            wheellog_columns = {'date', 'speed', 'gps_speed', 'voltage', 'system_temp',
+                              'current', 'battery_level', 'totaldistance', 'pwm', 'power'}
+
+            df_columns = set(df.columns)
+            is_darkness_bot = len(darkness_bot_columns.intersection(df_columns)) >= len(darkness_bot_columns) * 0.8
+            is_wheellog = len(wheellog_columns.intersection(df_columns)) >= len(wheellog_columns) * 0.8
+
+            if not (is_darkness_bot or is_wheellog):
+                os.remove(file_path)
+                return jsonify({'error': 'Invalid CSV format. Please upload a CSV file from DarknessBot or WheelLog.'}), 400
+
+            csv_type = 'darnkessbot' if is_darkness_bot else 'wheellog'
+
+        except Exception as e:
+            logging.error(f"Error validating CSV format: {str(e)}")
+            os.remove(file_path)
+            return jsonify({'error': 'Invalid CSV file. Please upload a CSV file from DarknessBot or WheelLog.'}), 400
+
+        # Create project with detected type
         project = Project(
             name=project_name,
             csv_file=filename,
-            csv_type=csv_type,  # Use detected type instead of 'pending'
+            csv_type=csv_type,
             created_at=datetime.now(),
             expiry_date=datetime.now() + timedelta(hours=48),
             status='pending',
@@ -123,6 +151,9 @@ def upload_file():
 
     except Exception as e:
         logging.error(f"Error processing upload: {str(e)}")
+        # Clean up file if it was saved
+        if 'file_path' in locals() and os.path.exists(file_path):
+            os.remove(file_path)
         return jsonify({'error': str(e)}), 500
 
 @app.route('/generate_frames/<int:project_id>', methods=['POST'])
