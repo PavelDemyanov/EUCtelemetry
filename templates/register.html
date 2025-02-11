@@ -5,11 +5,11 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header">
-                <h2 class="card-title">Регистрация</h2>
+                <h2 class="card-title">Registration</h2>
             </div>
             <div class="card-body">
                 <form method="POST" action="{{ url_for('register') }}">
-                    {{ form.csrf_token }}  {# Важно: Добавляем CSRF токен здесь #}
+                    {{ form.csrf_token }}  {# Important: Adding CSRF token here #}
                     <div class="mb-3">
                         {{ form.email.label(class="form-label") }}
                         {{ form.email(class="form-control") }}
@@ -42,7 +42,7 @@
                         {{ form.submit(class="btn btn-primary") }}
                     </div>
                 </form>
-                <p>Уже есть аккаунт? <a href="{{ url_for('login') }}">Войдите</a></p>
+                <p>Already have an account? <a href="{{ url_for('login') }}">Sign in</a></p>
             </div>
         </div>
     </div>
