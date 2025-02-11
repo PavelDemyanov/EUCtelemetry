@@ -3,29 +3,64 @@
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-6">
-        <div class="card">
+        <div class="card mb-4">
             <div class="card-header">
-                <h2 class="card-title">Профиль</h2>
+                <h2 class="card-title">Profile Settings</h2>
             </div>
             <div class="card-body">
                 <form method="POST" action="{{ url_for('profile') }}">
-                    {{ form.hidden_tag() }}
+                    {{ profile_form.csrf_token }}
                     <div class="mb-3">
-                        {{ form.name.label(class="form-label") }}
-                        {{ form.name(class="form-control") }}
-                        {% for error in form.name.errors %}
+                        {{ profile_form.name.label(class="form-label") }}
+                        {{ profile_form.name(class="form-control") }}
+                        {% for error in profile_form.name.errors %}
                         <span class="text-danger">{{ error }}</span>
                         {% endfor %}
                     </div>
                     <div class="mb-3">
-                        {{ form.email.label(class="form-label") }}
-                        {{ form.email(class="form-control") }}
-                        {% for error in form.email.errors %}
+                        {{ profile_form.email.label(class="form-label") }}
+                        {{ profile_form.email(class="form-control") }}
+                        {% for error in profile_form.email.errors %}
                         <span class="text-danger">{{ error }}</span>
                         {% endfor %}
                     </div>
                     <div class="mb-3">
-                        {{ form.submit(class="btn btn-primary") }}
+                        {{ profile_form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Change Password</h2>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('change_password') }}">
+                    {{ password_form.csrf_token }}
+                    <div class="mb-3">
+                        {{ password_form.current_password.label(class="form-label") }}
+                        {{ password_form.current_password(class="form-control") }}
+                        {% for error in password_form.current_password.errors %}
+                        <span class="text-danger">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        {{ password_form.new_password.label(class="form-label") }}
+                        {{ password_form.new_password(class="form-control") }}
+                        {% for error in password_form.new_password.errors %}
+                        <span class="text-danger">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        {{ password_form.confirm_password.label(class="form-label") }}
+                        {{ password_form.confirm_password(class="form-control") }}
+                        {% for error in password_form.confirm_password.errors %}
+                        <span class="text-danger">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        {{ password_form.submit(class="btn btn-primary") }}
                     </div>
                 </form>
             </div>

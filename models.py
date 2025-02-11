@@ -14,6 +14,8 @@ class User(UserMixin, db.Model):
     is_email_confirmed = db.Column(db.Boolean, default=False)
     email_confirmation_token = db.Column(db.String(100), unique=True)
     email_confirmation_sent_at = db.Column(db.DateTime)
+    password_reset_token = db.Column(db.String(100), unique=True)
+    password_reset_sent_at = db.Column(db.DateTime)
     projects = db.relationship('Project', backref='user', lazy=True)
 
     def set_password(self, password):
@@ -26,6 +28,16 @@ class User(UserMixin, db.Model):
         self.email_confirmation_token = secrets.token_urlsafe(32)
         self.email_confirmation_sent_at = datetime.utcnow()
         return self.email_confirmation_token
+
+    def generate_password_reset_token(self):
+        self.password_reset_token = secrets.token_urlsafe(32)
+        self.password_reset_sent_at = datetime.utcnow()
+        return self.password_reset_token
+
+    def can_reset_password(self):
+        if not self.password_reset_sent_at:
+            return False
+        return self.password_reset_sent_at > datetime.utcnow() - timedelta(hours=24)
 
 class Project(db.Model):
     id = db.Column(db.Integer, primary_key=True)

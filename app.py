@@ -12,7 +12,8 @@ from utils.csv_processor import process_csv_file
 from utils.image_generator import generate_frames, create_preview_frame
 from utils.video_creator import create_video
 from utils.background_processor import process_project
-from forms import LoginForm, RegistrationForm, ProfileForm
+from forms import (LoginForm, RegistrationForm, ProfileForm, 
+                  ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm)
 from models import User, Project
 from utils.email_sender import send_email
 
@@ -48,7 +49,7 @@ app.config['WTF_CSRF_ENABLED'] = True  # Enable CSRF protection
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
-login_manager.login_message = 'Пожалуйста, войдите для доступа к этой странице.'
+login_manager.login_message = 'Please log in to access this page.'
 
 @login_manager.user_loader
 def load_user(id):
@@ -75,10 +76,10 @@ def login():
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
         if user is None or not user.check_password(form.password.data):
-            flash('Неверный email или пароль')
+            flash('Invalid email or password')
             return redirect(url_for('login'))
         if not user.is_email_confirmed:
-            flash('Пожалуйста, подтвердите ваш email адрес перед входом.')
+            flash('Please confirm your email address before logging in.')
             return redirect(url_for('login'))
         login_user(user)
         return redirect(url_for('index'))
@@ -91,7 +92,7 @@ def register():
     form = RegistrationForm()
     if form.validate_on_submit():
         if User.query.filter_by(email=form.email.data).first():
-            flash('Этот email уже зарегистрирован')
+            flash('This email is already registered')
             return redirect(url_for('register'))
 
         user = User(email=form.email.data, name=form.name.data)
@@ -102,21 +103,21 @@ def register():
         try:
             db.session.commit()
 
-            # Send confirmation email
+            # Send confirmation email in English
             confirmation_link = url_for('confirm_email', token=confirmation_token, _external=True)
             confirmation_html = f"""
-            <h2>Подтверждение регистрации в EUCTelemetry</h2>
-            <p>Здравствуйте, {user.name}!</p>
-            <p>Для завершения регистрации, пожалуйста, перейдите по следующей ссылке:</p>
+            <h2>Confirm Your Registration</h2>
+            <p>Hello {user.name},</p>
+            <p>Thank you for registering with EUCTelemetry. Please click the link below to confirm your email address:</p>
             <p><a href="{confirmation_link}">{confirmation_link}</a></p>
-            <p>Ссылка действительна в течение 24 часов.</p>
-            <p>С наилучшими пожеланиями,<br>Команда EUCTelemetry</p>
+            <p>This link will expire in 24 hours.</p>
+            <p>Best regards,<br>EUCTelemetry Team</p>
             """
 
-            if send_email(user.email, "Подтвердите ваш email адрес", confirmation_html):
-                flash('Для завершения регистрации проверьте вашу почту и перейдите по ссылке в письме.')
+            if send_email(user.email, "Confirm Your Email Address", confirmation_html):
+                flash('Please check your email to complete registration.')
             else:
-                flash('Произошла ошибка при отправке письма для подтверждения. Попробуйте зарегистрироваться снова.')
+                flash('Error sending confirmation email. Please try registering again.')
                 db.session.delete(user)
                 db.session.commit()
 
@@ -125,7 +126,7 @@ def register():
         except Exception as e:
             db.session.rollback()
             logging.error(f"Registration error: {str(e)}")
-            flash('Произошла ошибка при регистрации. Пожалуйста, попробуйте позже.')
+            flash('An error occurred during registration. Please try again later.')
             return redirect(url_for('register'))
 
     return render_template('register.html', form=form)
@@ -135,12 +136,11 @@ def confirm_email(token):
     user = User.query.filter_by(email_confirmation_token=token).first()
 
     if not user:
-        flash('Недействительная ссылка подтверждения.')
+        flash('Invalid confirmation link.')
         return redirect(url_for('login'))
 
-    # Check if token is expired (24 hours)
     if user.email_confirmation_sent_at < datetime.utcnow() - timedelta(days=1):
-        flash('Срок действия ссылки для подтверждения истек. Пожалуйста, зарегистрируйтесь снова.')
+        flash('This confirmation link has expired. Please register again.')
         db.session.delete(user)
         db.session.commit()
         return redirect(url_for('register'))
@@ -149,7 +149,7 @@ def confirm_email(token):
     user.email_confirmation_token = None
     db.session.commit()
 
-    flash('Ваш email успешно подтвержден! Теперь вы можете войти.')
+    flash('Your email has been confirmed! You can now log in.')
     return redirect(url_for('login'))
 
 @app.route('/logout')
@@ -161,18 +161,81 @@ def logout():
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
-    form = ProfileForm(obj=current_user)
-    if form.validate_on_submit():
-        current_user.name = form.name.data
-        if form.email.data != current_user.email:
-            if User.query.filter_by(email=form.email.data).first():
-                flash('Этот email уже используется')
+    profile_form = ProfileForm(obj=current_user)
+    password_form = ChangePasswordForm()
+
+    if profile_form.validate_on_submit():
+        current_user.name = profile_form.name.data
+        if profile_form.email.data != current_user.email:
+            if User.query.filter_by(email=profile_form.email.data).first():
+                flash('This email is already in use')
                 return redirect(url_for('profile'))
-            current_user.email = form.email.data
+            current_user.email = profile_form.email.data
         db.session.commit()
-        flash('Профиль обновлен')
+        flash('Profile updated successfully')
         return redirect(url_for('profile'))
-    return render_template('profile.html', form=form)
+
+    return render_template('profile.html', profile_form=profile_form, password_form=password_form)
+
+@app.route('/change_password', methods=['POST'])
+@login_required
+def change_password():
+    form = ChangePasswordForm()
+    if form.validate_on_submit():
+        if current_user.check_password(form.current_password.data):
+            current_user.set_password(form.new_password.data)
+            db.session.commit()
+            flash('Your password has been updated')
+        else:
+            flash('Current password is incorrect')
+    return redirect(url_for('profile'))
+
+@app.route('/forgot_password', methods=['GET', 'POST'])
+def forgot_password():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    form = ForgotPasswordForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first()
+        if user:
+            token = user.generate_password_reset_token()
+            reset_link = url_for('reset_password', token=token, _external=True)
+            reset_html = f"""
+            <h2>Password Reset Request</h2>
+            <p>Hello {user.name},</p>
+            <p>You have requested to reset your password. Please click the link below to set a new password:</p>
+            <p><a href="{reset_link}">{reset_link}</a></p>
+            <p>This link will expire in 24 hours.</p>
+            <p>If you did not request this reset, please ignore this email.</p>
+            <p>Best regards,<br>EUCTelemetry Team</p>
+            """
+            if send_email(user.email, "Password Reset Request", reset_html):
+                flash('Check your email for password reset instructions')
+            else:
+                flash('Error sending password reset email. Please try again later.')
+        else:
+            flash('Check your email for password reset instructions')  # Security through obscurity
+        return redirect(url_for('login'))
+    return render_template('forgot_password.html', form=form)
+
+@app.route('/reset_password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    user = User.query.filter_by(password_reset_token=token).first()
+    if not user or not user.can_reset_password():
+        flash('Invalid or expired password reset link')
+        return redirect(url_for('login'))
+
+    form = ResetPasswordForm()
+    if form.validate_on_submit():
+        user.set_password(form.password.data)
+        user.password_reset_token = None
+        user.password_reset_sent_at = None
+        db.session.commit()
+        flash('Your password has been reset')
+        return redirect(url_for('login'))
+    return render_template('reset_password.html', form=form)
 
 
 # Existing routes with added authentication
