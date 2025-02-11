@@ -7,9 +7,9 @@ from flask import Flask, render_template, request, jsonify, send_file, url_for, 
 from werkzeug.utils import secure_filename
 from flask_migrate import Migrate
 from extensions import db
-from models import Project  # Explicitly import models at the top
 from utils.csv_processor import process_csv_file
-from utils.image_generator import create_preview_frame
+from utils.image_generator import generate_frames, create_preview_frame
+from utils.video_creator import create_video
 from utils.background_processor import process_project
 
 # Configure logging
@@ -47,18 +47,10 @@ for directory in ['uploads', 'frames', 'videos', 'processed_data', 'previews']:
         logging.error(f"Error creating directory {directory}: {str(e)}")
         raise
 
-# Initialize extensions
 db.init_app(app)
-migrate = Migrate(app, db)
+migrate = Migrate(app, db)  # Initialize Flask-Migrate
 
-# Create tables within app context
-with app.app_context():
-    try:
-        db.create_all()
-        logging.info("Database tables created successfully")
-    except Exception as e:
-        logging.error(f"Error creating database tables: {str(e)}")
-        raise
+from models import Project  # Import models after db initialization
 
 @app.route('/')
 def index():
@@ -339,5 +331,5 @@ def stop_project(project_id):
         logging.error(f"Error stopping project: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-if __name__ == '__main__':
-    app.run(debug=True)
+with app.app_context():
+    db.create_all()
