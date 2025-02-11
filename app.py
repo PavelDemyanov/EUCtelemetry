@@ -3,14 +3,17 @@ import logging
 import random
 import re
 from datetime import datetime, timedelta
-from flask import Flask, render_template, request, jsonify, send_file, url_for, send_from_directory
+from flask import Flask, render_template, request, jsonify, send_file, url_for, send_from_directory, flash, redirect
 from werkzeug.utils import secure_filename
 from flask_migrate import Migrate
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from extensions import db
 from utils.csv_processor import process_csv_file
 from utils.image_generator import generate_frames, create_preview_frame
 from utils.video_creator import create_video
 from utils.background_processor import process_project
+from forms import LoginForm, RegistrationForm, ProfileForm
+from models import User, Project
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -38,6 +41,16 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
+# Initialize Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+login_manager.login_message = 'Пожалуйста, войдите для доступа к этой странице.'
+
+@login_manager.user_loader
+def load_user(id):
+    return User.query.get(int(id))
+
 # Create required directories with proper error handling
 for directory in ['uploads', 'frames', 'videos', 'processed_data', 'previews']:
     try:
@@ -48,15 +61,70 @@ for directory in ['uploads', 'frames', 'videos', 'processed_data', 'previews']:
         raise
 
 db.init_app(app)
-migrate = Migrate(app, db)  # Initialize Flask-Migrate
+migrate = Migrate(app, db)
 
-from models import Project  # Import models after db initialization
+# Authentication routes
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first()
+        if user is None or not user.check_password(form.password.data):
+            flash('Неверный email или пароль')
+            return redirect(url_for('login'))
+        login_user(user)
+        return redirect(url_for('index'))
+    return render_template('login.html', form=form)
 
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    form = RegistrationForm()
+    if form.validate_on_submit():
+        if User.query.filter_by(email=form.email.data).first():
+            flash('Этот email уже зарегистрирован')
+            return redirect(url_for('register'))
+        user = User(email=form.email.data, name=form.name.data)
+        user.set_password(form.password.data)
+        db.session.add(user)
+        db.session.commit()
+        flash('Поздравляем с успешной регистрацией!')
+        return redirect(url_for('login'))
+    return render_template('register.html', form=form)
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('index'))
+
+@app.route('/profile', methods=['GET', 'POST'])
+@login_required
+def profile():
+    form = ProfileForm(obj=current_user)
+    if form.validate_on_submit():
+        current_user.name = form.name.data
+        if form.email.data != current_user.email:
+            if User.query.filter_by(email=form.email.data).first():
+                flash('Этот email уже используется')
+                return redirect(url_for('profile'))
+            current_user.email = form.email.data
+        db.session.commit()
+        flash('Профиль обновлен')
+        return redirect(url_for('profile'))
+    return render_template('profile.html', form=form)
+
+
+# Existing routes with added authentication
 @app.route('/')
 def index():
     return render_template('index.html')
 
 @app.route('/upload', methods=['POST'])
+@login_required
 def upload_file():
     if 'file' not in request.files:
         return jsonify({'error': 'No file provided'}), 400
@@ -94,10 +162,10 @@ def upload_file():
 
             # Check for DarknessBot format
             darkness_bot_columns = {'Date', 'Speed', 'GPS Speed', 'Voltage', 'Temperature', 
-                                  'Current', 'Battery level', 'Total mileage', 'PWM', 'Power'}
+                                      'Current', 'Battery level', 'Total mileage', 'PWM', 'Power'}
             # Check for WheelLog format
             wheellog_columns = {'date', 'speed', 'gps_speed', 'voltage', 'system_temp',
-                              'current', 'battery_level', 'totaldistance', 'pwm', 'power'}
+                                  'current', 'battery_level', 'totaldistance', 'pwm', 'power'}
 
             df_columns = set(df.columns)
             is_darkness_bot = len(darkness_bot_columns.intersection(df_columns)) >= len(darkness_bot_columns) * 0.8
@@ -114,7 +182,7 @@ def upload_file():
             os.remove(file_path)
             return jsonify({'error': 'Invalid CSV file. Please upload a CSV file from DarknessBot or WheelLog.'}), 400
 
-        # Create project with detected type
+        # Create project with detected type and user_id
         project = Project(
             name=project_name,
             csv_file=filename,
@@ -122,7 +190,8 @@ def upload_file():
             created_at=datetime.now(),
             expiry_date=datetime.now() + timedelta(hours=48),
             status='pending',
-            folder_number=Project.get_next_folder_number()
+            folder_number=Project.get_next_folder_number(),
+            user_id=current_user.id
         )
         db.session.add(project)
         db.session.commit()
@@ -131,9 +200,9 @@ def upload_file():
         default_settings = {
             'vertical_position': 1,
             'top_padding': 14,
-            'bottom_padding': 41,  # Changed from 47 to 41
+            'bottom_padding': 41,
             'spacing': 10,
-            'font_size': 22,  # Changed from 26 to 22
+            'font_size': 22,
             'border_radius': 13
         }
 
@@ -157,8 +226,11 @@ def upload_file():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/generate_frames/<int:project_id>', methods=['POST'])
+@login_required
 def generate_project_frames(project_id):
     project = Project.query.get_or_404(project_id)
+    if project.user_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
 
     try:
         # Get settings from request
@@ -195,8 +267,11 @@ def generate_project_frames(project_id):
         return jsonify({'error': str(e)}), 500
 
 @app.route('/project_status/<int:project_id>')
+@login_required
 def project_status(project_id):
     project = Project.query.get_or_404(project_id)
+    if project.user_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
     return jsonify({
         'status': project.status,
         'frame_count': project.frame_count,
@@ -207,15 +282,20 @@ def project_status(project_id):
     })
 
 @app.route('/projects')
+@login_required
 def list_projects():
     page = request.args.get('page', 1, type=int)
-    projects = Project.query.order_by(Project.created_at.desc())\
+    projects = Project.query.filter_by(user_id=current_user.id)\
+        .order_by(Project.created_at.desc())\
         .paginate(page=page, per_page=10, error_out=False)
     return render_template('projects.html', projects=projects)
 
 @app.route('/download/<int:project_id>/<type>')
+@login_required
 def download_file(project_id, type):
     project = Project.query.get_or_404(project_id)
+    if project.user_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
 
     if type == 'video' and project.video_file:
         return send_file(f'videos/{project.video_file}')
@@ -231,8 +311,11 @@ def download_file(project_id, type):
     return jsonify({'error': 'File not found'}), 404
 
 @app.route('/delete/<int:project_id>', methods=['POST'])
+@login_required
 def delete_project(project_id):
     project = Project.query.get_or_404(project_id)
+    if project.user_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
 
     try:
         # Delete associated files if they exist
@@ -277,8 +360,11 @@ def serve_preview(filename):
     return send_from_directory('previews', filename)
 
 @app.route('/preview/<int:project_id>', methods=['POST'])
+@login_required
 def generate_preview(project_id):
     project = Project.query.get_or_404(project_id)
+    if project.user_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
 
     try:
         # Get text display settings from request
@@ -311,8 +397,11 @@ def generate_preview(project_id):
         return jsonify({'error': str(e)}), 500
 
 @app.route('/stop/<int:project_id>', methods=['POST'])
+@login_required
 def stop_project(project_id):
     project = Project.query.get_or_404(project_id)
+    if project.user_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
 
     try:
         if project.status == 'processing':

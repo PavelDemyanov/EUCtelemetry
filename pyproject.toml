@@ -22,4 +22,5 @@ dependencies = [
     "rubicon-objc>=0.5.0",
     "openai>=1.61.1",
     "anthropic>=0.45.2",
+    "wtforms>=3.2.1",
 ]
