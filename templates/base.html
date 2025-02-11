@@ -20,10 +20,10 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('home') }}">Home</a>
                     </li>
-                    {% if current_user.is_authenticated %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('create_project') }}">Create Project</a>
+                        <a class="nav-link" href="{{ url_for('index') }}">Create Project</a>
                     </li>
+                    {% if current_user.is_authenticated %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('list_projects') }}">My Projects</a>
                     </li>

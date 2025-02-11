@@ -234,7 +234,7 @@ def delete_account():
 
 @app.route('/')
 def index():
-    return redirect(url_for('home'))
+    return render_template('index.html')
 
 @app.route('/home')
 def home():
@@ -631,12 +631,6 @@ def reset_password(token):
         flash('Your password has been reset')
         return redirect(url_for('login'))
     return render_template('reset_password.html', form=form)
-
-@app.route('/create_project')
-@login_required
-def create_project():
-    return render_template('create_project.html') #Assuming create_project.html exists
-
 
 with app.app_context():
     db.create_all()
