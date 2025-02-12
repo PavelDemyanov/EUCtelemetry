@@ -1,8 +1,9 @@
 import os
 from dotenv import load_dotenv
+from utils.env_setup import setup_env_variables
 
-# Load environment variables from .env file
-load_dotenv()
+# Setup environment variables with defaults if needed
+setup_env_variables()
 
 import logging
 import random
