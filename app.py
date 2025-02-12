@@ -22,7 +22,6 @@ from forms import (LoginForm, RegistrationForm, ProfileForm,
                   ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm, DeleteAccountForm)
 from models import User, Project
 from utils.email_sender import send_email
-from utils.speed_arc import draw_speed_arc
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -63,7 +62,7 @@ def load_user(id):
     return User.query.get(int(id))
 
 # Create required directories with proper error handling
-for directory in ['uploads', 'frames', 'videos', 'processed_data', 'previews', 'static']:
+for directory in ['uploads', 'frames', 'videos', 'processed_data', 'previews']:
     try:
         os.makedirs(directory, exist_ok=True)
         logging.info(f"Ensuring directory exists: {directory}")
@@ -640,27 +639,6 @@ def reset_password(token):
         flash('Your password has been reset')
         return redirect(url_for('login'))
     return render_template('reset_password.html', form=form)
-
-@app.route('/speed_arc/<int:speed>')
-def generate_speed_arc(speed):
-    try:
-        # Generate unique filename for each request
-        filename = f"speed_arc_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-        output_path = os.path.join('static', filename)
-
-        # Generate the speed arc
-        draw_speed_arc(speed, output_path=output_path)
-
-        # Return the image file
-        return send_file(output_path, mimetype='image/png')
-    except Exception as e:
-        logging.error(f"Error generating speed arc: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-    finally:
-        # Clean up the generated file after sending
-        if 'output_path' in locals() and os.path.exists(output_path):
-            os.remove(output_path)
-
 
 with app.app_context():
     db.create_all()
