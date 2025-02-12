@@ -8,6 +8,7 @@ import concurrent.futures
 import threading
 from functools import lru_cache
 from utils.hardware_detection import is_apple_silicon
+import math
 
 # Если используется Metal, можно инициализировать его, но если он не дает выигрыша — код работает по CPU.
 # Здесь пример инициализации Metal (если потребуется), но далее он не используется для отрисовки через PIL.
@@ -68,6 +69,65 @@ def create_rounded_box(width, height, radius):
 
 # --- Функция создания кадра (PNG) ---
 
+def draw_speed_arc(speed, image_size, arc_width=20):
+    """
+    Draw a speed arc with color transitions based on speed value.
+
+    Args:
+        speed (float): Current speed value (0-100 km/h)
+        image_size (tuple): Width and height of the output image
+        arc_width (int): Width of the arc line
+
+    Returns:
+        PIL.Image: Image with transparent background containing the speed arc
+    """
+    # Create transparent image
+    width, height = image_size
+    image = Image.new('RGBA', (width, height), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+
+    # Calculate arc parameters
+    center_x = width // 2
+    center_y = int(height * 0.9)  # Position arc near bottom
+    radius = min(width // 4, height // 4)  # Adjust radius based on image size
+
+    # Calculate angles with horizontal reflection
+    start_angle = 210  # 360 - 150 (reflected)
+    speed_normalized = min(speed, 100) / 100
+    end_angle = 360 - (150 + (390 - 150) * speed_normalized)
+    if end_angle < 0:
+        end_angle += 360
+
+    # Calculate color based on speed
+    if speed <= 70:
+        # Green to Yellow (0-70 km/h)
+        ratio = speed / 70
+        r = int(255 * ratio)
+        g = 255
+        b = 0
+    elif speed <= 85:
+        # Yellow to Red (70-85 km/h)
+        ratio = (speed - 70) / 15
+        r = 255
+        g = int(255 * (1 - ratio))
+        b = 0
+    else:
+        # Red (85-100 km/h)
+        r, g, b = 255, 0, 0
+
+    # Draw arc with rounded ends
+    bbox = (center_x - radius, center_y - radius, 
+            center_x + radius, center_y + radius)
+
+    # Convert angles to degrees for PIL
+    start_angle_pil = start_angle
+    end_angle_pil = end_angle if end_angle > start_angle else end_angle + 360
+
+    draw.arc(bbox, start=start_angle_pil, end=end_angle_pil, 
+             fill=(r, g, b, 255), width=arc_width)
+
+    return image
+
 def create_frame(values, resolution='fullhd', output_path=None, text_settings=None):
     # Определяем разрешение и масштаб
     if resolution == "4k":
@@ -78,7 +138,7 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
         scale_factor = 1.0
 
     # Создаем фон и оверлей
-    background = Image.new('RGBA', (width, height), (0, 0, 255, 255))
+    background = Image.new('RGBA', (width, height), (0, 0, 0, 0))  
     overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
 
@@ -146,11 +206,16 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
         draw.text((text_x, text_y), text, fill=(255, 255, 255, 255), font=font)
         x_position += element_width + spacing
 
+    # Draw speed arc
+    speed_arc = draw_speed_arc(float(values['speed']), (width, height), 
+                              arc_width=int(20 * scale_factor))
+
     # Компонуем итоговое изображение
     result = Image.alpha_composite(background, overlay)
+    result = Image.alpha_composite(result, speed_arc)
 
     if output_path:
-        result.convert('RGB').save(output_path, format='PNG', quality=95, optimize=True)
+        result.save(output_path, format='PNG', optimize=True)
         logging.debug(f"Saved frame to {output_path}")
 
     return result
