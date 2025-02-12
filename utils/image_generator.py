@@ -8,7 +8,6 @@ import concurrent.futures
 import threading
 from functools import lru_cache
 from utils.hardware_detection import is_apple_silicon
-from utils.speed_arc import overlay_speed_arc
 
 # Если используется Metal, можно инициализировать его, но если он не дает выигрыша — код работает по CPU.
 # Здесь пример инициализации Metal (если потребуется), но далее он не используется для отрисовки через PIL.
@@ -111,7 +110,6 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
         ('Power', f"{values['power']} W")
     ]
 
-    # Вычисляем размеры для каждого текстового элемента
     element_widths = []
     text_widths = []
     text_heights = []
@@ -150,10 +148,6 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
 
     # Компонуем итоговое изображение
     result = Image.alpha_composite(background, overlay)
-
-    # Add speed arc overlay
-    arc_width = int(20 * scale_factor)  # Scale arc width based on resolution
-    result = overlay_speed_arc(result, values['speed'], arc_width)
 
     if output_path:
         result.convert('RGB').save(output_path, format='PNG', quality=95, optimize=True)
