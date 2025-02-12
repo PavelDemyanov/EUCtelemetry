@@ -1,4 +1,8 @@
-# EUC Telemetry Visualization
+# EUC Telemetry Visualization 🛞
+
+> 🌐 Try it now at [https://euctelemetry.app](https://euctelemetry.app)
+
+Fork and run your own instance, or use our cloud version! ⚡️
 
 A Flask web application for transforming Electric Unicycle (EUC) telemetry data into dynamic video visualizations with advanced processing capabilities. The application processes telemetry data from DarknessBot and WheelLog to create professional-looking video visualizations.
 
