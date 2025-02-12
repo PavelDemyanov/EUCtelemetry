@@ -1,42 +1,32 @@
-# EUC Telemetry Visualization
-
-A powerful Flask web application for converting Electric Unicycle (EUC) sensor data into dynamic video visualizations with advanced processing capabilities.
-
-## Program Description
-
-This application processes telemetry data from Electric Unicycles (specifically from DarknessBot and WheelLog) and creates professional-looking video visualizations. It displays key metrics such as:
-- Speed
-- Battery level
-- Temperature
-- Power consumption
-- GPS coordinates
-- And more
-
-The generated videos include smooth animations and clean typography using SF UI Display Bold font, making them perfect for sharing on social media or analyzing ride data.
-
-## Project Structure
-
 ```
-├── app.py              # Main Flask application
-├── main.py            # Application entry point
-├── models.py          # Database models
-├── extensions.py      # Flask extensions
-├── static/            # Static assets (CSS, JS, images)
-├── templates/         # HTML templates
-├── uploads/          # Temporary storage for uploaded CSV files
-├── frames/           # Generated video frames
-├── videos/           # Output video files
-├── processed_data/   # Processed CSV files
-├── previews/         # Preview images
-└── fonts/            # Custom fonts (SF UI Display Bold)
-```
-
 ## Installation Instructions
 
 ### Prerequisites for All Platforms
 - Python 3.11 or higher
 - PostgreSQL database
 - FFmpeg
+
+### Environment Setup
+
+1. Create a `.env` file in the project root with the following configuration:
+```bash
+# SMTP Configuration
+SMTP_LOGIN=""        # Your SMTP email (e.g., noreply@example.com)
+SMTP_PASSWORD=""     # Your SMTP password
+SMTP_PORT="465"      # SMTP port (usually 465 for SSL)
+SMTP_SERVER=""       # SMTP server (e.g., smtp.gmail.com)
+
+# Flask Configuration
+FLASK_SECRET_KEY=""  # Random string for session security (e.g., use os.urandom(24).hex())
+
+# PostgreSQL Database Configuration
+DATABASE_URL=""      # Full database URL (e.g., postgresql://username:password@localhost:5432/euc_telemetry)
+PGDATABASE=""        # Database name (e.g., euc_telemetry)
+PGHOST=""           # Database host (e.g., localhost)
+PGPORT=""           # Database port (default: 5432)
+PGUSER=""           # Database username
+PGPASSWORD=""       # Database user password
+```
 
 ### macOS (Apple Silicon)
 
@@ -55,21 +45,20 @@ brew install postgresql ffmpeg
 brew services start postgresql
 ```
 
-4. Clone the repository:
+4. Install Poetry (Python dependency management):
+```bash
+curl -sSL https://install.python-poetry.org | python3 -
+```
+
+5. Clone the repository:
 ```bash
 git clone https://github.com/PavelDemyanov/EUCtelemetry.git
 cd EUCtelemetry
 ```
 
-5. Create and activate virtual environment:
+6. Install dependencies using Poetry:
 ```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
-6. Install dependencies:
-```bash
-pip install -r requirements.txt
+poetry install
 ```
 
 ### Linux
@@ -77,93 +66,92 @@ pip install -r requirements.txt
 1. Install system dependencies:
 ```bash
 sudo apt update
-sudo apt install python3-pip python3-venv postgresql postgresql-contrib ffmpeg
+sudo apt install python3-pip postgresql postgresql-contrib ffmpeg
 ```
 
-2. Start PostgreSQL:
+2. Install Poetry:
+```bash
+curl -sSL https://install.python-poetry.org | python3 -
+```
+
+3. Start PostgreSQL:
 ```bash
 sudo systemctl start postgresql
 sudo systemctl enable postgresql
 ```
 
-3. Clone the repository:
+4. Clone the repository and install dependencies:
 ```bash
 git clone https://github.com/PavelDemyanov/EUCtelemetry.git
 cd EUCtelemetry
-```
-
-4. Create and activate virtual environment:
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
-5. Install dependencies:
-```bash
-pip install -r requirements.txt
+poetry install
 ```
 
 ### Windows
 
 1. Install Python 3.11 from [python.org](https://www.python.org/downloads/)
-
 2. Install PostgreSQL from [postgresql.org](https://www.postgresql.org/download/windows/)
+3. Install FFmpeg from [ffmpeg.org](https://ffmpeg.org/download.html) and add to PATH
+4. Install Poetry:
+```powershell
+(Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -
+```
 
-3. Install FFmpeg:
-   - Download from [ffmpeg.org](https://ffmpeg.org/download.html)
-   - Add FFmpeg to system PATH
-
-4. Clone the repository:
+5. Clone the repository and install dependencies:
 ```cmd
 git clone https://github.com/PavelDemyanov/EUCtelemetry.git
 cd EUCtelemetry
+poetry install
 ```
 
-5. Create and activate virtual environment:
-```cmd
-python -m venv venv
-venv\Scripts\activate
-```
-
-6. Install dependencies:
-```cmd
-pip install -r requirements.txt
-```
-
-## Database Setup (All Platforms)
+## Database Setup
 
 1. Create a new PostgreSQL database:
 ```sql
 CREATE DATABASE euc_telemetry;
 ```
 
-2. Set environment variables:
+2. Initialize the database:
 ```bash
-# Unix/macOS
-export DATABASE_URL="postgresql://username:password@localhost/euc_telemetry"
-
-# Windows (CMD)
-set DATABASE_URL=postgresql://username:password@localhost/euc_telemetry
-
-# Windows (PowerShell)
-$env:DATABASE_URL="postgresql://username:password@localhost/euc_telemetry"
-```
-
-3. Initialize the database:
-```bash
-flask db upgrade
+poetry run flask db upgrade
 ```
 
 ## Running the Application
 
-1. Start the Flask server:
+1. Activate Poetry shell:
+```bash
+poetry shell
+```
+
+2. Start the Flask server:
 ```bash
 python main.py
 ```
 
-2. Open your browser and navigate to:
+3. Open your browser and navigate to:
 ```
 http://localhost:5000
+```
+
+## Development
+
+### Adding New Dependencies
+
+To add new Python packages:
+```bash
+poetry add package-name
+```
+
+### Updating Dependencies
+
+To update all dependencies:
+```bash
+poetry update
+```
+
+To update a specific package:
+```bash
+poetry update package-name
 ```
 
 ---
@@ -208,6 +196,28 @@ http://localhost:5000
 - База данных PostgreSQL
 - FFmpeg
 
+### Настройка окружения
+
+1. Создайте файл `.env` в корне проекта со следующей конфигурацией:
+```bash
+# Конфигурация SMTP
+SMTP_LOGIN=""        # Ваш SMTP email (например, noreply@example.com)
+SMTP_PASSWORD=""     # Ваш SMTP пароль
+SMTP_PORT="465"      # Порт SMTP (обычно 465 для SSL)
+SMTP_SERVER=""       # SMTP сервер (например, smtp.gmail.com)
+
+# Конфигурация Flask
+FLASK_SECRET_KEY=""  # Случайная строка для безопасности сессий (например, используйте os.urandom(24).hex())
+
+# Конфигурация базы данных PostgreSQL
+DATABASE_URL=""      # Полный URL базы данных (например, postgresql://username:password@localhost:5432/euc_telemetry)
+PGDATABASE=""        # Имя базы данных (например, euc_telemetry)
+PGHOST=""           # Хост базы данных (например, localhost)
+PGPORT=""           # Порт базы данных (по умолчанию: 5432)
+PGUSER=""           # Имя пользователя базы данных
+PGPASSWORD=""       # Пароль пользователя базы данных
+```
+
 ### macOS (Apple Silicon)
 
 1. Установите Homebrew:
@@ -225,21 +235,20 @@ brew install postgresql ffmpeg
 brew services start postgresql
 ```
 
-4. Клонируйте репозиторий:
+4. Установите Poetry (менеджер зависимостей Python):
+```bash
+curl -sSL https://install.python-poetry.org | python3 -
+```
+
+5. Клонируйте репозиторий:
 ```bash
 git clone https://github.com/PavelDemyanov/EUCtelemetry.git
 cd EUCtelemetry
 ```
 
-5. Создайте и активируйте виртуальное окружение:
+6. Установите зависимости с помощью Poetry:
 ```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
-6. Установите зависимости:
-```bash
-pip install -r requirements.txt
+poetry install
 ```
 
 ### Linux
@@ -247,91 +256,68 @@ pip install -r requirements.txt
 1. Установите системные зависимости:
 ```bash
 sudo apt update
-sudo apt install python3-pip python3-venv postgresql postgresql-contrib ffmpeg
+sudo apt install python3-pip postgresql postgresql-contrib ffmpeg
 ```
 
-2. Запустите PostgreSQL:
+2. Установите Poetry:
+```bash
+curl -sSL https://install.python-poetry.org | python3 -
+```
+
+3. Запустите PostgreSQL:
 ```bash
 sudo systemctl start postgresql
 sudo systemctl enable postgresql
 ```
 
-3. Клонируйте репозиторий:
+4. Клонируйте репозиторий и установите зависимости:
 ```bash
 git clone https://github.com/PavelDemyanov/EUCtelemetry.git
 cd EUCtelemetry
-```
-
-4. Создайте и активируйте виртуальное окружение:
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
-5. Установите зависимости:
-```bash
-pip install -r requirements.txt
+poetry install
 ```
 
 ### Windows
 
 1. Установите Python 3.11 с [python.org](https://www.python.org/downloads/)
-
 2. Установите PostgreSQL с [postgresql.org](https://www.postgresql.org/download/windows/)
+3. Установите FFmpeg с [ffmpeg.org](https://ffmpeg.org/download.html) и добавьте в PATH
+4. Установите Poetry:
+```powershell
+(Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -
+```
 
-3. Установите FFmpeg:
-   - Скачайте с [ffmpeg.org](https://ffmpeg.org/download.html)
-   - Добавьте FFmpeg в системный PATH
-
-4. Клонируйте репозиторий:
+5. Клонируйте репозиторий и установите зависимости:
 ```cmd
 git clone https://github.com/PavelDemyanov/EUCtelemetry.git
 cd EUCtelemetry
+poetry install
 ```
 
-5. Создайте и активируйте виртуальное окружение:
-```cmd
-python -m venv venv
-venv\Scripts\activate
-```
-
-6. Установите зависимости:
-```cmd
-pip install -r requirements.txt
-```
-
-## Настройка базы данных (Все платформы)
+## Настройка базы данных
 
 1. Создайте новую базу данных PostgreSQL:
 ```sql
 CREATE DATABASE euc_telemetry;
 ```
 
-2. Установите переменные окружения:
+2. Инициализируйте базу данных:
 ```bash
-# Unix/macOS
-export DATABASE_URL="postgresql://username:password@localhost/euc_telemetry"
-
-# Windows (CMD)
-set DATABASE_URL=postgresql://username:password@localhost/euc_telemetry
-
-# Windows (PowerShell)
-$env:DATABASE_URL="postgresql://username:password@localhost/euc_telemetry"
-```
-
-3. Инициализируйте базу данных:
-```bash
-flask db upgrade
+poetry run flask db upgrade
 ```
 
 ## Запуск приложения
 
-1. Запустите сервер Flask:
+1. Активируйте оболочку Poetry:
+```bash
+poetry shell
+```
+
+2. Запустите сервер Flask:
 ```bash
 python main.py
 ```
 
-2. Откройте браузер и перейдите по адресу:
+3. Откройте браузер и перейдите по адресу:
 ```
 http://localhost:5000
-```
