@@ -39,7 +39,7 @@ def validate_project_name(name):
         return False
     return len(name) <= 7 and bool(re.match(r'^[\w\d]+$', name, re.UNICODE))
 
-app = Flask(__name__, static_folder='static', static_url_path='/static')
+app = Flask(__name__)
 # Set a strong secret key for CSRF protection
 app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', os.urandom(32))
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
