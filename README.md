@@ -1,72 +1,74 @@
-```
-## Installation Instructions
+# EUC Telemetry Visualization
 
-### Prerequisites for All Platforms
+A Flask web application for transforming Electric Unicycle (EUC) telemetry data into dynamic video visualizations with advanced processing capabilities. The application processes telemetry data from DarknessBot and WheelLog to create professional-looking video visualizations.
+
+## Features
+
+- Processes and visualizes EUC telemetry metrics:
+  - Speed
+  - Battery level
+  - Temperature
+  - Power consumption
+  - GPS coordinates
+  - Additional metrics
+- Generates smooth animations with clean typography using SF UI Display Bold
+- Perfect for social media sharing and ride analysis
+- Automated environment configuration
+- Production-ready with Gunicorn support
+
+## Project Structure
+
+```
+├── app.py              # Main Flask application
+├── main.py            # Application entry point
+├── models.py          # Database models
+├── extensions.py      # Flask extensions
+├── static/            # Static files (CSS, JS, images)
+├── templates/         # HTML templates
+├── uploads/          # Temporary CSV file storage
+├── frames/           # Generated video frames
+├── videos/           # Output video files
+├── processed_data/   # Processed CSV files
+├── previews/         # Preview images
+└── fonts/            # Custom fonts (SF UI Display Bold)
+```
+
+## Prerequisites
+
 - Python 3.11 or higher
 - PostgreSQL database
 - FFmpeg
+- Git
 
-### Environment Setup
+## Environment Setup
 
-1. Create a `.env` file in the project root with the following configuration:
+The application features an automated environment setup process. You only need to configure SMTP settings manually. The `.env` file will be automatically created with this structure:
+
 ```bash
-# SMTP Configuration
+# SMTP Configuration (Required to be filled manually)
 SMTP_LOGIN=""        # Your SMTP email (e.g., noreply@example.com)
 SMTP_PASSWORD=""     # Your SMTP password
 SMTP_PORT="465"      # SMTP port (usually 465 for SSL)
 SMTP_SERVER=""       # SMTP server (e.g., smtp.gmail.com)
 
-# Flask Configuration
-FLASK_SECRET_KEY=""  # Random string for session security (e.g., use os.urandom(24).hex())
-
-# PostgreSQL Database Configuration
-DATABASE_URL=""      # Full database URL (e.g., postgresql://username:password@localhost:5432/euc_telemetry)
-PGDATABASE=""        # Database name (e.g., euc_telemetry)
-PGHOST=""           # Database host (e.g., localhost)
-PGPORT=""           # Database port (default: 5432)
-PGUSER=""           # Database username
-PGPASSWORD=""       # Database user password
+# Flask and Database Configuration (Auto-generated - do not modify)
+FLASK_SECRET_KEY=""  # Automatically generated on first run
+DATABASE_URL=""      # Automatically configured
+PGDATABASE=""        # Defaults to euc_telemetry
+PGHOST=""           # Defaults to localhost
+PGPORT=""           # Defaults to 5432
+PGUSER=""           # Defaults to postgres
+PGPASSWORD=""       # Defaults to postgres
 ```
 
-### macOS (Apple Silicon)
+## Installation Instructions
 
-1. Install Homebrew:
-```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-```
+### Linux (Ubuntu/Debian)
 
-2. Install PostgreSQL and FFmpeg:
-```bash
-brew install postgresql ffmpeg
-```
-
-3. Start PostgreSQL:
-```bash
-brew services start postgresql
-```
-
-4. Install Poetry (Python dependency management):
-```bash
-curl -sSL https://install.python-poetry.org | python3 -
-```
-
-5. Clone the repository:
-```bash
-git clone https://github.com/PavelDemyanov/EUCtelemetry.git
-cd EUCtelemetry
-```
-
-6. Install dependencies using Poetry:
-```bash
-poetry install
-```
-
-### Linux
-
-1. Install system dependencies:
+1. Update system and install dependencies:
 ```bash
 sudo apt update
-sudo apt install python3-pip postgresql postgresql-contrib ffmpeg
+sudo apt install -y python3.11 python3.11-venv python3-pip postgresql postgresql-contrib ffmpeg
 ```
 
 2. Install Poetry:
@@ -80,244 +82,189 @@ sudo systemctl start postgresql
 sudo systemctl enable postgresql
 ```
 
-4. Clone the repository and install dependencies:
+4. Clone and set up the application:
 ```bash
-git clone https://github.com/PavelDemyanov/EUCtelemetry.git
+git clone https://github.com/YourUsername/EUCtelemetry.git
 cd EUCtelemetry
-poetry install
+poetry config virtualenvs.in-project true
+poetry install --no-dev
 ```
 
-### Windows
-
-1. Install Python 3.11 from [python.org](https://www.python.org/downloads/)
-2. Install PostgreSQL from [postgresql.org](https://www.postgresql.org/download/windows/)
-3. Install FFmpeg from [ffmpeg.org](https://ffmpeg.org/download.html) and add to PATH
-4. Install Poetry:
-```powershell
-(Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -
+5. Configure SMTP settings in .env file:
+```bash
+cat << EOF > .env
+SMTP_LOGIN="your_email@example.com"
+SMTP_PASSWORD="your_smtp_password"
+SMTP_PORT="465"
+SMTP_SERVER="smtp.gmail.com"
+EOF
 ```
 
-5. Clone the repository and install dependencies:
-```cmd
-git clone https://github.com/PavelDemyanov/EUCtelemetry.git
-cd EUCtelemetry
-poetry install
-```
-
-## Database Setup
-
-1. Create a new PostgreSQL database:
-```sql
-CREATE DATABASE euc_telemetry;
-```
-
-2. Initialize the database:
+6. Initialize database:
 ```bash
 poetry run flask db upgrade
 ```
 
-## Running the Application
-
-1. Activate Poetry shell:
+7. Set up Gunicorn service:
 ```bash
-poetry shell
+sudo nano /etc/systemd/system/euctelemetry.service
 ```
 
-2. Start the Flask server:
+Add the following content:
+```ini
+[Unit]
+Description=EUC Telemetry Gunicorn Daemon
+After=network.target
+
+[Service]
+User=your_username
+Group=your_username
+WorkingDirectory=/path/to/EUCtelemetry
+Environment="PATH=/path/to/EUCtelemetry/.venv/bin"
+ExecStart=/path/to/EUCtelemetry/.venv/bin/gunicorn --workers 3 --bind 0.0.0.0:5000 -m 007 main:app
+
+[Install]
+WantedBy=multi-user.target
+```
+
+8. Enable and start service:
 ```bash
-python main.py
+sudo systemctl start euctelemetry
+sudo systemctl enable euctelemetry
 ```
 
-3. Open your browser and navigate to:
+### macOS (Apple Silicon)
+
+1. Install Homebrew:
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
-http://localhost:5000
+
+2. Install dependencies:
+```bash
+brew install postgresql ffmpeg python@3.11
+brew services start postgresql
+```
+
+3. Install Poetry and set up the application:
+```bash
+curl -sSL https://install.python-poetry.org | python3 -
+git clone https://github.com/YourUsername/EUCtelemetry.git
+cd EUCtelemetry
+poetry config virtualenvs.in-project true
+poetry install --no-dev
+```
+
+4. Configure SMTP settings in .env file (only SMTP settings are required)
+
+5. Initialize database:
+```bash
+poetry run flask db upgrade
+```
+
+6. Create and configure launchd service:
+```bash
+mkdir -p ~/Library/LaunchAgents
+cat << EOF > ~/Library/LaunchAgents/com.euctelemetry.plist
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.euctelemetry</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/path/to/EUCtelemetry/.venv/bin/gunicorn</string>
+        <string>--workers</string>
+        <string>3</string>
+        <string>--bind</string>
+        <string>0.0.0.0:5000</string>
+        <string>main:app</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>WorkingDirectory</key>
+    <string>/path/to/EUCtelemetry</string>
+    <key>StandardOutPath</key>
+    <string>/path/to/EUCtelemetry/logs/gunicorn.log</string>
+    <key>StandardErrorPath</key>
+    <string>/path/to/EUCtelemetry/logs/gunicorn.error.log</string>
+</dict>
+</plist>
+EOF
+
+launchctl load ~/Library/LaunchAgents/com.euctelemetry.plist
+```
+
+### Windows
+
+1. Install prerequisites:
+   - Python 3.11 from [python.org](https://www.python.org/downloads/)
+   - PostgreSQL from [postgresql.org](https://www.postgresql.org/download/windows/)
+   - FFmpeg from [ffmpeg.org](https://ffmpeg.org/download.html)
+   - Git from [git-scm.com](https://git-scm.com/download/win)
+
+2. Add Python and FFmpeg to PATH
+
+3. Install Poetry and set up the application:
+```powershell
+(Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -
+git clone https://github.com/YourUsername/EUCtelemetry.git
+cd EUCtelemetry
+poetry config virtualenvs.in-project true
+poetry install --no-dev
+```
+
+4. Configure SMTP settings in .env file (only SMTP settings are required)
+
+5. Initialize database:
+```bash
+poetry run flask db upgrade
+```
+
+6. Create Windows Service using NSSM:
+   - Download NSSM from [nssm.cc](https://nssm.cc/)
+   - Install the service:
+```powershell
+nssm install EUCTelemetry "C:\path\to\EUCtelemetry\.venv\Scripts\gunicorn.exe"
+nssm set EUCTelemetry AppParameters "--workers 3 --bind 0.0.0.0:5000 main:app"
+nssm set EUCTelemetry AppDirectory "C:\path\to\EUCtelemetry"
+nssm start EUCTelemetry
 ```
 
 ## Development
 
-### Adding New Dependencies
+### Adding Dependencies
 
-To add new Python packages:
 ```bash
 poetry add package-name
 ```
 
 ### Updating Dependencies
 
-To update all dependencies:
 ```bash
 poetry update
 ```
 
-To update a specific package:
-```bash
-poetry update package-name
-```
+### Running in Development Mode
 
----
-
-# EUC Telemetry Visualization (Русский)
-
-Веб-приложение на Flask для преобразования данных телеметрии электроуницикла (EUC) в динамические видеовизуализации с расширенными возможностями обработки.
-
-## Описание программы
-
-Это приложение обрабатывает данные телеметрии электроуницикла (из DarknessBot и WheelLog) и создает профессионально выглядящие видеовизуализации. Отображаются следующие метрики:
-- Скорость
-- Уровень заряда батареи
-- Температура
-- Потребляемая мощность
-- GPS координаты
-- И другие
-
-Генерируемые видео включают плавные анимации и чистую типографику с использованием шрифта SF UI Display Bold, что делает их идеальными для публикации в социальных сетях или анализа данных поездки.
-
-## Структура проекта
-
-```
-├── app.py              # Основное приложение Flask
-├── main.py            # Точка входа в приложение
-├── models.py          # Модели базы данных
-├── extensions.py      # Расширения Flask
-├── static/            # Статические файлы (CSS, JS, изображения)
-├── templates/         # HTML шаблоны
-├── uploads/          # Временное хранилище загруженных CSV файлов
-├── frames/           # Сгенерированные кадры видео
-├── videos/           # Выходные видеофайлы
-├── processed_data/   # Обработанные CSV файлы
-├── previews/         # Предварительные изображения
-└── fonts/            # Пользовательские шрифты (SF UI Display Bold)
-```
-
-## Инструкции по установке
-
-### Необходимые компоненты для всех платформ
-- Python 3.11 или выше
-- База данных PostgreSQL
-- FFmpeg
-
-### Настройка окружения
-
-1. Создайте файл `.env` в корне проекта со следующей конфигурацией:
-```bash
-# Конфигурация SMTP
-SMTP_LOGIN=""        # Ваш SMTP email (например, noreply@example.com)
-SMTP_PASSWORD=""     # Ваш SMTP пароль
-SMTP_PORT="465"      # Порт SMTP (обычно 465 для SSL)
-SMTP_SERVER=""       # SMTP сервер (например, smtp.gmail.com)
-
-# Конфигурация Flask
-FLASK_SECRET_KEY=""  # Случайная строка для безопасности сессий (например, используйте os.urandom(24).hex())
-
-# Конфигурация базы данных PostgreSQL
-DATABASE_URL=""      # Полный URL базы данных (например, postgresql://username:password@localhost:5432/euc_telemetry)
-PGDATABASE=""        # Имя базы данных (например, euc_telemetry)
-PGHOST=""           # Хост базы данных (например, localhost)
-PGPORT=""           # Порт базы данных (по умолчанию: 5432)
-PGUSER=""           # Имя пользователя базы данных
-PGPASSWORD=""       # Пароль пользователя базы данных
-```
-
-### macOS (Apple Silicon)
-
-1. Установите Homebrew:
-```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-```
-
-2. Установите PostgreSQL и FFmpeg:
-```bash
-brew install postgresql ffmpeg
-```
-
-3. Запустите PostgreSQL:
-```bash
-brew services start postgresql
-```
-
-4. Установите Poetry (менеджер зависимостей Python):
-```bash
-curl -sSL https://install.python-poetry.org | python3 -
-```
-
-5. Клонируйте репозиторий:
-```bash
-git clone https://github.com/PavelDemyanov/EUCtelemetry.git
-cd EUCtelemetry
-```
-
-6. Установите зависимости с помощью Poetry:
-```bash
-poetry install
-```
-
-### Linux
-
-1. Установите системные зависимости:
-```bash
-sudo apt update
-sudo apt install python3-pip postgresql postgresql-contrib ffmpeg
-```
-
-2. Установите Poetry:
-```bash
-curl -sSL https://install.python-poetry.org | python3 -
-```
-
-3. Запустите PostgreSQL:
-```bash
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
-```
-
-4. Клонируйте репозиторий и установите зависимости:
-```bash
-git clone https://github.com/PavelDemyanov/EUCtelemetry.git
-cd EUCtelemetry
-poetry install
-```
-
-### Windows
-
-1. Установите Python 3.11 с [python.org](https://www.python.org/downloads/)
-2. Установите PostgreSQL с [postgresql.org](https://www.postgresql.org/download/windows/)
-3. Установите FFmpeg с [ffmpeg.org](https://ffmpeg.org/download.html) и добавьте в PATH
-4. Установите Poetry:
-```powershell
-(Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -
-```
-
-5. Клонируйте репозиторий и установите зависимости:
-```cmd
-git clone https://github.com/PavelDemyanov/EUCtelemetry.git
-cd EUCtelemetry
-poetry install
-```
-
-## Настройка базы данных
-
-1. Создайте новую базу данных PostgreSQL:
-```sql
-CREATE DATABASE euc_telemetry;
-```
-
-2. Инициализируйте базу данных:
-```bash
-poetry run flask db upgrade
-```
-
-## Запуск приложения
-
-1. Активируйте оболочку Poetry:
 ```bash
 poetry shell
-```
-
-2. Запустите сервер Flask:
-```bash
 python main.py
 ```
 
-3. Откройте браузер и перейдите по адресу:
-```
-http://localhost:5000
+## Production Deployment Notes
+
+- Always use HTTPS in production
+- Configure proper firewall rules
+- Set up monitoring and logging
+- Regular database backups
+- Configure appropriate worker count based on server resources
+
+## License
+
+[MIT License](LICENSE)
+
+## Support
+
+For issues and feature requests, please use the GitHub issue tracker.
