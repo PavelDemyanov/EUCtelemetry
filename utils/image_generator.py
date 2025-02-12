@@ -94,9 +94,8 @@ def draw_speed_arc(speed, image_size, arc_width=20):
     # Calculate angles with horizontal reflection
     start_angle = 210  # 360 - 150 (reflected)
     speed_normalized = min(speed, 100) / 100
-    end_angle = 360 - (150 + (390 - 150) * speed_normalized)
-    if end_angle < 0:
-        end_angle += 360
+    angle_range = speed_normalized * (360 - 30 - start_angle)  # 360-30 is the reflected 330°
+    end_angle = start_angle - angle_range  # Subtract to go counterclockwise
 
     # Calculate color based on speed
     if speed <= 70:
@@ -119,11 +118,8 @@ def draw_speed_arc(speed, image_size, arc_width=20):
     bbox = (center_x - radius, center_y - radius, 
             center_x + radius, center_y + radius)
 
-    # Convert angles to degrees for PIL
-    start_angle_pil = start_angle
-    end_angle_pil = end_angle if end_angle > start_angle else end_angle + 360
-
-    draw.arc(bbox, start=start_angle_pil, end=end_angle_pil, 
+    # Draw the arc
+    draw.arc(bbox, start=start_angle, end=end_angle, 
              fill=(r, g, b, 255), width=arc_width)
 
     return image
