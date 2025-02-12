@@ -1,16 +1,82 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-body text-center">
-                    <h2 class="card-title">Home</h2>
-                    <p class="card-text">This section is under development.</p>
-                </div>
+<div class="container mt-5">
+    <!-- First Block: Description -->
+    <section class="mb-5">
+        <div class="row">
+            <div class="col-lg-12">
+                <h2 class="mb-4">EUC Telemetry Visualization</h2>
+                <p class="lead">
+                    Программа предназначена для извлечения телеметрических данных (скорость, PWM, GPS скорость, мощность, 
+                    ток, напряжение, заряд батареи, пробег поездки, температура) из популярных программ DarknessBot и WheelLog 
+                    и наложения их на синий фон (хромакей) для дальнейшей интеграции телеметрических данных на ваше видео, 
+                    снятое во время поездки или с камер insta360, GoPro, iPhone или любой другой камеры.
+                </p>
+                <img src="{{ url_for('static', filename='attached_assets/description.png') }}" alt="Description" class="img-fluid rounded shadow">
             </div>
         </div>
-    </div>
+    </section>
+
+    <!-- Second Block: How to Export Telemetry Data -->
+    <section class="mb-5">
+        <div class="row">
+            <div class="col-lg-12">
+                <h2 class="mb-4">Как экспортировать телеметрические данные</h2>
+
+                <h3 class="mb-3">Из DarknessBot:</h3>
+                <ol class="mb-4">
+                    <li>Откройте DarknessBot и перейдите в раздел "Trips"</li>
+                    <li>Выберите нужную "Trip"</li>
+                    <li>Нажмите кнопку экспорта</li>
+                    <li>Сохраните CSV файл поездки в удобное место</li>
+                </ol>
+                <img src="{{ url_for('static', filename='attached_assets/darkman01.gif') }}" alt="DarknessBot Export" class="img-fluid rounded shadow mb-4">
+
+                <h3 class="mb-3">Из WheelLog:</h3>
+                <ol class="mb-4">
+                    <li>Откройте WheelLog и перейдите в раздел</li>
+                    <li>Дополнительные шаги</li>
+                    <li>Дополнительные шаги</li>
+                    <li>Дополнительные шаги</li>
+                </ol>
+            </div>
+        </div>
+    </section>
+
+    <!-- Third Block: Running the Program -->
+    <section class="mb-5">
+        <div class="row">
+            <div class="col-lg-12">
+                <h2 class="mb-4">Работа с программой</h2>
+                <ol class="mb-4">
+                    <li>Откройте CSV файл</li>
+                    <li>Выберите желаемые настройки FPS, разрешения (FullHD или 4K) и кодека</li>
+                    <li>Настройте отображение элементов телеметрии на видео</li>
+                    <li>Запустите процесс создания видео на синем фоне (Chroma Key)</li>
+                    <li>Перейдите в раздел "My Projects" для скачивания готового видео</li>
+                </ol>
+                <img src="{{ url_for('static', filename='attached_assets/webman01.gif') }}" alt="Program Usage" class="img-fluid rounded shadow">
+            </div>
+        </div>
+    </section>
+
+    <!-- Fourth Block: Overlaying on Your Trip Video -->
+    <section class="mb-5">
+        <div class="row">
+            <div class="col-lg-12">
+                <h2 class="mb-4">Наложение на видео с вашей поездки с iPhone, insta360, GoPro и других камер</h2>
+                <ol class="mb-4">
+                    <li>Вы можете использовать любой видеоредактор с поддержкой удаления хромакея, например Davinci Resolve</li>
+                    <li>Откройте видео с вашей камеры в Davinci Resolve</li>
+                    <li>Наложите сверху видео, созданное программой euctelemetry.app</li>
+                    <li>Примените эффект 3D keyer к видео от euctelemetry.app</li>
+                    <li>Совместите телеметрические данные с вашей поездкой на таймлайне</li>
+                    <li>Экспортируйте видео с желаемыми настройками качества</li>
+                </ol>
+                <img src="{{ url_for('static', filename='attached_assets/davman01.gif') }}" alt="Video Editing" class="img-fluid rounded shadow">
+            </div>
+        </div>
+    </section>
 </div>
 {% endblock %}
