@@ -198,15 +198,15 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
 
         # Добавляем закругленные концы
         corner_radius = gauge_thickness // 2  # Радиус закругления равен половине толщины дуги
-        radius = (gauge_size - gauge_thickness) // 2  # Радиус дуги до центра линии
+        radius = gauge_size // 2  # Радиус дуги
 
-        # Рассчитываем координаты для начальной точки (150 градусов)
-        start_x = center_x + radius * math.cos(math.radians(150))
-        start_y = center_y + radius * math.sin(math.radians(150))
+        # Рассчитываем координаты для начальной точки (150 градусов) с учетом толщины дуги
+        start_x = center_x + (radius - gauge_thickness // 2) * math.cos(math.radians(150))
+        start_y = center_y + (radius - gauge_thickness // 2) * math.sin(math.radians(150))
 
-        # Рассчитываем координаты для конечной точки (текущий угол)
-        end_x = center_x + radius * math.cos(math.radians(current_angle))
-        end_y = center_y + radius * math.sin(math.radians(current_angle))
+        # Рассчитываем координаты для конечной точки (текущий угол) с учетом толщины дуги
+        end_x = center_x + (radius - gauge_thickness // 2) * math.cos(math.radians(current_angle))
+        end_y = center_y + (radius - gauge_thickness // 2) * math.sin(math.radians(current_angle))
 
         # Рисуем закругленные концы
         draw.ellipse([start_x - corner_radius, start_y - corner_radius, 
