@@ -68,10 +68,6 @@ def create_rounded_box(width, height, radius):
 
 # --- Функция создания кадра (PNG) ---
 
-def interpolate_color(color1, color2, factor):
-    """Градиентный переход между цветами."""
-    return tuple(int(color1[i] + (color2[i] - color1[i]) * factor) for i in range(3))
-
 def create_frame(values, resolution='fullhd', output_path=None, text_settings=None):
     # Определяем разрешение и масштаб
     if resolution == "4k":
@@ -150,56 +146,10 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
         draw.text((text_x, text_y), text, fill=(255, 255, 255, 255), font=font)
         x_position += element_width + spacing
 
-    # Добавляем полукруглую дугу скорости
-    # Размер дуги - 20% от ширины экрана
-    gauge_size = int(width * 0.2)
-    gauge_thickness = int(20 * scale_factor)  # Толщина дуги 20 пикселей с учетом масштаба
-
-    # Центр дуги
-    center_x = width // 2
-    center_y = height // 2
-
-    # Координаты прямоугольника, в который вписана дуга
-    margin = int(gauge_thickness / 2)  # Отступ для толщины линии
-    gauge_bbox = [
-        center_x - gauge_size // 2 + margin,  # left
-        center_y - gauge_size // 2 + margin,  # top
-        center_x + gauge_size // 2 - margin,  # right
-        center_y + gauge_size // 2 - margin   # bottom
-    ]
-
-    # Рисуем фоновую дугу (серую)
-    # Используем углы 150-390 как в примере
-    draw.arc(gauge_bbox, 150, 390, fill=(128, 128, 128, 128), width=gauge_thickness)
-
-    # Рассчитываем угол для текущей скорости
-    speed = min(100, values['speed'])  # Ограничиваем до 100
-    # Преобразуем скорость в угол (150 -> 390 градусов)
-    current_angle = 150 + (390 - 150) * (speed / 100)
-
-    # Определяем цвет дуги в зависимости от скорости
-    green = (0, 255, 0)
-    yellow = (255, 255, 0)
-    red = (255, 0, 0)
-
-    if speed < 70:
-        factor = speed / 70
-        arc_color = interpolate_color(green, yellow, factor)
-    elif speed < 85:
-        factor = (speed - 70) / 15
-        arc_color = interpolate_color(yellow, red, factor)
-    else:
-        arc_color = red
-
-    # Рисуем дугу скорости
-    if speed > 0:
-        draw.arc(gauge_bbox, 150, current_angle, fill=arc_color, width=gauge_thickness)
-
     # Компонуем итоговое изображение
     result = Image.alpha_composite(background, overlay)
 
     if output_path:
-        result = result.filter(ImageFilter.GaussianBlur(radius=0.5))  # Добавляем легкое размытие для сглаживания краёв
         result.convert('RGB').save(output_path, format='PNG', quality=95, optimize=True)
         logging.debug(f"Saved frame to {output_path}")
 
@@ -210,7 +160,7 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
 def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, text_settings=None, progress_callback=None):
     """
     Генерирует кадры для видео с наложением текста.
-
+    
     Параметры:
       csv_file: путь к CSV файлу
       folder_number: номер проекта/папки
