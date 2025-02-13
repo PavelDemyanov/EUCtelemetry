@@ -91,11 +91,6 @@ def draw_speed_arc(draw, width, height, speed, scale_factor=1.0):
     # Центр дуги
     arc_center_x = width // 2
 
-    # Рассчитываем угол дуги на основе скорости
-    # Максимальный угол - 180 градусов (пи радиан)
-    max_angle = math.pi
-    angle = min(speed / 100.0, 1.0) * max_angle
-
     # Координаты прямоугольника, в который вписывается дуга
     bbox = [
         arc_center_x - arc_radius,  # left
@@ -105,10 +100,13 @@ def draw_speed_arc(draw, width, height, speed, scale_factor=1.0):
     ]
 
     # Рисуем дугу
-    # Начальный угол - 180 градусов (влево), конечный зависит от скорости
-    # Углы в градусах для PIL
-    start_angle = 180  # Начинаем слева
-    end_angle = 180 - math.degrees(angle)  # Вычисляем конечный угол
+    # Начальный угол - 180 градусов (влево)
+    start_angle = 180
+    # Конечный угол зависит от скорости
+    # При speed=0 угол будет 180 (минимальная дуга)
+    # При speed=100 угол будет 0 (половина круга)
+    speed_normalized = min(speed / 100.0, 1.0)  # Нормализуем скорость до диапазона [0,1]
+    end_angle = 180 - (speed_normalized * 180)  # Линейная интерполяция от 180 до 0 градусов
 
     # Рисуем основную дугу
     draw.arc(bbox, start=start_angle, end=end_angle, 
