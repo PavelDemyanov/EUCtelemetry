@@ -6,6 +6,7 @@ import logging
 import shutil
 import concurrent.futures
 import threading
+import math
 from functools import lru_cache
 from utils.hardware_detection import is_apple_silicon
 
@@ -177,7 +178,7 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
     # Преобразуем скорость в угол (150 -> 390 градусов)
     current_angle = 150 + (390 - 150) * (speed / 100)
 
-    # Определяем цвет дуги в зависимости от скорости
+    # Определяем цвет в зависимости от скорости
     green = (0, 255, 0)
     yellow = (255, 255, 0)
     red = (255, 0, 0)
@@ -194,6 +195,24 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
     # Рисуем дугу скорости
     if speed > 0:
         draw.arc(gauge_bbox, 150, current_angle, fill=arc_color, width=gauge_thickness)
+
+        # Добавляем закругленные концы
+        corner_radius = gauge_thickness // 2  # Радиус закругления равен половине толщины дуги
+        radius = (gauge_size - gauge_thickness) // 2  # Радиус дуги до центра линии
+
+        # Рассчитываем координаты для начальной точки (150 градусов)
+        start_x = center_x + radius * math.cos(math.radians(150))
+        start_y = center_y + radius * math.sin(math.radians(150))
+
+        # Рассчитываем координаты для конечной точки (текущий угол)
+        end_x = center_x + radius * math.cos(math.radians(current_angle))
+        end_y = center_y + radius * math.sin(math.radians(current_angle))
+
+        # Рисуем закругленные концы
+        draw.ellipse([start_x - corner_radius, start_y - corner_radius, 
+                     start_x + corner_radius, start_y + corner_radius], fill=arc_color)
+        draw.ellipse([end_x - corner_radius, end_y - corner_radius, 
+                     end_x + corner_radius, end_y + corner_radius], fill=arc_color)
 
     # Компонуем итоговое изображение
     result = Image.alpha_composite(background, overlay)
