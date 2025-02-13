@@ -67,6 +67,48 @@ PGPASSWORD=""       # Defaults to postgres
 
 ## Installation Instructions
 
+### macOS (Apple Silicon/Intel)
+
+1. Install Homebrew:
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+2. Install dependencies:
+```bash
+brew install postgresql ffmpeg python@3.11
+brew services start postgresql
+```
+
+3. Install uv (Python package installer):
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+4. Clone the repository and set up the application:
+```bash
+git clone https://github.com/YourUsername/EUCtelemetry.git
+cd EUCtelemetry
+```
+
+5. Create and activate virtual environment:
+```bash
+uv venv
+source .venv/bin/activate
+```
+
+6. Install dependencies:
+```bash
+uv pip install --requirements <(uv pip compile pyproject.toml)
+```
+
+7. Configure SMTP settings in .env file (only SMTP settings are required)
+
+8. Initialize database:
+```bash
+flask db upgrade
+```
+
 ### Linux (Ubuntu/Debian)
 
 1. Update system and install dependencies:
@@ -75,41 +117,63 @@ sudo apt update
 sudo apt install -y python3.11 python3.11-venv python3-pip postgresql postgresql-contrib ffmpeg
 ```
 
-2. Install Poetry:
+2. Install uv:
 ```bash
-curl -sSL https://install.python-poetry.org | python3 -
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-3. Start PostgreSQL:
-```bash
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
+3. Follow steps 4-8 from macOS installation
+
+### Windows
+
+1. Install prerequisites:
+   - Python 3.11 from [python.org](https://www.python.org/downloads/)
+   - PostgreSQL from [postgresql.org](https://www.postgresql.org/download/windows/)
+   - FFmpeg from [ffmpeg.org](https://ffmpeg.org/download.html)
+   - Git from [git-scm.com](https://git-scm.com/download/win)
+
+2. Install uv:
+```powershell
+(Invoke-WebRequest -Uri https://astral.sh/uv/install.sh -UseBasicParsing).Content | sh
 ```
 
-4. Clone and set up the application:
-```bash
-git clone https://github.com/YourUsername/EUCtelemetry.git
-cd EUCtelemetry
-poetry config virtualenvs.in-project true
-poetry install --no-dev
+3. Follow steps 4-8 from macOS installation, but use Windows-specific commands:
+```powershell
+# Activate virtual environment
+.venv\Scripts\activate
 ```
 
-5. Configure SMTP settings in .env file:
+## Development
+
+### Adding Dependencies
+
+To add a new dependency:
 ```bash
-cat << EOF > .env
-SMTP_LOGIN="your_email@example.com"
-SMTP_PASSWORD="your_smtp_password"
-SMTP_PORT="465"
-SMTP_SERVER="smtp.gmail.com"
-EOF
+uv pip install package-name
 ```
 
-6. Initialize database:
+And then update pyproject.toml with the new dependency.
+
+
+## Running the Application
+
+### Development Mode
+
+For local development with auto-reload:
 ```bash
-poetry run flask db upgrade
+python main.py
 ```
 
-7. Set up Gunicorn service:
+### Production Mode
+
+1. Using Gunicorn directly:
+```bash
+gunicorn --workers 3 --bind 0.0.0.0:5000 main:app
+```
+
+2. Using systemd service (Linux):
+
+Create a systemd service file:
 ```bash
 sudo nano /etc/systemd/system/euctelemetry.service
 ```
@@ -125,51 +189,28 @@ User=your_username
 Group=your_username
 WorkingDirectory=/path/to/EUCtelemetry
 Environment="PATH=/path/to/EUCtelemetry/.venv/bin"
-ExecStart=/path/to/EUCtelemetry/.venv/bin/gunicorn --workers 3 --bind 0.0.0.0:5000 -m 007 main:app
+ExecStart=/path/to/EUCtelemetry/.venv/bin/gunicorn --workers 3 --bind 0.0.0.0:5000 main:app
 
 [Install]
 WantedBy=multi-user.target
 ```
 
-8. Enable and start service:
+Enable and start the service:
 ```bash
-sudo systemctl start euctelemetry
 sudo systemctl enable euctelemetry
+sudo systemctl start euctelemetry
 ```
 
-### macOS (Apple Silicon)
+3. Using launchd service (macOS):
 
-1. Install Homebrew:
-```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-```
-
-2. Install dependencies:
-```bash
-brew install postgresql ffmpeg python@3.11
-brew services start postgresql
-```
-
-3. Install Poetry and set up the application:
-```bash
-curl -sSL https://install.python-poetry.org | python3 -
-git clone https://github.com/YourUsername/EUCtelemetry.git
-cd EUCtelemetry
-poetry config virtualenvs.in-project true
-poetry install --no-dev
-```
-
-4. Configure SMTP settings in .env file (only SMTP settings are required)
-
-5. Initialize database:
-```bash
-poetry run flask db upgrade
-```
-
-6. Create and configure launchd service:
+Create a launchd service file:
 ```bash
 mkdir -p ~/Library/LaunchAgents
-cat << EOF > ~/Library/LaunchAgents/com.euctelemetry.plist
+nano ~/Library/LaunchAgents/com.euctelemetry.plist
+```
+
+Add the following content:
+```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -193,77 +234,77 @@ cat << EOF > ~/Library/LaunchAgents/com.euctelemetry.plist
     <string>/path/to/EUCtelemetry/logs/gunicorn.log</string>
     <key>StandardErrorPath</key>
     <string>/path/to/EUCtelemetry/logs/gunicorn.error.log</string>
+    <key>KeepAlive</key>
+    <true/>
 </dict>
 </plist>
-EOF
+```
 
+Load and start the service:
+```bash
 launchctl load ~/Library/LaunchAgents/com.euctelemetry.plist
 ```
 
-### Windows
+4. Using process manager (PM2):
 
-1. Install prerequisites:
-   - Python 3.11 from [python.org](https://www.python.org/downloads/)
-   - PostgreSQL from [postgresql.org](https://www.postgresql.org/download/windows/)
-   - FFmpeg from [ffmpeg.org](https://ffmpeg.org/download.html)
-   - Git from [git-scm.com](https://git-scm.com/download/win)
-
-2. Add Python and FFmpeg to PATH
-
-3. Install Poetry and set up the application:
-```powershell
-(Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -
-git clone https://github.com/YourUsername/EUCtelemetry.git
-cd EUCtelemetry
-poetry config virtualenvs.in-project true
-poetry install --no-dev
-```
-
-4. Configure SMTP settings in .env file (only SMTP settings are required)
-
-5. Initialize database:
+Install PM2:
 ```bash
-poetry run flask db upgrade
+npm install -g pm2
 ```
 
-6. Create Windows Service using NSSM:
-   - Download NSSM from [nssm.cc](https://nssm.cc/)
-   - Install the service:
-```powershell
-nssm install EUCTelemetry "C:\path\to\EUCtelemetry\.venv\Scripts\gunicorn.exe"
-nssm set EUCTelemetry AppParameters "--workers 3 --bind 0.0.0.0:5000 main:app"
-nssm set EUCTelemetry AppDirectory "C:\path\to\EUCtelemetry"
-nssm start EUCTelemetry
+Create ecosystem.config.js:
+```javascript
+module.exports = {
+  apps: [{
+    name: "euctelemetry",
+    script: ".venv/bin/gunicorn",
+    args: "main:app --workers 3 --bind 0.0.0.0:5000",
+    interpreter: "none",
+    cwd: "/path/to/EUCtelemetry",
+    watch: false,
+    env: {
+      PATH: "/path/to/EUCtelemetry/.venv/bin"
+    }
+  }]
+}
 ```
 
-## Development
-
-### Adding Dependencies
-
+Start the application:
 ```bash
-poetry add package-name
+pm2 start ecosystem.config.js
+pm2 save
+pm2 startup
 ```
 
-### Updating Dependencies
+### Important Production Settings
 
+1. Workers Configuration:
+- For CPU-bound applications: workers = 2 × CPU cores + 1
+- For I/O-bound applications: workers = CPU cores × 2 or more
 ```bash
-poetry update
+gunicorn --workers=$(( 2 * $(nproc) + 1 )) --bind 0.0.0.0:5000 main:app
 ```
 
-### Running in Development Mode
-
+2. Additional Gunicorn Settings:
 ```bash
-poetry shell
-python main.py
+gunicorn \
+    --workers 3 \
+    --bind 0.0.0.0:5000 \
+    --timeout 120 \
+    --keep-alive 5 \
+    --max-requests 1000 \
+    --max-requests-jitter 100 \
+    --access-logfile /path/to/access.log \
+    --error-logfile /path/to/error.log \
+    main:app
 ```
 
-## Production Deployment Notes
-
-- Always use HTTPS in production
-- Configure proper firewall rules
-- Set up monitoring and logging
-- Regular database backups
-- Configure appropriate worker count based on server resources
+3. Security Recommendations:
+- Run behind a reverse proxy (Nginx/Apache)
+- Enable HTTPS
+- Set secure headers
+- Limit access to admin endpoints
+- Configure proper file permissions
 
 ## License
 
