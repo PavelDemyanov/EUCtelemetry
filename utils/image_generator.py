@@ -106,7 +106,7 @@ def draw_speed_arc(draw, width, height, speed, scale_factor=1.0):
     # При speed=0 угол будет 180 (минимальная дуга)
     # При speed=100 угол будет 0 (половина круга)
     speed_normalized = min(speed / 100.0, 1.0)  # Нормализуем скорость до диапазона [0,1]
-    end_angle = 180 - (speed_normalized * 180)  # Линейная интерполяция от 180 до 0 градусов
+    end_angle = speed_normalized * 180 # Corrected angle calculation
 
     # Рисуем основную дугу
     draw.arc(bbox, start=start_angle, end=end_angle, 
