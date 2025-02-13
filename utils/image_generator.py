@@ -153,7 +153,7 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
     # Добавляем полукруглую дугу скорости
     # Размер дуги - 20% от ширины экрана
     gauge_size = int(width * 0.2)
-    gauge_thickness = int(gauge_size * 0.1)  # Толщина дуги - 10% от размера
+    gauge_thickness = int(20 * scale_factor)  # Толщина дуги 20 пикселей с учетом масштаба
 
     # Центр дуги
     center_x = width // 2
@@ -199,6 +199,7 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
     result = Image.alpha_composite(background, overlay)
 
     if output_path:
+        result = result.filter(ImageFilter.GaussianBlur(radius=0.5))  # Добавляем легкое размытие для сглаживания краёв
         result.convert('RGB').save(output_path, format='PNG', quality=95, optimize=True)
         logging.debug(f"Saved frame to {output_path}")
 
