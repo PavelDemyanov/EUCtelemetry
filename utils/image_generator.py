@@ -8,7 +8,6 @@ import concurrent.futures
 import threading
 from functools import lru_cache
 from utils.hardware_detection import is_apple_silicon
-import math
 
 # Если используется Metal, можно инициализировать его, но если он не дает выигрыша — код работает по CPU.
 # Здесь пример инициализации Metal (если потребуется), но далее он не используется для отрисовки через PIL.
@@ -72,17 +71,6 @@ def create_rounded_box(width, height, radius):
 def interpolate_color(color1, color2, factor):
     """Градиентный переход между цветами."""
     return tuple(int(color1[i] + (color2[i] - color1[i]) * factor) for i in range(3))
-
-def get_arc_points(center_x, center_y, radius, start_angle, end_angle, num_points=100):
-    """Генерирует точки для дуги."""
-    points = []
-    angle_range = end_angle - start_angle
-    for i in range(num_points):
-        angle = math.radians(start_angle + (angle_range * i / (num_points - 1)))
-        x = center_x + radius * math.cos(angle)
-        y = center_y + radius * math.sin(angle)
-        points.append((x, y))
-    return points
 
 def create_frame(values, resolution='fullhd', output_path=None, text_settings=None):
     # Определяем разрешение и масштаб
@@ -170,15 +158,26 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
     # Центр дуги
     center_x = width // 2
     center_y = height // 2
-    radius = gauge_size // 2
+
+    # Координаты прямоугольника, в который вписана дуга
+    margin = int(gauge_thickness / 2)  # Отступ для толщины линии
+    gauge_bbox = [
+        center_x - gauge_size // 2 + margin,  # left
+        center_y - gauge_size // 2 + margin,  # top
+        center_x + gauge_size // 2 - margin,  # right
+        center_y + gauge_size // 2 - margin   # bottom
+    ]
+
+    # Рисуем фоновую дугу (серую)
+    # Используем углы 150-390 как в примере
+    draw.arc(gauge_bbox, 150, 390, fill=(128, 128, 128, 128), width=gauge_thickness)
 
     # Рассчитываем угол для текущей скорости
     speed = min(100, values['speed'])  # Ограничиваем до 100
-    start_angle = 150
-    end_angle = 390
-    current_angle = start_angle + (end_angle - start_angle) * (speed / 100)
+    # Преобразуем скорость в угол (150 -> 390 градусов)
+    current_angle = 150 + (390 - 150) * (speed / 100)
 
-    # Определяем цвет в зависимости от скорости
+    # Определяем цвет дуги в зависимости от скорости
     green = (0, 255, 0)
     yellow = (255, 255, 0)
     red = (255, 0, 0)
@@ -192,50 +191,19 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
     else:
         arc_color = red
 
-    # Создаем маску для дуги
-    mask = Image.new('L', (width, height), 0)
-    mask_draw = ImageDraw.Draw(mask)
-
-    # Получаем точки для дуги
-    arc_points = get_arc_points(center_x, center_y, radius, 150, current_angle)
-
-    # Рисуем фоновую серую дугу
-    background_points = get_arc_points(center_x, center_y, radius, 150, 390)
-    for i in range(len(background_points) - 1):
-        mask_draw.line([background_points[i], background_points[i + 1]], 
-                      fill=128, width=gauge_thickness)
-
-    # Рисуем цветную дугу скорости
+    # Рисуем дугу скорости
     if speed > 0:
-        for i in range(len(arc_points) - 1):
-            mask_draw.line([arc_points[i], arc_points[i + 1]], 
-                          fill=255, width=gauge_thickness)
-
-    # Создаем слой для цветной дуги
-    arc_layer = Image.new('RGBA', (width, height), (0, 0, 0, 0))
-    arc_draw = ImageDraw.Draw(arc_layer)
-
-    # Рисуем цветную дугу
-    if speed > 0:
-        for i in range(len(arc_points) - 1):
-            arc_draw.line([arc_points[i], arc_points[i + 1]], 
-                         fill=arc_color, width=gauge_thickness)
-
-    # Применяем небольшое размытие для сглаживания
-    mask = mask.filter(ImageFilter.GaussianBlur(radius=1))
-    arc_layer.putalpha(mask)
+        draw.arc(gauge_bbox, 150, current_angle, fill=arc_color, width=gauge_thickness)
 
     # Компонуем итоговое изображение
     result = Image.alpha_composite(background, overlay)
-    result = Image.alpha_composite(result, arc_layer)
 
     if output_path:
-        result = result.filter(ImageFilter.GaussianBlur(radius=0.5))
+        result = result.filter(ImageFilter.GaussianBlur(radius=0.5))  # Добавляем легкое размытие для сглаживания краёв
         result.convert('RGB').save(output_path, format='PNG', quality=95, optimize=True)
         logging.debug(f"Saved frame to {output_path}")
 
     return result
-
 
 # --- Функция генерации кадров с обновлением прогресс-бара ---
 
