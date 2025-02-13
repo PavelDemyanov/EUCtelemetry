@@ -164,15 +164,18 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
     ]
 
     # Рисуем фоновую дугу (серую)
-    draw.arc(gauge_bbox, 180, 0, fill=(128, 128, 128, 128), width=gauge_thickness)
+    # Используем углы 270-90 для получения верхней полуокружности
+    draw.arc(gauge_bbox, 270, 90, fill=(128, 128, 128, 128), width=gauge_thickness)
 
-    # Рассчитываем угол для текущей скорости (0-180 градусов)
+    # Рассчитываем угол для текущей скорости
     speed = min(100, values['speed'])  # Ограничиваем до 100
-    speed_angle = int(180 - (speed * 180 / 100))  # Преобразуем скорость в угол
+    # Преобразуем скорость в угол (270 -> 90 градусов)
+    # При скорости 0 - угол 270, при скорости 100 - угол 90
+    angle = 270 - (speed * 180 / 100)
 
     # Рисуем дугу скорости (яркую)
     if speed > 0:
-        draw.arc(gauge_bbox, 180, speed_angle, fill=(255, 255, 255, 255), width=gauge_thickness)
+        draw.arc(gauge_bbox, 270, angle, fill=(255, 255, 255, 255), width=gauge_thickness)
 
     # Компонуем итоговое изображение
     result = Image.alpha_composite(background, overlay)
@@ -188,7 +191,7 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
 def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, text_settings=None, progress_callback=None):
     """
     Генерирует кадры для видео с наложением текста.
-    
+
     Параметры:
       csv_file: путь к CSV файлу
       folder_number: номер проекта/папки
