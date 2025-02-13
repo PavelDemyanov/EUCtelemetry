@@ -8,6 +8,7 @@ import concurrent.futures
 import threading
 from functools import lru_cache
 from utils.hardware_detection import is_apple_silicon
+import math
 
 # Если используется Metal, можно инициализировать его, но если он не дает выигрыша — код работает по CPU.
 # Здесь пример инициализации Metal (если потребуется), но далее он не используется для отрисовки через PIL.
@@ -68,6 +69,52 @@ def create_rounded_box(width, height, radius):
 
 # --- Функция создания кадра (PNG) ---
 
+def draw_speed_arc(draw, width, height, speed, scale_factor=1.0):
+    """
+    Рисует дугу скорости в верхней части изображения.
+
+    Args:
+        draw: ImageDraw объект
+        width: ширина изображения
+        height: высота изображения
+        speed: значение скорости (0-100+)
+        scale_factor: коэффициент масштабирования для разных разрешений
+    """
+    # Определяем размеры и положение дуги
+    arc_center_y = int(height * 0.15)  # 15% от высоты сверху
+    arc_radius = int(min(width, height) * 0.15)  # Радиус 15% от меньшей стороны
+
+    # Масштабируем размеры
+    arc_radius = int(arc_radius * scale_factor)
+    arc_thickness = int(5 * scale_factor)  # Толщина линии
+
+    # Центр дуги
+    arc_center_x = width // 2
+
+    # Рассчитываем угол дуги на основе скорости
+    # Максимальный угол - 180 градусов (пи радиан)
+    max_angle = math.pi
+    angle = min(speed / 100.0, 1.0) * max_angle
+
+    # Координаты прямоугольника, в который вписывается дуга
+    bbox = [
+        arc_center_x - arc_radius,  # left
+        arc_center_y - arc_radius,  # top
+        arc_center_x + arc_radius,  # right
+        arc_center_y + arc_radius   # bottom
+    ]
+
+    # Рисуем дугу
+    # Начальный угол - 180 градусов (влево), конечный зависит от скорости
+    # Углы в градусах для PIL
+    start_angle = 180  # Начинаем слева
+    end_angle = 180 - math.degrees(angle)  # Вычисляем конечный угол
+
+    # Рисуем основную дугу
+    draw.arc(bbox, start=start_angle, end=end_angle, 
+            fill=(255, 255, 255), width=arc_thickness)
+
+
 def create_frame(values, resolution='fullhd', output_path=None, text_settings=None):
     # Определяем разрешение и масштаб
     if resolution == "4k":
@@ -81,6 +128,9 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
     background = Image.new('RGBA', (width, height), (0, 0, 255, 255))
     overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
+
+    # Добавляем отрисовку дуги скорости
+    draw_speed_arc(draw, width, height, float(values['speed']), scale_factor)
 
     text_settings = text_settings or {}
     font_size = int(text_settings.get('font_size', 26) * scale_factor)
