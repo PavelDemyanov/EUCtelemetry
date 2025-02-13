@@ -164,18 +164,17 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
     ]
 
     # Рисуем фоновую дугу (серую)
-    # Используем углы 270-90 для получения верхней полуокружности
-    draw.arc(gauge_bbox, 270, 90, fill=(128, 128, 128, 128), width=gauge_thickness)
+    # Используем углы 150-390 как в примере
+    draw.arc(gauge_bbox, 150, 390, fill=(128, 128, 128, 128), width=gauge_thickness)
 
     # Рассчитываем угол для текущей скорости
     speed = min(100, values['speed'])  # Ограничиваем до 100
-    # Преобразуем скорость в угол (270 -> 90 градусов)
-    # При скорости 0 - угол 270, при скорости 100 - угол 90
-    angle = 270 - (speed * 180 / 100)
+    # Преобразуем скорость в угол (150 -> 390 градусов)
+    current_angle = 150 + (390 - 150) * (speed / 100)
 
     # Рисуем дугу скорости (яркую)
     if speed > 0:
-        draw.arc(gauge_bbox, 270, angle, fill=(255, 255, 255, 255), width=gauge_thickness)
+        draw.arc(gauge_bbox, 150, current_angle, fill=(255, 255, 255, 255), width=gauge_thickness)
 
     # Компонуем итоговое изображение
     result = Image.alpha_composite(background, overlay)
