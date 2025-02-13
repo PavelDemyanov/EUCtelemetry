@@ -8,6 +8,7 @@ import concurrent.futures
 import threading
 from functools import lru_cache
 from utils.hardware_detection import is_apple_silicon
+import math
 
 # Если используется Metal, можно инициализировать его, но если он не дает выигрыша — код работает по CPU.
 # Здесь пример инициализации Metal (если потребуется), но далее он не используется для отрисовки через PIL.
@@ -191,12 +192,51 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
     else:
         arc_color = red
 
-    # Рисуем дугу скорости
-    if speed > 0:
-        draw.arc(gauge_bbox, 150, current_angle, fill=arc_color, width=gauge_thickness)
+    # Создаем маску для закругленных концов
+    mask = Image.new('L', (width, height), 0)
+    mask_draw = ImageDraw.Draw(mask)
 
-    # Компонуем итоговое изображение
+    # Рисуем дугу на маске
+    mask_draw.arc(gauge_bbox, 150, current_angle, fill=255, width=gauge_thickness)
+
+    # Вычисляем координаты концов дуги
+    radius = gauge_size // 2 - margin
+    # Начальная точка (150 градусов)
+    start_angle_rad = math.radians(150)
+    start_x = center_x + radius * math.cos(start_angle_rad)
+    start_y = center_y + radius * math.sin(start_angle_rad)
+
+    # Конечная точка (текущий угол)
+    end_angle_rad = math.radians(current_angle)
+    end_x = center_x + radius * math.cos(end_angle_rad)
+    end_y = center_y + radius * math.sin(end_angle_rad)
+
+    # Добавляем закругленные концы
+    corner_radius = gauge_thickness // 2
+    mask_draw.ellipse([start_x - corner_radius, start_y - corner_radius,
+                      start_x + corner_radius, start_y + corner_radius], fill=255)
+    mask_draw.ellipse([end_x - corner_radius, end_y - corner_radius,
+                      end_x + corner_radius, end_y + corner_radius], fill=255)
+
+    # Создаем новый слой для цветной дуги
+    arc_layer = Image.new('RGBA', (width, height), (0, 0, 0, 0))
+    arc_draw = ImageDraw.Draw(arc_layer)
+
+    # Рисуем цветную дугу
+    if speed > 0:
+        arc_draw.arc(gauge_bbox, 150, current_angle, fill=arc_color, width=gauge_thickness)
+        # Добавляем закругленные концы с тем же цветом
+        arc_draw.ellipse([start_x - corner_radius, start_y - corner_radius,
+                         start_x + corner_radius, start_y + corner_radius], fill=arc_color)
+        arc_draw.ellipse([end_x - corner_radius, end_y - corner_radius,
+                         end_x + corner_radius, end_y + corner_radius], fill=arc_color)
+
+    # Применяем маску к цветной дуге
+    arc_layer.putalpha(mask)
+
+    # Накладываем дугу на основное изображение
     result = Image.alpha_composite(background, overlay)
+    result = Image.alpha_composite(result, arc_layer)
 
     if output_path:
         result = result.filter(ImageFilter.GaussianBlur(radius=0.5))  # Добавляем легкое размытие для сглаживания краёв
