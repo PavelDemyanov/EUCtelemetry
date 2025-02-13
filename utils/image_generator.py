@@ -199,7 +199,9 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
     result = Image.alpha_composite(background, overlay)
 
     if output_path:
-        result = result.filter(ImageFilter.GaussianBlur(radius=0.5))  # Добавляем легкое размытие для сглаживания краёв
+        # Применяем более сильное размытие для лучшего сглаживания краёв
+        overlay = overlay.filter(ImageFilter.GaussianBlur(radius=1.5))
+        result = Image.alpha_composite(background, overlay)
         result.convert('RGB').save(output_path, format='PNG', quality=95, optimize=True)
         logging.debug(f"Saved frame to {output_path}")
 
