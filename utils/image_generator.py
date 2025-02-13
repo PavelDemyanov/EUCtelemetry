@@ -6,6 +6,7 @@ import logging
 import shutil
 import concurrent.futures
 import threading
+import math
 from functools import lru_cache
 from utils.hardware_detection import is_apple_silicon
 
@@ -191,9 +192,39 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
     else:
         arc_color = red
 
-    # Рисуем дугу скорости
+    # Создаем маску для дуги с закругленными концами
+    arc_mask = Image.new('RGBA', (width, height), (0, 0, 0, 0))
+    mask_draw = ImageDraw.Draw(arc_mask)
+
+    # Рисуем основную дугу
     if speed > 0:
-        draw.arc(gauge_bbox, 150, current_angle, fill=arc_color, width=gauge_thickness)
+        # Рисуем дугу
+        mask_draw.arc(gauge_bbox, 150, current_angle, fill=arc_color + (255,), width=gauge_thickness)
+
+        # Добавляем закругленные концы
+        # Вычисляем координаты для концов дуги
+        start_angle_rad = math.radians(150)
+        end_angle_rad = math.radians(current_angle)
+
+        # Координаты начала дуги
+        start_x = center_x + (gauge_size // 2 - margin) * math.cos(start_angle_rad)
+        start_y = center_y + (gauge_size // 2 - margin) * math.sin(start_angle_rad)
+
+        # Координаты конца дуги
+        end_x = center_x + (gauge_size // 2 - margin) * math.cos(end_angle_rad)
+        end_y = center_y + (gauge_size // 2 - margin) * math.sin(end_angle_rad)
+
+        # Рисуем круги на концах дуги
+        radius = gauge_thickness // 2
+        mask_draw.ellipse([start_x - radius, start_y - radius, 
+                          start_x + radius, start_y + radius], 
+                         fill=arc_color + (255,))
+        mask_draw.ellipse([end_x - radius, end_y - radius,
+                          end_x + radius, end_y + radius],
+                         fill=arc_color + (255,))
+
+    # Накладываем маску дуги на оверлей
+    overlay = Image.alpha_composite(overlay, arc_mask)
 
     # Компонуем итоговое изображение
     result = Image.alpha_composite(background, overlay)
@@ -206,6 +237,7 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
         logging.debug(f"Saved frame to {output_path}")
 
     return result
+
 
 # --- Функция генерации кадров с обновлением прогресс-бара ---
 
