@@ -245,6 +245,7 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
 
     return result
 
+
 # --- Функция генерации кадров с обновлением прогресс-бара ---
 
 def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, text_settings=None, progress_callback=None):
