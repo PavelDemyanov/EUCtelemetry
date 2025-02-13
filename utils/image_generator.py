@@ -146,6 +146,34 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
         draw.text((text_x, text_y), text, fill=(255, 255, 255, 255), font=font)
         x_position += element_width + spacing
 
+    # Добавляем полукруглую дугу скорости
+    # Размер дуги - 20% от ширины экрана
+    gauge_size = int(width * 0.2)
+    gauge_thickness = int(gauge_size * 0.1)  # Толщина дуги - 10% от размера
+
+    # Центр дуги
+    center_x = width // 2
+    center_y = height // 2
+
+    # Координаты прямоугольника, в который вписана дуга
+    gauge_bbox = [
+        center_x - gauge_size // 2,  # left
+        center_y - gauge_size // 2,  # top
+        center_x + gauge_size // 2,  # right
+        center_y + gauge_size // 2   # bottom
+    ]
+
+    # Рисуем фоновую дугу (серую)
+    draw.arc(gauge_bbox, 180, 0, fill=(128, 128, 128, 128), width=gauge_thickness)
+
+    # Рассчитываем угол для текущей скорости (0-180 градусов)
+    speed = min(100, values['speed'])  # Ограничиваем до 100
+    speed_angle = int(180 - (speed * 180 / 100))  # Преобразуем скорость в угол
+
+    # Рисуем дугу скорости (яркую)
+    if speed > 0:
+        draw.arc(gauge_bbox, 180, speed_angle, fill=(255, 255, 255, 255), width=gauge_thickness)
+
     # Компонуем итоговое изображение
     result = Image.alpha_composite(background, overlay)
 
