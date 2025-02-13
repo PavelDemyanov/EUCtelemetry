@@ -6,7 +6,6 @@ import logging
 import shutil
 import concurrent.futures
 import threading
-import math
 from functools import lru_cache
 from utils.hardware_detection import is_apple_silicon
 
@@ -87,7 +86,6 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
     overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
 
-    # Настройки текста и отступов
     text_settings = text_settings or {}
     font_size = int(text_settings.get('font_size', 26) * scale_factor)
     top_padding = int(text_settings.get('top_padding', 14) * scale_factor)
@@ -116,12 +114,12 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
         ('Power', f"{values['power']} W")
     ]
 
-    # Расчет размеров текста и позиционирование
     element_widths = []
     text_widths = []
     text_heights = []
     total_width = 0
 
+    # Вычисляем размеры для каждого текстового элемента
     for label, value in params:
         bbox = draw.textbbox((0, 0), f"{label}: {value}", font=font)
         text_width = bbox[2] - bbox[0]
@@ -140,7 +138,7 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
     box_vertical_center = y_position + (box_height // 2)
     text_baseline_y = box_vertical_center - (max_text_height // 2)
 
-    # Рисуем текстовые блоки
+    # Рисуем каждый текстовый блок с закругленным фоном
     x_position = start_x
     for i, ((label, value), element_width, text_width) in enumerate(zip(params, element_widths, text_widths)):
         box = create_rounded_box(element_width, box_height, border_radius)
@@ -152,83 +150,60 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
         draw.text((text_x, text_y), text, fill=(255, 255, 255, 255), font=font)
         x_position += element_width + spacing
 
-    # Создаем маску для дуги скорости
-    speed = min(100, values['speed'])
-    gauge_size = int(width * 0.2)  # Размер дуги - 20% от ширины экрана
+    # Добавляем полукруглую дугу скорости
+    # Размер дуги - 20% от ширины экрана
+    gauge_size = int(width * 0.2)
+    gauge_thickness = int(20 * scale_factor)  # Толщина дуги 20 пикселей с учетом масштаба
+
+    # Центр дуги
     center_x = width // 2
     center_y = height // 2
 
-    # Создаем отдельное изображение для дуги
-    arc_image = Image.new('RGBA', (width, height), (0, 0, 0, 0))
-    arc_mask = Image.new('L', (width, height), 0)
-    arc_draw = ImageDraw.Draw(arc_image)
-    mask_draw = ImageDraw.Draw(arc_mask)
+    # Координаты прямоугольника, в который вписана дуга
+    margin = int(gauge_thickness / 2)  # Отступ для толщины линии
+    gauge_bbox = [
+        center_x - gauge_size // 2 + margin,  # left
+        center_y - gauge_size // 2 + margin,  # top
+        center_x + gauge_size // 2 - margin,  # right
+        center_y + gauge_size // 2 - margin   # bottom
+    ]
 
-    # Параметры дуги
-    arc_width = int(20 * scale_factor)  # Толщина дуги 20 пикселей
-    radius = gauge_size // 2
-    start_angle = 150  # Начальный угол (0 км/ч)
-    end_angle = 30    # Конечный угол (100 км/ч)
-    corner_radius = arc_width // 2
+    # Рисуем фоновую дугу (серую)
+    # Используем углы 150-390 как в примере
+    draw.arc(gauge_bbox, 150, 390, fill=(128, 128, 128, 128), width=gauge_thickness)
 
-    # Определяем цвет в зависимости от скорости
+    # Рассчитываем угол для текущей скорости
+    speed = min(100, values['speed'])  # Ограничиваем до 100
+    # Преобразуем скорость в угол (150 -> 390 градусов)
+    current_angle = 150 + (390 - 150) * (speed / 100)
+
+    # Определяем цвет дуги в зависимости от скорости
     green = (0, 255, 0)
     yellow = (255, 255, 0)
     red = (255, 0, 0)
 
     if speed < 70:
         factor = speed / 70
-        color = interpolate_color(green, yellow, factor)
+        arc_color = interpolate_color(green, yellow, factor)
     elif speed < 85:
         factor = (speed - 70) / 15
-        color = interpolate_color(yellow, red, factor)
+        arc_color = interpolate_color(yellow, red, factor)
     else:
-        color = red + (255,)  # Добавляем альфа-канал
+        arc_color = red
 
-    # Рассчитываем угол для текущей скорости
-    if end_angle < start_angle:
-        end_angle += 360
-    current_angle = start_angle + (end_angle - start_angle) * (speed / 100)
-    current_angle %= 360
-
-    # Рисуем дугу на маске
-    margin = int(arc_width / 2)
-    arc_bbox = [
-        center_x - radius + margin,
-        center_y - radius + margin,
-        center_x + radius - margin,
-        center_y + radius - margin
-    ]
-
-    # Рисуем фоновую серую дугу
-    arc_draw.arc(arc_bbox, start_angle, end_angle, fill=(128, 128, 128, 128), width=arc_width)
-
+    # Рисуем дугу скорости
     if speed > 0:
-        # Рисуем цветную дугу
-        arc_draw.arc(arc_bbox, start_angle, current_angle, fill=color, width=arc_width)
+        draw.arc(gauge_bbox, 150, current_angle, fill=arc_color, width=gauge_thickness)
 
-        # Добавляем закругленные концы
-        start_x = center_x + (radius - arc_width // 2) * math.cos(math.radians(start_angle))
-        start_y = center_y + (radius - arc_width // 2) * math.sin(math.radians(start_angle))
-        end_x = center_x + (radius - arc_width // 2) * math.cos(math.radians(current_angle))
-        end_y = center_y + (radius - arc_width // 2) * math.sin(math.radians(current_angle))
-
-        arc_draw.ellipse([start_x - corner_radius, start_y - corner_radius,
-                         start_x + corner_radius, start_y + corner_radius], fill=color)
-        arc_draw.ellipse([end_x - corner_radius, end_y - corner_radius,
-                         end_x + corner_radius, end_y + corner_radius], fill=color)
-
-    # Накладываем цветное изображение на основное
-    overlay = Image.alpha_composite(overlay, arc_image)
+    # Компонуем итоговое изображение
     result = Image.alpha_composite(background, overlay)
 
     if output_path:
-        result = result.filter(ImageFilter.GaussianBlur(radius=0.5))
+        result = result.filter(ImageFilter.GaussianBlur(radius=0.5))  # Добавляем легкое размытие для сглаживания краёв
         result.convert('RGB').save(output_path, format='PNG', quality=95, optimize=True)
         logging.debug(f"Saved frame to {output_path}")
 
     return result
-
 
 # --- Функция генерации кадров с обновлением прогресс-бара ---
 
