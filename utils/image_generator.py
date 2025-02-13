@@ -68,6 +68,10 @@ def create_rounded_box(width, height, radius):
 
 # --- Функция создания кадра (PNG) ---
 
+def interpolate_color(color1, color2, factor):
+    """Градиентный переход между цветами."""
+    return tuple(int(color1[i] + (color2[i] - color1[i]) * factor) for i in range(3))
+
 def create_frame(values, resolution='fullhd', output_path=None, text_settings=None):
     # Определяем разрешение и масштаб
     if resolution == "4k":
@@ -156,11 +160,12 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
     center_y = height // 2
 
     # Координаты прямоугольника, в который вписана дуга
+    margin = int(gauge_thickness / 2)  # Отступ для толщины линии
     gauge_bbox = [
-        center_x - gauge_size // 2,  # left
-        center_y - gauge_size // 2,  # top
-        center_x + gauge_size // 2,  # right
-        center_y + gauge_size // 2   # bottom
+        center_x - gauge_size // 2 + margin,  # left
+        center_y - gauge_size // 2 + margin,  # top
+        center_x + gauge_size // 2 - margin,  # right
+        center_y + gauge_size // 2 - margin   # bottom
     ]
 
     # Рисуем фоновую дугу (серую)
@@ -172,9 +177,23 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
     # Преобразуем скорость в угол (150 -> 390 градусов)
     current_angle = 150 + (390 - 150) * (speed / 100)
 
-    # Рисуем дугу скорости (яркую)
+    # Определяем цвет дуги в зависимости от скорости
+    green = (0, 255, 0)
+    yellow = (255, 255, 0)
+    red = (255, 0, 0)
+
+    if speed < 70:
+        factor = speed / 70
+        arc_color = interpolate_color(green, yellow, factor)
+    elif speed < 85:
+        factor = (speed - 70) / 15
+        arc_color = interpolate_color(yellow, red, factor)
+    else:
+        arc_color = red
+
+    # Рисуем дугу скорости
     if speed > 0:
-        draw.arc(gauge_bbox, 150, current_angle, fill=(255, 255, 255, 255), width=gauge_thickness)
+        draw.arc(gauge_bbox, 150, current_angle, fill=arc_color, width=gauge_thickness)
 
     # Компонуем итоговое изображение
     result = Image.alpha_composite(background, overlay)
