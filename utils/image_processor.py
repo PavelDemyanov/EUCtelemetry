@@ -17,22 +17,21 @@ def interpolate_color(color1, color2, factor):
     b = int(b1 + (b2 - b1) * factor)
     return (r, g, b)
 
-
 def create_speed_indicator(speed,
-                         size=500,
-                         speed_offset=(0, 0),
-                         unit_offset=(0, 0),
-                         speed_size=100,
-                         unit_size=100,
-                         indicator_scale=100,
-                         arc_width=20,
-                         resolution='fullhd'):
+                          size=500,
+                          speed_offset=(0, 0),
+                          unit_offset=(0, 0),
+                          speed_size=100,
+                          unit_size=100,
+                          indicator_scale=100,
+                          arc_width=20,
+                          resolution='fullhd'):
     """
-    Создает индикатор скорости в виде полукруглой дуги
+    Создает индикатор скорости с настраиваемой толщиной дуги
     """
-    logging.info(f"Creating speed indicator with arc_width={arc_width}, scale={indicator_scale}")
+    logging.info(f"Creating speed indicator with raw arc_width={arc_width}, scale={indicator_scale}")
 
-    # Создаем изображение стандартного размера (не масштабированное)
+    # Создаем изображение
     image = Image.new('RGBA', (size, size), (0, 0, 0, 0))
 
     # Создаем маску для дуги с учетом масштаба
@@ -48,11 +47,11 @@ def create_speed_indicator(speed,
     start_angle = 150  # Начальный угол (0 км/ч)
     end_angle = 30     # Конечный угол (100 км/ч)
 
-    # Масштабируем толщину дуги только в зависимости от масштаба индикатора
-    scaled_arc_width = max(1, int(arc_width * indicator_scale / 100))
+    # Масштабируем толщину дуги
+    scaled_arc_width = max(1, int(float(arc_width)))  # Преобразуем в float для надежности
     corner_radius = scaled_arc_width // 2
 
-    logging.info(f"Final arc width after scaling: {scaled_arc_width}px")
+    logging.info(f"Processing arc with width={scaled_arc_width}px, corner_radius={corner_radius}px")
 
     # Определяем цвет в зависимости от скорости
     green = (0, 255, 0)
@@ -87,6 +86,7 @@ def create_speed_indicator(speed,
     end_x = arc_center + (arc_radius - scaled_arc_width // 2) * math.cos(math.radians(current_angle))
     end_y = arc_center + (arc_radius - scaled_arc_width // 2) * math.sin(math.radians(current_angle))
 
+    # Рисуем закругленные концы
     mask_draw.ellipse([
         start_x - corner_radius, start_y - corner_radius,
         start_x + corner_radius, start_y + corner_radius
@@ -97,12 +97,11 @@ def create_speed_indicator(speed,
     ], fill=255)
 
     # Создаем цветное изображение для дуги
-    color_image = Image.new(
-        'RGBA', (arc_size, arc_size),
-        color if isinstance(color, tuple) else color[:3] + (255,))
+    color_image = Image.new('RGBA', (arc_size, arc_size),
+                          color if isinstance(color, tuple) else color[:3] + (255,))
     color_image.putalpha(mask)
 
-    # Создаем финальное изображение с правильным размером
+    # Создаем финальное изображение
     final_image = Image.new('RGBA', (size, size), (0, 0, 0, 0))
 
     # Центрируем дугу на финальном изображении
@@ -110,18 +109,20 @@ def create_speed_indicator(speed,
     paste_y = (size - arc_size) // 2
     final_image.paste(color_image, (paste_x, paste_y), color_image)
 
-    # Добавляем текст скорости
+    # Добавляем текст
     draw = ImageDraw.Draw(final_image)
 
-    # Масштабируем базовые размеры шрифта в зависимости от разрешения
-    resolution_scale = 1.0  #Always 1.0 now
+    # Масштабируем размеры шрифта
+    resolution_scale = 1.0
     base_speed_font_size = int((size // 4) * speed_size / 100 * resolution_scale)
     base_unit_font_size = int((size // 8) * unit_size / 100 * resolution_scale)
 
+    # Загружаем шрифты
     try:
         speed_font = ImageFont.truetype("fonts/sf-ui-display-bold.otf", base_speed_font_size)
         unit_font = ImageFont.truetype("fonts/sf-ui-display-regular.otf", base_unit_font_size)
     except Exception as e:
+        logging.error(f"Error loading fonts: {str(e)}")
         raise ValueError(f"Error loading fonts: {str(e)}")
 
     # Отрисовка значения скорости
@@ -136,11 +137,11 @@ def create_speed_indicator(speed,
     unit_text_width = unit_bbox[2] - unit_bbox[0]
     unit_text_height = unit_bbox[3] - unit_bbox[1]
 
-    # Масштабируем смещения в зависимости от разрешения
+    # Масштабируем смещения
     scaled_speed_offset = (speed_offset[0], int(speed_offset[1] * resolution_scale))
     scaled_unit_offset = (unit_offset[0], int(unit_offset[1] * resolution_scale))
 
-    # Позиционирование текста с учетом масштабированных смещений
+    # Позиционирование текста
     center = size // 2
     speed_x = center - speed_text_width // 2
     speed_y = center - speed_text_height // 2 - unit_text_height // 2 + scaled_speed_offset[1]
@@ -148,12 +149,11 @@ def create_speed_indicator(speed,
     unit_x = center - unit_text_width // 2
     unit_y = speed_y + speed_text_height + 5 + scaled_unit_offset[1]
 
-    # Рисуем тексты
+    # Рисуем текст
     draw.text((speed_x, speed_y), speed_text, fill=(255, 255, 255, 255), font=speed_font)
     draw.text((unit_x, unit_y), unit_text, fill=(255, 255, 255, 255), font=unit_font)
 
     return final_image
-
 
 def overlay_speed_indicator(base_image,
                           speed,
