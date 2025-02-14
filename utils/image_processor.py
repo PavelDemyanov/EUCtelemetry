@@ -103,7 +103,7 @@ def create_speed_indicator(speed, size=500, speed_offset=(0, 0), unit_offset=(0,
     draw = ImageDraw.Draw(final_image)
 
     # Масштабируем базовые размеры шрифта в зависимости от разрешения
-    resolution_scale = 2.0 if resolution == '4k' else 1.0
+    resolution_scale = 1.5 if resolution == '4k' else 1.0
     base_speed_font_size = int((size // 4) * speed_size / 100 * resolution_scale)
     base_unit_font_size = int((size // 8) * unit_size / 100 * resolution_scale)
 
