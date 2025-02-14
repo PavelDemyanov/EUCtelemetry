@@ -218,7 +218,7 @@ def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, tex
             idx = np.searchsorted(ts_array, timestamp, side='right') - 1
             if idx < 0:
                 values = {key: 0 for key in ['speed', 'max_speed', 'gps', 'voltage', 'temperature',
-                                              'current', 'battery', 'mileage', 'pwm', 'power']}
+                                          'current', 'battery', 'mileage', 'pwm', 'power']}
             else:
                 values = {key: int(arr[idx]) for key, arr in zip(
                     ['speed', 'gps', 'voltage', 'temperature', 'current', 'battery', 'mileage', 'pwm', 'power'],

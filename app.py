@@ -382,7 +382,14 @@ def generate_project_frames(project_id):
             'bottom_padding': int(data.get('bottom_padding', 30)),
             'spacing': int(data.get('spacing', 20)),
             'font_size': int(data.get('font_size', 26)),
-            'border_radius': int(data.get('border_radius', 13))
+            'border_radius': int(data.get('border_radius', 13)),
+            # Speed indicator settings
+            'indicator_x': float(data.get('indicator_x', 50)),
+            'indicator_y': float(data.get('indicator_y', 80)),
+            'speed_y': int(data.get('speed_y', 0)),
+            'unit_y': int(data.get('unit_y', 0)),
+            'speed_size': float(data.get('speed_size', 100)),
+            'unit_size': float(data.get('unit_size', 100))
         }
 
         logging.info(f"Starting processing with settings: {text_settings}")
