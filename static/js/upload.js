@@ -123,7 +123,12 @@ document.getElementById('projectName').addEventListener('input', function() {
 
 // Add event listeners for text display settings
 const textSettings = ['verticalPosition', 'topPadding', 'bottomPadding', 'spacing', 'fontSize', 'borderRadius'];
-textSettings.forEach(setting => {
+const speedIndicatorSettings = ['indicatorX', 'indicatorY', 'speedX', 'speedY', 'unitX', 'unitY'];
+
+// Combine all settings
+const allSettings = [...textSettings, ...speedIndicatorSettings];
+
+allSettings.forEach(setting => {
     const input = document.getElementById(setting);
     const valueDisplay = document.getElementById(setting + 'Value');
 
@@ -144,7 +149,14 @@ textSettings.forEach(setting => {
                     bottom_padding: document.getElementById('bottomPadding').value,
                     spacing: document.getElementById('spacing').value,
                     font_size: document.getElementById('fontSize').value,
-                    border_radius: document.getElementById('borderRadius').value
+                    border_radius: document.getElementById('borderRadius').value,
+                    // Add new speed indicator settings
+                    indicator_x: document.getElementById('indicatorX').value,
+                    indicator_y: document.getElementById('indicatorY').value,
+                    speed_x: document.getElementById('speedX').value,
+                    speed_y: document.getElementById('speedY').value,
+                    unit_x: document.getElementById('unitX').value,
+                    unit_y: document.getElementById('unitY').value
                 };
 
                 // Update preview with all current settings
@@ -194,7 +206,13 @@ document.getElementById('startProcessButton').addEventListener('click', function
         bottom_padding: document.getElementById('bottomPadding').value,
         spacing: document.getElementById('spacing').value,
         font_size: document.getElementById('fontSize').value,
-        border_radius: document.getElementById('borderRadius').value
+        border_radius: document.getElementById('borderRadius').value,
+        indicator_x: document.getElementById('indicatorX').value,
+        indicator_y: document.getElementById('indicatorY').value,
+        speed_x: document.getElementById('speedX').value,
+        speed_y: document.getElementById('speedY').value,
+        unit_x: document.getElementById('unitX').value,
+        unit_y: document.getElementById('unitY').value
     };
 
     // Start processing

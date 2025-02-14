@@ -16,11 +16,13 @@ def interpolate_color(color1, color2, factor):
     b = int(b1 + (b2 - b1) * factor)
     return (r, g, b)
 
-def create_speed_indicator(speed, size=500):
+def create_speed_indicator(speed, size=500, speed_offset=(0, 0), unit_offset=(0, 0)):
     """
     Создает индикатор скорости в виде полукруглой дуги
     :param speed: Скорость (0-100 км/ч)
     :param size: Размер изображения в пикселях
+    :param speed_offset: Смещение текста скорости (x, y)
+    :param unit_offset: Смещение текста единиц измерения (x, y)
     :return: PIL Image объект
     """
     image = Image.new('RGBA', (size, size), (0, 0, 0, 0))
@@ -105,12 +107,12 @@ def create_speed_indicator(speed, size=500):
     unit_text_width = unit_bbox[2] - unit_bbox[0]
     unit_text_height = unit_bbox[3] - unit_bbox[1]
 
-    # Позиционирование текста
-    speed_x = center - speed_text_width // 2
-    speed_y = center - speed_text_height // 2 - unit_text_height // 2
+    # Позиционирование текста с учетом смещений
+    speed_x = center - speed_text_width // 2 + speed_offset[0]
+    speed_y = center - speed_text_height // 2 - unit_text_height // 2 + speed_offset[1]
 
-    unit_x = center - unit_text_width // 2
-    unit_y = speed_y + speed_text_height + 5  # Добавляем небольшой отступ между текстами
+    unit_x = center - unit_text_width // 2 + unit_offset[0]
+    unit_y = speed_y + speed_text_height + 5 + unit_offset[1]  # Добавляем небольшой отступ между текстами
 
     # Рисуем тексты
     draw.text((speed_x, speed_y), speed_text, fill=(255, 255, 255, 255), font=speed_font)

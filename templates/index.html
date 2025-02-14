@@ -176,6 +176,68 @@
                         </div>
                     </div>
 
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h5 class="mb-0">Speed Indicator Display Settings</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="indicatorX" class="form-label">Indicator Horizontal Position</label>
+                                        <input type="range" class="form-range" id="indicatorX" name="indicator_x" 
+                                               min="0" max="100" value="50" step="1">
+                                        <div class="text-muted small">Current: <span id="indicatorXValue">50</span>%</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="indicatorY" class="form-label">Indicator Vertical Position</label>
+                                        <input type="range" class="form-range" id="indicatorY" name="indicator_y" 
+                                               min="0" max="100" value="80" step="1">
+                                        <div class="text-muted small">Current: <span id="indicatorYValue">80</span>%</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="speedX" class="form-label">Speed Text Horizontal Offset</label>
+                                        <input type="range" class="form-range" id="speedX" name="speed_x" 
+                                               min="-50" max="50" value="0" step="1">
+                                        <div class="text-muted small">Current: <span id="speedXValue">0</span>px</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="speedY" class="form-label">Speed Text Vertical Offset</label>
+                                        <input type="range" class="form-range" id="speedY" name="speed_y" 
+                                               min="-50" max="50" value="0" step="1">
+                                        <div class="text-muted small">Current: <span id="speedYValue">0</span>px</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="unitX" class="form-label">Unit Text Horizontal Offset</label>
+                                        <input type="range" class="form-range" id="unitX" name="unit_x" 
+                                               min="-50" max="50" value="0" step="1">
+                                        <div class="text-muted small">Current: <span id="unitXValue">0</span>px</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="unitY" class="form-label">Unit Text Vertical Offset</label>
+                                        <input type="range" class="form-range" id="unitY" name="unit_y" 
+                                               min="-50" max="50" value="0" step="1">
+                                        <div class="text-muted small">Current: <span id="unitYValue">0</span>px</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <button type="button" class="btn btn-success" id="startProcessButton">Start Processing</button>
                 </div>
 

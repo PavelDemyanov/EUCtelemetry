@@ -79,15 +79,29 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
     overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
 
-    # Создаем индикатор скорости
-    speed_indicator = create_speed_indicator(values['speed'], indicator_size)
+    text_settings = text_settings or {}
 
-    # Позиционируем индикатор скорости по центру внизу
-    indicator_x = (width - indicator_size) // 2  # центрирование по горизонтали
-    indicator_y = height - indicator_size - int(20 * scale_factor)  # отступ 20 пикселей от низа с учетом масштаба
+    # Получаем настройки позиционирования индикатора и текста
+    indicator_x_percent = float(text_settings.get('indicator_x', 50))
+    indicator_y_percent = float(text_settings.get('indicator_y', 80))
+    speed_x_offset = int(text_settings.get('speed_x', 0))
+    speed_y_offset = int(text_settings.get('speed_y', 0))
+    unit_x_offset = int(text_settings.get('unit_x', 0))
+    unit_y_offset = int(text_settings.get('unit_y', 0))
+
+    # Создаем индикатор скорости с учетом смещений текста
+    speed_indicator = create_speed_indicator(
+        values['speed'], 
+        indicator_size,
+        speed_offset=(speed_x_offset, speed_y_offset),
+        unit_offset=(unit_x_offset, unit_y_offset)
+    )
+
+    # Позиционируем индикатор скорости на основе процентных значений
+    indicator_x = int((width - indicator_size) * indicator_x_percent / 100)
+    indicator_y = int((height - indicator_size) * indicator_y_percent / 100)
     background.paste(speed_indicator, (indicator_x, indicator_y), speed_indicator)
 
-    text_settings = text_settings or {}
     font_size = int(text_settings.get('font_size', 26) * scale_factor)
     top_padding = int(text_settings.get('top_padding', 14) * scale_factor)
     box_height = int(text_settings.get('bottom_padding', 47) * scale_factor)
