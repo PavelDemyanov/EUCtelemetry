@@ -16,7 +16,7 @@ def interpolate_color(color1, color2, factor):
     b = int(b1 + (b2 - b1) * factor)
     return (r, g, b)
 
-def create_speed_indicator(speed, size=500, speed_offset=(0, 0), unit_offset=(0, 0), speed_size=100, unit_size=100, indicator_scale=100):
+def create_speed_indicator(speed, size=500, speed_offset=(0, 0), unit_offset=(0, 0), speed_size=100, unit_size=100, indicator_scale=100, resolution='fullhd'):
     """
     Создает индикатор скорости в виде полукруглой дуги
     :param speed: Скорость (0-100 км/ч)
@@ -26,6 +26,7 @@ def create_speed_indicator(speed, size=500, speed_offset=(0, 0), unit_offset=(0,
     :param speed_size: Размер текста скорости в процентах (100 = стандартный)
     :param unit_size: Размер текста единиц измерения в процентах (100 = стандартный)
     :param indicator_scale: Масштаб дуги в процентах (100 = стандартный)
+    :param resolution: Разрешение кадра ('fullhd' или '4k')
     :return: PIL Image объект
     """
     # Создаем изображение стандартного размера (не масштабированное)
@@ -43,7 +44,13 @@ def create_speed_indicator(speed, size=500, speed_offset=(0, 0), unit_offset=(0,
     # Параметры дуги
     start_angle = 150  # Начальный угол (0 км/ч)
     end_angle = 30     # Конечный угол (100 км/ч)
-    arc_width = int(20 * indicator_scale / 100)  # Масштабируем ширину дуги
+
+    # Масштабируем толщину дуги в зависимости от разрешения
+    base_width = 20  # Базовая толщина для Full HD
+    if resolution == '4k':
+        base_width *= 2  # Удваиваем толщину для 4K
+
+    arc_width = int(base_width * indicator_scale / 100)  # Применяем масштаб пользователя
     corner_radius = arc_width // 2
 
     # Определяем цвет в зависимости от скорости
@@ -132,7 +139,7 @@ def create_speed_indicator(speed, size=500, speed_offset=(0, 0), unit_offset=(0,
     return final_image
 
 def overlay_speed_indicator(base_image, speed, position=(0, 0), size=500, speed_offset=(0, 0), unit_offset=(0, 0),
-                          speed_size=100, unit_size=100, indicator_scale=100):
+                          speed_size=100, unit_size=100, indicator_scale=100, resolution='fullhd'):
     """
     Накладывает индикатор скорости на базовое изображение
     :param base_image: Базовое изображение (PIL Image)
@@ -144,10 +151,11 @@ def overlay_speed_indicator(base_image, speed, position=(0, 0), size=500, speed_
     :param speed_size: Размер текста скорости в процентах (100 = стандартный)
     :param unit_size: Размер текста единиц измерения в процентах (100 = стандартный)
     :param indicator_scale: Общий масштаб индикатора в процентах (100 = стандартный)
+    :param resolution: Разрешение кадра ('fullhd' или '4k')
     :return: PIL Image с наложенным индикатором
     """
     speed_indicator = create_speed_indicator(speed, size, speed_offset, unit_offset, 
-                                          speed_size, unit_size, indicator_scale)
+                                          speed_size, unit_size, indicator_scale, resolution)
     if base_image.mode != 'RGBA':
         base_image = base_image.convert('RGBA')
     base_image.paste(speed_indicator, position, speed_indicator)
