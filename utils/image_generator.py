@@ -74,17 +74,17 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
         scale_factor = 1.0
         indicator_size = 500  # Стандартный размер для Full HD
 
-    # Создаем прозрачный фон
-    background = Image.new('RGBA', (width, height), (0, 0, 0, 0))
+    # Создаем синий фон и прозрачный оверлей
+    background = Image.new('RGBA', (width, height), (0, 0, 255, 255))
     overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
 
     # Создаем индикатор скорости
     speed_indicator = create_speed_indicator(values['speed'], indicator_size)
 
-    # Позиционируем индикатор скорости в левом верхнем углу
-    indicator_x = int(50 * scale_factor)
-    indicator_y = int(50 * scale_factor)
+    # Позиционируем индикатор скорости по центру внизу
+    indicator_x = (width - indicator_size) // 2  # центрирование по горизонтали
+    indicator_y = height - indicator_size - int(20 * scale_factor)  # отступ 20 пикселей от низа с учетом масштаба
     background.paste(speed_indicator, (indicator_x, indicator_y), speed_indicator)
 
     text_settings = text_settings or {}
