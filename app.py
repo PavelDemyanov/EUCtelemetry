@@ -389,7 +389,8 @@ def generate_project_frames(project_id):
             'speed_y': int(data.get('speed_y', 0)),
             'unit_y': int(data.get('unit_y', 0)),
             'speed_size': float(data.get('speed_size', 100)),
-            'unit_size': float(data.get('unit_size', 100))
+            'unit_size': float(data.get('unit_size', 100)),
+            'indicator_scale': float(data.get('indicator_scale', 100))  # Added new parameter
         }
 
         logging.info(f"Starting processing with settings: {text_settings}")
@@ -519,7 +520,8 @@ def generate_preview(project_id):
             'speed_y': int(data.get('speed_y', 0)),
             'unit_y': int(data.get('unit_y', 0)),
             'speed_size': float(data.get('speed_size', 100)),
-            'unit_size': float(data.get('unit_size', 100))
+            'unit_size': float(data.get('unit_size', 100)),
+            'indicator_scale': float(data.get('indicator_scale', 100))  # Added new parameter
         }
 
         logging.info(f"Generating preview with settings: {text_settings}")
