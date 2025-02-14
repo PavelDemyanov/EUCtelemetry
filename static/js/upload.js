@@ -141,9 +141,19 @@ allSettings.forEach(setting => {
     if (!input || !valueDisplay) return; // Skip if elements don't exist
 
     input.addEventListener('input', function() {
-        // Update value display
-        valueDisplay.textContent = this.value + (this.id === 'speedSize' || this.id === 'unitSize' ? '%' : 
-                                               this.id.includes('indicator') ? '%' : 'px');
+        // Update value display without adding unit if it's already in the display text
+        const currentText = valueDisplay.textContent;
+        const value = this.value;
+
+        // Check if the current text already contains a unit
+        if (currentText.includes('%') || currentText.includes('px')) {
+            valueDisplay.textContent = value;
+        } else {
+            // Add unit only if it's not already present
+            valueDisplay.textContent = value + (
+                this.id === 'speedSize' || this.id === 'unitSize' || this.id.includes('indicator') ? '%' : 'px'
+            );
+        }
 
         // Debounce the preview update
         clearTimeout(this.timeout);
