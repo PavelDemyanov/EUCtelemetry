@@ -64,111 +64,120 @@ def create_rounded_box(width, height, radius):
     return _box_cache[cache_key].copy()
 
 def create_frame(values, resolution='fullhd', output_path=None, text_settings=None):
-    # Определяем разрешение и масштаб
-    if resolution == "4k":
-        width, height = 3840, 2160
-        scale_factor = 2.0
-        indicator_size = 1000  # Увеличенный размер для 4K
-    else:  # fullhd
-        width, height = 1920, 1080
-        scale_factor = 1.0
-        indicator_size = 500  # Стандартный размер для Full HD
-
-    # Создаем синий фон и прозрачный оверлей
-    background = Image.new('RGBA', (width, height), (0, 0, 255, 255))
-    overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(overlay)
-
-    text_settings = text_settings or {}
-
-    # Получаем настройки позиционирования индикатора и текста
-    indicator_x_percent = float(text_settings.get('indicator_x', 50))
-    indicator_y_percent = float(text_settings.get('indicator_y', 80))
-    speed_x_offset = int(text_settings.get('speed_x', 0))
-    speed_y_offset = int(text_settings.get('speed_y', 0))
-    unit_x_offset = int(text_settings.get('unit_x', 0))
-    unit_y_offset = int(text_settings.get('unit_y', 0))
-
-    # Создаем индикатор скорости с учетом смещений текста
-    speed_indicator = create_speed_indicator(
-        values['speed'], 
-        indicator_size,
-        speed_offset=(speed_x_offset, speed_y_offset),
-        unit_offset=(unit_x_offset, unit_y_offset)
-    )
-
-    # Позиционируем индикатор скорости на основе процентных значений
-    indicator_x = int((width - indicator_size) * indicator_x_percent / 100)
-    indicator_y = int((height - indicator_size) * indicator_y_percent / 100)
-    background.paste(speed_indicator, (indicator_x, indicator_y), speed_indicator)
-
-    font_size = int(text_settings.get('font_size', 26) * scale_factor)
-    top_padding = int(text_settings.get('top_padding', 14) * scale_factor)
-    box_height = int(text_settings.get('bottom_padding', 47) * scale_factor)
-    spacing = int(text_settings.get('spacing', 10) * scale_factor)
-    vertical_position = int(text_settings.get('vertical_position', 1))
-    border_radius = int(text_settings.get('border_radius', 13) * scale_factor)
-
     try:
-        font = _get_font("fonts/sf-ui-display-bold.otf", font_size)
+        # Определяем разрешение и масштаб
+        if resolution == "4k":
+            width, height = 3840, 2160
+            scale_factor = 2.0
+            indicator_size = 1000  # Увеличенный размер для 4K
+        else:  # fullhd
+            width, height = 1920, 1080
+            scale_factor = 1.0
+            indicator_size = 500  # Стандартный размер для Full HD
+
+        # Создаем синий фон и прозрачный оверлей
+        background = Image.new('RGBA', (width, height), (0, 0, 255, 255))
+        overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(overlay)
+
+        text_settings = text_settings or {}
+
+        # Получаем настройки позиционирования индикатора и текста
+        indicator_x_percent = float(text_settings.get('indicator_x', 50))
+        indicator_y_percent = float(text_settings.get('indicator_y', 80))
+        speed_x_offset = int(text_settings.get('speed_x', 0))
+        speed_y_offset = int(text_settings.get('speed_y', 0))
+        unit_x_offset = int(text_settings.get('unit_x', 0))
+        unit_y_offset = int(text_settings.get('unit_y', 0))
+
+        logging.info(f"Speed indicator settings - X: {indicator_x_percent}%, Y: {indicator_y_percent}%")
+        logging.info(f"Speed text offset - X: {speed_x_offset}px, Y: {speed_y_offset}px")
+        logging.info(f"Unit text offset - X: {unit_x_offset}px, Y: {unit_y_offset}px")
+
+        # Создаем индикатор скорости с учетом смещений текста
+        speed_indicator = create_speed_indicator(
+            values['speed'], 
+            size=indicator_size,
+            speed_offset=(speed_x_offset, speed_y_offset),
+            unit_offset=(unit_x_offset, unit_y_offset)
+        )
+
+        # Позиционируем индикатор скорости на основе процентных значений
+        indicator_x = int((width - indicator_size) * indicator_x_percent / 100)
+        indicator_y = int((height - indicator_size) * indicator_y_percent / 100)
+        background.paste(speed_indicator, (indicator_x, indicator_y), speed_indicator)
+
+        font_size = int(text_settings.get('font_size', 26) * scale_factor)
+        top_padding = int(text_settings.get('top_padding', 14) * scale_factor)
+        box_height = int(text_settings.get('bottom_padding', 47) * scale_factor)
+        spacing = int(text_settings.get('spacing', 10) * scale_factor)
+        vertical_position = int(text_settings.get('vertical_position', 1))
+        border_radius = int(text_settings.get('border_radius', 13) * scale_factor)
+
+        try:
+            font = _get_font("fonts/sf-ui-display-bold.otf", font_size)
+        except Exception as e:
+            logging.error(f"Error loading font: {e}")
+            raise
+
+        params = [
+            ('Speed', f"{values['speed']} km/h"),
+            ('Max Speed', f"{values['max_speed']} km/h"),
+            ('GPS', f"{values['gps']} km/h"),
+            ('Voltage', f"{values['voltage']} V"),
+            ('Temp', f"{values['temperature']} °C"),
+            ('Current', f"{values['current']} A"),
+            ('Battery', f"{values['battery']} %"),
+            ('Mileage', f"{values['mileage']} km"),
+            ('PWM', f"{values['pwm']} %"),
+            ('Power', f"{values['power']} W")
+        ]
+
+        element_widths = []
+        text_widths = []
+        text_heights = []
+        total_width = 0
+
+        for label, value in params:
+            bbox = draw.textbbox((0, 0), f"{label}: {value}", font=font)
+            text_width = bbox[2] - bbox[0]
+            text_height = bbox[3] - bbox[1]
+            element_width = text_width + (2 * top_padding)
+            element_widths.append(element_width)
+            text_widths.append(text_width)
+            text_heights.append(text_height)
+            total_width += element_width
+
+        total_width += spacing * (len(params) - 1)
+        start_x = (width - total_width) // 2
+        y_position = int((height * vertical_position) / 100)
+
+        max_text_height = max(text_heights)
+        box_vertical_center = y_position + (box_height // 2)
+        text_baseline_y = box_vertical_center - (max_text_height // 2)
+
+        x_position = start_x
+        for i, ((label, value), element_width, text_width) in enumerate(zip(params, element_widths, text_widths)):
+            box = create_rounded_box(element_width, box_height, border_radius)
+            overlay.paste(box, (x_position, y_position), box)
+            text = f"{label}: {value}"
+            text_x = x_position + ((element_width - text_width) // 2)
+            baseline_offset = int(max_text_height * 0.2)
+            text_y = text_baseline_y - baseline_offset
+            draw.text((text_x, text_y), text, fill=(255, 255, 255, 255), font=font)
+            x_position += element_width + spacing
+
+        result = Image.alpha_composite(background, overlay)
+
+        if output_path:
+            result.convert('RGB').save(output_path, format='PNG', quality=95, optimize=True)
+            logging.debug(f"Saved frame to {output_path}")
+
+        return result
+
     except Exception as e:
-        logging.error(f"Error loading font: {e}")
+        logging.error(f"Error in create_frame: {e}")
         raise
-
-    params = [
-        ('Speed', f"{values['speed']} km/h"),
-        ('Max Speed', f"{values['max_speed']} km/h"),
-        ('GPS', f"{values['gps']} km/h"),
-        ('Voltage', f"{values['voltage']} V"),
-        ('Temp', f"{values['temperature']} °C"),
-        ('Current', f"{values['current']} A"),
-        ('Battery', f"{values['battery']} %"),
-        ('Mileage', f"{values['mileage']} km"),
-        ('PWM', f"{values['pwm']} %"),
-        ('Power', f"{values['power']} W")
-    ]
-
-    element_widths = []
-    text_widths = []
-    text_heights = []
-    total_width = 0
-
-    for label, value in params:
-        bbox = draw.textbbox((0, 0), f"{label}: {value}", font=font)
-        text_width = bbox[2] - bbox[0]
-        text_height = bbox[3] - bbox[1]
-        element_width = text_width + (2 * top_padding)
-        element_widths.append(element_width)
-        text_widths.append(text_width)
-        text_heights.append(text_height)
-        total_width += element_width
-
-    total_width += spacing * (len(params) - 1)
-    start_x = (width - total_width) // 2
-    y_position = int((height * vertical_position) / 100)
-
-    max_text_height = max(text_heights)
-    box_vertical_center = y_position + (box_height // 2)
-    text_baseline_y = box_vertical_center - (max_text_height // 2)
-
-    x_position = start_x
-    for i, ((label, value), element_width, text_width) in enumerate(zip(params, element_widths, text_widths)):
-        box = create_rounded_box(element_width, box_height, border_radius)
-        overlay.paste(box, (x_position, y_position), box)
-        text = f"{label}: {value}"
-        text_x = x_position + ((element_width - text_width) // 2)
-        baseline_offset = int(max_text_height * 0.2)
-        text_y = text_baseline_y - baseline_offset
-        draw.text((text_x, text_y), text, fill=(255, 255, 255, 255), font=font)
-        x_position += element_width + spacing
-
-    result = Image.alpha_composite(background, overlay)
-
-    if output_path:
-        result.convert('RGB').save(output_path, format='PNG', quality=95, optimize=True)
-        logging.debug(f"Saved frame to {output_path}")
-
-    return result
 
 def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, text_settings=None, progress_callback=None):
     try:
