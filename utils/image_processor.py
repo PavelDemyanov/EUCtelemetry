@@ -16,13 +16,15 @@ def interpolate_color(color1, color2, factor):
     b = int(b1 + (b2 - b1) * factor)
     return (r, g, b)
 
-def create_speed_indicator(speed, size=500, speed_offset=(0, 0), unit_offset=(0, 0)):
+def create_speed_indicator(speed, size=500, speed_offset=(0, 0), unit_offset=(0, 0), speed_size=100, unit_size=100):
     """
     Создает индикатор скорости в виде полукруглой дуги
     :param speed: Скорость (0-100 км/ч)
     :param size: Размер изображения в пикселях
     :param speed_offset: Смещение текста скорости (x, y)
     :param unit_offset: Смещение текста единиц измерения (x, y)
+    :param speed_size: Размер текста скорости в процентах (100 = стандартный)
+    :param unit_size: Размер текста единиц измерения в процентах (100 = стандартный)
     :return: PIL Image объект
     """
     image = Image.new('RGBA', (size, size), (0, 0, 0, 0))
@@ -85,9 +87,12 @@ def create_speed_indicator(speed, size=500, speed_offset=(0, 0), unit_offset=(0,
     # Добавляем текст скорости
     draw = ImageDraw.Draw(image)
 
-    # Загружаем шрифты
-    speed_font_size = size // 4  # Размер шрифта для скорости
-    unit_font_size = speed_font_size // 2  # Размер шрифта для единиц измерения
+    # Применяем масштабирование к размерам шрифтов
+    base_speed_font_size = size // 4
+    base_unit_font_size = base_speed_font_size // 2
+
+    speed_font_size = int(base_speed_font_size * speed_size / 100)
+    unit_font_size = int(base_unit_font_size * unit_size / 100)
 
     try:
         speed_font = ImageFont.truetype("fonts/sf-ui-display-bold.otf", speed_font_size)
@@ -108,10 +113,10 @@ def create_speed_indicator(speed, size=500, speed_offset=(0, 0), unit_offset=(0,
     unit_text_height = unit_bbox[3] - unit_bbox[1]
 
     # Позиционирование текста с учетом смещений
-    speed_x = center - speed_text_width // 2 + speed_offset[0]
+    speed_x = center - speed_text_width // 2
     speed_y = center - speed_text_height // 2 - unit_text_height // 2 + speed_offset[1]
 
-    unit_x = center - unit_text_width // 2 + unit_offset[0]
+    unit_x = center - unit_text_width // 2
     unit_y = speed_y + speed_text_height + 5 + unit_offset[1]  # Добавляем небольшой отступ между текстами
 
     # Рисуем тексты

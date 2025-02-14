@@ -60,7 +60,7 @@ function updatePreview(projectId) {
     const progressBar = progressDiv.querySelector('.progress-bar');
     const progressTitle = document.getElementById('progressTitle');
 
-    // Get current values
+    // Get current values with updated settings
     const settings = {
         resolution: document.querySelector('input[name="resolution"]:checked').value,
         vertical_position: document.getElementById('verticalPosition').value,
@@ -68,7 +68,14 @@ function updatePreview(projectId) {
         bottom_padding: document.getElementById('bottomPadding').value,
         spacing: document.getElementById('spacing').value,
         font_size: document.getElementById('fontSize').value,
-        border_radius: document.getElementById('borderRadius').value
+        border_radius: document.getElementById('borderRadius').value,
+        // Speed indicator settings
+        indicator_x: document.getElementById('indicatorX').value,
+        indicator_y: document.getElementById('indicatorY').value,
+        speed_y: document.getElementById('speedY').value,
+        unit_y: document.getElementById('unitY').value,
+        speed_size: document.getElementById('speedSize').value,
+        unit_size: document.getElementById('unitSize').value
     };
 
     console.log('Sending preview settings:', settings);
@@ -123,7 +130,7 @@ document.getElementById('projectName').addEventListener('input', function() {
 
 // Add event listeners for text display settings
 const textSettings = ['verticalPosition', 'topPadding', 'bottomPadding', 'spacing', 'fontSize', 'borderRadius'];
-const speedIndicatorSettings = ['indicatorX', 'indicatorY', 'speedX', 'speedY', 'unitX', 'unitY'];
+const speedIndicatorSettings = ['indicatorX', 'indicatorY', 'speedSize', 'speedY', 'unitSize', 'unitY'];
 
 // Combine all settings
 const allSettings = [...textSettings, ...speedIndicatorSettings];
@@ -131,10 +138,12 @@ const allSettings = [...textSettings, ...speedIndicatorSettings];
 allSettings.forEach(setting => {
     const input = document.getElementById(setting);
     const valueDisplay = document.getElementById(setting + 'Value');
+    if (!input || !valueDisplay) return; // Skip if elements don't exist
 
     input.addEventListener('input', function() {
         // Update value display
-        valueDisplay.textContent = this.value;
+        valueDisplay.textContent = this.value + (this.id === 'speedSize' || this.id === 'unitSize' ? '%' : 
+                                               this.id.includes('indicator') ? '%' : 'px');
 
         // Debounce the preview update
         clearTimeout(this.timeout);
@@ -150,13 +159,13 @@ allSettings.forEach(setting => {
                     spacing: document.getElementById('spacing').value,
                     font_size: document.getElementById('fontSize').value,
                     border_radius: document.getElementById('borderRadius').value,
-                    // Add new speed indicator settings
+                    // Speed indicator settings
                     indicator_x: document.getElementById('indicatorX').value,
                     indicator_y: document.getElementById('indicatorY').value,
-                    speed_x: document.getElementById('speedX').value,
                     speed_y: document.getElementById('speedY').value,
-                    unit_x: document.getElementById('unitX').value,
-                    unit_y: document.getElementById('unitY').value
+                    unit_y: document.getElementById('unitY').value,
+                    speed_size: document.getElementById('speedSize').value,
+                    unit_size: document.getElementById('unitSize').value
                 };
 
                 // Update preview with all current settings
@@ -209,10 +218,10 @@ document.getElementById('startProcessButton').addEventListener('click', function
         border_radius: document.getElementById('borderRadius').value,
         indicator_x: document.getElementById('indicatorX').value,
         indicator_y: document.getElementById('indicatorY').value,
-        speed_x: document.getElementById('speedX').value,
         speed_y: document.getElementById('speedY').value,
-        unit_x: document.getElementById('unitX').value,
-        unit_y: document.getElementById('unitY').value
+        unit_y: document.getElementById('unitY').value,
+        speed_size: document.getElementById('speedSize').value,
+        unit_size: document.getElementById('unitSize').value
     };
 
     // Start processing

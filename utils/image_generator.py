@@ -85,21 +85,23 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
         # Получаем настройки позиционирования индикатора и текста
         indicator_x_percent = float(text_settings.get('indicator_x', 50))
         indicator_y_percent = float(text_settings.get('indicator_y', 80))
-        speed_x_offset = int(text_settings.get('speed_x', 0))
         speed_y_offset = int(text_settings.get('speed_y', 0))
-        unit_x_offset = int(text_settings.get('unit_x', 0))
         unit_y_offset = int(text_settings.get('unit_y', 0))
+        speed_size = float(text_settings.get('speed_size', 100))
+        unit_size = float(text_settings.get('unit_size', 100))
 
         logging.info(f"Speed indicator settings - X: {indicator_x_percent}%, Y: {indicator_y_percent}%")
-        logging.info(f"Speed text offset - X: {speed_x_offset}px, Y: {speed_y_offset}px")
-        logging.info(f"Unit text offset - X: {unit_x_offset}px, Y: {unit_y_offset}px")
+        logging.info(f"Speed text size: {speed_size}%, offset Y: {speed_y_offset}px")
+        logging.info(f"Unit text size: {unit_size}%, offset Y: {unit_y_offset}px")
 
         # Создаем индикатор скорости с учетом смещений текста
         speed_indicator = create_speed_indicator(
             values['speed'], 
             size=indicator_size,
-            speed_offset=(speed_x_offset, speed_y_offset),
-            unit_offset=(unit_x_offset, unit_y_offset)
+            speed_offset=(0, speed_y_offset),
+            unit_offset=(0, unit_y_offset),
+            speed_size=speed_size,
+            unit_size=unit_size
         )
 
         # Позиционируем индикатор скорости на основе процентных значений
