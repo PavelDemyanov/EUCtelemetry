@@ -1,4 +1,4 @@
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 import math
 
 def interpolate_color(color1, color2, factor):
@@ -24,11 +24,8 @@ def create_speed_indicator(speed, size=500):
     :return: PIL Image объект
     """
     image = Image.new('RGBA', (size, size), (0, 0, 0, 0))
-    
-    # Если скорость равна 0, возвращаем пустое изображение
-    if speed == 0:
-        return image
 
+    # Если скорость равна 0, все равно отображаем шкалу и значение
     mask = Image.new('L', (size, size), 0)
     draw = ImageDraw.Draw(image)
     mask_draw = ImageDraw.Draw(mask)
@@ -82,6 +79,42 @@ def create_speed_indicator(speed, size=500):
 
     # Накладываем цветное изображение на основное
     image = Image.alpha_composite(image, color_image)
+
+    # Добавляем текст скорости
+    draw = ImageDraw.Draw(image)
+
+    # Загружаем шрифты
+    speed_font_size = size // 4  # Размер шрифта для скорости
+    unit_font_size = speed_font_size // 2  # Размер шрифта для единиц измерения
+
+    try:
+        speed_font = ImageFont.truetype("fonts/sf-ui-display-bold.otf", speed_font_size)
+        unit_font = ImageFont.truetype("fonts/sf-ui-display-regular.otf", unit_font_size)
+    except Exception as e:
+        raise ValueError(f"Error loading fonts: {str(e)}")
+
+    # Отрисовка значения скорости
+    speed_text = str(int(speed))
+    speed_bbox = draw.textbbox((0, 0), speed_text, font=speed_font)
+    speed_text_width = speed_bbox[2] - speed_bbox[0]
+    speed_text_height = speed_bbox[3] - speed_bbox[1]
+
+    # Отрисовка "km/h"
+    unit_text = "km/h"
+    unit_bbox = draw.textbbox((0, 0), unit_text, font=unit_font)
+    unit_text_width = unit_bbox[2] - unit_bbox[0]
+    unit_text_height = unit_bbox[3] - unit_bbox[1]
+
+    # Позиционирование текста
+    speed_x = center - speed_text_width // 2
+    speed_y = center - speed_text_height // 2 - unit_text_height // 2
+
+    unit_x = center - unit_text_width // 2
+    unit_y = speed_y + speed_text_height + 5  # Добавляем небольшой отступ между текстами
+
+    # Рисуем тексты
+    draw.text((speed_x, speed_y), speed_text, fill=(255, 255, 255, 255), font=speed_font)
+    draw.text((unit_x, unit_y), unit_text, fill=(255, 255, 255, 255), font=unit_font)
 
     return image
 
