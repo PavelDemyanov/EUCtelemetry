@@ -1,5 +1,5 @@
-from PIL import Image, ImageDraw, ImageFont
 import math
+from PIL import Image, ImageDraw, ImageFont
 
 def interpolate_color(color1, color2, factor):
     """
@@ -25,24 +25,26 @@ def create_speed_indicator(speed, size=500, speed_offset=(0, 0), unit_offset=(0,
     :param unit_offset: Смещение текста единиц измерения (x, y)
     :param speed_size: Размер текста скорости в процентах (100 = стандартный)
     :param unit_size: Размер текста единиц измерения в процентах (100 = стандартный)
-    :param indicator_scale: Общий масштаб индикатора в процентах (100 = стандартный)
+    :param indicator_scale: Масштаб дуги в процентах (100 = стандартный)
     :return: PIL Image объект
     """
-    # Применяем масштабирование к базовому размеру
-    scaled_size = int(size * indicator_scale / 100)
-    image = Image.new('RGBA', (scaled_size, scaled_size), (0, 0, 0, 0))
+    # Создаем изображение стандартного размера (не масштабированное)
+    image = Image.new('RGBA', (size, size), (0, 0, 0, 0))
 
-    # Если скорость равна 0, все равно отображаем шкалу и значение
-    mask = Image.new('L', (scaled_size, scaled_size), 0)
-    draw = ImageDraw.Draw(image)
+    # Создаем маску для дуги с учетом масштаба
+    arc_size = int(size * indicator_scale / 100)
+    mask = Image.new('L', (arc_size, arc_size), 0)
     mask_draw = ImageDraw.Draw(mask)
 
-    center = scaled_size // 2
-    radius = scaled_size // 2 - 10
-    start_angle = 150  # Начальный угол (0 км/ч) - 5 часов
-    end_angle = 30     # Конечный угол (100 км/ч) - 1 час
+    # Центр и радиус для дуги
+    arc_center = arc_size // 2
+    arc_radius = arc_size // 2 - 10
+
+    # Параметры дуги
+    start_angle = 150  # Начальный угол (0 км/ч)
+    end_angle = 30     # Конечный угол (100 км/ч)
     arc_width = int(20 * indicator_scale / 100)  # Масштабируем ширину дуги
-    corner_radius = arc_width // 2  # Радиус закругления
+    corner_radius = arc_width // 2
 
     # Определяем цвет в зависимости от скорости
     green = (0, 255, 0)
@@ -56,7 +58,7 @@ def create_speed_indicator(speed, size=500, speed_offset=(0, 0), unit_offset=(0,
         factor = (speed - 70) / 15
         color = interpolate_color(yellow, red, factor)
     else:
-        color = red + (255,)  # Добавляем альфа-канал
+        color = red + (255,)
 
     # Рассчитываем угол для текущей скорости
     if end_angle < start_angle:
@@ -65,41 +67,41 @@ def create_speed_indicator(speed, size=500, speed_offset=(0, 0), unit_offset=(0,
     current_angle %= 360
 
     # Рисуем дугу на маске
-    mask_draw.arc([10, 10, scaled_size-10, scaled_size-10], start=start_angle, end=current_angle, fill=255, width=arc_width)
+    mask_draw.arc([10, 10, arc_size-10, arc_size-10], start=start_angle, end=current_angle, fill=255, width=arc_width)
 
     # Добавляем закругленные концы
-    start_x = center + (radius - arc_width // 2) * math.cos(math.radians(start_angle))
-    start_y = center + (radius - arc_width // 2) * math.sin(math.radians(start_angle))
-    end_x = center + (radius - arc_width // 2) * math.cos(math.radians(current_angle))
-    end_y = center + (radius - arc_width // 2) * math.sin(math.radians(current_angle))
+    start_x = arc_center + (arc_radius - arc_width // 2) * math.cos(math.radians(start_angle))
+    start_y = arc_center + (arc_radius - arc_width // 2) * math.sin(math.radians(start_angle))
+    end_x = arc_center + (arc_radius - arc_width // 2) * math.cos(math.radians(current_angle))
+    end_y = arc_center + (arc_radius - arc_width // 2) * math.sin(math.radians(current_angle))
 
     mask_draw.ellipse([start_x - corner_radius, start_y - corner_radius, 
                     start_x + corner_radius, start_y + corner_radius], fill=255)
     mask_draw.ellipse([end_x - corner_radius, end_y - corner_radius, 
                     end_x + corner_radius, end_y + corner_radius], fill=255)
 
-    # Создаем цветное изображение
-    color_image = Image.new('RGBA', (scaled_size, scaled_size), color if isinstance(color, tuple) else color[:3] + (255,))
-
-    # Применяем маску к цветному изображению
+    # Создаем цветное изображение для дуги
+    color_image = Image.new('RGBA', (arc_size, arc_size), color if isinstance(color, tuple) else color[:3] + (255,))
     color_image.putalpha(mask)
 
-    # Накладываем цветное изображение на основное
-    image = Image.alpha_composite(image, color_image)
+    # Создаем финальное изображение с правильным размером
+    final_image = Image.new('RGBA', (size, size), (0, 0, 0, 0))
 
-    # Добавляем текст скорости
-    draw = ImageDraw.Draw(image)
+    # Центрируем дугу на финальном изображении
+    paste_x = (size - arc_size) // 2
+    paste_y = (size - arc_size) // 2
+    final_image.paste(color_image, (paste_x, paste_y), color_image)
 
-    # Применяем масштабирование к размерам шрифтов
-    base_speed_font_size = int((scaled_size // 4) * speed_size / 100)
-    base_unit_font_size = int((scaled_size // 8) * unit_size / 100)
+    # Добавляем текст скорости (размер не зависит от масштаба дуги)
+    draw = ImageDraw.Draw(final_image)
 
-    speed_font_size = base_speed_font_size
-    unit_font_size = base_unit_font_size
+    # Размеры шрифтов теперь не зависят от масштаба дуги
+    base_speed_font_size = int((size // 4) * speed_size / 100)
+    base_unit_font_size = int((size // 8) * unit_size / 100)
 
     try:
-        speed_font = ImageFont.truetype("fonts/sf-ui-display-bold.otf", speed_font_size)
-        unit_font = ImageFont.truetype("fonts/sf-ui-display-regular.otf", unit_font_size)
+        speed_font = ImageFont.truetype("fonts/sf-ui-display-bold.otf", base_speed_font_size)
+        unit_font = ImageFont.truetype("fonts/sf-ui-display-regular.otf", base_unit_font_size)
     except Exception as e:
         raise ValueError(f"Error loading fonts: {str(e)}")
 
@@ -116,17 +118,18 @@ def create_speed_indicator(speed, size=500, speed_offset=(0, 0), unit_offset=(0,
     unit_text_height = unit_bbox[3] - unit_bbox[1]
 
     # Позиционирование текста с учетом смещений
+    center = size // 2
     speed_x = center - speed_text_width // 2
     speed_y = center - speed_text_height // 2 - unit_text_height // 2 + speed_offset[1]
 
     unit_x = center - unit_text_width // 2
-    unit_y = speed_y + speed_text_height + 5 + unit_offset[1]  # Добавляем небольшой отступ между текстами
+    unit_y = speed_y + speed_text_height + 5 + unit_offset[1]
 
     # Рисуем тексты
     draw.text((speed_x, speed_y), speed_text, fill=(255, 255, 255, 255), font=speed_font)
     draw.text((unit_x, unit_y), unit_text, fill=(255, 255, 255, 255), font=unit_font)
 
-    return image
+    return final_image
 
 def overlay_speed_indicator(base_image, speed, position=(0, 0), size=500, speed_offset=(0, 0), unit_offset=(0, 0),
                           speed_size=100, unit_size=100, indicator_scale=100):
