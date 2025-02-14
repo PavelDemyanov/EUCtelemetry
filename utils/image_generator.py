@@ -90,7 +90,7 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
         speed_size = float(text_settings.get('speed_size', 100))
         unit_size = float(text_settings.get('unit_size', 100))
         indicator_scale = float(text_settings.get('indicator_scale', 100))
-        arc_width = int(text_settings.get('arc_width', 20))  # Новый параметр
+        arc_width = int(text_settings.get('arc_width', 20))
 
         logging.info(f"Speed indicator settings - X: {indicator_x_percent}%, Y: {indicator_y_percent}%")
         logging.info(f"Speed text size: {speed_size}%, offset Y: {speed_y_offset}px")
@@ -107,7 +107,7 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
             speed_size=speed_size,
             unit_size=unit_size,
             indicator_scale=indicator_scale,
-            arc_width=arc_width,  # Передаем новый параметр
+            arc_width=arc_width,
             resolution=resolution
         )
 

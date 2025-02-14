@@ -1,5 +1,6 @@
 import math
 from PIL import Image, ImageDraw, ImageFont
+import logging
 
 def interpolate_color(color1, color2, factor):
     """
@@ -28,17 +29,9 @@ def create_speed_indicator(speed,
                          resolution='fullhd'):
     """
     Создает индикатор скорости в виде полукруглой дуги
-    :param speed: Скорость (0-100 км/ч)
-    :param size: Базовый размер изображения в пикселях
-    :param speed_offset: Смещение текста скорости (x, y)
-    :param unit_offset: Смещение текста единиц измерения (x, y)
-    :param speed_size: Размер текста скорости в процентах (100 = стандартный)
-    :param unit_size: Размер текста единиц измерения в процентах (100 = стандартный)
-    :param indicator_scale: Масштаб дуги в процентах (100 = стандартный)
-    :param arc_width: Толщина дуги в пикселях (20 = стандартный)
-    :param resolution: Разрешение кадра ('fullhd' или '4k')
-    :return: PIL Image объект
     """
+    logging.info(f"Creating speed indicator with arc_width={arc_width}, scale={indicator_scale}")
+
     # Создаем изображение стандартного размера (не масштабированное)
     image = Image.new('RGBA', (size, size), (0, 0, 0, 0))
 
@@ -55,9 +48,11 @@ def create_speed_indicator(speed,
     start_angle = 150  # Начальный угол (0 км/ч)
     end_angle = 30     # Конечный угол (100 км/ч)
 
-    # Масштабируем толщину дуги в зависимости от разрешения и масштаба индикатора
-    scaled_arc_width = int(arc_width * indicator_scale / 100)
+    # Масштабируем толщину дуги только в зависимости от масштаба индикатора
+    scaled_arc_width = max(1, int(arc_width * indicator_scale / 100))
     corner_radius = scaled_arc_width // 2
+
+    logging.info(f"Final arc width after scaling: {scaled_arc_width}px")
 
     # Определяем цвет в зависимости от скорости
     green = (0, 255, 0)

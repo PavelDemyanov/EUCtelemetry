@@ -70,14 +70,14 @@ function updatePreview(projectId) {
         font_size: document.getElementById('fontSize').value,
         border_radius: document.getElementById('borderRadius').value,
         // Speed indicator settings
-        indicator_scale: document.getElementById('indicatorScale').value,  // Added new parameter
+        indicator_scale: document.getElementById('indicatorScale').value,
         indicator_x: document.getElementById('indicatorX').value,
         indicator_y: document.getElementById('indicatorY').value,
         speed_y: document.getElementById('speedY').value,
         unit_y: document.getElementById('unitY').value,
         speed_size: document.getElementById('speedSize').value,
         unit_size: document.getElementById('unitSize').value,
-        arc_width: document.getElementById('arcWidth').value // Added arcWidth
+        arc_width: document.getElementById('arcWidth').value
     };
 
     console.log('Sending preview settings:', settings);
@@ -204,7 +204,7 @@ allSettings.forEach(setting => {
                     speed_size: document.getElementById('speedSize').value,
                     unit_size: document.getElementById('unitSize').value,
                     indicator_scale: document.getElementById('indicatorScale').value,
-                    arc_width: document.getElementById('arcWidth').value // Added arcWidth
+                    arc_width: document.getElementById('arcWidth').value
                 };
 
                 // Update preview with all current settings
@@ -262,7 +262,7 @@ document.getElementById('startProcessButton').addEventListener('click', function
         speed_size: document.getElementById('speedSize').value,
         unit_size: document.getElementById('unitSize').value,
         indicator_scale: document.getElementById('indicatorScale').value,
-        arc_width: document.getElementById('arcWidth').value // Added arcWidth
+        arc_width: document.getElementById('arcWidth').value
     };
 
     // Start processing
