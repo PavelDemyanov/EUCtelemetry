@@ -505,7 +505,14 @@ def generate_preview(project_id):
             'bottom_padding': int(data.get('bottom_padding', 30)),
             'spacing': int(data.get('spacing', 20)),
             'font_size': int(data.get('font_size', 26)),
-            'border_radius': int(data.get('border_radius', 13))
+            'border_radius': int(data.get('border_radius', 13)),
+            # Add speed indicator settings
+            'indicator_x': float(data.get('indicator_x', 50)),
+            'indicator_y': float(data.get('indicator_y', 80)),
+            'speed_x': int(data.get('speed_x', 0)),
+            'speed_y': int(data.get('speed_y', 0)),
+            'unit_x': int(data.get('unit_x', 0)),
+            'unit_y': int(data.get('unit_y', 0))
         }
 
         logging.info(f"Generating preview with settings: {text_settings}")
