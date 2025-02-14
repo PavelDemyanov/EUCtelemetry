@@ -128,16 +128,23 @@ def create_speed_indicator(speed, size=500, speed_offset=(0, 0), unit_offset=(0,
 
     return image
 
-def overlay_speed_indicator(base_image, speed, position=(0, 0), size=500):
+def overlay_speed_indicator(base_image, speed, position=(0, 0), size=500, speed_offset=(0, 0), unit_offset=(0, 0),
+                          speed_size=100, unit_size=100, indicator_scale=100):
     """
     Накладывает индикатор скорости на базовое изображение
     :param base_image: Базовое изображение (PIL Image)
     :param speed: Скорость для отображения
     :param position: Позиция для размещения индикатора (x, y)
     :param size: Размер индикатора
+    :param speed_offset: Смещение текста скорости
+    :param unit_offset: Смещение текста единиц измерения
+    :param speed_size: Размер текста скорости в процентах (100 = стандартный)
+    :param unit_size: Размер текста единиц измерения в процентах (100 = стандартный)
+    :param indicator_scale: Общий масштаб индикатора в процентах (100 = стандартный)
     :return: PIL Image с наложенным индикатором
     """
-    speed_indicator = create_speed_indicator(speed, size)
+    speed_indicator = create_speed_indicator(speed, size, speed_offset, unit_offset, 
+                                          speed_size, unit_size, indicator_scale)
     if base_image.mode != 'RGBA':
         base_image = base_image.convert('RGBA')
     base_image.paste(speed_indicator, position, speed_indicator)
