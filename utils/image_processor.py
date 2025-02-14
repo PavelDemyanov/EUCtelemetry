@@ -99,12 +99,13 @@ def create_speed_indicator(speed, size=500, speed_offset=(0, 0), unit_offset=(0,
     paste_y = (size - arc_size) // 2
     final_image.paste(color_image, (paste_x, paste_y), color_image)
 
-    # Добавляем текст скорости (размер не зависит от масштаба дуги)
+    # Добавляем текст скорости (размер теперь зависит от разрешения)
     draw = ImageDraw.Draw(final_image)
 
-    # Размеры шрифтов теперь не зависят от масштаба дуги
-    base_speed_font_size = int((size // 4) * speed_size / 100)
-    base_unit_font_size = int((size // 8) * unit_size / 100)
+    # Масштабируем базовые размеры шрифта в зависимости от разрешения
+    resolution_scale = 2.0 if resolution == '4k' else 1.0
+    base_speed_font_size = int((size // 4) * speed_size / 100 * resolution_scale)
+    base_unit_font_size = int((size // 8) * unit_size / 100 * resolution_scale)
 
     try:
         speed_font = ImageFont.truetype("fonts/sf-ui-display-bold.otf", base_speed_font_size)
@@ -124,13 +125,17 @@ def create_speed_indicator(speed, size=500, speed_offset=(0, 0), unit_offset=(0,
     unit_text_width = unit_bbox[2] - unit_bbox[0]
     unit_text_height = unit_bbox[3] - unit_bbox[1]
 
-    # Позиционирование текста с учетом смещений
+    # Масштабируем смещения в зависимости от разрешения
+    scaled_speed_offset = (speed_offset[0], int(speed_offset[1] * resolution_scale))
+    scaled_unit_offset = (unit_offset[0], int(unit_offset[1] * resolution_scale))
+
+    # Позиционирование текста с учетом масштабированных смещений
     center = size // 2
     speed_x = center - speed_text_width // 2
-    speed_y = center - speed_text_height // 2 - unit_text_height // 2 + speed_offset[1]
+    speed_y = center - speed_text_height // 2 - unit_text_height // 2 + scaled_speed_offset[1]
 
     unit_x = center - unit_text_width // 2
-    unit_y = speed_y + speed_text_height + 5 + unit_offset[1]
+    unit_y = speed_y + speed_text_height + 5 + scaled_unit_offset[1]
 
     # Рисуем тексты
     draw.text((speed_x, speed_y), speed_text, fill=(255, 255, 255, 255), font=speed_font)
