@@ -131,10 +131,20 @@ document.getElementById('projectName').addEventListener('input', function() {
 
 // Add event listeners for text display settings
 const textSettings = ['verticalPosition', 'topPadding', 'bottomPadding', 'spacing', 'fontSize', 'borderRadius'];
-const speedIndicatorSettings = ['indicatorScale', 'indicatorX', 'indicatorY', 'speedSize', 'speedY', 'unitSize', 'unitY'];  // Added indicatorScale
+const speedIndicatorSettings = ['indicatorScale', 'indicatorX', 'indicatorY', 'speedSize', 'speedY', 'unitSize', 'unitY'];
 
 // Combine all settings
 const allSettings = [...textSettings, ...speedIndicatorSettings];
+
+// Add event listener for resolution change
+document.querySelectorAll('input[name="resolution"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        const projectId = document.getElementById('startProcessButton').dataset.projectId;
+        if (projectId) {
+            updatePreview(projectId);
+        }
+    });
+});
 
 allSettings.forEach(setting => {
     const input = document.getElementById(setting);
