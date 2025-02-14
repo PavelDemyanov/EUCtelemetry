@@ -18,13 +18,14 @@ def interpolate_color(color1, color2, factor):
 
 
 def create_speed_indicator(speed,
-                           size=500,
-                           speed_offset=(0, 0),
-                           unit_offset=(0, 0),
-                           speed_size=100,
-                           unit_size=100,
-                           indicator_scale=100,
-                           resolution='fullhd'):
+                         size=500,
+                         speed_offset=(0, 0),
+                         unit_offset=(0, 0),
+                         speed_size=100,
+                         unit_size=100,
+                         indicator_scale=100,
+                         arc_width=20,
+                         resolution='fullhd'):
     """
     Создает индикатор скорости в виде полукруглой дуги
     :param speed: Скорость (0-100 км/ч)
@@ -34,6 +35,7 @@ def create_speed_indicator(speed,
     :param speed_size: Размер текста скорости в процентах (100 = стандартный)
     :param unit_size: Размер текста единиц измерения в процентах (100 = стандартный)
     :param indicator_scale: Масштаб дуги в процентах (100 = стандартный)
+    :param arc_width: Толщина дуги в пикселях (20 = стандартный)
     :param resolution: Разрешение кадра ('fullhd' или '4k')
     :return: PIL Image объект
     """
@@ -51,15 +53,14 @@ def create_speed_indicator(speed,
 
     # Параметры дуги
     start_angle = 150  # Начальный угол (0 км/ч)
-    end_angle = 30  # Конечный угол (100 км/ч)
+    end_angle = 30     # Конечный угол (100 км/ч)
 
-    # Масштабируем толщину дуги в зависимости от разрешения
-    base_width = 20  # Базовая толщина для Full HD
+    # Масштабируем толщину дуги в зависимости от разрешения и пользовательских настроек
+    base_width = int(arc_width)  # Используем значение из параметра
     if resolution == '4k':
         base_width *= 2  # Удваиваем толщину для 4K
 
-    arc_width = int(base_width * indicator_scale /
-                    100)  # Применяем масштаб пользователя
+    arc_width = int(base_width * indicator_scale / 100)  # Применяем масштаб пользователя
     corner_radius = arc_width // 2
 
     # Определяем цвет в зависимости от скорости
@@ -207,8 +208,7 @@ def overlay_speed_indicator(base_image,
     """
     speed_indicator = create_speed_indicator(speed, size, speed_offset,
                                              unit_offset, speed_size,
-                                             unit_size, indicator_scale,
-                                             resolution)
+                                             unit_size, indicator_scale, resolution=resolution)
     if base_image.mode != 'RGBA':
         base_image = base_image.convert('RGBA')
     base_image.paste(speed_indicator, position, speed_indicator)

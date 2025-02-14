@@ -76,7 +76,8 @@ function updatePreview(projectId) {
         speed_y: document.getElementById('speedY').value,
         unit_y: document.getElementById('unitY').value,
         speed_size: document.getElementById('speedSize').value,
-        unit_size: document.getElementById('unitSize').value
+        unit_size: document.getElementById('unitSize').value,
+        arc_width: document.getElementById('arcWidth').value // Added arcWidth
     };
 
     console.log('Sending preview settings:', settings);
@@ -131,7 +132,7 @@ document.getElementById('projectName').addEventListener('input', function() {
 
 // Add event listeners for text display settings
 const textSettings = ['verticalPosition', 'topPadding', 'bottomPadding', 'spacing', 'fontSize', 'borderRadius'];
-const speedIndicatorSettings = ['indicatorScale', 'indicatorX', 'indicatorY', 'speedSize', 'speedY', 'unitSize', 'unitY'];
+const speedIndicatorSettings = ['indicatorScale', 'indicatorX', 'indicatorY', 'speedSize', 'speedY', 'unitSize', 'unitY', 'arcWidth'];
 
 // Combine all settings
 const allSettings = [...textSettings, ...speedIndicatorSettings];
@@ -202,7 +203,8 @@ allSettings.forEach(setting => {
                     unit_y: document.getElementById('unitY').value,
                     speed_size: document.getElementById('speedSize').value,
                     unit_size: document.getElementById('unitSize').value,
-                    indicator_scale: document.getElementById('indicatorScale').value
+                    indicator_scale: document.getElementById('indicatorScale').value,
+                    arc_width: document.getElementById('arcWidth').value // Added arcWidth
                 };
 
                 // Update preview with all current settings
@@ -259,7 +261,8 @@ document.getElementById('startProcessButton').addEventListener('click', function
         unit_y: document.getElementById('unitY').value,
         speed_size: document.getElementById('speedSize').value,
         unit_size: document.getElementById('unitSize').value,
-        indicator_scale: document.getElementById('indicatorScale').value
+        indicator_scale: document.getElementById('indicatorScale').value,
+        arc_width: document.getElementById('arcWidth').value // Added arcWidth
     };
 
     // Start processing
