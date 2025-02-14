@@ -8,12 +8,11 @@ import concurrent.futures
 import threading
 from functools import lru_cache
 from utils.hardware_detection import is_apple_silicon
+from utils.image_processor import create_speed_indicator
 
-# Если используется Metal, можно инициализировать его, но если он не дает выигрыша — код работает по CPU.
-# Здесь пример инициализации Metal (если потребуется), но далее он не используется для отрисовки через PIL.
+_metal_initialized = False
 _metal_context = None
 _metal_device = None
-_metal_initialized = False
 
 def _initialize_metal():
     global _metal_context, _metal_device, _metal_initialized
@@ -33,8 +32,6 @@ def _initialize_metal():
             logging.warning(f"Failed to initialize Metal: {e}")
             _metal_initialized = True
     return False
-
-# --- Функции для кэширования шрифта и закругленных блоков ---
 
 _font_cache = {}
 
@@ -66,21 +63,29 @@ def create_rounded_box(width, height, radius):
         logging.debug(f"Created and cached rounded box {cache_key}")
     return _box_cache[cache_key].copy()
 
-# --- Функция создания кадра (PNG) ---
-
 def create_frame(values, resolution='fullhd', output_path=None, text_settings=None):
     # Определяем разрешение и масштаб
     if resolution == "4k":
         width, height = 3840, 2160
         scale_factor = 2.0
+        indicator_size = 1000  # Увеличенный размер для 4K
     else:  # fullhd
         width, height = 1920, 1080
         scale_factor = 1.0
+        indicator_size = 500  # Стандартный размер для Full HD
 
-    # Создаем фон и оверлей
-    background = Image.new('RGBA', (width, height), (0, 0, 255, 255))
+    # Создаем прозрачный фон
+    background = Image.new('RGBA', (width, height), (0, 0, 0, 0))
     overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
+
+    # Создаем индикатор скорости
+    speed_indicator = create_speed_indicator(values['speed'], indicator_size)
+
+    # Позиционируем индикатор скорости в левом верхнем углу
+    indicator_x = int(50 * scale_factor)
+    indicator_y = int(50 * scale_factor)
+    background.paste(speed_indicator, (indicator_x, indicator_y), speed_indicator)
 
     text_settings = text_settings or {}
     font_size = int(text_settings.get('font_size', 26) * scale_factor)
@@ -96,7 +101,6 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
         logging.error(f"Error loading font: {e}")
         raise
 
-    # Формируем параметры для вывода текста
     params = [
         ('Speed', f"{values['speed']} km/h"),
         ('Max Speed', f"{values['max_speed']} km/h"),
@@ -115,7 +119,6 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
     text_heights = []
     total_width = 0
 
-    # Вычисляем размеры для каждого текстового элемента
     for label, value in params:
         bbox = draw.textbbox((0, 0), f"{label}: {value}", font=font)
         text_width = bbox[2] - bbox[0]
@@ -134,7 +137,6 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
     box_vertical_center = y_position + (box_height // 2)
     text_baseline_y = box_vertical_center - (max_text_height // 2)
 
-    # Рисуем каждый текстовый блок с закругленным фоном
     x_position = start_x
     for i, ((label, value), element_width, text_width) in enumerate(zip(params, element_widths, text_widths)):
         box = create_rounded_box(element_width, box_height, border_radius)
@@ -146,7 +148,6 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
         draw.text((text_x, text_y), text, fill=(255, 255, 255, 255), font=font)
         x_position += element_width + spacing
 
-    # Компонуем итоговое изображение
     result = Image.alpha_composite(background, overlay)
 
     if output_path:
@@ -155,21 +156,7 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
 
     return result
 
-# --- Функция генерации кадров с обновлением прогресс-бара ---
-
 def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, text_settings=None, progress_callback=None):
-    """
-    Генерирует кадры для видео с наложением текста.
-    
-    Параметры:
-      csv_file: путь к CSV файлу
-      folder_number: номер проекта/папки
-      resolution: 'fullhd' или '4k'
-      fps: частота кадров
-      text_settings: настройки для текста (словарь)
-      progress_callback: функция обратного вызова, принимающая (completed_frames, total_frames, 'frames')
-                         для обновления прогресс-бара
-    """
     try:
         frames_dir = f'frames/project_{folder_number}'
         if os.path.exists(frames_dir):
@@ -180,7 +167,6 @@ def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, tex
         csv_type, processed_data = process_csv_file(csv_file, folder_number)
         df = pd.DataFrame(processed_data)
 
-        # Преобразуем нужные столбцы в массивы NumPy для быстрого поиска
         ts_array = df['timestamp'].to_numpy()
         speed_array = df['speed'].to_numpy(dtype=int)
         gps_array = df['gps'].to_numpy(dtype=int)
@@ -219,7 +205,6 @@ def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, tex
             create_frame(values, resolution, output_path, text_settings)
             with lock:
                 completed_frames += 1
-                # Обновляем прогресс каждые 10 кадров или при завершении всех
                 if progress_callback and (completed_frames % 10 == 0 or completed_frames == frame_count):
                     progress_callback(completed_frames, frame_count, 'frames')
 
@@ -234,8 +219,6 @@ def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, tex
     except Exception as e:
         logging.error(f"Error in generate_frames: {e}")
         raise
-
-# --- Прочие функции (create_preview_frame, find_nearest_values, get_column_name, detect_csv_type) ---
 
 def find_nearest_values(df, timestamp):
     mask = df['timestamp'] <= timestamp
