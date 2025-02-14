@@ -106,8 +106,8 @@ def create_speed_indicator(speed, size=500, speed_offset=(0, 0), unit_offset=(0,
     speed_text_width = speed_bbox[2] - speed_bbox[0]
     speed_text_height = speed_bbox[3] - speed_bbox[1]
 
-    # Отрисовка "km/h"
-    unit_text = "km/h"
+    # Отрисовка "KM/H"
+    unit_text = "KM/H"
     unit_bbox = draw.textbbox((0, 0), unit_text, font=unit_font)
     unit_text_width = unit_bbox[2] - unit_bbox[0]
     unit_text_height = unit_bbox[3] - unit_bbox[1]
