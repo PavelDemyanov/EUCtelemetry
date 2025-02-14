@@ -70,9 +70,7 @@ function updatePreview(projectId) {
         font_size: document.getElementById('fontSize').value,
         border_radius: document.getElementById('borderRadius').value,
         // Speed indicator settings
-        indicator_scale: document.getElementById('indicatorScale').value,  // Added new parameter
-        indicator_x: document.getElementById('indicatorX').value,
-        indicator_y: document.getElementById('indicatorY').value,
+        indicator_scale: document.getElementById('indicatorScale').value,
         speed_y: document.getElementById('speedY').value,
         unit_y: document.getElementById('unitY').value,
         speed_size: document.getElementById('speedSize').value,
@@ -131,7 +129,7 @@ document.getElementById('projectName').addEventListener('input', function() {
 
 // Add event listeners for text display settings
 const textSettings = ['verticalPosition', 'topPadding', 'bottomPadding', 'spacing', 'fontSize', 'borderRadius'];
-const speedIndicatorSettings = ['indicatorScale', 'indicatorX', 'indicatorY', 'speedSize', 'speedY', 'unitSize', 'unitY'];  // Added indicatorScale
+const speedIndicatorSettings = ['indicatorScale', 'speedSize', 'speedY', 'unitSize', 'unitY'];
 
 // Combine all settings
 const allSettings = [...textSettings, ...speedIndicatorSettings];
@@ -152,7 +150,7 @@ allSettings.forEach(setting => {
         } else {
             // Add unit only if it's not already present
             valueDisplay.textContent = value + (
-                this.id === 'speedSize' || this.id === 'unitSize' || this.id.includes('indicator') ? '%' : 'px'
+                this.id === 'speedSize' || this.id === 'unitSize' || this.id === 'indicatorScale' ? '%' : 'px'
             );
         }
 
@@ -171,13 +169,11 @@ allSettings.forEach(setting => {
                     font_size: document.getElementById('fontSize').value,
                     border_radius: document.getElementById('borderRadius').value,
                     // Speed indicator settings
-                    indicator_x: document.getElementById('indicatorX').value,
-                    indicator_y: document.getElementById('indicatorY').value,
+                    indicator_scale: document.getElementById('indicatorScale').value,
                     speed_y: document.getElementById('speedY').value,
                     unit_y: document.getElementById('unitY').value,
                     speed_size: document.getElementById('speedSize').value,
-                    unit_size: document.getElementById('unitSize').value,
-                    indicator_scale: document.getElementById('indicatorScale').value
+                    unit_size: document.getElementById('unitSize').value
                 };
 
                 // Update preview with all current settings
@@ -228,13 +224,11 @@ document.getElementById('startProcessButton').addEventListener('click', function
         spacing: document.getElementById('spacing').value,
         font_size: document.getElementById('fontSize').value,
         border_radius: document.getElementById('borderRadius').value,
-        indicator_x: document.getElementById('indicatorX').value,
-        indicator_y: document.getElementById('indicatorY').value,
+        indicator_scale: document.getElementById('indicatorScale').value,
         speed_y: document.getElementById('speedY').value,
         unit_y: document.getElementById('unitY').value,
         speed_size: document.getElementById('speedSize').value,
-        unit_size: document.getElementById('unitSize').value,
-        indicator_scale: document.getElementById('indicatorScale').value
+        unit_size: document.getElementById('unitSize').value
     };
 
     // Start processing
