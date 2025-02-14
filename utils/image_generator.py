@@ -121,22 +121,23 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
         border_radius = int(text_settings.get('border_radius', 13) * scale_factor)
 
         try:
-            font = _get_font("fonts/sf-ui-display-bold.otf", font_size)
+            regular_font = _get_font("fonts/sf-ui-display-regular.otf", font_size)
+            bold_font = _get_font("fonts/sf-ui-display-bold.otf", font_size)
         except Exception as e:
             logging.error(f"Error loading font: {e}")
             raise
 
         params = [
-            ('Speed', f"{values['speed']} km/h"),
-            ('Max Speed', f"{values['max_speed']} km/h"),
-            ('GPS', f"{values['gps']} km/h"),
-            ('Voltage', f"{values['voltage']} V"),
-            ('Temp', f"{values['temperature']} °C"),
-            ('Current', f"{values['current']} A"),
-            ('Battery', f"{values['battery']} %"),
-            ('Mileage', f"{values['mileage']} km"),
-            ('PWM', f"{values['pwm']} %"),
-            ('Power', f"{values['power']} W")
+            ('Speed', f"{values['speed']}", 'km/h'),
+            ('Max Speed', f"{values['max_speed']}", 'km/h'),
+            ('GPS', f"{values['gps']}", 'km/h'),
+            ('Voltage', f"{values['voltage']}", 'V'),
+            ('Temp', f"{values['temperature']}", '°C'),
+            ('Current', f"{values['current']}", 'A'),
+            ('Battery', f"{values['battery']}", '%'),
+            ('Mileage', f"{values['mileage']}", 'km'),
+            ('PWM', f"{values['pwm']}", '%'),
+            ('Power', f"{values['power']}", 'W')
         ]
 
         element_widths = []
@@ -144,10 +145,15 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
         text_heights = []
         total_width = 0
 
-        for label, value in params:
-            bbox = draw.textbbox((0, 0), f"{label}: {value}", font=font)
-            text_width = bbox[2] - bbox[0]
-            text_height = bbox[3] - bbox[1]
+        for label, value, unit in params:
+            # Измеряем ширину для каждой части текста отдельно
+            label_bbox = draw.textbbox((0, 0), f"{label}: ", font=regular_font)
+            value_bbox = draw.textbbox((0, 0), value, font=bold_font)
+            unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
+
+            text_width = (label_bbox[2] - label_bbox[0]) + (value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])
+            text_height = max(label_bbox[3] - label_bbox[1], value_bbox[3] - value_bbox[1], unit_bbox[3] - unit_bbox[1])
+
             element_width = text_width + (2 * top_padding)
             element_widths.append(element_width)
             text_widths.append(text_width)
@@ -163,14 +169,28 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
         text_baseline_y = box_vertical_center - (max_text_height // 2)
 
         x_position = start_x
-        for i, ((label, value), element_width, text_width) in enumerate(zip(params, element_widths, text_widths)):
+        for i, ((label, value, unit), element_width, text_width) in enumerate(zip(params, element_widths, text_widths)):
             box = create_rounded_box(element_width, box_height, border_radius)
             overlay.paste(box, (x_position, y_position), box)
-            text = f"{label}: {value}"
+
+            # Рисуем каждую часть текста отдельно с соответствующим шрифтом
             text_x = x_position + ((element_width - text_width) // 2)
             baseline_offset = int(max_text_height * 0.2)
             text_y = text_baseline_y - baseline_offset
-            draw.text((text_x, text_y), text, fill=(255, 255, 255, 255), font=font)
+
+            # Рисуем метку regular шрифтом
+            label_bbox = draw.textbbox((0, 0), f"{label}: ", font=regular_font)
+            label_width = label_bbox[2] - label_bbox[0]
+            draw.text((text_x, text_y), f"{label}: ", fill=(255, 255, 255, 255), font=regular_font)
+
+            # Рисуем значение bold шрифтом
+            value_bbox = draw.textbbox((0, 0), value, font=bold_font)
+            value_width = value_bbox[2] - value_bbox[0]
+            draw.text((text_x + label_width, text_y), value, fill=(255, 255, 255, 255), font=bold_font)
+
+            # Рисуем единицу измерения regular шрифтом
+            draw.text((text_x + label_width + value_width, text_y), f" {unit}", fill=(255, 255, 255, 255), font=regular_font)
+
             x_position += element_width + spacing
 
         result = Image.alpha_composite(background, overlay)
