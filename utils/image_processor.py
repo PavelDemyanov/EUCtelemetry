@@ -16,7 +16,15 @@ def interpolate_color(color1, color2, factor):
     b = int(b1 + (b2 - b1) * factor)
     return (r, g, b)
 
-def create_speed_indicator(speed, size=500, speed_offset=(0, 0), unit_offset=(0, 0), speed_size=100, unit_size=100, indicator_scale=100, resolution='fullhd'):
+
+def create_speed_indicator(speed,
+                           size=500,
+                           speed_offset=(0, 0),
+                           unit_offset=(0, 0),
+                           speed_size=100,
+                           unit_size=100,
+                           indicator_scale=100,
+                           resolution='fullhd'):
     """
     Создает индикатор скорости в виде полукруглой дуги
     :param speed: Скорость (0-100 км/ч)
@@ -43,14 +51,15 @@ def create_speed_indicator(speed, size=500, speed_offset=(0, 0), unit_offset=(0,
 
     # Параметры дуги
     start_angle = 150  # Начальный угол (0 км/ч)
-    end_angle = 30     # Конечный угол (100 км/ч)
+    end_angle = 30  # Конечный угол (100 км/ч)
 
     # Масштабируем толщину дуги в зависимости от разрешения
     base_width = 20  # Базовая толщина для Full HD
     if resolution == '4k':
         base_width *= 2  # Удваиваем толщину для 4K
 
-    arc_width = int(base_width * indicator_scale / 100)  # Применяем масштаб пользователя
+    arc_width = int(base_width * indicator_scale /
+                    100)  # Применяем масштаб пользователя
     corner_radius = arc_width // 2
 
     # Определяем цвет в зависимости от скорости
@@ -70,25 +79,42 @@ def create_speed_indicator(speed, size=500, speed_offset=(0, 0), unit_offset=(0,
     # Рассчитываем угол для текущей скорости
     if end_angle < start_angle:
         end_angle += 360
-    current_angle = start_angle + (end_angle - start_angle) * (min(speed, 100) / 100)
+    current_angle = start_angle + (end_angle -
+                                   start_angle) * (min(speed, 100) / 100)
     current_angle %= 360
 
     # Рисуем дугу на маске
-    mask_draw.arc([10, 10, arc_size-10, arc_size-10], start=start_angle, end=current_angle, fill=255, width=arc_width)
+    mask_draw.arc([10, 10, arc_size - 10, arc_size - 10],
+                  start=start_angle,
+                  end=current_angle,
+                  fill=255,
+                  width=arc_width)
 
     # Добавляем закругленные концы
-    start_x = arc_center + (arc_radius - arc_width // 2) * math.cos(math.radians(start_angle))
-    start_y = arc_center + (arc_radius - arc_width // 2) * math.sin(math.radians(start_angle))
-    end_x = arc_center + (arc_radius - arc_width // 2) * math.cos(math.radians(current_angle))
-    end_y = arc_center + (arc_radius - arc_width // 2) * math.sin(math.radians(current_angle))
+    start_x = arc_center + (arc_radius - arc_width // 2) * math.cos(
+        math.radians(start_angle))
+    start_y = arc_center + (arc_radius - arc_width // 2) * math.sin(
+        math.radians(start_angle))
+    end_x = arc_center + (arc_radius - arc_width // 2) * math.cos(
+        math.radians(current_angle))
+    end_y = arc_center + (arc_radius - arc_width // 2) * math.sin(
+        math.radians(current_angle))
 
-    mask_draw.ellipse([start_x - corner_radius, start_y - corner_radius, 
-                    start_x + corner_radius, start_y + corner_radius], fill=255)
-    mask_draw.ellipse([end_x - corner_radius, end_y - corner_radius, 
-                    end_x + corner_radius, end_y + corner_radius], fill=255)
+    mask_draw.ellipse([
+        start_x - corner_radius, start_y - corner_radius,
+        start_x + corner_radius, start_y + corner_radius
+    ],
+                      fill=255)
+    mask_draw.ellipse([
+        end_x - corner_radius, end_y - corner_radius, end_x + corner_radius,
+        end_y + corner_radius
+    ],
+                      fill=255)
 
     # Создаем цветное изображение для дуги
-    color_image = Image.new('RGBA', (arc_size, arc_size), color if isinstance(color, tuple) else color[:3] + (255,))
+    color_image = Image.new(
+        'RGBA', (arc_size, arc_size),
+        color if isinstance(color, tuple) else color[:3] + (255,))
     color_image.putalpha(mask)
 
     # Создаем финальное изображение с правильным размером
@@ -103,13 +129,15 @@ def create_speed_indicator(speed, size=500, speed_offset=(0, 0), unit_offset=(0,
     draw = ImageDraw.Draw(final_image)
 
     # Масштабируем базовые размеры шрифта в зависимости от разрешения
-    resolution_scale = 1.5 if resolution == '4k' else 1.0
+    resolution_scale = 1.0  #Always 1.0 now
     base_speed_font_size = int((size // 4) * speed_size / 100 * resolution_scale)
     base_unit_font_size = int((size // 8) * unit_size / 100 * resolution_scale)
 
     try:
-        speed_font = ImageFont.truetype("fonts/sf-ui-display-bold.otf", base_speed_font_size)
-        unit_font = ImageFont.truetype("fonts/sf-ui-display-regular.otf", base_unit_font_size)
+        speed_font = ImageFont.truetype("fonts/sf-ui-display-bold.otf",
+                                        base_speed_font_size)
+        unit_font = ImageFont.truetype("fonts/sf-ui-display-regular.otf",
+                                       base_unit_font_size)
     except Exception as e:
         raise ValueError(f"Error loading fonts: {str(e)}")
 
@@ -126,25 +154,43 @@ def create_speed_indicator(speed, size=500, speed_offset=(0, 0), unit_offset=(0,
     unit_text_height = unit_bbox[3] - unit_bbox[1]
 
     # Масштабируем смещения в зависимости от разрешения
-    scaled_speed_offset = (speed_offset[0], int(speed_offset[1] * resolution_scale))
-    scaled_unit_offset = (unit_offset[0], int(unit_offset[1] * resolution_scale))
+    scaled_speed_offset = (speed_offset[0],
+                           int(speed_offset[1] * resolution_scale))
+    scaled_unit_offset = (unit_offset[0],
+                          int(unit_offset[1] * resolution_scale))
 
     # Позиционирование текста с учетом масштабированных смещений
     center = size // 2
     speed_x = center - speed_text_width // 2
-    speed_y = center - speed_text_height // 2 - unit_text_height // 2 + scaled_speed_offset[1]
+    speed_y = center - speed_text_height // 2 - unit_text_height // 2 + scaled_speed_offset[
+        1]
 
     unit_x = center - unit_text_width // 2
     unit_y = speed_y + speed_text_height + 5 + scaled_unit_offset[1]
 
     # Рисуем тексты
-    draw.text((speed_x, speed_y), speed_text, fill=(255, 255, 255, 255), font=speed_font)
-    draw.text((unit_x, unit_y), unit_text, fill=(255, 255, 255, 255), font=unit_font)
+    draw.text((speed_x, speed_y),
+              speed_text,
+              fill=(255, 255, 255, 255),
+              font=speed_font)
+    draw.text((unit_x, unit_y),
+              unit_text,
+              fill=(255, 255, 255, 255),
+              font=unit_font)
 
     return final_image
 
-def overlay_speed_indicator(base_image, speed, position=(0, 0), size=500, speed_offset=(0, 0), unit_offset=(0, 0),
-                          speed_size=100, unit_size=100, indicator_scale=100, resolution='fullhd'):
+
+def overlay_speed_indicator(base_image,
+                            speed,
+                            position=(0, 0),
+                            size=500,
+                            speed_offset=(0, 0),
+                            unit_offset=(0, 0),
+                            speed_size=100,
+                            unit_size=100,
+                            indicator_scale=100,
+                            resolution='fullhd'):
     """
     Накладывает индикатор скорости на базовое изображение
     :param base_image: Базовое изображение (PIL Image)
@@ -159,8 +205,10 @@ def overlay_speed_indicator(base_image, speed, position=(0, 0), size=500, speed_
     :param resolution: Разрешение кадра ('fullhd' или '4k')
     :return: PIL Image с наложенным индикатором
     """
-    speed_indicator = create_speed_indicator(speed, size, speed_offset, unit_offset, 
-                                          speed_size, unit_size, indicator_scale, resolution)
+    speed_indicator = create_speed_indicator(speed, size, speed_offset,
+                                             unit_offset, speed_size,
+                                             unit_size, indicator_scale,
+                                             resolution)
     if base_image.mode != 'RGBA':
         base_image = base_image.convert('RGBA')
     base_image.paste(speed_indicator, position, speed_indicator)

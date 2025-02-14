@@ -141,6 +141,21 @@ document.querySelectorAll('input[name="resolution"]').forEach(radio => {
     radio.addEventListener('change', function() {
         const projectId = document.getElementById('startProcessButton').dataset.projectId;
         if (projectId) {
+            // Adjust slider values based on resolution
+            if (this.value === '4k') {
+                // Set specific values for 4K
+                document.getElementById('speedY').value = -50;
+                document.getElementById('speedYValue').textContent = '-50';
+                document.getElementById('unitY').value = 65;
+                document.getElementById('unitYValue').textContent = '65';
+            } else {
+                // Reset to default values for Full HD
+                document.getElementById('speedY').value = -28;
+                document.getElementById('speedYValue').textContent = '-28';
+                document.getElementById('unitY').value = 36;
+                document.getElementById('unitYValue').textContent = '36';
+            }
+            // Update preview with new settings
             updatePreview(projectId);
         }
     });
