@@ -48,7 +48,11 @@ def create_speed_indicator(speed,
     end_angle = 30     # Конечный угол (100 км/ч)
 
     # Масштабируем толщину дуги
-    scaled_arc_width = max(1, int(float(arc_width)))  # Преобразуем в float для надежности
+    base_width = int(arc_width)  # Базовая толщина из параметра
+    if resolution == '4k':
+        base_width *= 2  # Удваиваем для 4K
+
+    scaled_arc_width = max(1, int(base_width))
     corner_radius = scaled_arc_width // 2
 
     logging.info(f"Processing arc with width={scaled_arc_width}px, corner_radius={corner_radius}px")
@@ -80,7 +84,7 @@ def create_speed_indicator(speed,
                   fill=255,
                   width=scaled_arc_width)
 
-    # Добавляем закругленные концы
+    # Рассчитываем координаты для закругленных концов
     start_x = arc_center + (arc_radius - scaled_arc_width // 2) * math.cos(math.radians(start_angle))
     start_y = arc_center + (arc_radius - scaled_arc_width // 2) * math.sin(math.radians(start_angle))
     end_x = arc_center + (arc_radius - scaled_arc_width // 2) * math.cos(math.radians(current_angle))
