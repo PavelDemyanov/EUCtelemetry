@@ -41,3 +41,9 @@
     color: #dc3545 !important;
     font-weight: 500;
 }
+
+/* Custom video styling */
+.img-fluid.rounded.shadow {
+    border-radius: 1rem !important;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
