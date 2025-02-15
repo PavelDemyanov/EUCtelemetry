@@ -13,7 +13,10 @@
                     and overlay them on a blue background (chroma key) for further integration of telemetry data onto your video 
                     recorded during a trip or from cameras such as insta360, GoPro, iPhone, or any other camera.
                 </p>
-                <img src="{{ url_for('static', filename='images/screenvid.png') }}" alt="Description" class="img-fluid rounded shadow">
+                <video class="img-fluid rounded shadow" autoplay loop muted playsinline>
+                    <source src="{{ url_for('static', filename='mp4/screenvid.mp4') }}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
             </div>
         </div>
     </section>
@@ -31,7 +34,10 @@
                     <li>Click the export button</li>
                     <li>Save the CSV file of the trip to a convenient location</li>
                 </ol>
-                <img src="{{ url_for('static', filename='images/darkman01.gif') }}" alt="DarknessBot Export" class="img-fluid rounded shadow mb-4">
+                <video class="img-fluid rounded shadow mb-4" autoplay loop muted playsinline>
+                    <source src="{{ url_for('static', filename='mp4/darkman01.mp4') }}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
 
                 <h3 class="mb-3">From WheelLog:</h3>
                 <ol class="mb-4">
@@ -56,7 +62,10 @@
                     <li>Start the process of creating a video on the blue background (Chroma Key)</li>
                     <li>Go to the "My Projects" section to download the finished video</li>
                 </ol>
-                <img src="{{ url_for('static', filename='images/webman01.gif') }}" alt="Program Usage" class="img-fluid rounded shadow">
+                <video class="img-fluid rounded shadow" autoplay loop muted playsinline>
+                    <source src="{{ url_for('static', filename='mp4/webman01.mp4') }}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
             </div>
         </div>
     </section>
@@ -74,7 +83,10 @@
                     <li>Align the telemetry data with your trip on the timeline</li>
                     <li>Export the video with your desired quality settings</li>
                 </ol>
-                <img src="{{ url_for('static', filename='images/davman01.gif') }}" alt="Video Editing" class="img-fluid rounded shadow">
+                <video class="img-fluid rounded shadow" autoplay loop muted playsinline>
+                    <source src="{{ url_for('static', filename='mp4/davman01.mp4') }}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
             </div>
         </div>
     </section>
