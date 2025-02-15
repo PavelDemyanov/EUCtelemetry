@@ -1,13 +1,71 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container">
+<div class="container py-5">
     <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-body text-center">
-                    <h2 class="card-title">About</h2>
-                    <p class="card-text">The creator of the application is Pavel Demyanov</p>
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <img src="{{ url_for('static', filename='assets/zedsdeadbaby.JPG') }}" 
+                             alt="Pavel Demyanov" 
+                             class="rounded-circle img-fluid mb-3"
+                             style="max-width: 200px; border: 3px solid #f8f9fa;">
+                        <h2 class="card-title">About the Creator</h2>
+                        <h4 class="text-muted">Pavel Demyanov</h4>
+                    </div>
+
+                    <div class="mb-4">
+                        <h5 class="mb-3">About EUCtelemetry</h5>
+                        <p class="lead">
+                            EUCtelemetry is an application designed to process and visualize Electric Unicycle telemetry data,
+                            creating professional-looking overlays for your ride videos. As the creator of this tool, I'm
+                            committed to helping the EUC community enhance their riding content.
+                        </p>
+                    </div>
+
+                    <div class="mb-4">
+                        <h5 class="mb-3">Contact Information</h5>
+                        <div class="row g-3">
+                            <div class="col-sm-6">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="bi bi-telegram me-2"></i>
+                                    <a href="https://t.me/paveldemyanov" target="_blank" class="text-decoration-none">Telegram</a>
+                                </div>
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="bi bi-facebook me-2"></i>
+                                    <a href="https://www.facebook.com/redpax" target="_blank" class="text-decoration-none">Facebook</a>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="bi bi-instagram me-2"></i>
+                                    <a href="https://www.instagram.com/paveldemyanov/" target="_blank" class="text-decoration-none">Instagram</a>
+                                </div>
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="bi bi-envelope me-2"></i>
+                                    <div>
+                                        <a href="mailto:greypax@gmail.com" class="text-decoration-none">greypax@gmail.com</a><br>
+                                        <a href="mailto:redpax@mail.ru" class="text-decoration-none">redpax@mail.ru</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <h5 class="mb-3">Open Source</h5>
+                        <p>
+                            The application is open source and available on GitHub. You can download, fork, or distribute it
+                            according to the license terms. I appreciate attribution when you use or modify the software.
+                        </p>
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-github me-2"></i>
+                            <a href="https://github.com/PavelDemyanov/EUCtelemetry" target="_blank" class="text-decoration-none">
+                                Access the GitHub Repository
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
 from utils.env_setup import setup_env_variables
+from datetime import datetime  # Add datetime import at the top
 
 # Setup environment variables with defaults if needed
 setup_env_variables()
@@ -50,6 +51,11 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 app.config['WTF_CSRF_ENABLED'] = True  # Enable CSRF protection
+
+# Add context processor for datetime
+@app.context_processor
+def inject_now():
+    return {'now': datetime.utcnow()}
 
 # Initialize Flask-Login
 login_manager = LoginManager()

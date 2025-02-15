@@ -8,7 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/custom.css') }}" rel="stylesheet">
 </head>
-<body>
+<body class="d-flex flex-column min-vh-100">
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
         <div class="container">
             <a class="navbar-brand" href="{{ url_for('index') }}">EUCTelemetry</a>
@@ -53,7 +53,7 @@
         </div>
     </nav>
 
-    <div class="container">
+    <div class="container flex-grow-1">
         {% with messages = get_flashed_messages() %}
         {% if messages %}
         {% for message in messages %}
@@ -67,6 +67,52 @@
 
         {% block content %}{% endblock %}
     </div>
+
+    <footer class="footer mt-auto py-4 bg-dark text-light">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <h5>EUCTelemetry</h5>
+                    <p class="text-muted">
+                        Transform your EUC ride videos with professional telemetry overlays.
+                    </p>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <h5>Quick Links</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="{{ url_for('home') }}" class="text-decoration-none text-light">Home</a></li>
+                        <li><a href="{{ url_for('about') }}" class="text-decoration-none text-light">About</a></li>
+                        {% if current_user.is_authenticated %}
+                        <li><a href="{{ url_for('list_projects') }}" class="text-decoration-none text-light">My Projects</a></li>
+                        {% else %}
+                        <li><a href="{{ url_for('register') }}" class="text-decoration-none text-light">Register</a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <h5>Connect</h5>
+                    <div class="d-flex gap-3">
+                        <a href="https://t.me/paveldemyanov" target="_blank" class="text-light">
+                            <i class="bi bi-telegram"></i>
+                        </a>
+                        <a href="https://www.facebook.com/redpax" target="_blank" class="text-light">
+                            <i class="bi bi-facebook"></i>
+                        </a>
+                        <a href="https://www.instagram.com/paveldemyanov/" target="_blank" class="text-light">
+                            <i class="bi bi-instagram"></i>
+                        </a>
+                        <a href="https://github.com/PavelDemyanov/EUCtelemetry" target="_blank" class="text-light">
+                            <i class="bi bi-github"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <hr class="my-3">
+            <div class="text-center text-muted">
+                <small>&copy; {{ now.year }} EUCTelemetry. Created by Pavel Demyanov. All rights reserved.</small>
+            </div>
+        </div>
+    </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     {% block scripts %}{% endblock %}
