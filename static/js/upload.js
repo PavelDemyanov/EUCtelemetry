@@ -60,9 +60,23 @@ function updatePreview(projectId) {
     const progressBar = progressDiv.querySelector('.progress-bar');
     const progressTitle = document.getElementById('progressTitle');
 
+    // Check resolution and adjust offsets if needed
+    const resolution = document.querySelector('input[name="resolution"]:checked').value;
+    if (resolution === '4k') {
+        document.getElementById('speedY').value = -50;
+        document.getElementById('speedYValue').textContent = '-50';
+        document.getElementById('unitY').value = 65;
+        document.getElementById('unitYValue').textContent = '65';
+    } else {
+        document.getElementById('speedY').value = -28;
+        document.getElementById('speedYValue').textContent = '-28';
+        document.getElementById('unitY').value = 36;
+        document.getElementById('unitYValue').textContent = '36';
+    }
+
     // Get current values with updated settings
     const settings = {
-        resolution: document.querySelector('input[name="resolution"]:checked').value,
+        resolution: resolution,
         vertical_position: document.getElementById('verticalPosition').value,
         top_padding: document.getElementById('topPadding').value,
         bottom_padding: document.getElementById('bottomPadding').value,
@@ -70,7 +84,7 @@ function updatePreview(projectId) {
         font_size: document.getElementById('fontSize').value,
         border_radius: document.getElementById('borderRadius').value,
         // Speed indicator settings
-        indicator_scale: document.getElementById('indicatorScale').value,  // Added new parameter
+        indicator_scale: document.getElementById('indicatorScale').value,
         indicator_x: document.getElementById('indicatorX').value,
         indicator_y: document.getElementById('indicatorY').value,
         speed_y: document.getElementById('speedY').value,
