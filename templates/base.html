@@ -70,46 +70,50 @@
 
     <footer class="footer mt-auto py-4 bg-dark text-light">
         <div class="container">
-            <div class="row">
-                <div class="col-md-4 mb-3">
-                    <h5>EUCTelemetry</h5>
-                    <p class="text-muted">
-                        Transform your EUC ride videos with professional telemetry overlays.
-                    </p>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <h5>Quick Links</h5>
-                    <ul class="list-unstyled">
-                        <li><a href="{{ url_for('home') }}" class="text-decoration-none text-light">Home</a></li>
-                        <li><a href="{{ url_for('about') }}" class="text-decoration-none text-light">About</a></li>
-                        {% if current_user.is_authenticated %}
-                        <li><a href="{{ url_for('list_projects') }}" class="text-decoration-none text-light">My Projects</a></li>
-                        {% else %}
-                        <li><a href="{{ url_for('register') }}" class="text-decoration-none text-light">Register</a></li>
-                        {% endif %}
-                    </ul>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <h5>Connect</h5>
-                    <div class="d-flex gap-3">
-                        <a href="https://t.me/paveldemyanov" target="_blank" class="text-light">
-                            <i class="bi bi-telegram"></i>
-                        </a>
-                        <a href="https://www.facebook.com/redpax" target="_blank" class="text-light">
-                            <i class="bi bi-facebook"></i>
-                        </a>
-                        <a href="https://www.instagram.com/paveldemyanov/" target="_blank" class="text-light">
-                            <i class="bi bi-instagram"></i>
-                        </a>
-                        <a href="https://github.com/PavelDemyanov/EUCtelemetry" target="_blank" class="text-light">
-                            <i class="bi bi-github"></i>
-                        </a>
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <h5>EUCTelemetry</h5>
+                            <p class="text-muted">
+                                Transform your EUC ride videos with professional telemetry overlays.
+                            </p>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <h5>Quick Links</h5>
+                            <ul class="list-unstyled">
+                                <li><a href="{{ url_for('home') }}" class="text-decoration-none text-light">Home</a></li>
+                                <li><a href="{{ url_for('about') }}" class="text-decoration-none text-light">About</a></li>
+                                {% if current_user.is_authenticated %}
+                                <li><a href="{{ url_for('list_projects') }}" class="text-decoration-none text-light">My Projects</a></li>
+                                {% else %}
+                                <li><a href="{{ url_for('register') }}" class="text-decoration-none text-light">Register</a></li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <h5>Connect</h5>
+                            <div class="d-flex gap-3">
+                                <a href="https://t.me/paveldemyanov" target="_blank" class="text-light">
+                                    <i class="bi bi-telegram"></i>
+                                </a>
+                                <a href="https://www.facebook.com/redpax" target="_blank" class="text-light">
+                                    <i class="bi bi-facebook"></i>
+                                </a>
+                                <a href="https://www.instagram.com/paveldemyanov/" target="_blank" class="text-light">
+                                    <i class="bi bi-instagram"></i>
+                                </a>
+                                <a href="https://github.com/PavelDemyanov/EUCtelemetry" target="_blank" class="text-light">
+                                    <i class="bi bi-github"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <hr class="my-3">
+                    <div class="text-center text-muted">
+                        <small>&copy; {{ now.year }} EUCTelemetry. Created by Pavel Demyanov. All rights reserved.</small>
                     </div>
                 </div>
-            </div>
-            <hr class="my-3">
-            <div class="text-center text-muted">
-                <small>&copy; {{ now.year }} EUCTelemetry. Created by Pavel Demyanov. All rights reserved.</small>
             </div>
         </div>
     </footer>
