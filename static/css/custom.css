@@ -47,3 +47,12 @@
     border-radius: 1rem !important;
     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
 }
+
+/* Limit height for darkman01 video */
+.img-fluid.rounded.shadow.mb-4 {
+    max-height: 75vh !important;
+    width: auto !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    display: block !important;
+}
