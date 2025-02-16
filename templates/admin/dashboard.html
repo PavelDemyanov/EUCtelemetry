@@ -116,6 +116,18 @@
         </div>
     </div>
 
+    <!-- Terminal Output Section -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h2 class="h5 mb-0">Terminal Output</h2>
+        </div>
+        <div class="card-body">
+            <div class="terminal-window bg-dark text-light p-3" style="height: 400px; overflow-y: auto; font-family: 'Courier New', Courier, monospace; border-radius: 4px; border: 1px solid #444;">
+                <pre id="terminal-output" class="mb-0" style="white-space: pre-wrap;"></pre>
+            </div>
+        </div>
+    </div>
+
     <!-- Project Monitoring -->
     <div class="card">
         <div class="card-header">
@@ -187,6 +199,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const charts = {};
     const resources = ['cpu', 'memory', 'disk', 'gpu'];
     let currentRange = 'day';
+    let lastLogId = 0;
 
     // Initialize all charts
     resources.forEach(resource => {
@@ -449,7 +462,48 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Обновление списков
         updateLists();
+        updateTerminalOutput();
     }
+
+    // Function to update terminal output
+    function updateTerminalOutput() {
+        fetch('/admin/logs?last_id=' + lastLogId)
+            .then(response => response.json())
+            .then(data => {
+                if (data.logs && data.logs.length > 0) {
+                    const terminal = document.getElementById('terminal-output');
+                    data.logs.forEach(log => {
+                        // Create a span element for each log entry
+                        const logEntry = document.createElement('span');
+                        logEntry.textContent = log.message + '\n';
+                        logEntry.title = log.message; // Show full message on hover
+                        logEntry.style.color = log.message.includes('ERROR') ? '#ff6b6b' :
+                                             log.message.includes('WARNING') ? '#ffd93d' : 
+                                             '#a8e6cf';
+                        terminal.appendChild(logEntry);
+                        lastLogId = Math.max(lastLogId, log.id);
+                    });
+                    // Auto-scroll to bottom while preserving user scroll position if they've scrolled up
+                    const shouldScroll = terminal.scrollTop + terminal.clientHeight === terminal.scrollHeight;
+                    if (shouldScroll) {
+                        terminal.scrollTop = terminal.scrollHeight;
+                    }
+                }
+            });
+    }
+
+    // Store lastLogId in localStorage to preserve it across page reloads
+    window.addEventListener('beforeunload', () => {
+        localStorage.setItem('lastLogId', lastLogId);
+    });
+
+    // Restore lastLogId when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+        const savedLastLogId = localStorage.getItem('lastLogId');
+        if (savedLastLogId) {
+            lastLogId = parseInt(savedLastLogId);
+        }
+    });
 
     // Функция обновления списков
     function updateLists(userPage = null, projectPage = null) {
@@ -465,11 +519,13 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
 
+
     // Обновляем данные каждые 5 секунд
     setInterval(updateData, 5000);
 
     // Initial load of lists
     updateLists();
+    updateTerminalOutput();
 });
 </script>
 {% endblock %}

@@ -20,6 +20,37 @@ from forms import (LoginForm, RegistrationForm, ProfileForm,
                   ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm, DeleteAccountForm)
 from models import User, Project
 from utils.email_sender import send_email
+import logging
+from collections import deque
+from threading import Lock
+
+# Create a custom handler to store logs in memory
+class MemoryHandler(logging.Handler):
+    def __init__(self, max_logs=1000):
+        super().__init__()
+        self.logs = deque(maxlen=max_logs)
+        self.lock = Lock()
+        self.counter = 0
+
+    def emit(self, record):
+        with self.lock:
+            self.counter += 1
+            # Format timestamp to be more readable
+            formatted_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            # Color-code different log levels
+            level_name = record.levelname
+            message = f"{formatted_time} - {level_name} - {record.getMessage()}"
+
+            self.logs.append({
+                'id': self.counter,
+                'message': message,
+                'level': level_name,
+                'timestamp': formatted_time
+            })
+
+# Create and configure the memory handler
+memory_handler = MemoryHandler()
+logging.getLogger().addHandler(memory_handler)
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -124,6 +155,20 @@ def admin_dashboard():
 def admin_stats():
     """API endpoint to get updated system stats"""
     return jsonify(get_system_stats())
+
+@app.route('/admin/logs')
+@login_required
+@admin_required
+def admin_logs():
+    """API endpoint to get application logs"""
+    last_id = request.args.get('last_id', type=int, default=0)
+
+    # Get new logs since last_id
+    new_logs = [log for log in memory_handler.logs if log['id'] > last_id]
+
+    return jsonify({
+        'logs': new_logs
+    })
 
 @app.route('/admin/lists')
 @login_required
@@ -748,7 +793,7 @@ def forgot_password():
             reset_html = f"""
             <h2>Password Reset Request</h2>
             <p>Hello {user.name},</p>
-            <p>You have requested to reset your password. Please click the link below to set a new password:</p>
+            <p>You have requested to reset your password. Please click the link belowto set a new password:</p>
             <p><a href="{reset_link}">{reset_link}</a></p>
             <p>This link will expire in 24 hours.</p>
             <p>If you did not request this reset, please ignore this email.</p>
