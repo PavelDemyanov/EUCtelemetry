@@ -13,52 +13,52 @@
             <div class="row">
                 <div class="col-md-3">
                     <h6>CPU Usage</h6>
-                    <div class="progress mb-2 resource-progress" data-resource="cpu" role="button">
+                    <div class="progress mb-2">
                         <div class="progress-bar" role="progressbar" style="width: {{ cpu_percent }}%">
                             {{ cpu_percent }}%
                         </div>
                     </div>
-                    <div class="chart-container" style="position: relative; height: 200px; display: none;">
+                    <div class="chart-container" style="position: relative; height: 200px;">
                         <canvas id="cpu-chart"></canvas>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <h6>Memory Usage</h6>
-                    <div class="progress mb-2 resource-progress" data-resource="memory" role="button">
+                    <div class="progress mb-2">
                         <div class="progress-bar" role="progressbar" style="width: {{ memory_percent }}%">
                             {{ memory_percent }}%
                         </div>
                     </div>
-                    <div class="chart-container" style="position: relative; height: 200px; display: none;">
+                    <div class="chart-container" style="position: relative; height: 200px;">
                         <canvas id="memory-chart"></canvas>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <h6>Disk Usage</h6>
-                    <div class="progress mb-2 resource-progress" data-resource="disk" role="button">
+                    <div class="progress mb-2">
                         <div class="progress-bar" role="progressbar" style="width: {{ disk_percent }}%">
                             {{ disk_percent }}%
                         </div>
                     </div>
-                    <div class="chart-container" style="position: relative; height: 200px; display: none;">
+                    <div class="chart-container" style="position: relative; height: 200px;">
                         <canvas id="disk-chart"></canvas>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <h6>GPU Usage</h6>
-                    <div class="progress mb-2 resource-progress" data-resource="gpu" role="button">
+                    <div class="progress mb-2">
                         <div class="progress-bar" role="progressbar" style="width: {{ gpu_percent|default(0) }}%">
                             {{ gpu_percent|default(0) }}%
                         </div>
                     </div>
-                    <div class="chart-container" style="position: relative; height: 200px; display: none;">
+                    <div class="chart-container" style="position: relative; height: 200px;">
                         <canvas id="gpu-chart"></canvas>
                     </div>
                 </div>
             </div>
             <!-- Time Range Selector -->
-            <div class="btn-group mt-3" id="time-range-selector" style="display: none;">
-                <button type="button" class="btn btn-outline-primary" data-range="day">1 день</button>
+            <div class="btn-group mt-3">
+                <button type="button" class="btn btn-outline-primary active" data-range="day">1 день</button>
                 <button type="button" class="btn btn-outline-primary" data-range="week">Неделя</button>
                 <button type="button" class="btn btn-outline-primary" data-range="month">Месяц</button>
                 <button type="button" class="btn btn-outline-primary" data-range="year">Год</button>
@@ -83,7 +83,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for user in users %}
+                        {% for user in users.items %}
                         <tr>
                             <td>
                                 {{ user.name }}
@@ -105,6 +105,34 @@
                     </tbody>
                 </table>
             </div>
+            <!-- Users Pagination -->
+            {% if users.pages > 1 %}
+            <nav aria-label="Users pagination" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if users.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admin_dashboard', user_page=users.prev_num, project_page=projects.page) }}">&laquo;</a>
+                    </li>
+                    {% endif %}
+
+                    {% for page_num in users.iter_pages(left_edge=2, left_current=2, right_current=3, right_edge=2) %}
+                        {% if page_num %}
+                            <li class="page-item {% if page_num == users.page %}active{% endif %}">
+                                <a class="page-link" href="{{ url_for('admin_dashboard', user_page=page_num, project_page=projects.page) }}">{{ page_num }}</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if users.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admin_dashboard', user_page=users.next_num, project_page=projects.page) }}">&raquo;</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
         </div>
     </div>
 
@@ -159,20 +187,20 @@
                     </tbody>
                 </table>
             </div>
-            <!-- Pagination -->
+            <!-- Projects Pagination -->
             {% if projects.pages > 1 %}
             <nav aria-label="Project pagination" class="mt-4">
                 <ul class="pagination justify-content-center">
                     {% if projects.has_prev %}
                     <li class="page-item">
-                        <a class="page-link" href="{{ url_for('admin_dashboard', page=projects.prev_num) }}">&laquo;</a>
+                        <a class="page-link" href="{{ url_for('admin_dashboard', project_page=projects.prev_num, user_page=users.page) }}">&laquo;</a>
                     </li>
                     {% endif %}
 
                     {% for page_num in projects.iter_pages(left_edge=2, left_current=2, right_current=3, right_edge=2) %}
                         {% if page_num %}
                             <li class="page-item {% if page_num == projects.page %}active{% endif %}">
-                                <a class="page-link" href="{{ url_for('admin_dashboard', page=page_num) }}">{{ page_num }}</a>
+                                <a class="page-link" href="{{ url_for('admin_dashboard', project_page=page_num, user_page=users.page) }}">{{ page_num }}</a>
                             </li>
                         {% else %}
                             <li class="page-item disabled"><span class="page-link">...</span></li>
@@ -181,7 +209,7 @@
 
                     {% if projects.has_next %}
                     <li class="page-item">
-                        <a class="page-link" href="{{ url_for('admin_dashboard', page=projects.next_num) }}">&raquo;</a>
+                        <a class="page-link" href="{{ url_for('admin_dashboard', project_page=projects.next_num, user_page=users.page) }}">&raquo;</a>
                     </li>
                     {% endif %}
                 </ul>
@@ -196,88 +224,49 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    let currentChart = null;
-    let currentChartContainer = null;
+    const charts = {};
+    const resources = ['cpu', 'memory', 'disk', 'gpu'];
+    let currentRange = 'day';
 
-    // Setup click handlers for progress bars
-    document.querySelectorAll('.resource-progress').forEach(progress => {
-        progress.addEventListener('click', function() {
-            const resource = this.dataset.resource;
-            const chartContainer = this.nextElementSibling;
-            const timeRangeSelector = document.getElementById('time-range-selector');
-
-            // If clicking the same progress bar again, hide the chart
-            if (chartContainer.style.display === 'block') {
-                chartContainer.style.display = 'none';
-                timeRangeSelector.style.display = 'none';
-                if (currentChart) {
-                    currentChart.destroy();
-                    currentChart = null;
-                }
-                currentChartContainer = null;
-                return;
-            }
-
-            // Hide all other charts
-            document.querySelectorAll('.chart-container').forEach(container => {
-                container.style.display = 'none';
-            });
-
-            // Destroy previous chart if exists
-            if (currentChart) {
-                currentChart.destroy();
-            }
-
-            // Show current chart container
-            chartContainer.style.display = 'block';
-            currentChartContainer = chartContainer;
-            timeRangeSelector.style.display = 'flex';
-
-            // Create new chart
-            updateChart(resource, 'day');
-        });
+    // Initialize all charts
+    resources.forEach(resource => {
+        const ctx = document.getElementById(`${resource}-chart`);
+        charts[resource] = createChart(ctx, resource);
+        updateChart(resource, 'day');
     });
 
     // Setup click handlers for time range buttons
-    document.querySelectorAll('#time-range-selector button').forEach(button => {
+    document.querySelectorAll('.btn-group button').forEach(button => {
         button.addEventListener('click', function() {
             const range = this.dataset.range;
-            const resource = document.querySelector('.chart-container[style*="display: block"]')
-                            .previousElementSibling.dataset.resource;
+            currentRange = range;
 
-            document.querySelectorAll('#time-range-selector button').forEach(btn => {
+            document.querySelectorAll('.btn-group button').forEach(btn => {
                 btn.classList.remove('active');
             });
             this.classList.add('active');
 
-            updateChart(resource, range);
+            resources.forEach(resource => {
+                updateChart(resource, range);
+            });
         });
     });
 
-    function updateChart(resource, timeRange) {
-        const ctx = document.getElementById(`${resource}-chart`);
-
-        if (currentChart) {
-            currentChart.destroy();
-        }
-
-        const labels = getLabelsForTimeRange(timeRange);
-        const data = {
-            labels: labels,
-            datasets: [{
-                label: `${resource.toUpperCase()} Usage (%)`,
-                data: Array.from({length: labels.length}, () => Math.random() * 100),
-                borderColor: 'rgb(75, 192, 192)',
-                backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                borderWidth: 2,
-                fill: true,
-                tension: 0.4
-            }]
-        };
-
-        currentChart = new Chart(ctx, {
+    function createChart(ctx, resource) {
+        return new Chart(ctx, {
             type: 'line',
-            data: data,
+            data: {
+                labels: [],
+                datasets: [{
+                    label: `${resource.toUpperCase()} Usage (%)`,
+                    data: [],
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -317,6 +306,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    function updateChart(resource, timeRange) {
+        const labels = getLabelsForTimeRange(timeRange);
+        const data = Array.from({length: labels.length}, () => Math.random() * 100);
+
+        charts[resource].data.labels = labels;
+        charts[resource].data.datasets[0].data = data;
+        charts[resource].update();
+    }
+
     function getLabelsForTimeRange(range) {
         const labels = [];
         const now = new Date();
@@ -350,6 +348,29 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         return labels;
     }
+
+    // Периодическое обновление данных
+    function updateData() {
+        fetch('/admin/stats')
+            .then(response => response.json())
+            .then(stats => {
+                // Обновляем прогресс-бары
+                document.querySelectorAll('.progress-bar').forEach(bar => {
+                    const resource = bar.closest('.col-md-3').querySelector('h6').textContent.toLowerCase().replace(' usage', '');
+                    const value = stats[`${resource}_percent`];
+                    bar.style.width = `${value}%`;
+                    bar.textContent = `${value}%`;
+                });
+
+                // Обновляем графики
+                resources.forEach(resource => {
+                    updateChart(resource, currentRange);
+                });
+            });
+    }
+
+    // Обновляем данные каждые 5 секунд
+    setInterval(updateData, 5000);
 });
 </script>
 {% endblock %}

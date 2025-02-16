@@ -101,21 +101,29 @@ def admin_dashboard():
     stats = get_system_stats()
 
     # Get paginated projects
-    page = request.args.get('page', 1, type=int)
+    project_page = request.args.get('project_page', 1, type=int)
     projects = Project.query.order_by(Project.created_at.desc())\
-        .paginate(page=page, per_page=20, error_out=False)
+        .paginate(page=project_page, per_page=20, error_out=False)
 
-    # Get recent users (registered in the last 30 days)
+    # Get paginated recent users (registered in the last 30 days)
+    user_page = request.args.get('user_page', 1, type=int)
     today = datetime.utcnow().date()
     users = User.query.filter(User.created_at >= today - timedelta(days=30))\
         .order_by(User.created_at.desc())\
-        .all()
+        .paginate(page=user_page, per_page=20, error_out=False)
 
     return render_template('admin/dashboard.html', 
                          projects=projects,
                          users=users,
                          today=today,
                          **stats)
+
+@app.route('/admin/stats')
+@login_required
+@admin_required
+def admin_stats():
+    """API endpoint to get updated system stats"""
+    return jsonify(get_system_stats())
 
 # Add context processor for datetime
 @app.context_processor
