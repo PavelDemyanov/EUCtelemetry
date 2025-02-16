@@ -4,6 +4,7 @@
 <div class="container py-4">
     <h1 class="mb-4">Admin Dashboard</h1>
 
+    <!-- System Monitoring -->
     <div class="card mb-4">
         <div class="card-header">
             <h2 class="h5 mb-0">System Resources</h2>
@@ -11,68 +12,56 @@
         <div class="card-body">
             <div class="row">
                 <div class="col-md-3">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" value="" id="cpu-checkbox" checked>
-                        <label class="form-check-label" for="cpu-checkbox">
-                            CPU Usage
-                        </label>
-                        <div class="progress mb-2">
-                            <div class="progress-bar" style="background-color: #4a6baf" role="progressbar" style="width: {{ cpu_percent }}%">
-                                {{ cpu_percent }}%
-                            </div>
+                    <h6>CPU Usage</h6>
+                    <div class="progress mb-2">
+                        <div class="progress-bar" role="progressbar" style="width: {{ cpu_percent }}%">
+                            {{ cpu_percent }}%
                         </div>
+                    </div>
+                    <div class="chart-container" style="position: relative; height: 200px;">
+                        <canvas id="cpu-chart"></canvas>
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" value="" id="memory-checkbox" checked>
-                        <label class="form-check-label" for="memory-checkbox">
-                            Memory Usage
-                        </label>
-                        <div class="progress mb-2">
-                            <div class="progress-bar" style="background-color: #3d8c5f" role="progressbar" style="width: {{ memory_percent }}%">
-                                {{ memory_percent }}%
-                            </div>
+                    <h6>Memory Usage</h6>
+                    <div class="progress mb-2">
+                        <div class="progress-bar" role="progressbar" style="width: {{ memory_percent }}%">
+                            {{ memory_percent }}%
                         </div>
+                    </div>
+                    <div class="chart-container" style="position: relative; height: 200px;">
+                        <canvas id="memory-chart"></canvas>
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" value="" id="disk-checkbox" checked>
-                        <label class="form-check-label" for="disk-checkbox">
-                            Disk Usage
-                        </label>
-                        <div class="progress mb-2">
-                            <div class="progress-bar" style="background-color: #b3851d" role="progressbar" style="width: {{ disk_percent }}%">
-                                {{ disk_percent }}%
-                            </div>
+                    <h6>Disk Usage</h6>
+                    <div class="progress mb-2">
+                        <div class="progress-bar" role="progressbar" style="width: {{ disk_percent }}%">
+                            {{ disk_percent }}%
                         </div>
+                    </div>
+                    <div class="chart-container" style="position: relative; height: 200px;">
+                        <canvas id="disk-chart"></canvas>
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" value="" id="gpu-checkbox" checked>
-                        <label class="form-check-label" for="gpu-checkbox">
-                            GPU Usage
-                        </label>
-                        <div class="progress mb-2">
-                            <div class="progress-bar" style="background-color: #a34242" role="progressbar" style="width: {{ gpu_percent|default(0) }}%">
-                                {{ gpu_percent|default(0) }}%
-                            </div>
+                    <h6>GPU Usage</h6>
+                    <div class="progress mb-2">
+                        <div class="progress-bar" role="progressbar" style="width: {{ gpu_percent|default(0) }}%">
+                            {{ gpu_percent|default(0) }}%
                         </div>
                     </div>
+                    <div class="chart-container" style="position: relative; height: 200px;">
+                        <canvas id="gpu-chart"></canvas>
+                    </div>
                 </div>
-            </div>
-            <div class="chart-container" style="position: relative; height: 300px;">
-                <canvas id="resources-chart"></canvas>
             </div>
             <!-- Time Range Selector -->
             <div class="btn-group mt-3">
-                <button type="button" class="btn btn-outline-secondary active" data-range="hour">1 час</button>
-                <button type="button" class="btn btn-outline-secondary" data-range="day">1 день</button>
-                <button type="button" class="btn btn-outline-secondary" data-range="week">Неделя</button>
-                <button type="button" class="btn btn-outline-secondary" data-range="month">Месяц</button>
-                <button type="button" class="btn btn-outline-secondary" data-range="year">Год</button>
+                <button type="button" class="btn btn-outline-primary active" data-range="day">1 день</button>
+                <button type="button" class="btn btn-outline-primary" data-range="week">Неделя</button>
+                <button type="button" class="btn btn-outline-primary" data-range="month">Месяц</button>
+                <button type="button" class="btn btn-outline-primary" data-range="year">Год</button>
             </div>
         </div>
     </div>
@@ -99,16 +88,16 @@
                             <td>
                                 {{ user.name }}
                                 {% if user.created_at.date() == today %}
-                                <span class="badge" style="background-color: #3d8c5f">New User</span>
+                                <span class="badge bg-success">New User</span>
                                 {% endif %}
                             </td>
                             <td>{{ user.email }}</td>
                             <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
                             <td>
                                 {% if user.is_email_confirmed %}
-                                <span class="badge" style="background-color: #3d8c5f">Confirmed</span>
+                                <span class="badge bg-success">Confirmed</span>
                                 {% else %}
-                                <span class="badge" style="background-color: #b3851d">Pending</span>
+                                <span class="badge bg-warning">Pending</span>
                                 {% endif %}
                             </td>
                         </tr>
@@ -116,9 +105,11 @@
                     </tbody>
                 </table>
             </div>
+            <!-- Users Pagination -->
             {% if users.pages > 1 %}
             <nav aria-label="Users pagination" class="mt-4">
                 <ul class="pagination justify-content-center" id="users-pagination">
+                    <!-- Pagination items will be dynamically updated -->
                 </ul>
             </nav>
             {% endif %}
@@ -152,17 +143,17 @@
                             <td>{{ project.user.email }}</td>
                             <td>{{ project.name }}</td>
                             <td>
-                                <span class="badge" style="background-color: {% if project.status == 'completed' %}#3d8c5f
-                                              {% elif project.status == 'error' %}#a34242
-                                              {% elif project.status == 'processing' %}#4a6baf
-                                              {% else %}#6c757d{% endif %}">
+                                <span class="badge {% if project.status == 'completed' %}bg-success
+                                              {% elif project.status == 'error' %}bg-danger
+                                              {% elif project.status == 'processing' %}bg-primary
+                                              {% else %}bg-secondary{% endif %}">
                                     {{ project.status }}
                                 </span>
                             </td>
                             <td>{{ project.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
                             <td>
                                 <div class="progress">
-                                    <div class="progress-bar" style="background-color: #4a6baf" role="progressbar" 
+                                    <div class="progress-bar" role="progressbar" 
                                          style="width: {{ project.progress|int }}%"
                                          aria-valuenow="{{ project.progress|int }}" 
                                          aria-valuemin="0" 
@@ -176,9 +167,11 @@
                     </tbody>
                 </table>
             </div>
+            <!-- Projects Pagination -->
             {% if projects.pages > 1 %}
             <nav aria-label="Project pagination" class="mt-4">
                 <ul class="pagination justify-content-center" id="projects-pagination">
+                    <!-- Pagination items will be dynamically updated -->
                 </ul>
             </nav>
             {% endif %}
@@ -191,37 +184,48 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    let currentRange = 'hour';
-    let chart = null;
-    const resources = [
-        { id: 'cpu', color: 'rgb(74, 107, 175)', checked: true },
-        { id: 'memory', color: 'rgb(61, 140, 95)', checked: true },
-        { id: 'disk', color: 'rgb(179, 133, 29)', checked: true },
-        { id: 'gpu', color: 'rgb(163, 66, 66)', checked: true }
-    ];
+    const charts = {};
+    const resources = ['cpu', 'memory', 'disk', 'gpu'];
+    let currentRange = 'day';
 
-    // Store historical data
-    let historicalData = {};
+    // Initialize all charts
     resources.forEach(resource => {
-        historicalData[resource.id] = new Map();
+        const ctx = document.getElementById(`${resource}-chart`);
+        charts[resource] = createChart(ctx, resource);
+        updateChart(resource, 'day');
     });
 
-    function createChart() {
-        const ctx = document.getElementById('resources-chart');
+    // Setup click handlers for time range buttons
+    document.querySelectorAll('.btn-group button').forEach(button => {
+        button.addEventListener('click', function() {
+            const range = this.dataset.range;
+            currentRange = range;
+
+            document.querySelectorAll('.btn-group button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            this.classList.add('active');
+
+            resources.forEach(resource => {
+                updateChart(resource, range);
+            });
+        });
+    });
+
+    function createChart(ctx, resource) {
         return new Chart(ctx, {
             type: 'line',
             data: {
                 labels: [],
-                datasets: resources.map(resource => ({
-                    label: `${resource.id.toUpperCase()} Usage (%)`,
+                datasets: [{
+                    label: `${resource.toUpperCase()} Usage (%)`,
                     data: [],
-                    borderColor: resource.color,
-                    backgroundColor: resource.color.replace('rgb', 'rgba').replace(')', ', 0.2)'),
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
                     borderWidth: 2,
                     fill: true,
-                    tension: 0.4,
-                    hidden: !resource.checked
-                }))
+                    tension: 0.4
+                }]
             },
             options: {
                 responsive: true,
@@ -262,53 +266,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Initialize chart
-    chart = createChart();
+    function updateChart(resource, timeRange) {
+        const labels = getLabelsForTimeRange(timeRange);
+        const data = Array.from({length: labels.length}, () => Math.random() * 100);
 
-    // Setup checkbox handlers
-    resources.forEach(resource => {
-        const checkbox = document.getElementById(`${resource.id}-checkbox`);
-        checkbox.addEventListener('change', function() {
-            resource.checked = this.checked;
-            const dataset = chart.data.datasets.find(ds => ds.label.toLowerCase().startsWith(resource.id));
-            if (dataset) {
-                dataset.hidden = !this.checked;
-                chart.update();
-            }
-        });
-    });
-
-    // Setup time range buttons
-    document.querySelectorAll('.btn-group button').forEach(button => {
-        button.addEventListener('click', function() {
-            const range = this.dataset.range;
-            currentRange = range;
-
-            document.querySelectorAll('.btn-group button').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            this.classList.add('active');
-
-            updateChart();
-        });
-    });
-
-    function getTimestamp(range, index) {
-        const now = new Date();
-        switch(range) {
-            case 'hour':
-                const minutes = now.getMinutes();
-                return new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), index).getTime();
-            case 'day':
-                return new Date(now.getFullYear(), now.getMonth(), now.getDate(), index).getTime();
-            case 'week':
-                const weekDay = now.getDate() - now.getDay() + index;
-                return new Date(now.getFullYear(), now.getMonth(), weekDay).getTime();
-            case 'month':
-                return new Date(now.getFullYear(), now.getMonth(), index + 1).getTime();
-            case 'year':
-                return new Date(now.getFullYear(), index, 1).getTime();
-        }
+        charts[resource].data.labels = labels;
+        charts[resource].data.datasets[0].data = data;
+        charts[resource].update();
     }
 
     function getLabelsForTimeRange(range) {
@@ -316,26 +280,23 @@ document.addEventListener('DOMContentLoaded', function() {
         const now = new Date();
 
         switch(range) {
-            case 'hour':
-                for(let i = 0; i < 60; i++) {
-                    labels.push(`${now.getHours()}:${String(i).padStart(2, '0')}`);
-                }
-                break;
             case 'day':
                 for(let i = 0; i < 24; i++) {
                     labels.push(`${i}:00`);
                 }
                 break;
             case 'week':
-                for(let i = 0; i < 7; i++) {
+                for(let i = 6; i >= 0; i--) {
                     const date = new Date(now);
-                    date.setDate(date.getDate() - now.getDay() + i);
+                    date.setDate(date.getDate() - i);
                     labels.push(date.toLocaleDateString('ru-RU', { weekday: 'short' }));
                 }
                 break;
             case 'month':
-                for(let i = 1; i <= 30; i++) {
-                    labels.push(i);
+                for(let i = 29; i >= 0; i--) {
+                    const date = new Date(now);
+                    date.setDate(date.getDate() - i);
+                    labels.push(date.getDate());
                 }
                 break;
             case 'year':
@@ -348,82 +309,6 @@ document.addEventListener('DOMContentLoaded', function() {
         return labels;
     }
 
-    function updateChart() {
-        const labels = getLabelsForTimeRange(currentRange);
-        chart.data.labels = labels;
-
-        // Get current timestamp for comparison
-        const now = new Date();
-        const currentMinute = now.getMinutes();
-        const currentHour = now.getHours();
-        const currentDay = now.getDate();
-        const currentMonth = now.getMonth();
-
-        resources.forEach((resource, index) => {
-            const data = [];
-            for(let i = 0; i < labels.length; i++) {
-                const timestamp = getTimestamp(currentRange, i);
-
-                // Only generate new random data for current time points
-                if (!historicalData[resource.id].has(timestamp)) {
-                    if (
-                        (currentRange === 'hour' && i <= currentMinute) ||
-                        (currentRange === 'day' && i <= currentHour) ||
-                        (currentRange === 'week' && i <= now.getDay()) ||
-                        (currentRange === 'month' && i < currentDay) ||
-                        (currentRange === 'year' && i <= currentMonth)
-                    ) {
-                        historicalData[resource.id].set(timestamp, Math.random() * 100);
-                    }
-                }
-                data.push(historicalData[resource.id].get(timestamp) || null);
-            }
-            chart.data.datasets[index].data = data;
-        });
-
-        chart.update();
-    }
-
-    // Update data periodically
-    function updateData() {
-        fetch('/admin/stats')
-            .then(response => response.json())
-            .then(stats => {
-                // Update progress bars
-                resources.forEach(resource => {
-                    const progressBar = document.querySelector(`#${resource.id}-checkbox`)
-                        .closest('.form-check')
-                        .querySelector('.progress-bar');
-                    const value = stats[`${resource.id}_percent`];
-                    progressBar.style.width = `${value}%`;
-                    progressBar.textContent = `${Math.round(value)}%`;
-
-                    // Update current point in historical data
-                    const now = new Date();
-                    const timestamp = now.getTime();
-                    historicalData[resource.id].set(timestamp, value);
-                });
-
-                updateChart();
-            });
-
-        updateLists();
-    }
-
-    // Function to update lists
-    function updateLists(userPage = null, projectPage = null) {
-        const searchParams = new URLSearchParams();
-        if (userPage) searchParams.append('user_page', userPage);
-        if (projectPage) searchParams.append('project_page', projectPage);
-
-        fetch(`/admin/lists?${searchParams.toString()}`)
-            .then(response => response.json())
-            .then(data => {
-                updateUsersTable(data.users);
-                updateProjectsTable(data.projects);
-            });
-    }
-
     // Update users table
     function updateUsersTable(users) {
         const tbody = document.querySelector('#users-table tbody');
@@ -431,18 +316,19 @@ document.addEventListener('DOMContentLoaded', function() {
             <tr>
                 <td>
                     ${user.name}
-                    ${user.is_new ? '<span class="badge" style="background-color: #3d8c5f">New User</span>' : ''}
+                    ${user.is_new ? '<span class="badge bg-success">New User</span>' : ''}
                 </td>
                 <td>${user.email}</td>
                 <td>${user.created_at}</td>
                 <td>
                     ${user.is_email_confirmed ? 
-                    '<span class="badge" style="background-color: #3d8c5f">Confirmed</span>' : 
-                    '<span class="badge" style="background-color: #b3851d">Pending</span>'}
+                    '<span class="badge bg-success">Confirmed</span>' : 
+                    '<span class="badge bg-warning">Pending</span>'}
                 </td>
             </tr>
         `).join('');
 
+        // Update pagination
         updatePagination('users', users);
     }
 
@@ -456,30 +342,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td>${project.user_email}</td>
                 <td>${project.name}</td>
                 <td>
-                    <span class="badge" style="background-color: ${
-                        project.status === 'completed' ? '#3d8c5f' :
-                        project.status === 'error' ? '#a34242' :
-                        project.status === 'processing' ? '#4a6baf' :
-                        '#6c757d'
-                    }">
+                    <span class="badge ${project.status === 'completed' ? 'bg-success' :
+                                      project.status === 'error' ? 'bg-danger' :
+                                      project.status === 'processing' ? 'bg-primary' :
+                                      'bg-secondary'}">
                         ${project.status}
                     </span>
                 </td>
                 <td>${project.created_at}</td>
                 <td>
                     <div class="progress">
-                        <div class="progress-bar" style="background-color: #4a6baf" role="progressbar" 
+                        <div class="progress-bar" role="progressbar" 
                              style="width: ${project.progress}%"
                              aria-valuenow="${project.progress}" 
                              aria-valuemin="0" 
                              aria-valuemax="100">
-                            ${Math.round(project.progress)}%
+                            ${project.progress}%
                         </div>
                     </div>
                 </td>
             </tr>
         `).join('');
 
+        // Update pagination
         updatePagination('projects', projects);
     }
 
@@ -542,11 +427,48 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Update data every 5 seconds
+    // Периодическое обновление данных
+    function updateData() {
+        // Обновление статистики
+        fetch('/admin/stats')
+            .then(response => response.json())
+            .then(stats => {
+                // Обновляем прогресс-бары
+                document.querySelectorAll('.progress-bar').forEach(bar => {
+                    const resource = bar.closest('.col-md-3').querySelector('h6').textContent.toLowerCase().replace(' usage', '');
+                    const value = stats[`${resource}_percent`];
+                    bar.style.width = `${value}%`;
+                    bar.textContent = `${value}%`;
+                });
+
+                // Обновляем графики
+                resources.forEach(resource => {
+                    updateChart(resource, currentRange);
+                });
+            });
+
+        // Обновление списков
+        updateLists();
+    }
+
+    // Функция обновления списков
+    function updateLists(userPage = null, projectPage = null) {
+        const searchParams = new URLSearchParams();
+        if (userPage) searchParams.append('user_page', userPage);
+        if (projectPage) searchParams.append('project_page', projectPage);
+
+        fetch(`/admin/lists?${searchParams.toString()}`)
+            .then(response => response.json())
+            .then(data => {
+                updateUsersTable(data.users);
+                updateProjectsTable(data.projects);
+            });
+    }
+
+    // Обновляем данные каждые 5 секунд
     setInterval(updateData, 5000);
 
-    // Initial updates
-    updateData();
+    // Initial load of lists
     updateLists();
 });
 </script>
