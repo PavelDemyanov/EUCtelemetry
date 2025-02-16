@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 import secrets
-import os
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -17,6 +16,7 @@ class User(UserMixin, db.Model):
     email_confirmation_sent_at = db.Column(db.DateTime)
     password_reset_token = db.Column(db.String(100), unique=True)
     password_reset_sent_at = db.Column(db.DateTime)
+    is_admin = db.Column(db.Boolean, default=False)  # New admin field
     projects = db.relationship('Project', backref='user', lazy=True)
 
     def set_password(self, password):
@@ -40,11 +40,6 @@ class User(UserMixin, db.Model):
             return False
         return self.password_reset_sent_at > datetime.utcnow() - timedelta(hours=24)
 
-    @property
-    def is_admin(self):
-        """Check if user is admin based on email"""
-        admin_email = os.environ.get('ADMIN_EMAIL')
-        return admin_email and self.email == admin_email
 
 class Project(db.Model):
     id = db.Column(db.Integer, primary_key=True)
