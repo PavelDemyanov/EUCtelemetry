@@ -227,7 +227,14 @@ def register():
             flash('This email is already registered')
             return redirect(url_for('register'))
 
-        user = User(email=form.email.data, name=form.name.data)
+        # Check if this is the first user
+        is_first_user = User.query.count() == 0
+
+        user = User(
+            email=form.email.data,
+            name=form.name.data,
+            is_admin=is_first_user  # Set admin status based on whether this is the first user
+        )
         user.set_password(form.password.data)
         confirmation_token = user.generate_email_confirmation_token()
         db.session.add(user)
