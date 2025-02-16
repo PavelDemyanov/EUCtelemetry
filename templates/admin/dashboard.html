@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="mb-4">Admin Dashboard</h1>
+
+    <!-- System Monitoring -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2 class="h5 mb-0">System Resources</h2>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <h6>CPU Usage</h6>
+                    <div class="progress mb-2">
+                        <div class="progress-bar" role="progressbar" style="width: {{ cpu_percent }}%">
+                            {{ cpu_percent }}%
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <h6>Memory Usage</h6>
+                    <div class="progress mb-2">
+                        <div class="progress-bar" role="progressbar" style="width: {{ memory_percent }}%">
+                            {{ memory_percent }}%
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <h6>Disk Usage</h6>
+                    <div class="progress mb-2">
+                        <div class="progress-bar" role="progressbar" style="width: {{ disk_percent }}%">
+                            {{ disk_percent }}%
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <h6>GPU Usage</h6>
+                    <div class="progress mb-2">
+                        <div class="progress-bar" role="progressbar" style="width: {{ gpu_percent|default(0) }}%">
+                            {{ gpu_percent|default(0) }}%
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Monitoring -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="h5 mb-0">User Projects</h2>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Project ID</th>
+                            <th>User</th>
+                            <th>Email</th>
+                            <th>Project Name</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Progress</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for project in projects %}
+                        <tr>
+                            <td>{{ project.id }}</td>
+                            <td>{{ project.user.name }}</td>
+                            <td>{{ project.user.email }}</td>
+                            <td>{{ project.name }}</td>
+                            <td>
+                                <span class="badge {% if project.status == 'completed' %}bg-success
+                                             {% elif project.status == 'error' %}bg-danger
+                                             {% elif project.status == 'processing' %}bg-primary
+                                             {% else %}bg-secondary{% endif %}">
+                                    {{ project.status }}
+                                </span>
+                            </td>
+                            <td>{{ project.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                <div class="progress">
+                                    <div class="progress-bar" role="progressbar" 
+                                         style="width: {{ project.progress }}%"
+                                         aria-valuenow="{{ project.progress }}" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="100">
+                                        {{ project.progress }}%
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -37,6 +37,11 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('about') }}">About</a>
                     </li>
+                    {% if current_user.is_authenticated and current_user.is_admin %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('admin_dashboard') }}">Admin</a>
+                    </li>
+                    {% endif %}
                 </ul>
                 <ul class="navbar-nav">
                     {% if current_user.is_authenticated %}
@@ -74,7 +79,7 @@
         {% block content %}{% endblock %}
     </div>
 
-    <footer class="footer mt-auto py-4" style="background-color: #111;">
+    <footer class="footer mt-auto py-4" style="background-color: rgb(18, 25, 41);">
         <div class="container">
             <div class="row justify-content-center">
                 <div class="col-lg-8">

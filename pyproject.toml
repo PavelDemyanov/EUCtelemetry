@@ -26,4 +26,5 @@ dependencies = [
     "sendgrid>=6.11.0",
     "twilio>=9.4.5",
     "python-dotenv>=1.0.1",
+    "psutil>=7.0.0",
 ]

@@ -1,16 +1,13 @@
 import os
-from dotenv import load_dotenv
-from utils.env_setup import setup_env_variables
-from datetime import datetime  # Add datetime import at the top
-
-# Setup environment variables with defaults if needed
-setup_env_variables()
-
 import logging
 import random
 import re
+from dotenv import load_dotenv
+from utils.env_setup import setup_env_variables
 from datetime import datetime, timedelta
-from flask import Flask, render_template, request, jsonify, send_file, url_for, send_from_directory, flash, redirect
+import psutil
+from functools import wraps
+from flask import Flask, render_template, request, jsonify, send_file, url_for, send_from_directory, flash, redirect, abort
 from werkzeug.utils import secure_filename
 from flask_migrate import Migrate
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
@@ -52,11 +49,6 @@ app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 app.config['WTF_CSRF_ENABLED'] = True  # Enable CSRF protection
 
-# Add context processor for datetime
-@app.context_processor
-def inject_now():
-    return {'now': datetime.utcnow()}
-
 # Initialize Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -66,6 +58,60 @@ login_manager.login_message = 'Please log in to access this page.'
 @login_manager.user_loader
 def load_user(id):
     return User.query.get(int(id))
+
+# Add admin required decorator after the login_manager setup
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.is_admin:
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated_function
+
+# Add this new route before the app.context_processor
+def get_system_stats():
+    """Get system resource usage statistics"""
+    cpu_percent = psutil.cpu_percent()
+    memory = psutil.virtual_memory()
+    disk = psutil.disk_usage('/')
+
+    # GPU stats - return 0 if not available
+    gpu_percent = 0
+    try:
+        import GPUtil
+        gpus = GPUtil.getGPUs()
+        if gpus:
+            gpu_percent = gpus[0].load * 100
+    except:
+        pass
+
+    return {
+        'cpu_percent': cpu_percent,
+        'memory_percent': memory.percent,
+        'disk_percent': disk.percent,
+        'gpu_percent': gpu_percent
+    }
+
+
+# Add this new route after the about route
+@app.route('/admin')
+@login_required
+@admin_required
+def admin_dashboard():
+    # Get system stats
+    stats = get_system_stats()
+
+    # Get all projects with user information
+    projects = Project.query.order_by(Project.created_at.desc()).all()
+
+    return render_template('admin/dashboard.html', 
+                         projects=projects,
+                         **stats)
+
+# Add context processor for datetime
+@app.context_processor
+def inject_now():
+    return {'now': datetime.utcnow()}
 
 # Create required directories with proper error handling
 for directory in ['uploads', 'frames', 'videos', 'processed_data', 'previews']:
@@ -242,6 +288,7 @@ def delete_account():
         else:
             flash('Incorrect password')
     return redirect(url_for('profile'))
+
 
 
 @app.route('/')
