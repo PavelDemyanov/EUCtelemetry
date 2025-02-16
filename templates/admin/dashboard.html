@@ -4,7 +4,6 @@
 <div class="container py-4">
     <h1 class="mb-4">Admin Dashboard</h1>
 
-    <!-- System Monitoring -->
     <div class="card mb-4">
         <div class="card-header">
             <h2 class="h5 mb-0">System Resources</h2>
@@ -12,53 +11,65 @@
         <div class="card-body">
             <div class="row">
                 <div class="col-md-3">
-                    <h6>CPU Usage</h6>
-                    <div class="progress mb-2">
-                        <div class="progress-bar" role="progressbar" style="width: {{ cpu_percent }}%">
-                            {{ cpu_percent }}%
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="" id="cpu-checkbox" checked>
+                        <label class="form-check-label" for="cpu-checkbox">
+                            CPU Usage
+                        </label>
+                        <div class="progress mb-2">
+                            <div class="progress-bar bg-primary" role="progressbar" style="width: {{ cpu_percent }}%">
+                                {{ cpu_percent }}%
+                            </div>
                         </div>
-                    </div>
-                    <div class="chart-container" style="position: relative; height: 200px;">
-                        <canvas id="cpu-chart"></canvas>
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <h6>Memory Usage</h6>
-                    <div class="progress mb-2">
-                        <div class="progress-bar" role="progressbar" style="width: {{ memory_percent }}%">
-                            {{ memory_percent }}%
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="" id="memory-checkbox" checked>
+                        <label class="form-check-label" for="memory-checkbox">
+                            Memory Usage
+                        </label>
+                        <div class="progress mb-2">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: {{ memory_percent }}%">
+                                {{ memory_percent }}%
+                            </div>
                         </div>
-                    </div>
-                    <div class="chart-container" style="position: relative; height: 200px;">
-                        <canvas id="memory-chart"></canvas>
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <h6>Disk Usage</h6>
-                    <div class="progress mb-2">
-                        <div class="progress-bar" role="progressbar" style="width: {{ disk_percent }}%">
-                            {{ disk_percent }}%
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="" id="disk-checkbox" checked>
+                        <label class="form-check-label" for="disk-checkbox">
+                            Disk Usage
+                        </label>
+                        <div class="progress mb-2">
+                            <div class="progress-bar bg-warning" role="progressbar" style="width: {{ disk_percent }}%">
+                                {{ disk_percent }}%
+                            </div>
                         </div>
-                    </div>
-                    <div class="chart-container" style="position: relative; height: 200px;">
-                        <canvas id="disk-chart"></canvas>
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <h6>GPU Usage</h6>
-                    <div class="progress mb-2">
-                        <div class="progress-bar" role="progressbar" style="width: {{ gpu_percent|default(0) }}%">
-                            {{ gpu_percent|default(0) }}%
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="" id="gpu-checkbox" checked>
+                        <label class="form-check-label" for="gpu-checkbox">
+                            GPU Usage
+                        </label>
+                        <div class="progress mb-2">
+                            <div class="progress-bar bg-danger" role="progressbar" style="width: {{ gpu_percent|default(0) }}%">
+                                {{ gpu_percent|default(0) }}%
+                            </div>
                         </div>
-                    </div>
-                    <div class="chart-container" style="position: relative; height: 200px;">
-                        <canvas id="gpu-chart"></canvas>
                     </div>
                 </div>
             </div>
+            <div class="chart-container" style="position: relative; height: 300px;">
+                <canvas id="resources-chart"></canvas>
+            </div>
             <!-- Time Range Selector -->
             <div class="btn-group mt-3">
-                <button type="button" class="btn btn-outline-primary active" data-range="day">1 день</button>
+                <button type="button" class="btn btn-outline-primary active" data-range="hour">1 час</button>
+                <button type="button" class="btn btn-outline-primary" data-range="day">1 день</button>
                 <button type="button" class="btn btn-outline-primary" data-range="week">Неделя</button>
                 <button type="button" class="btn btn-outline-primary" data-range="month">Месяц</button>
                 <button type="button" class="btn btn-outline-primary" data-range="year">Год</button>
@@ -184,48 +195,31 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const charts = {};
-    const resources = ['cpu', 'memory', 'disk', 'gpu'];
-    let currentRange = 'day';
+    let currentRange = 'hour';
+    let chart = null;
+    const resources = [
+        { id: 'cpu', color: 'rgb(13, 110, 253)', checked: true },
+        { id: 'memory', color: 'rgb(25, 135, 84)', checked: true },
+        { id: 'disk', color: 'rgb(255, 193, 7)', checked: true },
+        { id: 'gpu', color: 'rgb(220, 53, 69)', checked: true }
+    ];
 
-    // Initialize all charts
-    resources.forEach(resource => {
-        const ctx = document.getElementById(`${resource}-chart`);
-        charts[resource] = createChart(ctx, resource);
-        updateChart(resource, 'day');
-    });
-
-    // Setup click handlers for time range buttons
-    document.querySelectorAll('.btn-group button').forEach(button => {
-        button.addEventListener('click', function() {
-            const range = this.dataset.range;
-            currentRange = range;
-
-            document.querySelectorAll('.btn-group button').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            this.classList.add('active');
-
-            resources.forEach(resource => {
-                updateChart(resource, range);
-            });
-        });
-    });
-
-    function createChart(ctx, resource) {
+    function createChart() {
+        const ctx = document.getElementById('resources-chart');
         return new Chart(ctx, {
             type: 'line',
             data: {
                 labels: [],
-                datasets: [{
-                    label: `${resource.toUpperCase()} Usage (%)`,
+                datasets: resources.map(resource => ({
+                    label: `${resource.id.toUpperCase()} Usage (%)`,
                     data: [],
-                    borderColor: 'rgb(75, 192, 192)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: resource.color,
+                    backgroundColor: resource.color.replace('rgb', 'rgba').replace(')', ', 0.2)'),
                     borderWidth: 2,
                     fill: true,
-                    tension: 0.4
-                }]
+                    tension: 0.4,
+                    hidden: !resource.checked
+                }))
             },
             options: {
                 responsive: true,
@@ -266,20 +260,47 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    function updateChart(resource, timeRange) {
-        const labels = getLabelsForTimeRange(timeRange);
-        const data = Array.from({length: labels.length}, () => Math.random() * 100);
+    // Initialize chart
+    chart = createChart();
 
-        charts[resource].data.labels = labels;
-        charts[resource].data.datasets[0].data = data;
-        charts[resource].update();
-    }
+    // Setup checkbox handlers
+    resources.forEach(resource => {
+        const checkbox = document.getElementById(`${resource.id}-checkbox`);
+        checkbox.addEventListener('change', function() {
+            resource.checked = this.checked;
+            const dataset = chart.data.datasets.find(ds => ds.label.toLowerCase().startsWith(resource.id));
+            if (dataset) {
+                dataset.hidden = !this.checked;
+                chart.update();
+            }
+        });
+    });
+
+    // Setup time range buttons
+    document.querySelectorAll('.btn-group button').forEach(button => {
+        button.addEventListener('click', function() {
+            const range = this.dataset.range;
+            currentRange = range;
+
+            document.querySelectorAll('.btn-group button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            this.classList.add('active');
+
+            updateChart();
+        });
+    });
 
     function getLabelsForTimeRange(range) {
         const labels = [];
         const now = new Date();
 
         switch(range) {
+            case 'hour':
+                for(let i = 0; i < 60; i++) {
+                    labels.push(`${now.getHours()}:${String(i).padStart(2, '0')}`);
+                }
+                break;
             case 'day':
                 for(let i = 0; i < 24; i++) {
                     labels.push(`${i}:00`);
@@ -307,6 +328,41 @@ document.addEventListener('DOMContentLoaded', function() {
                 break;
         }
         return labels;
+    }
+
+    function updateChart() {
+        const labels = getLabelsForTimeRange(currentRange);
+        chart.data.labels = labels;
+
+        resources.forEach((resource, index) => {
+            chart.data.datasets[index].data = Array.from(
+                { length: labels.length }, 
+                () => Math.random() * 100
+            );
+        });
+
+        chart.update();
+    }
+
+    // Update data periodically
+    function updateData() {
+        fetch('/admin/stats')
+            .then(response => response.json())
+            .then(stats => {
+                // Update progress bars
+                resources.forEach(resource => {
+                    const progressBar = document.querySelector(`#${resource.id}-checkbox`)
+                        .closest('.form-check')
+                        .querySelector('.progress-bar');
+                    const value = stats[`${resource.id}_percent`];
+                    progressBar.style.width = `${value}%`;
+                    progressBar.textContent = `${value}%`;
+                });
+
+                updateChart();
+            });
+
+        updateLists();
     }
 
     // Update users table
@@ -427,31 +483,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Периодическое обновление данных
-    function updateData() {
-        // Обновление статистики
-        fetch('/admin/stats')
-            .then(response => response.json())
-            .then(stats => {
-                // Обновляем прогресс-бары
-                document.querySelectorAll('.progress-bar').forEach(bar => {
-                    const resource = bar.closest('.col-md-3').querySelector('h6').textContent.toLowerCase().replace(' usage', '');
-                    const value = stats[`${resource}_percent`];
-                    bar.style.width = `${value}%`;
-                    bar.textContent = `${value}%`;
-                });
-
-                // Обновляем графики
-                resources.forEach(resource => {
-                    updateChart(resource, currentRange);
-                });
-            });
-
-        // Обновление списков
-        updateLists();
-    }
-
-    // Функция обновления списков
+    // Function to update lists
     function updateLists(userPage = null, projectPage = null) {
         const searchParams = new URLSearchParams();
         if (userPage) searchParams.append('user_page', userPage);
@@ -465,10 +497,12 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
 
-    // Обновляем данные каждые 5 секунд
+
+    // Update data every 5 seconds
     setInterval(updateData, 5000);
 
-    // Initial load of lists
+    // Initial updates
+    updateData();
     updateLists();
 });
 </script>
