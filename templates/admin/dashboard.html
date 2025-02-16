@@ -210,6 +210,17 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
+    // Get user's timezone
+    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const userLocale = navigator.language || 'en-US';
+
+    function formatTimeInUserTimezone(date, format = {}) {
+        return new Intl.DateTimeFormat(userLocale, {
+            timeZone: userTimezone,
+            ...format
+        }).format(date);
+    }
+
     // Initialize all charts
     resources.forEach(resource => {
         const ctx = document.getElementById(`${resource}-chart`);
@@ -295,15 +306,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    function updateChart(resource, timeRange) {
-        const labels = getLabelsForTimeRange(timeRange);
-        const data = Array.from({length: labels.length}, () => Math.random() * 100);
-
-        charts[resource].data.labels = labels;
-        charts[resource].data.datasets[0].data = data;
-        charts[resource].update();
-    }
-
     function getLabelsForTimeRange(range) {
         const labels = [];
         const now = new Date();
@@ -311,31 +313,52 @@ document.addEventListener('DOMContentLoaded', function() {
         switch(range) {
             case 'day':
                 for(let i = 0; i < 24; i++) {
-                    labels.push(`${i}:00`);
+                    const date = new Date(now);
+                    date.setHours(i, 0, 0, 0);
+                    labels.push(formatTimeInUserTimezone(date, {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    }));
                 }
                 break;
             case 'week':
                 for(let i = 6; i >= 0; i--) {
                     const date = new Date(now);
                     date.setDate(date.getDate() - i);
-                    labels.push(date.toLocaleDateString('ru-RU', { weekday: 'short' }));
+                    labels.push(formatTimeInUserTimezone(date, {
+                        weekday: 'short'
+                    }));
                 }
                 break;
             case 'month':
                 for(let i = 29; i >= 0; i--) {
                     const date = new Date(now);
                     date.setDate(date.getDate() - i);
-                    labels.push(date.getDate());
+                    labels.push(formatTimeInUserTimezone(date, {
+                        day: 'numeric',
+                        month: 'short'
+                    }));
                 }
                 break;
             case 'year':
                 for(let i = 0; i < 12; i++) {
                     const date = new Date(now.getFullYear(), i, 1);
-                    labels.push(date.toLocaleDateString('ru-RU', { month: 'short' }));
+                    labels.push(formatTimeInUserTimezone(date, {
+                        month: 'short'
+                    }));
                 }
                 break;
         }
         return labels;
+    }
+
+    function updateChart(resource, timeRange) {
+        const labels = getLabelsForTimeRange(timeRange);
+        const data = Array.from({length: labels.length}, () => Math.random() * 100);
+
+        charts[resource].data.labels = labels;
+        charts[resource].data.datasets[0].data = data;
+        charts[resource].update();
     }
 
     // Update users table
