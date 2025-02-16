@@ -200,6 +200,12 @@ document.addEventListener('DOMContentLoaded', function() {
         { id: 'gpu', color: 'rgb(163, 66, 66)', checked: true }
     ];
 
+    // Store historical data
+    let historicalData = {};
+    resources.forEach(resource => {
+        historicalData[resource.id] = new Map();
+    });
+
     function createChart() {
         const ctx = document.getElementById('resources-chart');
         return new Chart(ctx, {
@@ -287,6 +293,24 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    function getTimestamp(range, index) {
+        const now = new Date();
+        switch(range) {
+            case 'hour':
+                const minutes = now.getMinutes();
+                return new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), index).getTime();
+            case 'day':
+                return new Date(now.getFullYear(), now.getMonth(), now.getDate(), index).getTime();
+            case 'week':
+                const weekDay = now.getDate() - now.getDay() + index;
+                return new Date(now.getFullYear(), now.getMonth(), weekDay).getTime();
+            case 'month':
+                return new Date(now.getFullYear(), now.getMonth(), index + 1).getTime();
+            case 'year':
+                return new Date(now.getFullYear(), index, 1).getTime();
+        }
+    }
+
     function getLabelsForTimeRange(range) {
         const labels = [];
         const now = new Date();
@@ -303,17 +327,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 break;
             case 'week':
-                for(let i = 6; i >= 0; i--) {
+                for(let i = 0; i < 7; i++) {
                     const date = new Date(now);
-                    date.setDate(date.getDate() - i);
+                    date.setDate(date.getDate() - now.getDay() + i);
                     labels.push(date.toLocaleDateString('ru-RU', { weekday: 'short' }));
                 }
                 break;
             case 'month':
-                for(let i = 29; i >= 0; i--) {
-                    const date = new Date(now);
-                    date.setDate(date.getDate() - i);
-                    labels.push(date.getDate());
+                for(let i = 1; i <= 30; i++) {
+                    labels.push(i);
                 }
                 break;
             case 'year':
@@ -330,11 +352,33 @@ document.addEventListener('DOMContentLoaded', function() {
         const labels = getLabelsForTimeRange(currentRange);
         chart.data.labels = labels;
 
+        // Get current timestamp for comparison
+        const now = new Date();
+        const currentMinute = now.getMinutes();
+        const currentHour = now.getHours();
+        const currentDay = now.getDate();
+        const currentMonth = now.getMonth();
+
         resources.forEach((resource, index) => {
-            chart.data.datasets[index].data = Array.from(
-                { length: labels.length }, 
-                () => Math.random() * 100
-            );
+            const data = [];
+            for(let i = 0; i < labels.length; i++) {
+                const timestamp = getTimestamp(currentRange, i);
+
+                // Only generate new random data for current time points
+                if (!historicalData[resource.id].has(timestamp)) {
+                    if (
+                        (currentRange === 'hour' && i <= currentMinute) ||
+                        (currentRange === 'day' && i <= currentHour) ||
+                        (currentRange === 'week' && i <= now.getDay()) ||
+                        (currentRange === 'month' && i < currentDay) ||
+                        (currentRange === 'year' && i <= currentMonth)
+                    ) {
+                        historicalData[resource.id].set(timestamp, Math.random() * 100);
+                    }
+                }
+                data.push(historicalData[resource.id].get(timestamp) || null);
+            }
+            chart.data.datasets[index].data = data;
         });
 
         chart.update();
@@ -352,13 +396,32 @@ document.addEventListener('DOMContentLoaded', function() {
                         .querySelector('.progress-bar');
                     const value = stats[`${resource.id}_percent`];
                     progressBar.style.width = `${value}%`;
-                    progressBar.textContent = `${value}%`;
+                    progressBar.textContent = `${Math.round(value)}%`;
+
+                    // Update current point in historical data
+                    const now = new Date();
+                    const timestamp = now.getTime();
+                    historicalData[resource.id].set(timestamp, value);
                 });
 
                 updateChart();
             });
 
         updateLists();
+    }
+
+    // Function to update lists
+    function updateLists(userPage = null, projectPage = null) {
+        const searchParams = new URLSearchParams();
+        if (userPage) searchParams.append('user_page', userPage);
+        if (projectPage) searchParams.append('project_page', projectPage);
+
+        fetch(`/admin/lists?${searchParams.toString()}`)
+            .then(response => response.json())
+            .then(data => {
+                updateUsersTable(data.users);
+                updateProjectsTable(data.projects);
+            });
     }
 
     // Update users table
@@ -380,7 +443,6 @@ document.addEventListener('DOMContentLoaded', function() {
             </tr>
         `).join('');
 
-        // Update pagination
         updatePagination('users', users);
     }
 
@@ -411,14 +473,13 @@ document.addEventListener('DOMContentLoaded', function() {
                              aria-valuenow="${project.progress}" 
                              aria-valuemin="0" 
                              aria-valuemax="100">
-                            ${project.progress}%
+                            ${Math.round(project.progress)}%
                         </div>
                     </div>
                 </td>
             </tr>
         `).join('');
 
-        // Update pagination
         updatePagination('projects', projects);
     }
 
@@ -480,21 +541,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
-
-    // Function to update lists
-    function updateLists(userPage = null, projectPage = null) {
-        const searchParams = new URLSearchParams();
-        if (userPage) searchParams.append('user_page', userPage);
-        if (projectPage) searchParams.append('project_page', projectPage);
-
-        fetch(`/admin/lists?${searchParams.toString()}`)
-            .then(response => response.json())
-            .then(data => {
-                updateUsersTable(data.users);
-                updateProjectsTable(data.projects);
-            });
-    }
-
 
     // Update data every 5 seconds
     setInterval(updateData, 5000);
