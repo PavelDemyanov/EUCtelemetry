@@ -93,7 +93,6 @@ def get_system_stats():
     }
 
 
-# Add this new route after the about route
 @app.route('/admin')
 @login_required
 @admin_required
@@ -101,11 +100,21 @@ def admin_dashboard():
     # Get system stats
     stats = get_system_stats()
 
-    # Get all projects with user information
-    projects = Project.query.order_by(Project.created_at.desc()).all()
+    # Get paginated projects
+    page = request.args.get('page', 1, type=int)
+    projects = Project.query.order_by(Project.created_at.desc())\
+        .paginate(page=page, per_page=20, error_out=False)
+
+    # Get recent users (registered in the last 30 days)
+    today = datetime.utcnow().date()
+    users = User.query.filter(User.created_at >= today - timedelta(days=30))\
+        .order_by(User.created_at.desc())\
+        .all()
 
     return render_template('admin/dashboard.html', 
                          projects=projects,
+                         users=users,
+                         today=today,
                          **stats)
 
 # Add context processor for datetime
@@ -288,7 +297,6 @@ def delete_account():
         else:
             flash('Incorrect password')
     return redirect(url_for('profile'))
-
 
 
 @app.route('/')

@@ -13,36 +13,89 @@
             <div class="row">
                 <div class="col-md-3">
                     <h6>CPU Usage</h6>
-                    <div class="progress mb-2">
+                    <div class="progress mb-2 resource-progress" data-resource="cpu" role="button">
                         <div class="progress-bar" role="progressbar" style="width: {{ cpu_percent }}%">
                             {{ cpu_percent }}%
                         </div>
                     </div>
+                    <div id="cpu-chart" class="resource-chart d-none"></div>
                 </div>
                 <div class="col-md-3">
                     <h6>Memory Usage</h6>
-                    <div class="progress mb-2">
+                    <div class="progress mb-2 resource-progress" data-resource="memory" role="button">
                         <div class="progress-bar" role="progressbar" style="width: {{ memory_percent }}%">
                             {{ memory_percent }}%
                         </div>
                     </div>
+                    <div id="memory-chart" class="resource-chart d-none"></div>
                 </div>
                 <div class="col-md-3">
                     <h6>Disk Usage</h6>
-                    <div class="progress mb-2">
+                    <div class="progress mb-2 resource-progress" data-resource="disk" role="button">
                         <div class="progress-bar" role="progressbar" style="width: {{ disk_percent }}%">
                             {{ disk_percent }}%
                         </div>
                     </div>
+                    <div id="disk-chart" class="resource-chart d-none"></div>
                 </div>
                 <div class="col-md-3">
                     <h6>GPU Usage</h6>
-                    <div class="progress mb-2">
+                    <div class="progress mb-2 resource-progress" data-resource="gpu" role="button">
                         <div class="progress-bar" role="progressbar" style="width: {{ gpu_percent|default(0) }}%">
                             {{ gpu_percent|default(0) }}%
                         </div>
                     </div>
+                    <div id="gpu-chart" class="resource-chart d-none"></div>
                 </div>
+            </div>
+            <!-- Time Range Selector -->
+            <div class="btn-group mt-3 d-none" id="time-range-selector">
+                <button type="button" class="btn btn-outline-primary" data-range="day">1 день</button>
+                <button type="button" class="btn btn-outline-primary" data-range="week">Неделя</button>
+                <button type="button" class="btn btn-outline-primary" data-range="month">Месяц</button>
+                <button type="button" class="btn btn-outline-primary" data-range="year">Год</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Users -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2 class="h5 mb-0">Recent Users</h2>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Registration Date</th>
+                            <th>Email Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>
+                                {{ user.name }}
+                                {% if user.created_at.date() == today %}
+                                <span class="badge bg-success">New User</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ user.email }}</td>
+                            <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                {% if user.is_email_confirmed %}
+                                <span class="badge bg-success">Confirmed</span>
+                                {% else %}
+                                <span class="badge bg-warning">Pending</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -67,7 +120,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for project in projects %}
+                        {% for project in projects.items %}
                         <tr>
                             <td>{{ project.id }}</td>
                             <td>{{ project.user.name }}</td>
@@ -98,7 +151,163 @@
                     </tbody>
                 </table>
             </div>
+            <!-- Pagination -->
+            {% if projects.pages > 1 %}
+            <nav aria-label="Project pagination" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if projects.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admin_dashboard', page=projects.prev_num) }}">&laquo;</a>
+                    </li>
+                    {% endif %}
+
+                    {% for page_num in projects.iter_pages(left_edge=2, left_current=2, right_current=3, right_edge=2) %}
+                        {% if page_num %}
+                            <li class="page-item {% if page_num == projects.page %}active{% endif %}">
+                                <a class="page-link" href="{{ url_for('admin_dashboard', page=page_num) }}">{{ page_num }}</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if projects.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admin_dashboard', page=projects.next_num) }}">&raquo;</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
         </div>
     </div>
 </div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let currentChart = null;
+    let currentResource = null;
+
+    // Hide all charts initially
+    document.querySelectorAll('.resource-chart').forEach(chart => {
+        chart.style.height = '200px';
+    });
+
+    // Setup click handlers for progress bars
+    document.querySelectorAll('.resource-progress').forEach(progress => {
+        progress.addEventListener('click', function() {
+            const resource = this.dataset.resource;
+            const chartId = `${resource}-chart`;
+            const timeRangeSelector = document.getElementById('time-range-selector');
+
+            // Hide all charts first
+            document.querySelectorAll('.resource-chart').forEach(chart => {
+                chart.classList.add('d-none');
+            });
+
+            // Show/hide clicked chart
+            const chartElement = document.getElementById(chartId);
+            if (chartElement.classList.contains('d-none')) {
+                chartElement.classList.remove('d-none');
+                timeRangeSelector.classList.remove('d-none');
+                currentResource = resource;
+                updateChart('day'); // Default to daily view
+            } else {
+                chartElement.classList.add('d-none');
+                timeRangeSelector.classList.add('d-none');
+                currentResource = null;
+            }
+        });
+    });
+
+    // Setup click handlers for time range buttons
+    document.querySelectorAll('#time-range-selector button').forEach(button => {
+        button.addEventListener('click', function() {
+            const range = this.dataset.range;
+            document.querySelectorAll('#time-range-selector button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            this.classList.add('active');
+            if (currentResource) {
+                updateChart(range);
+            }
+        });
+    });
+
+    function updateChart(timeRange) {
+        // Here we'll add the actual data fetching and chart updating logic
+        // For now, we'll just show a dummy chart
+        const ctx = document.getElementById(`${currentResource}-chart`);
+
+        if (currentChart) {
+            currentChart.destroy();
+        }
+
+        // Example data - in real implementation, this would come from an API
+        const labels = getLabelsForTimeRange(timeRange);
+        const data = {
+            labels: labels,
+            datasets: [{
+                label: `${currentResource.toUpperCase()} Usage`,
+                data: Array.from({length: labels.length}, () => Math.random() * 100),
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1
+            }]
+        };
+
+        currentChart = new Chart(ctx, {
+            type: 'line',
+            data: data,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100
+                    }
+                }
+            }
+        });
+    }
+
+    function getLabelsForTimeRange(range) {
+        const labels = [];
+        const now = new Date();
+
+        switch(range) {
+            case 'day':
+                for(let i = 0; i < 24; i++) {
+                    labels.push(`${i}:00`);
+                }
+                break;
+            case 'week':
+                for(let i = 6; i >= 0; i--) {
+                    const date = new Date(now);
+                    date.setDate(date.getDate() - i);
+                    labels.push(date.toLocaleDateString('ru-RU', { weekday: 'short' }));
+                }
+                break;
+            case 'month':
+                for(let i = 29; i >= 0; i--) {
+                    const date = new Date(now);
+                    date.setDate(date.getDate() - i);
+                    labels.push(date.getDate());
+                }
+                break;
+            case 'year':
+                for(let i = 0; i < 12; i++) {
+                    const date = new Date(now.getFullYear(), i, 1);
+                    labels.push(date.toLocaleDateString('ru-RU', { month: 'short' }));
+                }
+                break;
+        }
+        return labels;
+    }
+});
+</script>
 {% endblock %}
