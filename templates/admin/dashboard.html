@@ -18,7 +18,9 @@
                             {{ cpu_percent }}%
                         </div>
                     </div>
-                    <div id="cpu-chart" class="resource-chart d-none"></div>
+                    <div class="chart-container" style="position: relative; height: 200px; display: none;">
+                        <canvas id="cpu-chart"></canvas>
+                    </div>
                 </div>
                 <div class="col-md-3">
                     <h6>Memory Usage</h6>
@@ -27,7 +29,9 @@
                             {{ memory_percent }}%
                         </div>
                     </div>
-                    <div id="memory-chart" class="resource-chart d-none"></div>
+                    <div class="chart-container" style="position: relative; height: 200px; display: none;">
+                        <canvas id="memory-chart"></canvas>
+                    </div>
                 </div>
                 <div class="col-md-3">
                     <h6>Disk Usage</h6>
@@ -36,7 +40,9 @@
                             {{ disk_percent }}%
                         </div>
                     </div>
-                    <div id="disk-chart" class="resource-chart d-none"></div>
+                    <div class="chart-container" style="position: relative; height: 200px; display: none;">
+                        <canvas id="disk-chart"></canvas>
+                    </div>
                 </div>
                 <div class="col-md-3">
                     <h6>GPU Usage</h6>
@@ -45,11 +51,13 @@
                             {{ gpu_percent|default(0) }}%
                         </div>
                     </div>
-                    <div id="gpu-chart" class="resource-chart d-none"></div>
+                    <div class="chart-container" style="position: relative; height: 200px; display: none;">
+                        <canvas id="gpu-chart"></canvas>
+                    </div>
                 </div>
             </div>
             <!-- Time Range Selector -->
-            <div class="btn-group mt-3 d-none" id="time-range-selector">
+            <div class="btn-group mt-3" id="time-range-selector" style="display: none;">
                 <button type="button" class="btn btn-outline-primary" data-range="day">1 день</button>
                 <button type="button" class="btn btn-outline-primary" data-range="week">Неделя</button>
                 <button type="button" class="btn btn-outline-primary" data-range="month">Месяц</button>
@@ -182,7 +190,6 @@
         </div>
     </div>
 </div>
-
 {% endblock %}
 
 {% block scripts %}
@@ -190,37 +197,44 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     let currentChart = null;
-    let currentResource = null;
-
-    // Hide all charts initially
-    document.querySelectorAll('.resource-chart').forEach(chart => {
-        chart.style.height = '200px';
-    });
+    let currentChartContainer = null;
 
     // Setup click handlers for progress bars
     document.querySelectorAll('.resource-progress').forEach(progress => {
         progress.addEventListener('click', function() {
             const resource = this.dataset.resource;
-            const chartId = `${resource}-chart`;
+            const chartContainer = this.nextElementSibling;
             const timeRangeSelector = document.getElementById('time-range-selector');
 
-            // Hide all charts first
-            document.querySelectorAll('.resource-chart').forEach(chart => {
-                chart.classList.add('d-none');
+            // If clicking the same progress bar again, hide the chart
+            if (chartContainer.style.display === 'block') {
+                chartContainer.style.display = 'none';
+                timeRangeSelector.style.display = 'none';
+                if (currentChart) {
+                    currentChart.destroy();
+                    currentChart = null;
+                }
+                currentChartContainer = null;
+                return;
+            }
+
+            // Hide all other charts
+            document.querySelectorAll('.chart-container').forEach(container => {
+                container.style.display = 'none';
             });
 
-            // Show/hide clicked chart
-            const chartElement = document.getElementById(chartId);
-            if (chartElement.classList.contains('d-none')) {
-                chartElement.classList.remove('d-none');
-                timeRangeSelector.classList.remove('d-none');
-                currentResource = resource;
-                updateChart('day'); // Default to daily view
-            } else {
-                chartElement.classList.add('d-none');
-                timeRangeSelector.classList.add('d-none');
-                currentResource = null;
+            // Destroy previous chart if exists
+            if (currentChart) {
+                currentChart.destroy();
             }
+
+            // Show current chart container
+            chartContainer.style.display = 'block';
+            currentChartContainer = chartContainer;
+            timeRangeSelector.style.display = 'flex';
+
+            // Create new chart
+            updateChart(resource, 'day');
         });
     });
 
@@ -228,34 +242,36 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('#time-range-selector button').forEach(button => {
         button.addEventListener('click', function() {
             const range = this.dataset.range;
+            const resource = document.querySelector('.chart-container[style*="display: block"]')
+                            .previousElementSibling.dataset.resource;
+
             document.querySelectorAll('#time-range-selector button').forEach(btn => {
                 btn.classList.remove('active');
             });
             this.classList.add('active');
-            if (currentResource) {
-                updateChart(range);
-            }
+
+            updateChart(resource, range);
         });
     });
 
-    function updateChart(timeRange) {
-        // Here we'll add the actual data fetching and chart updating logic
-        // For now, we'll just show a dummy chart
-        const ctx = document.getElementById(`${currentResource}-chart`);
+    function updateChart(resource, timeRange) {
+        const ctx = document.getElementById(`${resource}-chart`);
 
         if (currentChart) {
             currentChart.destroy();
         }
 
-        // Example data - in real implementation, this would come from an API
         const labels = getLabelsForTimeRange(timeRange);
         const data = {
             labels: labels,
             datasets: [{
-                label: `${currentResource.toUpperCase()} Usage`,
+                label: `${resource.toUpperCase()} Usage (%)`,
                 data: Array.from({length: labels.length}, () => Math.random() * 100),
                 borderColor: 'rgb(75, 192, 192)',
-                tension: 0.1
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4
             }]
         };
 
@@ -265,10 +281,36 @@ document.addEventListener('DOMContentLoaded', function() {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                plugins: {
+                    tooltip: {
+                        enabled: true
+                    },
+                    legend: {
+                        position: 'top',
+                    }
+                },
                 scales: {
                     y: {
                         beginAtZero: true,
-                        max: 100
+                        max: 100,
+                        ticks: {
+                            stepSize: 20,
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
                     }
                 }
             }
