@@ -17,7 +17,7 @@
                             CPU Usage
                         </label>
                         <div class="progress mb-2">
-                            <div class="progress-bar bg-primary" role="progressbar" style="width: {{ cpu_percent }}%">
+                            <div class="progress-bar" style="background-color: #4a6baf" role="progressbar" style="width: {{ cpu_percent }}%">
                                 {{ cpu_percent }}%
                             </div>
                         </div>
@@ -30,7 +30,7 @@
                             Memory Usage
                         </label>
                         <div class="progress mb-2">
-                            <div class="progress-bar bg-success" role="progressbar" style="width: {{ memory_percent }}%">
+                            <div class="progress-bar" style="background-color: #3d8c5f" role="progressbar" style="width: {{ memory_percent }}%">
                                 {{ memory_percent }}%
                             </div>
                         </div>
@@ -43,7 +43,7 @@
                             Disk Usage
                         </label>
                         <div class="progress mb-2">
-                            <div class="progress-bar bg-warning" role="progressbar" style="width: {{ disk_percent }}%">
+                            <div class="progress-bar" style="background-color: #b3851d" role="progressbar" style="width: {{ disk_percent }}%">
                                 {{ disk_percent }}%
                             </div>
                         </div>
@@ -56,7 +56,7 @@
                             GPU Usage
                         </label>
                         <div class="progress mb-2">
-                            <div class="progress-bar bg-danger" role="progressbar" style="width: {{ gpu_percent|default(0) }}%">
+                            <div class="progress-bar" style="background-color: #a34242" role="progressbar" style="width: {{ gpu_percent|default(0) }}%">
                                 {{ gpu_percent|default(0) }}%
                             </div>
                         </div>
@@ -68,11 +68,11 @@
             </div>
             <!-- Time Range Selector -->
             <div class="btn-group mt-3">
-                <button type="button" class="btn btn-outline-primary active" data-range="hour">1 час</button>
-                <button type="button" class="btn btn-outline-primary" data-range="day">1 день</button>
-                <button type="button" class="btn btn-outline-primary" data-range="week">Неделя</button>
-                <button type="button" class="btn btn-outline-primary" data-range="month">Месяц</button>
-                <button type="button" class="btn btn-outline-primary" data-range="year">Год</button>
+                <button type="button" class="btn btn-outline-secondary active" data-range="hour">1 час</button>
+                <button type="button" class="btn btn-outline-secondary" data-range="day">1 день</button>
+                <button type="button" class="btn btn-outline-secondary" data-range="week">Неделя</button>
+                <button type="button" class="btn btn-outline-secondary" data-range="month">Месяц</button>
+                <button type="button" class="btn btn-outline-secondary" data-range="year">Год</button>
             </div>
         </div>
     </div>
@@ -99,16 +99,16 @@
                             <td>
                                 {{ user.name }}
                                 {% if user.created_at.date() == today %}
-                                <span class="badge bg-success">New User</span>
+                                <span class="badge" style="background-color: #3d8c5f">New User</span>
                                 {% endif %}
                             </td>
                             <td>{{ user.email }}</td>
                             <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
                             <td>
                                 {% if user.is_email_confirmed %}
-                                <span class="badge bg-success">Confirmed</span>
+                                <span class="badge" style="background-color: #3d8c5f">Confirmed</span>
                                 {% else %}
-                                <span class="badge bg-warning">Pending</span>
+                                <span class="badge" style="background-color: #b3851d">Pending</span>
                                 {% endif %}
                             </td>
                         </tr>
@@ -116,11 +116,9 @@
                     </tbody>
                 </table>
             </div>
-            <!-- Users Pagination -->
             {% if users.pages > 1 %}
             <nav aria-label="Users pagination" class="mt-4">
                 <ul class="pagination justify-content-center" id="users-pagination">
-                    <!-- Pagination items will be dynamically updated -->
                 </ul>
             </nav>
             {% endif %}
@@ -154,17 +152,17 @@
                             <td>{{ project.user.email }}</td>
                             <td>{{ project.name }}</td>
                             <td>
-                                <span class="badge {% if project.status == 'completed' %}bg-success
-                                              {% elif project.status == 'error' %}bg-danger
-                                              {% elif project.status == 'processing' %}bg-primary
-                                              {% else %}bg-secondary{% endif %}">
+                                <span class="badge" style="background-color: {% if project.status == 'completed' %}#3d8c5f
+                                              {% elif project.status == 'error' %}#a34242
+                                              {% elif project.status == 'processing' %}#4a6baf
+                                              {% else %}#6c757d{% endif %}">
                                     {{ project.status }}
                                 </span>
                             </td>
                             <td>{{ project.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
                             <td>
                                 <div class="progress">
-                                    <div class="progress-bar" role="progressbar" 
+                                    <div class="progress-bar" style="background-color: #4a6baf" role="progressbar" 
                                          style="width: {{ project.progress|int }}%"
                                          aria-valuenow="{{ project.progress|int }}" 
                                          aria-valuemin="0" 
@@ -178,11 +176,9 @@
                     </tbody>
                 </table>
             </div>
-            <!-- Projects Pagination -->
             {% if projects.pages > 1 %}
             <nav aria-label="Project pagination" class="mt-4">
                 <ul class="pagination justify-content-center" id="projects-pagination">
-                    <!-- Pagination items will be dynamically updated -->
                 </ul>
             </nav>
             {% endif %}
@@ -198,10 +194,10 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentRange = 'hour';
     let chart = null;
     const resources = [
-        { id: 'cpu', color: 'rgb(13, 110, 253)', checked: true },
-        { id: 'memory', color: 'rgb(25, 135, 84)', checked: true },
-        { id: 'disk', color: 'rgb(255, 193, 7)', checked: true },
-        { id: 'gpu', color: 'rgb(220, 53, 69)', checked: true }
+        { id: 'cpu', color: 'rgb(74, 107, 175)', checked: true },
+        { id: 'memory', color: 'rgb(61, 140, 95)', checked: true },
+        { id: 'disk', color: 'rgb(179, 133, 29)', checked: true },
+        { id: 'gpu', color: 'rgb(163, 66, 66)', checked: true }
     ];
 
     function createChart() {
@@ -372,14 +368,14 @@ document.addEventListener('DOMContentLoaded', function() {
             <tr>
                 <td>
                     ${user.name}
-                    ${user.is_new ? '<span class="badge bg-success">New User</span>' : ''}
+                    ${user.is_new ? '<span class="badge" style="background-color: #3d8c5f">New User</span>' : ''}
                 </td>
                 <td>${user.email}</td>
                 <td>${user.created_at}</td>
                 <td>
                     ${user.is_email_confirmed ? 
-                    '<span class="badge bg-success">Confirmed</span>' : 
-                    '<span class="badge bg-warning">Pending</span>'}
+                    '<span class="badge" style="background-color: #3d8c5f">Confirmed</span>' : 
+                    '<span class="badge" style="background-color: #b3851d">Pending</span>'}
                 </td>
             </tr>
         `).join('');
@@ -398,17 +394,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td>${project.user_email}</td>
                 <td>${project.name}</td>
                 <td>
-                    <span class="badge ${project.status === 'completed' ? 'bg-success' :
-                                      project.status === 'error' ? 'bg-danger' :
-                                      project.status === 'processing' ? 'bg-primary' :
-                                      'bg-secondary'}">
+                    <span class="badge" style="background-color: ${
+                        project.status === 'completed' ? '#3d8c5f' :
+                        project.status === 'error' ? '#a34242' :
+                        project.status === 'processing' ? '#4a6baf' :
+                        '#6c757d'
+                    }">
                         ${project.status}
                     </span>
                 </td>
                 <td>${project.created_at}</td>
                 <td>
                     <div class="progress">
-                        <div class="progress-bar" role="progressbar" 
+                        <div class="progress-bar" style="background-color: #4a6baf" role="progressbar" 
                              style="width: ${project.progress}%"
                              aria-valuenow="${project.progress}" 
                              aria-valuemin="0" 
