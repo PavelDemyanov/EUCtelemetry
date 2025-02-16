@@ -6,23 +6,25 @@
 
     <!-- System Monitoring -->
     <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="card-header">
             <h2 class="h5 mb-0">System Resources</h2>
-            <div class="form-check form-check-inline">
-                <input class="form-check-input" type="checkbox" id="cpuToggle" checked>
-                <label class="form-check-label" for="cpuToggle" style="color: rgb(255, 99, 132);">CPU</label>
-            </div>
-            <div class="form-check form-check-inline">
-                <input class="form-check-input" type="checkbox" id="memoryToggle" checked>
-                <label class="form-check-label" for="memoryToggle" style="color: rgb(75, 192, 192);">Memory</label>
-            </div>
-            <div class="form-check form-check-inline">
-                <input class="form-check-input" type="checkbox" id="diskToggle" checked>
-                <label class="form-check-label" for="diskToggle" style="color: rgb(153, 102, 255);">Disk</label>
-            </div>
-            <div class="form-check form-check-inline">
-                <input class="form-check-input" type="checkbox" id="gpuToggle" checked>
-                <label class="form-check-label" for="gpuToggle" style="color: rgb(255, 159, 64);">GPU</label>
+            <div class="mt-2">
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" id="cpuToggle" checked>
+                    <label class="form-check-label" for="cpuToggle" style="color: rgb(255, 99, 132);">CPU</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" id="memoryToggle" checked>
+                    <label class="form-check-label" for="memoryToggle" style="color: rgb(75, 192, 192);">Memory</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" id="diskToggle" checked>
+                    <label class="form-check-label" for="diskToggle" style="color: rgb(153, 102, 255);">Disk</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" id="gpuToggle" checked>
+                    <label class="form-check-label" for="gpuToggle" style="color: rgb(255, 159, 64);">GPU</label>
+                </div>
             </div>
         </div>
         <div class="card-body">
@@ -55,6 +57,7 @@
             </div>
             <!-- Time Range Selector -->
             <div class="btn-group mt-3">
+                <button type="button" class="btn btn-outline-primary" data-range="hour">1 час</button>
                 <button type="button" class="btn btn-outline-primary active" data-range="day">1 день</button>
                 <button type="button" class="btn btn-outline-primary" data-range="week">Неделя</button>
                 <button type="button" class="btn btn-outline-primary" data-range="month">Месяц</button>
@@ -296,6 +299,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const now = new Date();
 
         switch(range) {
+            case 'hour':
+                for(let i = 0; i < 60; i++) {
+                    labels.push(`${i}m`);
+                }
+                break;
             case 'day':
                 for(let i = 0; i < 24; i++) {
                     labels.push(`${i}:00`);
