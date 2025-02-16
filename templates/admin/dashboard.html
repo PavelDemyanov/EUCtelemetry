@@ -187,6 +187,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const charts = {};
     const resources = ['cpu', 'memory', 'disk', 'gpu'];
     let currentRange = 'day';
+    let currentUserPage = 1;
+    let currentProjectPage = 1;
 
     // Define colors for each resource
     const resourceColors = {
@@ -447,8 +449,16 @@ document.addEventListener('DOMContentLoaded', function() {
         nav.querySelectorAll('a.page-link').forEach(link => {
             link.addEventListener('click', function(e) {
                 e.preventDefault();
-                const page = this.dataset.page;
+                const page = parseInt(this.dataset.page);
                 const type = this.dataset.type;
+
+                // Update current page variables
+                if (type === 'users') {
+                    currentUserPage = page;
+                } else {
+                    currentProjectPage = page;
+                }
+
                 updateLists(type === 'users' ? page : null, type === 'projects' ? page : null);
             });
         });
@@ -474,8 +484,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             });
 
-        // Обновление списков
-        updateLists();
+        // Обновление списков с сохранением текущей страницы
+        updateLists(currentUserPage, currentProjectPage);
     }
 
     // Функция обновления списков
@@ -496,7 +506,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setInterval(updateData, 5000);
 
     // Initial load of lists
-    updateLists();
+    updateLists(currentUserPage, currentProjectPage);
 });
 </script>
 {% endblock %}
