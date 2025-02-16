@@ -188,6 +188,26 @@ document.addEventListener('DOMContentLoaded', function() {
     const resources = ['cpu', 'memory', 'disk', 'gpu'];
     let currentRange = 'day';
 
+    // Define colors for each resource
+    const resourceColors = {
+        cpu: {
+            border: 'rgb(65, 105, 225)',
+            background: 'rgba(65, 105, 225, 0.2)'
+        },
+        memory: {
+            border: 'rgb(50, 168, 82)',
+            background: 'rgba(50, 168, 82, 0.2)'
+        },
+        disk: {
+            border: 'rgb(147, 112, 219)',
+            background: 'rgba(147, 112, 219, 0.2)'
+        },
+        gpu: {
+            border: 'rgb(255, 140, 0)',
+            background: 'rgba(255, 140, 0, 0.2)'
+        }
+    };
+
     // Initialize all charts
     resources.forEach(resource => {
         const ctx = document.getElementById(`${resource}-chart`);
@@ -220,8 +240,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 datasets: [{
                     label: `${resource.toUpperCase()} Usage (%)`,
                     data: [],
-                    borderColor: 'rgb(75, 192, 192)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: resourceColors[resource].border,
+                    backgroundColor: resourceColors[resource].background,
                     borderWidth: 2,
                     fill: true,
                     tension: 0.4
@@ -240,6 +260,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     legend: {
                         position: 'top',
+                        labels: {
+                            color: 'rgba(255, 255, 255, 0.7)'
+                        }
                     }
                 },
                 scales: {
@@ -250,13 +273,17 @@ document.addEventListener('DOMContentLoaded', function() {
                             stepSize: 20,
                             callback: function(value) {
                                 return value + '%';
-                            }
+                            },
+                            color: 'rgba(255, 255, 255, 0.7)'
                         },
                         grid: {
                             color: 'rgba(255, 255, 255, 0.1)'
                         }
                     },
                     x: {
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.7)'
+                        },
                         grid: {
                             color: 'rgba(255, 255, 255, 0.1)'
                         }
@@ -414,7 +441,7 @@ document.addEventListener('DOMContentLoaded', function() {
             `);
         }
 
-        nav.innerHTML = pagination.join('');
+        nav.innerHTML = `<ul class="pagination justify-content-center">${pagination.join('')}</ul>`;
 
         // Add click handlers for pagination
         nav.querySelectorAll('a.page-link').forEach(link => {
