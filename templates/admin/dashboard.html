@@ -6,53 +6,50 @@
 
     <!-- System Monitoring -->
     <div class="card mb-4">
-        <div class="card-header">
+        <div class="card-header d-flex justify-content-between align-items-center">
             <h2 class="h5 mb-0">System Resources</h2>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" id="cpuToggle" checked>
+                <label class="form-check-label" for="cpuToggle" style="color: rgb(255, 99, 132);">CPU</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" id="memoryToggle" checked>
+                <label class="form-check-label" for="memoryToggle" style="color: rgb(75, 192, 192);">Memory</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" id="diskToggle" checked>
+                <label class="form-check-label" for="diskToggle" style="color: rgb(153, 102, 255);">Disk</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" id="gpuToggle" checked>
+                <label class="form-check-label" for="gpuToggle" style="color: rgb(255, 159, 64);">GPU</label>
+            </div>
         </div>
         <div class="card-body">
             <div class="row">
-                <div class="col-md-3">
-                    <h6>CPU Usage</h6>
-                    <div class="progress mb-2">
-                        <div class="progress-bar" role="progressbar" style="width: {{ cpu_percent }}%">
-                            {{ cpu_percent }}%
+                <div class="col-12">
+                    <div class="progress-indicators mb-3">
+                        <div class="d-flex justify-content-between">
+                            <div class="text-nowrap me-2">
+                                <span style="color: rgb(255, 99, 132)">CPU: </span>
+                                <span id="cpuValue">{{ cpu_percent }}%</span>
+                            </div>
+                            <div class="text-nowrap me-2">
+                                <span style="color: rgb(75, 192, 192)">Memory: </span>
+                                <span id="memoryValue">{{ memory_percent }}%</span>
+                            </div>
+                            <div class="text-nowrap me-2">
+                                <span style="color: rgb(153, 102, 255)">Disk: </span>
+                                <span id="diskValue">{{ disk_percent }}%</span>
+                            </div>
+                            <div class="text-nowrap">
+                                <span style="color: rgb(255, 159, 64)">GPU: </span>
+                                <span id="gpuValue">{{ gpu_percent|default(0) }}%</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="chart-container" style="position: relative; height: 200px;">
-                        <canvas id="cpu-chart"></canvas>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <h6>Memory Usage</h6>
-                    <div class="progress mb-2">
-                        <div class="progress-bar" role="progressbar" style="width: {{ memory_percent }}%">
-                            {{ memory_percent }}%
-                        </div>
-                    </div>
-                    <div class="chart-container" style="position: relative; height: 200px;">
-                        <canvas id="memory-chart"></canvas>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <h6>Disk Usage</h6>
-                    <div class="progress mb-2">
-                        <div class="progress-bar" role="progressbar" style="width: {{ disk_percent }}%">
-                            {{ disk_percent }}%
-                        </div>
-                    </div>
-                    <div class="chart-container" style="position: relative; height: 200px;">
-                        <canvas id="disk-chart"></canvas>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <h6>GPU Usage</h6>
-                    <div class="progress mb-2">
-                        <div class="progress-bar" role="progressbar" style="width: {{ gpu_percent|default(0) }}%">
-                            {{ gpu_percent|default(0) }}%
-                        </div>
-                    </div>
-                    <div class="chart-container" style="position: relative; height: 200px;">
-                        <canvas id="gpu-chart"></canvas>
+                    <div class="chart-container" style="position: relative; height: 400px;">
+                        <canvas id="resourcesChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -184,18 +181,102 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const charts = {};
-    const resources = ['cpu', 'memory', 'disk', 'gpu'];
     let currentRange = 'day';
+    let resourcesChart;
 
-    // Initialize all charts
-    resources.forEach(resource => {
-        const ctx = document.getElementById(`${resource}-chart`);
-        charts[resource] = createChart(ctx, resource);
-        updateChart(resource, 'day');
+    // Initialize chart
+    const ctx = document.getElementById('resourcesChart');
+    resourcesChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [
+                {
+                    label: 'CPU',
+                    data: [],
+                    borderColor: 'rgb(255, 99, 132)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                },
+                {
+                    label: 'Memory',
+                    data: [],
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                },
+                {
+                    label: 'Disk',
+                    data: [],
+                    borderColor: 'rgb(153, 102, 255)',
+                    backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                },
+                {
+                    label: 'GPU',
+                    data: [],
+                    borderColor: 'rgb(255, 159, 64)',
+                    backgroundColor: 'rgba(255, 159, 64, 0.2)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            },
+            plugins: {
+                tooltip: {
+                    enabled: true
+                },
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        stepSize: 20,
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    }
+                },
+                x: {
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    }
+                }
+            }
+        }
     });
 
-    // Setup click handlers for time range buttons
+    // Setup toggle handlers
+    const resources = ['cpu', 'memory', 'disk', 'gpu'];
+    resources.forEach((resource, index) => {
+        document.getElementById(`${resource}Toggle`).addEventListener('change', function() {
+            resourcesChart.data.datasets[index].hidden = !this.checked;
+            resourcesChart.update();
+        });
+    });
+
+    // Setup time range handlers
     document.querySelectorAll('.btn-group button').forEach(button => {
         button.addEventListener('click', function() {
             const range = this.dataset.range;
@@ -206,74 +287,9 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             this.classList.add('active');
 
-            resources.forEach(resource => {
-                updateChart(resource, range);
-            });
+            updateChart(range);
         });
     });
-
-    function createChart(ctx, resource) {
-        return new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: `${resource.toUpperCase()} Usage (%)`,
-                    data: [],
-                    borderColor: 'rgb(75, 192, 192)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: {
-                    intersect: false,
-                    mode: 'index'
-                },
-                plugins: {
-                    tooltip: {
-                        enabled: true
-                    },
-                    legend: {
-                        position: 'top',
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 100,
-                        ticks: {
-                            stepSize: 20,
-                            callback: function(value) {
-                                return value + '%';
-                            }
-                        },
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.1)'
-                        }
-                    },
-                    x: {
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.1)'
-                        }
-                    }
-                }
-            }
-        });
-    }
-
-    function updateChart(resource, timeRange) {
-        const labels = getLabelsForTimeRange(timeRange);
-        const data = Array.from({length: labels.length}, () => Math.random() * 100);
-
-        charts[resource].data.labels = labels;
-        charts[resource].data.datasets[0].data = data;
-        charts[resource].update();
-    }
 
     function getLabelsForTimeRange(range) {
         const labels = [];
@@ -307,6 +323,35 @@ document.addEventListener('DOMContentLoaded', function() {
                 break;
         }
         return labels;
+    }
+
+    function updateChart(timeRange) {
+        const labels = getLabelsForTimeRange(timeRange);
+
+        resourcesChart.data.labels = labels;
+        resources.forEach((resource, index) => {
+            resourcesChart.data.datasets[index].data = Array.from({length: labels.length}, () => Math.random() * 100);
+        });
+        resourcesChart.update();
+    }
+
+    // Update data periodically
+    function updateData() {
+        fetch('/admin/stats')
+            .then(response => response.json())
+            .then(stats => {
+                // Update value displays
+                resources.forEach(resource => {
+                    document.getElementById(`${resource}Value`).textContent = 
+                        `${stats[`${resource}_percent`]}%`;
+                });
+
+                // Update chart
+                updateChart(currentRange);
+            });
+
+        // Update lists
+        updateLists();
     }
 
     // Update users table
@@ -427,13 +472,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Периодическое обновление данных
+    // Periodically update data
     function updateData() {
-        // Обновление статистики
+        // Update statistics
         fetch('/admin/stats')
             .then(response => response.json())
             .then(stats => {
-                // Обновляем прогресс-бары
+                // Update progress bars
                 document.querySelectorAll('.progress-bar').forEach(bar => {
                     const resource = bar.closest('.col-md-3').querySelector('h6').textContent.toLowerCase().replace(' usage', '');
                     const value = stats[`${resource}_percent`];
@@ -441,17 +486,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     bar.textContent = `${value}%`;
                 });
 
-                // Обновляем графики
+                // Update charts
                 resources.forEach(resource => {
                     updateChart(resource, currentRange);
                 });
             });
 
-        // Обновление списков
+        // Update lists
         updateLists();
     }
 
-    // Функция обновления списков
+    // Function to update lists
     function updateLists(userPage = null, projectPage = null) {
         const searchParams = new URLSearchParams();
         if (userPage) searchParams.append('user_page', userPage);
@@ -465,11 +510,12 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
 
-    // Обновляем данные каждые 5 секунд
+    // Update data every 5 seconds
     setInterval(updateData, 5000);
 
     // Initial load of lists
     updateLists();
+    updateChart('day');
 });
 </script>
 {% endblock %}
