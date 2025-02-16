@@ -73,7 +73,7 @@
         </div>
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-hover">
+                <table class="table table-hover" id="users-table">
                     <thead>
                         <tr>
                             <th>Name</th>
@@ -108,28 +108,8 @@
             <!-- Users Pagination -->
             {% if users.pages > 1 %}
             <nav aria-label="Users pagination" class="mt-4">
-                <ul class="pagination justify-content-center">
-                    {% if users.has_prev %}
-                    <li class="page-item">
-                        <a class="page-link" href="{{ url_for('admin_dashboard', user_page=users.prev_num, project_page=projects.page) }}">&laquo;</a>
-                    </li>
-                    {% endif %}
-
-                    {% for page_num in users.iter_pages(left_edge=2, left_current=2, right_current=3, right_edge=2) %}
-                        {% if page_num %}
-                            <li class="page-item {% if page_num == users.page %}active{% endif %}">
-                                <a class="page-link" href="{{ url_for('admin_dashboard', user_page=page_num, project_page=projects.page) }}">{{ page_num }}</a>
-                            </li>
-                        {% else %}
-                            <li class="page-item disabled"><span class="page-link">...</span></li>
-                        {% endif %}
-                    {% endfor %}
-
-                    {% if users.has_next %}
-                    <li class="page-item">
-                        <a class="page-link" href="{{ url_for('admin_dashboard', user_page=users.next_num, project_page=projects.page) }}">&raquo;</a>
-                    </li>
-                    {% endif %}
+                <ul class="pagination justify-content-center" id="users-pagination">
+                    <!-- Pagination items will be dynamically updated -->
                 </ul>
             </nav>
             {% endif %}
@@ -143,7 +123,7 @@
         </div>
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-hover">
+                <table class="table table-hover" id="projects-table">
                     <thead>
                         <tr>
                             <th>Project ID</th>
@@ -164,9 +144,9 @@
                             <td>{{ project.name }}</td>
                             <td>
                                 <span class="badge {% if project.status == 'completed' %}bg-success
-                                             {% elif project.status == 'error' %}bg-danger
-                                             {% elif project.status == 'processing' %}bg-primary
-                                             {% else %}bg-secondary{% endif %}">
+                                              {% elif project.status == 'error' %}bg-danger
+                                              {% elif project.status == 'processing' %}bg-primary
+                                              {% else %}bg-secondary{% endif %}">
                                     {{ project.status }}
                                 </span>
                             </td>
@@ -174,11 +154,11 @@
                             <td>
                                 <div class="progress">
                                     <div class="progress-bar" role="progressbar" 
-                                         style="width: {{ project.progress }}%"
-                                         aria-valuenow="{{ project.progress }}" 
+                                         style="width: {{ project.progress|int }}%"
+                                         aria-valuenow="{{ project.progress|int }}" 
                                          aria-valuemin="0" 
                                          aria-valuemax="100">
-                                        {{ project.progress }}%
+                                        {{ project.progress|int }}%
                                     </div>
                                 </div>
                             </td>
@@ -190,28 +170,8 @@
             <!-- Projects Pagination -->
             {% if projects.pages > 1 %}
             <nav aria-label="Project pagination" class="mt-4">
-                <ul class="pagination justify-content-center">
-                    {% if projects.has_prev %}
-                    <li class="page-item">
-                        <a class="page-link" href="{{ url_for('admin_dashboard', project_page=projects.prev_num, user_page=users.page) }}">&laquo;</a>
-                    </li>
-                    {% endif %}
-
-                    {% for page_num in projects.iter_pages(left_edge=2, left_current=2, right_current=3, right_edge=2) %}
-                        {% if page_num %}
-                            <li class="page-item {% if page_num == projects.page %}active{% endif %}">
-                                <a class="page-link" href="{{ url_for('admin_dashboard', project_page=page_num, user_page=users.page) }}">{{ page_num }}</a>
-                            </li>
-                        {% else %}
-                            <li class="page-item disabled"><span class="page-link">...</span></li>
-                        {% endif %}
-                    {% endfor %}
-
-                    {% if projects.has_next %}
-                    <li class="page-item">
-                        <a class="page-link" href="{{ url_for('admin_dashboard', project_page=projects.next_num, user_page=users.page) }}">&raquo;</a>
-                    </li>
-                    {% endif %}
+                <ul class="pagination justify-content-center" id="projects-pagination">
+                    <!-- Pagination items will be dynamically updated -->
                 </ul>
             </nav>
             {% endif %}
@@ -349,8 +309,127 @@ document.addEventListener('DOMContentLoaded', function() {
         return labels;
     }
 
+    // Update users table
+    function updateUsersTable(users) {
+        const tbody = document.querySelector('#users-table tbody');
+        tbody.innerHTML = users.items.map(user => `
+            <tr>
+                <td>
+                    ${user.name}
+                    ${user.is_new ? '<span class="badge bg-success">New User</span>' : ''}
+                </td>
+                <td>${user.email}</td>
+                <td>${user.created_at}</td>
+                <td>
+                    ${user.is_email_confirmed ? 
+                    '<span class="badge bg-success">Confirmed</span>' : 
+                    '<span class="badge bg-warning">Pending</span>'}
+                </td>
+            </tr>
+        `).join('');
+
+        // Update pagination
+        updatePagination('users', users);
+    }
+
+    // Update projects table
+    function updateProjectsTable(projects) {
+        const tbody = document.querySelector('#projects-table tbody');
+        tbody.innerHTML = projects.items.map(project => `
+            <tr>
+                <td>${project.id}</td>
+                <td>${project.user_name}</td>
+                <td>${project.user_email}</td>
+                <td>${project.name}</td>
+                <td>
+                    <span class="badge ${project.status === 'completed' ? 'bg-success' :
+                                      project.status === 'error' ? 'bg-danger' :
+                                      project.status === 'processing' ? 'bg-primary' :
+                                      'bg-secondary'}">
+                        ${project.status}
+                    </span>
+                </td>
+                <td>${project.created_at}</td>
+                <td>
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar" 
+                             style="width: ${project.progress}%"
+                             aria-valuenow="${project.progress}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                            ${project.progress}%
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+
+        // Update pagination
+        updatePagination('projects', projects);
+    }
+
+    // Update pagination
+    function updatePagination(type, data) {
+        const nav = document.querySelector(`#${type}-pagination`);
+        if (!nav) return;
+
+        const pagination = [];
+
+        // Previous button
+        if (data.has_prev) {
+            pagination.push(`
+                <li class="page-item">
+                    <a class="page-link" href="#" data-page="${data.page - 1}" data-type="${type}">&laquo;</a>
+                </li>
+            `);
+        }
+
+        // Page numbers
+        for (let i = 1; i <= data.pages; i++) {
+            if (
+                i === 1 || i === data.pages ||
+                (i >= data.page - 2 && i <= data.page + 2)
+            ) {
+                pagination.push(`
+                    <li class="page-item ${i === data.page ? 'active' : ''}">
+                        <a class="page-link" href="#" data-page="${i}" data-type="${type}">${i}</a>
+                    </li>
+                `);
+            } else if (
+                i === data.page - 3 ||
+                i === data.page + 3
+            ) {
+                pagination.push(`
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                `);
+            }
+        }
+
+        // Next button
+        if (data.has_next) {
+            pagination.push(`
+                <li class="page-item">
+                    <a class="page-link" href="#" data-page="${data.page + 1}" data-type="${type}">&raquo;</a>
+                </li>
+            `);
+        }
+
+        nav.innerHTML = pagination.join('');
+
+        // Add click handlers for pagination
+        nav.querySelectorAll('a.page-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const page = this.dataset.page;
+                const type = this.dataset.type;
+                updateLists(type === 'users' ? page : null, type === 'projects' ? page : null);
+            });
+        });
+    }
+
     // Периодическое обновление данных
     function updateData() {
+        // Обновление статистики
         fetch('/admin/stats')
             .then(response => response.json())
             .then(stats => {
@@ -367,10 +446,30 @@ document.addEventListener('DOMContentLoaded', function() {
                     updateChart(resource, currentRange);
                 });
             });
+
+        // Обновление списков
+        updateLists();
+    }
+
+    // Функция обновления списков
+    function updateLists(userPage = null, projectPage = null) {
+        const searchParams = new URLSearchParams();
+        if (userPage) searchParams.append('user_page', userPage);
+        if (projectPage) searchParams.append('project_page', projectPage);
+
+        fetch(`/admin/lists?${searchParams.toString()}`)
+            .then(response => response.json())
+            .then(data => {
+                updateUsersTable(data.users);
+                updateProjectsTable(data.projects);
+            });
     }
 
     // Обновляем данные каждые 5 секунд
     setInterval(updateData, 5000);
+
+    // Initial load of lists
+    updateLists();
 });
 </script>
 {% endblock %}

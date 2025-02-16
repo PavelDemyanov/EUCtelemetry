@@ -125,6 +125,63 @@ def admin_stats():
     """API endpoint to get updated system stats"""
     return jsonify(get_system_stats())
 
+@app.route('/admin/lists')
+@login_required
+@admin_required
+def admin_lists():
+    """API endpoint to get updated users and projects lists"""
+    project_page = request.args.get('project_page', 1, type=int)
+    user_page = request.args.get('user_page', 1, type=int)
+    today = datetime.utcnow().date()
+
+    # Get paginated projects
+    projects = Project.query.order_by(Project.created_at.desc())\
+        .paginate(page=project_page, per_page=20, error_out=False)
+
+    # Get paginated recent users
+    users = User.query.filter(User.created_at >= today - timedelta(days=30))\
+        .order_by(User.created_at.desc())\
+        .paginate(page=user_page, per_page=20, error_out=False)
+
+    # Format projects data
+    projects_data = [{
+        'id': p.id,
+        'user_name': p.user.name,
+        'user_email': p.user.email,
+        'name': p.name,
+        'status': p.status,
+        'created_at': p.created_at.strftime('%Y-%m-%d %H:%M'),
+        'progress': int(p.progress)  # Round progress to integer
+    } for p in projects.items]
+
+    # Format users data
+    users_data = [{
+        'name': u.name,
+        'email': u.email,
+        'created_at': u.created_at.strftime('%Y-%m-%d %H:%M'),
+        'is_email_confirmed': u.is_email_confirmed,
+        'is_new': u.created_at.date() == today
+    } for u in users.items]
+
+    return jsonify({
+        'projects': {
+            'items': projects_data,
+            'has_next': projects.has_next,
+            'has_prev': projects.has_prev,
+            'page': projects.page,
+            'pages': projects.pages,
+            'total': projects.total
+        },
+        'users': {
+            'items': users_data,
+            'has_next': users.has_next,
+            'has_prev': users.has_prev,
+            'page': users.page,
+            'pages': users.pages,
+            'total': users.total
+        }
+    })
+
 # Add context processor for datetime
 @app.context_processor
 def inject_now():
