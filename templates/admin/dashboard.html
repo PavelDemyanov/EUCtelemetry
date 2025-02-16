@@ -15,7 +15,7 @@
                     <h6>CPU Usage</h6>
                     <div class="progress mb-2">
                         <div class="progress-bar" role="progressbar" style="width: {{ cpu_percent }}%">
-                            {{ cpu_percent }}%
+                            {{ cpu_percent|int }}%
                         </div>
                     </div>
                     <div class="chart-container" style="position: relative; height: 200px;">
@@ -26,7 +26,7 @@
                     <h6>Memory Usage</h6>
                     <div class="progress mb-2">
                         <div class="progress-bar" role="progressbar" style="width: {{ memory_percent }}%">
-                            {{ memory_percent }}%
+                            {{ memory_percent|int }}%
                         </div>
                     </div>
                     <div class="chart-container" style="position: relative; height: 200px;">
@@ -37,7 +37,7 @@
                     <h6>Disk Usage</h6>
                     <div class="progress mb-2">
                         <div class="progress-bar" role="progressbar" style="width: {{ disk_percent }}%">
-                            {{ disk_percent }}%
+                            {{ disk_percent|int }}%
                         </div>
                     </div>
                     <div class="chart-container" style="position: relative; height: 200px;">
@@ -48,20 +48,13 @@
                     <h6>GPU Usage</h6>
                     <div class="progress mb-2">
                         <div class="progress-bar" role="progressbar" style="width: {{ gpu_percent|default(0) }}%">
-                            {{ gpu_percent|default(0) }}%
+                            {{ gpu_percent|default(0)|int }}%
                         </div>
                     </div>
                     <div class="chart-container" style="position: relative; height: 200px;">
                         <canvas id="gpu-chart"></canvas>
                     </div>
                 </div>
-            </div>
-            <!-- Time Range Selector -->
-            <div class="btn-group mt-3">
-                <button type="button" class="btn btn-outline-primary active" data-range="day">1 день</button>
-                <button type="button" class="btn btn-outline-primary" data-range="week">Неделя</button>
-                <button type="button" class="btn btn-outline-primary" data-range="month">Месяц</button>
-                <button type="button" class="btn btn-outline-primary" data-range="year">Год</button>
             </div>
         </div>
     </div>
@@ -105,26 +98,12 @@
                     </tbody>
                 </table>
             </div>
-            <!-- Users Pagination -->
             {% if users.pages > 1 %}
             <nav aria-label="Users pagination" class="mt-4">
                 <ul class="pagination justify-content-center" id="users-pagination">
-                    <!-- Pagination items will be dynamically updated -->
                 </ul>
             </nav>
             {% endif %}
-        </div>
-    </div>
-
-    <!-- Terminal Output Section -->
-    <div class="card mt-4">
-        <div class="card-header">
-            <h2 class="h5 mb-0">Terminal Output</h2>
-        </div>
-        <div class="card-body">
-            <div class="terminal-window bg-dark text-light p-3" style="height: 400px; overflow-y: auto; font-family: 'Courier New', Courier, monospace; border-radius: 4px; border: 1px solid #444;">
-                <pre id="terminal-output" class="mb-0" style="white-space: pre-wrap;"></pre>
-            </div>
         </div>
     </div>
 
@@ -179,11 +158,9 @@
                     </tbody>
                 </table>
             </div>
-            <!-- Projects Pagination -->
             {% if projects.pages > 1 %}
             <nav aria-label="Project pagination" class="mt-4">
                 <ul class="pagination justify-content-center" id="projects-pagination">
-                    <!-- Pagination items will be dynamically updated -->
                 </ul>
             </nav>
             {% endif %}
@@ -199,30 +176,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const charts = {};
     const resources = ['cpu', 'memory', 'disk', 'gpu'];
     let currentRange = 'day';
-    let lastLogId = 0;
 
     // Initialize all charts
     resources.forEach(resource => {
         const ctx = document.getElementById(`${resource}-chart`);
         charts[resource] = createChart(ctx, resource);
         updateChart(resource, 'day');
-    });
-
-    // Setup click handlers for time range buttons
-    document.querySelectorAll('.btn-group button').forEach(button => {
-        button.addEventListener('click', function() {
-            const range = this.dataset.range;
-            currentRange = range;
-
-            document.querySelectorAll('.btn-group button').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            this.classList.add('active');
-
-            resources.forEach(resource => {
-                updateChart(resource, range);
-            });
-        });
     });
 
     function createChart(ctx, resource) {
@@ -266,12 +225,16 @@ document.addEventListener('DOMContentLoaded', function() {
                             }
                         },
                         grid: {
-                            color: 'rgba(255, 255, 255, 0.1)'
+                            display: true,
+                            drawBorder: true,
+                            color: 'rgba(200, 200, 200, 0.2)'
                         }
                     },
                     x: {
                         grid: {
-                            color: 'rgba(255, 255, 255, 0.1)'
+                            display: true,
+                            drawBorder: true,
+                            color: 'rgba(200, 200, 200, 0.2)'
                         }
                     }
                 }
@@ -302,7 +265,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 for(let i = 6; i >= 0; i--) {
                     const date = new Date(now);
                     date.setDate(date.getDate() - i);
-                    labels.push(date.toLocaleDateString('ru-RU', { weekday: 'short' }));
+                    labels.push(date.toLocaleDateString('en', { weekday: 'short' }));
                 }
                 break;
             case 'month':
@@ -315,7 +278,7 @@ document.addEventListener('DOMContentLoaded', function() {
             case 'year':
                 for(let i = 0; i < 12; i++) {
                     const date = new Date(now.getFullYear(), i, 1);
-                    labels.push(date.toLocaleDateString('ru-RU', { month: 'short' }));
+                    labels.push(date.toLocaleDateString('en', { month: 'short' }));
                 }
                 break;
         }
@@ -366,11 +329,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td>
                     <div class="progress">
                         <div class="progress-bar" role="progressbar" 
-                             style="width: ${project.progress}%"
-                             aria-valuenow="${project.progress}" 
+                             style="width: ${Math.round(project.progress)}%"
+                             aria-valuenow="${Math.round(project.progress)}" 
                              aria-valuemin="0" 
                              aria-valuemax="100">
-                            ${project.progress}%
+                            ${Math.round(project.progress)}%
                         </div>
                     </div>
                 </td>
@@ -440,72 +403,31 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Периодическое обновление данных
+    // Update data periodically
     function updateData() {
-        // Обновление статистики
+        // Update system stats
         fetch('/admin/stats')
             .then(response => response.json())
             .then(stats => {
-                // Обновляем прогресс-бары
+                // Update progress bars
                 document.querySelectorAll('.progress-bar').forEach(bar => {
                     const resource = bar.closest('.col-md-3').querySelector('h6').textContent.toLowerCase().replace(' usage', '');
-                    const value = stats[`${resource}_percent`];
+                    const value = Math.round(stats[`${resource}_percent`]);
                     bar.style.width = `${value}%`;
                     bar.textContent = `${value}%`;
                 });
 
-                // Обновляем графики
+                // Update charts
                 resources.forEach(resource => {
                     updateChart(resource, currentRange);
                 });
             });
 
-        // Обновление списков
+        // Update lists
         updateLists();
-        updateTerminalOutput();
     }
 
-    // Function to update terminal output
-    function updateTerminalOutput() {
-        fetch('/admin/logs?last_id=' + lastLogId)
-            .then(response => response.json())
-            .then(data => {
-                if (data.logs && data.logs.length > 0) {
-                    const terminal = document.getElementById('terminal-output');
-                    data.logs.forEach(log => {
-                        // Create a span element for each log entry
-                        const logEntry = document.createElement('span');
-                        logEntry.textContent = log.message + '\n';
-                        logEntry.title = log.message; // Show full message on hover
-                        logEntry.style.color = log.message.includes('ERROR') ? '#ff6b6b' :
-                                             log.message.includes('WARNING') ? '#ffd93d' : 
-                                             '#a8e6cf';
-                        terminal.appendChild(logEntry);
-                        lastLogId = Math.max(lastLogId, log.id);
-                    });
-                    // Auto-scroll to bottom while preserving user scroll position if they've scrolled up
-                    const shouldScroll = terminal.scrollTop + terminal.clientHeight === terminal.scrollHeight;
-                    if (shouldScroll) {
-                        terminal.scrollTop = terminal.scrollHeight;
-                    }
-                }
-            });
-    }
-
-    // Store lastLogId in localStorage to preserve it across page reloads
-    window.addEventListener('beforeunload', () => {
-        localStorage.setItem('lastLogId', lastLogId);
-    });
-
-    // Restore lastLogId when page loads
-    document.addEventListener('DOMContentLoaded', () => {
-        const savedLastLogId = localStorage.getItem('lastLogId');
-        if (savedLastLogId) {
-            lastLogId = parseInt(savedLastLogId);
-        }
-    });
-
-    // Функция обновления списков
+    // Function to update lists
     function updateLists(userPage = null, projectPage = null) {
         const searchParams = new URLSearchParams();
         if (userPage) searchParams.append('user_page', userPage);
@@ -519,13 +441,11 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
 
-
-    // Обновляем данные каждые 5 секунд
+    // Update data every 5 seconds
     setInterval(updateData, 5000);
 
     // Initial load of lists
     updateLists();
-    updateTerminalOutput();
 });
 </script>
 {% endblock %}

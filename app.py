@@ -227,7 +227,6 @@ def admin_lists():
         }
     })
 
-# Add context processor for datetime
 @app.context_processor
 def inject_now():
     return {'now': datetime.utcnow()}
