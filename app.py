@@ -71,18 +71,11 @@ def admin_required(f):
 # Add this new route before the app.context_processor
 def get_system_stats():
     """Get system resource usage statistics"""
-    # CPU shows usage activity
     cpu_percent = psutil.cpu_percent()
-
-    # Memory shows used space percentage
     memory = psutil.virtual_memory()
-    memory_percent = memory.percent
-
-    # Disk shows used space percentage
     disk = psutil.disk_usage('/')
-    disk_percent = disk.percent
 
-    # GPU shows usage activity - return 0 if not available
+    # GPU stats - return 0 if not available
     gpu_percent = 0
     try:
         import GPUtil
@@ -94,8 +87,8 @@ def get_system_stats():
 
     return {
         'cpu_percent': cpu_percent,
-        'memory_percent': memory_percent,
-        'disk_percent': disk_percent,
+        'memory_percent': memory.percent,
+        'disk_percent': disk.percent,
         'gpu_percent': gpu_percent
     }
 
