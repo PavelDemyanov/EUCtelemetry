@@ -68,15 +68,15 @@
     </div>
 
     <!-- Recent Users -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h2 class="h5 mb-0">Recent Users</h2>
+    <div class="card mb-4 bg-dark text-light">
+        <div class="card-header bg-dark border-secondary">
+            <h2 class="h5 mb-0 text-light">Recent Users</h2>
         </div>
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-hover" id="users-table">
+                <table class="table table-hover table-dark" id="users-table">
                     <thead>
-                        <tr>
+                        <tr class="text-secondary">
                             <th>Name</th>
                             <th>Email</th>
                             <th>Registration Date</th>
@@ -118,15 +118,15 @@
     </div>
 
     <!-- Project Monitoring -->
-    <div class="card">
-        <div class="card-header">
-            <h2 class="h5 mb-0">User Projects</h2>
+    <div class="card bg-dark text-light">
+        <div class="card-header bg-dark border-secondary">
+            <h2 class="h5 mb-0 text-light">User Projects</h2>
         </div>
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-hover" id="projects-table">
+                <table class="table table-hover table-dark" id="projects-table">
                     <thead>
-                        <tr>
+                        <tr class="text-secondary">
                             <th>Project ID</th>
                             <th>User</th>
                             <th>Email</th>
@@ -136,7 +136,7 @@
                             <th>Progress</th>
                             <th>Duration</th>
                             <th>Expiry</th>
-                            <th>Processing Time</th>
+                            <th>Proc. Time</th>
                             <th>FPS</th>
                             <th>Resolution</th>
                         </tr>
@@ -189,6 +189,47 @@
         </div>
     </div>
 </div>
+
+<style>
+/* Dark theme customizations */
+.table-dark {
+    --bs-table-bg: #1a1a1a;
+    --bs-table-striped-bg: #2d2d2d;
+    --bs-table-striped-color: #fff;
+    --bs-table-active-bg: #373b3e;
+    --bs-table-active-color: #fff;
+    --bs-table-hover-bg: #323539;
+    --bs-table-hover-color: #fff;
+    border-color: #373b3e;
+}
+
+.table-dark td, .table-dark th {
+    border-color: #373b3e;
+}
+
+.pagination .page-link {
+    background-color: #1a1a1a;
+    border-color: #373b3e;
+    color: #fff;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.pagination .page-link:hover {
+    background-color: #323539;
+    border-color: #373b3e;
+    color: #fff;
+}
+
+/* Keep progress bar styling unchanged */
+.progress {
+    background-color: rgba(0,0,0,0.2);
+}
+</style>
+
 {% endblock %}
 
 {% block scripts %}
