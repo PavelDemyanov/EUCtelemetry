@@ -405,3 +405,18 @@ msgstr "Инициализация..."
 
 msgid "Preview frame"
 msgstr "Кадр предпросмотра"
+
+msgid "Complete!"
+msgstr "Завершено!"
+
+msgid "Creating frames... Complete!"
+msgstr "Создание кадров... Завершено!"
+
+msgid "Processing video... Complete!"
+msgstr "Обработка видео... Завершено!"
+
+msgid "Analyzing CSV data... Complete!"
+msgstr "Анализ CSV данных... Завершено!"
+
+msgid "Generating preview... Complete!"
+msgstr "Создание предпросмотра... Завершено!"
