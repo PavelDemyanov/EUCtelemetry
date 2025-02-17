@@ -51,9 +51,14 @@ def get_locale():
         return locale
     # Try to get locale from user settings
     if current_user.is_authenticated and hasattr(current_user, 'locale'):
-        return current_user.locale
+        if current_user.locale in ['en', 'ru']:
+            return current_user.locale
     # Try to get locale from request header
-    return request.accept_languages.best_match(['en', 'ru'])
+    best_match = request.accept_languages.best_match(['en', 'ru'])
+    if best_match:
+        return best_match
+    # Default to English if no locale is found
+    return 'en'
 
 # Configure Babel with locale selector
 babel.init_app(app, locale_selector=get_locale)
