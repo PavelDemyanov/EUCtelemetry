@@ -19,6 +19,25 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.17.0\n"
 
+# Email and registration messages
+msgid "Please check your email to complete registration."
+msgstr "Пожалуйста, проверьте вашу почту для завершения регистрации."
+
+msgid "Error sending confirmation email. Please try registering again."
+msgstr "Ошибка при отправке письма для подтверждения. Пожалуйста, попробуйте зарегистрироваться снова."
+
+msgid "An error occurred during registration. Please try again later."
+msgstr "Произошла ошибка при регистрации. Пожалуйста, попробуйте позже."
+
+msgid "Invalid confirmation link."
+msgstr "Неверная ссылка подтверждения."
+
+msgid "This confirmation link has expired. Please register again."
+msgstr "Срок действия этой ссылки подтверждения истек. Пожалуйста, зарегистрируйтесь снова."
+
+msgid "Your email has been confirmed! You can now log in."
+msgstr "Ваш email подтвержден! Теперь вы можете войти в систему."
+
 # Authentication pages translations
 msgid "Sign In"
 msgstr "Войти"

@@ -388,21 +388,34 @@ def register():
         try:
             db.session.commit()
 
-            # Send confirmation email in English
+            # Get user's preferred language
+            user_locale = request.accept_languages.best_match(['en', 'ru'])
+
+            # Prepare email content based on locale
             confirmation_link = url_for('confirm_email', token=confirmation_token, _external=True)
-            confirmation_html = f"""
-            <h2>Confirm Your Registration</h2>
-            <p>Hello {user.name},</p>
-            <p>Thank you for registering with EUCTelemetry. Please click the link below to confirm your email address:</p>
-            <p><a href="{confirmation_link}">{confirmation_link}</a></p>
-            <p>This link will expire in 24 hours.</p>
-            <p>Best regards,<br>EUCTelemetry Team</p>
-            """
+            if user_locale == 'ru':
+                confirmation_html = f"""
+                <h2>Подтвердите регистрацию</h2>
+                <p>Здравствуйте, {user.name},</p>
+                <p>Спасибо за регистрацию в EUCTelemetry. Пожалуйста, нажмите на ссылку ниже, чтобы подтвердить ваш email:</p>
+                <p><a href="{confirmation_link}">{confirmation_link}</a></p>
+                <p>Эта ссылка будет действительна в течение 24 часов.</p>
+                <p>С наилучшими пожеланиями,<br>Команда EUCTelemetry</p>
+                """
+            else:
+                confirmation_html = f"""
+                <h2>Confirm Your Registration</h2>
+                <p>Hello {user.name},</p>
+                <p>Thank you for registering with EUCTelemetry. Please click the link below to confirm your email address:</p>
+                <p><a href="{confirmation_link}">{confirmation_link}</a></p>
+                <p>This link will expire in 24 hours.</p>
+                <p>Best regards,<br>EUCTelemetry Team</p>
+                """
 
             if send_email(user.email, "Confirm Your Email Address", confirmation_html):
-                flash('Please check your email to complete registration.')
+                flash(_('Please check your email to complete registration.'))
             else:
-                flash('Error sending confirmation email. Please try registering again.')
+                flash(_('Error sending confirmation email. Please try registering again.'))
                 db.session.delete(user)
                 db.session.commit()
 
@@ -411,7 +424,7 @@ def register():
         except Exception as e:
             db.session.rollback()
             logging.error(f"Registration error: {str(e)}")
-            flash('An error occurred during registration. Please try again later.')
+            flash(_('An error occurred during registration. Please try again later.'))
             return redirect(url_for('register'))
 
     return render_template('register.html', form=form)
@@ -421,11 +434,11 @@ def confirm_email(token):
     user = User.query.filter_by(email_confirmation_token=token).first()
 
     if not user:
-        flash('Invalid confirmation link.')
+        flash(_('Invalid confirmation link.'))
         return redirect(url_for('login'))
 
     if user.email_confirmation_sent_at < datetime.utcnow() - timedelta(days=1):
-        flash('This confirmation link has expired. Please register again.')
+        flash(_('This confirmation link has expired. Please register again.'))
         db.session.delete(user)
         db.session.commit()
         return redirect(url_for('register'))
@@ -434,7 +447,7 @@ def confirm_email(token):
     user.email_confirmation_token = None
     db.session.commit()
 
-    flash('Your email has been confirmed! You can now log in.')
+    flash(_('Your email has been confirmed! You can now log in.'))
     return redirect(url_for('login'))
 
 @app.route('/logout')
