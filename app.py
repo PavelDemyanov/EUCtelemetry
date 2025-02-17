@@ -2,30 +2,31 @@ import os
 import logging
 import random
 import re
-from dotenv import load_dotenv
-from utils.env_setup import setup_env_variables
+import shutil
+import threading
+import time
 from datetime import datetime, timedelta
-import psutil
+from collections import defaultdict
 from functools import wraps
-from flask import Flask, render_template, request, jsonify, send_file, url_for, send_from_directory, flash, redirect, abort
-from werkzeug.utils import secure_filename
+
+import psutil
+from dotenv import load_dotenv
+from flask import (Flask, render_template, request, jsonify, send_file, 
+                  url_for, send_from_directory, flash, redirect, abort)
 from flask_migrate import Migrate
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from werkzeug.utils import secure_filename
+
 from extensions import db
 from utils.csv_processor import process_csv_file
 from utils.image_generator import generate_frames, create_preview_frame
 from utils.video_creator import create_video
 from utils.background_processor import process_project
+from utils.env_setup import setup_env_variables
+from utils.email_sender import send_email
 from forms import (LoginForm, RegistrationForm, ProfileForm, 
                   ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm, DeleteAccountForm)
 from models import User, Project
-from utils.email_sender import send_email
-from collections import defaultdict
-import threading
-import time
-import shutil
-from datetime import datetime, timedelta
-import logging
 
 # Project name characters
 PROJECT_NAME_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
@@ -776,7 +777,7 @@ def generate_preview(project_id):
             'unit_y': int(data.get('unit_y', 0)),
             'speed_size': float(data.get('speed_size', 100)),
             'unit_size': float(data.get('unit_size', 100)),
-            'indicator_scale': float(data.get('indicator_scale', 100))  # Added new parameter
+            'indicator_scale': float(data.get('indicator_scale', 100))
         }
 
         logging.info(f"Generating preview with settings: {text_settings}")
@@ -968,6 +969,106 @@ def delete_admin_user(user_id):
         db.session.rollback()
         logging.error(f"Error deleting user: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+import os
+# Add this new endpoint after other admin routes
+@app.route('/admin/cleanup-storage', methods=['POST'])
+@login_required
+@admin_required
+def cleanup_storage():
+    """Clean up unused files from storage directories"""
+    try:
+        # Get all project files from database
+        projects = Project.query.all()
+        used_files = set()
+
+        # Collect all files that are used by projects
+        for project in projects:
+            if project.csv_file:
+                used_files.add(project.csv_file)  # uploads directory
+                used_files.add(f'project_{project.folder_number}_{project.csv_file}')  # processed_data directory
+            if project.video_file:
+                used_files.add(project.video_file)  # videos directory
+            used_files.add(f'{project.id}_preview.png')  # previews directory
+            # frames directory is handled by folder name
+            used_folders = {f'project_{project.folder_number}'}  # frames directory
+
+        deleted_files = []
+        deleted_count = 0
+
+        # Check uploads directory
+        for filename in os.listdir('uploads'):
+            if filename not in used_files:
+                file_path = os.path.join('uploads', filename)
+                try:
+                    os.remove(file_path)
+                    deleted_files.append(f'uploads/{filename}')
+                    deleted_count += 1
+                    logging.info(f"Deleted unused file: {file_path}")
+                except Exception as e:
+                    logging.error(f"Error deleting file {file_path}: {str(e)}")
+
+        # Check previews directory
+        for filename in os.listdir('previews'):
+            if filename not in used_files:
+                file_path = os.path.join('previews', filename)
+                try:
+                    os.remove(file_path)
+                    deleted_files.append(f'previews/{filename}')
+                    deleted_count += 1
+                    logging.info(f"Deleted unused file: {file_path}")
+                except Exception as e:
+                    logging.error(f"Error deleting file {file_path}: {str(e)}")
+
+        # Check videos directory
+        for filename in os.listdir('videos'):
+            if filename not in used_files:
+                file_path = os.path.join('videos', filename)
+                try:
+                    os.remove(file_path)
+                    deleted_files.append(f'videos/{filename}')
+                    deleted_count += 1
+                    logging.info(f"Deleted unused file: {file_path}")
+                except Exception as e:
+                    logging.error(f"Error deleting file {file_path}: {str(e)}")
+
+        # Check processed_data directory
+        for filename in os.listdir('processed_data'):
+            if filename not in used_files:
+                file_path = os.path.join('processed_data', filename)
+                try:
+                    os.remove(file_path)
+                    deleted_files.append(f'processed_data/{filename}')
+                    deleted_count += 1
+                    logging.info(f"Deleted unused file: {file_path}")
+                except Exception as e:
+                    logging.error(f"Error deleting file {file_path}: {str(e)}")
+
+        # Check frames directory
+        for foldername in os.listdir('frames'):
+            if foldername not in used_folders:
+                folder_path = os.path.join('frames', foldername)
+                try:
+                    if os.path.isdir(folder_path):
+                        shutil.rmtree(folder_path)
+                        deleted_files.append(f'frames/{foldername}')
+                        deleted_count += 1
+                        logging.info(f"Deleted unused folder: {folder_path}")
+                except Exception as e:
+                    logging.error(f"Error deleting folder {folder_path}: {str(e)}")
+
+        return jsonify({
+            'success': True,
+            'deleted_count': deleted_count,
+            'deleted_files': deleted_files
+        })
+
+    except Exception as e:
+        logging.error(f"Error during storage cleanup: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 with app.app_context():
     db.create_all()
