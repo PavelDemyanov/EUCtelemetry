@@ -23,9 +23,9 @@ from utils.email_sender import send_email
 from collections import defaultdict
 import threading
 import time
-
-# Configure logging
-logging.basicConfig(level=logging.DEBUG)
+import shutil
+from datetime import datetime, timedelta
+import logging
 
 # Project name characters
 PROJECT_NAME_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
@@ -39,6 +39,76 @@ def validate_project_name(name):
     if not name:
         return False
     return len(name) <= 7 and bool(re.match(r'^[\w\d]+$', name, re.UNICODE))
+
+def cleanup_project_files(project):
+    """Delete all files associated with a project"""
+    try:
+        # Delete CSV file
+        if project.csv_file:
+            csv_path = os.path.join('uploads', project.csv_file)
+            if os.path.exists(csv_path):
+                os.remove(csv_path)
+                logging.info(f"Deleted CSV file: {csv_path}")
+
+        # Delete preview file
+        preview_path = os.path.join('previews', f'{project.id}_preview.png')
+        if os.path.exists(preview_path):
+            os.remove(preview_path)
+            logging.info(f"Deleted preview file: {preview_path}")
+
+        # Delete video file
+        if project.video_file:
+            video_path = os.path.join('videos', project.video_file)
+            if os.path.exists(video_path):
+                os.remove(video_path)
+                logging.info(f"Deleted video file: {video_path}")
+
+        # Delete frames directory
+        frames_dir = f'frames/project_{project.folder_number}'
+        if os.path.exists(frames_dir):
+            shutil.rmtree(frames_dir)
+            logging.info(f"Deleted frames directory: {frames_dir}")
+
+        # Delete processed CSV file
+        if project.csv_file:
+            processed_csv = os.path.join('processed_data', f'project_{project.folder_number}_{project.csv_file}')
+            if os.path.exists(processed_csv):
+                os.remove(processed_csv)
+                logging.info(f"Deleted processed CSV file: {processed_csv}")
+
+        return True
+    except Exception as e:
+        logging.error(f"Error cleaning up project files: {str(e)}")
+        return False
+
+def cleanup_expired_projects():
+    """Check and remove expired projects"""
+    while True:
+        try:
+            with app.app_context():
+                # Find all expired projects
+                expired_projects = Project.query.filter(
+                    Project.expiry_date <= datetime.utcnow()
+                ).all()
+
+                for project in expired_projects:
+                    logging.info(f"Cleaning up expired project {project.id}")
+
+                    # Delete associated files
+                    if cleanup_project_files(project):
+                        # Delete project from database
+                        db.session.delete(project)
+                        logging.info(f"Deleted expired project {project.id} from database")
+                    else:
+                        logging.error(f"Failed to clean up files for project {project.id}")
+
+                db.session.commit()
+
+        except Exception as e:
+            logging.error(f"Error in cleanup task: {str(e)}")
+
+        # Sleep for 1 hour before next cleanup
+        time.sleep(3600)
 
 app = Flask(__name__)
 # Set a strong secret key for CSRF protection
@@ -399,7 +469,6 @@ def delete_account():
                 # Delete frames directory
                 frames_dir = f'frames/project_{project.folder_number}'
                 if os.path.exists(frames_dir):
-                    import shutil
                     shutil.rmtree(frames_dir)
 
                 # Delete processed CSV file
@@ -658,7 +727,6 @@ def delete_project(project_id):
         # Delete frames directory if it exists
         frames_dir = f'frames/project_{project.folder_number}'
         if os.path.exists(frames_dir):
-            import shutil
             shutil.rmtree(frames_dir)
 
         # Delete processed CSV file if exists
@@ -759,7 +827,6 @@ def stop_project(project_id):
             # Delete frames directory if it exists
             frames_dir = f'frames/project_{project.folder_number}'
             if os.path.exists(frames_dir):
-                import shutil
                 shutil.rmtree(frames_dir)
 
             # Delete processed CSV file if exists
@@ -846,3 +913,7 @@ with app.app_context():
 # Start collecting stats when the app starts
 stats_thread = threading.Thread(target=collect_system_stats, daemon=True)
 stats_thread.start()
+
+# Start cleanup thread when app starts
+cleanup_thread = threading.Thread(target=cleanup_expired_projects, daemon=True)
+cleanup_thread.start()
