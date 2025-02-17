@@ -81,6 +81,7 @@
                             <th>Email</th>
                             <th>Registration Date</th>
                             <th>Email Status</th>
+                            <th>Admin Status</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -100,6 +101,13 @@
                                 <span class="badge bg-success muted text-white">Confirmed</span>
                                 {% else %}
                                 <span class="badge bg-warning muted text-dark">Pending</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if user.is_admin %}
+                                <span class="badge bg-info muted text-white">Admin</span>
+                                {% else %}
+                                <span class="badge bg-secondary muted text-white">User</span>
                                 {% endif %}
                             </td>
                             <td>
@@ -278,6 +286,10 @@
 
 .badge.bg-secondary.muted {
     background-color: rgba(108, 117, 125, 0.7) !important;
+}
+
+.badge.bg-info.muted {
+    background-color: rgba(23, 162, 184, 0.7) !important;
 }
 
 /* Keep progress bar styling unchanged */
@@ -548,6 +560,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     ${user.is_email_confirmed ? 
                     '<span class="badge bg-success muted text-white">Confirmed</span>' : 
                     '<span class="badge bg-warning muted text-dark">Pending</span>'}
+                </td>
+                <td>
+                    ${user.is_admin ?
+                    '<span class="badge bg-info muted text-white">Admin</span>' :
+                    '<span class="badge bg-secondary muted text-white">User</span>'}
                 </td>
                 <td>
                     <button class="btn btn-sm btn-primary" onclick="editUser(${user.id}, '${user.name}', '${user.email}', ${user.is_admin})">
