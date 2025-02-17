@@ -228,7 +228,7 @@ msgid "FPS"
 msgstr "FPS"
 
 msgid "Resolution"
-msgstr "Разрешение"
+msgstr "Разреш."
 
 msgid "Codec"
 msgstr "Кодек"
