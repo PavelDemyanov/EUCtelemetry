@@ -320,12 +320,171 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+// Global variables
+let currentUserPage = 1;
+let currentProjectPage = 1;
+let charts = {};
+let currentRange = 'day';
+
+// Global functions for user management
+function updateUsersTable(users) {
+    const tbody = document.querySelector('#users-table tbody');
+    tbody.innerHTML = users.items.map(user => `
+        <tr>
+            <td>
+                ${user.name}
+                ${user.is_new ? '<span class="badge bg-success muted text-white">New User</span>' : ''}
+            </td>
+            <td>${user.email}</td>
+            <td>${user.created_at}</td>
+            <td>
+                ${user.is_email_confirmed ? 
+                '<span class="badge bg-success muted text-white">Confirmed</span>' : 
+                '<span class="badge bg-warning muted text-dark">Pending</span>'}
+            </td>
+            <td>
+                ${user.is_admin ?
+                '<span class="badge bg-info muted text-white">Admin</span>' :
+                '<span class="badge bg-secondary muted text-white">User</span>'}
+            </td>
+            <td>
+                <button class="btn btn-sm btn-primary" onclick="editUser(${user.id}, '${user.name}', '${user.email}', ${user.is_admin})">
+                    <i class="fas fa-edit"></i> Edit
+                </button>
+                <button class="btn btn-sm btn-danger" onclick="confirmDeleteUser(${user.id}, '${user.email}')">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+            </td>
+        </tr>
+    `).join('');
+
+    // Update pagination
+    updatePagination('users', users);
+}
+
+function updateProjectsTable(projects) {
+    const tbody = document.querySelector('#projects-table tbody');
+    tbody.innerHTML = projects.items.map(project => `
+        <tr>
+            <td>${project.id}</td>
+            <td>${project.user_name}</td>
+            <td>${project.user_email}</td>
+            <td>${project.name}</td>
+            <td>
+                <span class="badge ${project.status === 'completed' ? 'bg-success muted text-white' :
+                                  project.status === 'error' ? 'bg-danger muted text-white' :
+                                  project.status === 'processing' ? 'bg-primary muted text-white' :
+                                  'bg-secondary muted text-white'}">
+                    ${project.status}
+                </span>
+            </td>
+            <td>${project.created_at}</td>
+            <td>
+                <div class="progress">
+                    <div class="progress-bar" role="progressbar" 
+                         style="width: ${project.progress}%"
+                         aria-valuenow="${project.progress}" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100">
+                        ${project.progress}%
+                    </div>
+                </div>
+            </td>
+            <td>${project.duration}</td>
+            <td>${project.time_until_expiry}</td>
+            <td>${project.processing_time}</td>
+            <td>${project.fps}</td>
+            <td>${project.resolution}</td>
+        </tr>
+    `).join('');
+
+    // Update pagination
+    updatePagination('projects', projects);
+}
+
+function updatePagination(type, data) {
+    const nav = document.querySelector(`#${type}-pagination`);
+    if (!nav) return;
+
+    const pagination = [];
+
+    // Previous button
+    if (data.has_prev) {
+        pagination.push(`
+            <li class="page-item">
+                <a class="page-link" href="#" data-page="${data.page - 1}" data-type="${type}">&laquo;</a>
+            </li>
+        `);
+    }
+
+    // Page numbers
+    for (let i = 1; i <= data.pages; i++) {
+        if (
+            i === 1 || i === data.pages ||
+            (i >= data.page - 2 && i <= data.page + 2)
+        ) {
+            pagination.push(`
+                <li class="page-item ${i === data.page ? 'active' : ''}">
+                    <a class="page-link" href="#" data-page="${i}" data-type="${type}">${i}</a>
+                </li>
+            `);
+        } else if (
+            i === data.page - 3 ||
+            i === data.page + 3
+        ) {
+            pagination.push(`
+                <li class="page-item disabled"><span class="page-link">...</span></li>
+            `);
+        }
+    }
+
+    // Next button
+    if (data.has_next) {
+        pagination.push(`
+            <li class="page-item">
+                <a class="page-link" href="#" data-page="${data.page + 1}" data-type="${type}">&raquo;</a>
+            </li>
+        `);
+    }
+
+    nav.innerHTML = pagination.join('');
+
+    // Add click handlers for pagination
+    nav.querySelectorAll('a.page-link').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const page = parseInt(this.dataset.page);
+            const type = this.dataset.type;
+
+            // Update current page variables
+            if (type === 'users') {
+                currentUserPage = page;
+            } else {
+                currentProjectPage = page;
+            }
+
+            updateLists(type === 'users' ? page : null, type === 'projects' ? page : null);
+        });
+    });
+}
+
+// Function to update lists
+function updateLists(userPage = null, projectPage = null) {
+    const searchParams = new URLSearchParams();
+    if (userPage) searchParams.append('user_page', userPage);
+    if (projectPage) searchParams.append('project_page', projectPage);
+
+    fetch(`/admin/lists?${searchParams.toString()}`)
+        .then(response => response.json())
+        .then(data => {
+            updateUsersTable(data.users);
+            updateProjectsTable(data.projects);
+        });
+}
+
+// Rest of your existing code remains the same...
 document.addEventListener('DOMContentLoaded', function() {
-    const charts = {};
     const resources = ['cpu', 'memory', 'disk', 'gpu'];
-    let currentRange = 'day';
-    let currentUserPage = 1;
-    let currentProjectPage = 1;
 
     // Define colors for each resource
     const resourceColors = {
@@ -347,6 +506,128 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
+    // Initialize all charts
+    resources.forEach(resource => {
+        const ctx = document.getElementById(`${resource}-chart`);
+        charts[resource] = createChart(ctx, resource);
+        updateChart(resource, currentRange);
+    });
+
+    // Initial load of lists and stats
+    updateData();
+
+    // Start periodic updates
+    setInterval(updateData, 5000);
+});
+
+
+    let userToDelete = null;
+
+    function editUser(userId, name, email, isAdmin) {
+        document.getElementById('editUserId').value = userId;
+        document.getElementById('editUserName').value = name;
+        document.getElementById('editUserEmail').value = email;
+        document.getElementById('editUserIsAdmin').checked = isAdmin;
+        new bootstrap.Modal(document.getElementById('editUserModal')).show();
+    }
+
+    function confirmDeleteUser(userId, email) {
+        userToDelete = userId;
+        document.getElementById('deleteUserEmail').textContent = email;
+        new bootstrap.Modal(document.getElementById('deleteUserModal')).show();
+    }
+
+    function saveUserChanges() {
+        const userId = document.getElementById('editUserId').value;
+        const data = {
+            name: document.getElementById('editUserName').value,
+            email: document.getElementById('editUserEmail').value,
+            is_admin: document.getElementById('editUserIsAdmin').checked
+        };
+
+        fetch(`/admin/user/${userId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => Promise.reject(err));
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Create and show success alert
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
+                alertDiv.setAttribute('role', 'alert');
+                alertDiv.innerHTML = `
+                    <strong>Success!</strong> User information updated successfully.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                `;
+                document.body.appendChild(alertDiv);
+
+                // Close the modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('editUserModal'));
+                if (modal) {
+                    modal.hide();
+                }
+
+                // Update the table
+                updateLists(currentUserPage, currentProjectPage);
+
+                // Remove the alert after 3 seconds
+                setTimeout(() => {
+                    alertDiv.remove();
+                }, 3000);
+            } else {
+                throw new Error(data.error || 'Failed to update user');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            // Create and show error alert
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-danger alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
+            alertDiv.setAttribute('role', 'alert');
+            alertDiv.innerHTML = `
+                <strong>Error!</strong> ${error.error || error.message || 'Failed to update user'}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            document.body.appendChild(alertDiv);
+
+            // Remove the alert after 5 seconds
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        });
+    }
+
+    function deleteUser() {
+        if (!userToDelete) return;
+
+        fetch(`/admin/user/${userToDelete}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('deleteUserModal')).hide();
+                updateLists(currentUserPage, currentProjectPage);
+            } else {
+                alert(data.error || 'Failed to delete user');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to delete user');
+        });
+    }
+
     // Get user's timezone
     const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const userLocale = navigator.language || 'en-US';
@@ -357,30 +638,6 @@ document.addEventListener('DOMContentLoaded', function() {
             ...format
         }).format(date);
     }
-
-    // Initialize all charts
-    resources.forEach(resource => {
-        const ctx = document.getElementById(`${resource}-chart`);
-        charts[resource] = createChart(ctx, resource);
-        updateChart(resource, 'day');
-    });
-
-    // Setup click handlers for time range buttons
-    document.querySelectorAll('.btn-group button').forEach(button => {
-        button.addEventListener('click', function() {
-            const range = this.dataset.range;
-            currentRange = range;
-
-            document.querySelectorAll('.btn-group button').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            this.classList.add('active');
-
-            resources.forEach(resource => {
-                updateChart(resource, range);
-            });
-        });
-    });
 
     function createChart(ctx, resource) {
         return new Chart(ctx, {
@@ -564,150 +821,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
 
-    // Update users table
-    function updateUsersTable(users) {
-        const tbody = document.querySelector('#users-table tbody');
-        tbody.innerHTML = users.items.map(user => `
-            <tr>
-                <td>
-                    ${user.name}
-                    ${user.is_new ? '<span class="badge bg-success muted text-white">New User</span>' : ''}
-                </td>
-                <td>${user.email}</td>
-                <td>${user.created_at}</td>
-                <td>
-                    ${user.is_email_confirmed ? 
-                    '<span class="badge bg-success muted text-white">Confirmed</span>' : 
-                    '<span class="badge bg-warning muted text-dark">Pending</span>'}
-                </td>
-                <td>
-                    ${user.is_admin ?
-                    '<span class="badge bg-info muted text-white">Admin</span>' :
-                    '<span class="badge bg-secondary muted text-white">User</span>'}
-                </td>
-                <td>
-                    <button class="btn btn-sm btn-primary" onclick="editUser(${user.id}, '${user.name}', '${user.email}', ${user.is_admin})">
-                        <i class="fas fa-edit"></i> Edit
-                    </button>
-                    <button class="btn btn-sm btn-danger" onclick="confirmDeleteUser(${user.id}, '${user.email}')">
-                        <i class="fas fa-trash"></i> Delete
-                    </button>
-                </td>
-            </tr>
-        `).join('');
-
-        // Update pagination
-        updatePagination('users', users);
-    }
-
-    // Update projects table
-    function updateProjectsTable(projects) {
-        const tbody = document.querySelector('#projects-table tbody');
-        tbody.innerHTML = projects.items.map(project => `
-            <tr>
-                <td>${project.id}</td>
-                <td>${project.user_name}</td>
-                <td>${project.user_email}</td>
-                <td>${project.name}</td>
-                <td>
-                    <span class="badge ${project.status === 'completed' ? 'bg-success muted text-white' :
-                                      project.status === 'error' ? 'bg-danger muted text-white' :
-                                      project.status === 'processing' ? 'bg-primary muted text-white' :
-                                      'bg-secondary muted text-white'}">
-                        ${project.status}
-                    </span>
-                </td>
-                <td>${project.created_at}</td>
-                <td>
-                    <div class="progress">
-                        <div class="progress-bar" role="progressbar" 
-                             style="width: ${project.progress}%"
-                             aria-valuenow="${project.progress}" 
-                             aria-valuemin="0" 
-                             aria-valuemax="100">
-                            ${project.progress}%
-                        </div>
-                    </div>
-                </td>
-                <td>${project.duration}</td>
-                <td>${project.time_until_expiry}</td>
-                <td>${project.processing_time}</td>
-                <td>${project.fps}</td>
-                <td>${project.resolution}</td>
-            </tr>
-        `).join('');
-
-        // Update pagination
-        updatePagination('projects', projects);
-    }
-
-    // Update pagination
-    function updatePagination(type, data) {
-        const nav = document.querySelector(`#${type}-pagination`);
-        if (!nav) return;
-
-        const pagination = [];
-
-        // Previous button
-        if (data.has_prev) {
-            pagination.push(`
-                <li class="page-item">
-                    <a class="page-link" href="#" data-page="${data.page - 1}" data-type="${type}">&laquo;</a>
-                </li>
-            `);
-        }
-
-        // Page numbers
-        for (let i = 1; i <= data.pages; i++) {
-            if (
-                i === 1 || i === data.pages ||
-                (i >= data.page - 2 && i <= data.page + 2)
-            ) {
-                pagination.push(`
-                    <li class="page-item ${i === data.page ? 'active' : ''}">
-                        <a class="page-link" href="#" data-page="${i}" data-type="${type}">${i}</a>
-                    </li>
-                `);
-            } else if (
-                i === data.page - 3 ||
-                i === data.page + 3
-            ) {
-                pagination.push(`
-                    <li class="page-item disabled"><span class="page-link">...</span></li>
-                `);
-            }
-        }
-
-        // Next button
-        if (data.has_next) {
-            pagination.push(`
-                <li class="page-item">
-                    <a class="page-link" href="#" data-page="${data.page + 1}" data-type="${type}">&raquo;</a>
-                </li>
-            `);
-        }
-
-        nav.innerHTML = `<ul class="pagination justify-content-center">${pagination.join('')}</ul>`;
-
-        // Add click handlers for pagination
-        nav.querySelectorAll('a.page-link').forEach(link => {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
-                const page = parseInt(this.dataset.page);
-                const type = this.dataset.type;
-
-                // Update current page variables
-                if (type === 'users') {
-                    currentUserPage = page;
-                } else {
-                    currentProjectPage = page;
-                }
-
-                updateLists(type === 'users' ? page : null, type === 'projects' ? page : null);
-            });
-        });
-    }
-
     // Периодическое обновление данных
     function updateData() {
         // Обновление статистики
@@ -735,132 +848,21 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
 
-    // Функция обновления списков
-    function updateLists(userPage = null, projectPage = null) {
-        const searchParams = new URLSearchParams();
-        if (userPage) searchParams.append('user_page', userPage);
-        if (projectPage) searchParams.append('project_page', projectPage);
+    // Setup click handlers for time range buttons
+    document.querySelectorAll('.btn-group button').forEach(button => {
+        button.addEventListener('click', function() {
+            const range = this.dataset.range;
+            currentRange = range;
 
-        fetch(`/admin/lists?${searchParams.toString()}`)
-            .then(response => response.json())
-            .then(data => {
-                updateUsersTable(data.users);
-                updateProjectsTable(data.projects);
+            document.querySelectorAll('.btn-group button').forEach(btn => {
+                btn.classList.remove('active');
             });
-    }
+            this.classList.add('active');
 
-    // Запускаем периодическое обновление
-    setInterval(updateData, 5000);
-
-    // Initial load of lists and stats
-    updateData();
-});
-
-let userToDelete = null;
-
-function editUser(userId, name, email, isAdmin) {
-    document.getElementById('editUserId').value = userId;
-    document.getElementById('editUserName').value = name;
-    document.getElementById('editUserEmail').value = email;
-    document.getElementById('editUserIsAdmin').checked = isAdmin;
-    new bootstrap.Modal(document.getElementById('editUserModal')).show();
-}
-
-function confirmDeleteUser(userId, email) {
-    userToDelete = userId;
-    document.getElementById('deleteUserEmail').textContent = email;
-    new bootstrap.Modal(document.getElementById('deleteUserModal')).show();
-}
-
-function saveUserChanges() {
-    const userId = document.getElementById('editUserId').value;
-    const data = {
-        name: document.getElementById('editUserName').value,
-        email: document.getElementById('editUserEmail').value,
-        is_admin: document.getElementById('editUserIsAdmin').checked
-    };
-
-    fetch(`/admin/user/${userId}`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        },
-        body: JSON.stringify(data)
-    })
-    .then(response => {
-        if (!response.ok) {
-            return response.json().then(err => Promise.reject(err));
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.success) {
-            // Create and show success alert
-            const alertDiv = document.createElement('div');
-            alertDiv.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
-            alertDiv.setAttribute('role', 'alert');
-            alertDiv.innerHTML = `
-                <strong>Success!</strong> User information updated successfully.
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            `;
-            document.body.appendChild(alertDiv);
-
-            // Close the modal
-            const modal = bootstrap.Modal.getInstance(document.getElementById('editUserModal'));
-            if (modal) {
-                modal.hide();
-            }
-
-            // Update the table
-            updateLists(currentUserPage, currentProjectPage);
-
-            // Remove the alert after 3 seconds
-            setTimeout(() => {
-                alertDiv.remove();
-            }, 3000);
-        } else {
-            throw new Error(data.error || 'Failed to update user');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        // Create and show error alert
-        const alertDiv = document.createElement('div');
-        alertDiv.className = 'alert alert-danger alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
-        alertDiv.setAttribute('role', 'alert');
-        alertDiv.innerHTML = `
-            <strong>Error!</strong> ${error.error || error.message || 'Failed to update user'}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        `;
-        document.body.appendChild(alertDiv);
-
-        // Remove the alert after 5 seconds
-        setTimeout(() => {
-            alertDiv.remove();
-        }, 5000);
+            resources.forEach(resource => {
+                updateChart(resource, range);
+            });
+        });
     });
-}
-
-function deleteUser() {
-    if (!userToDelete) return;
-
-    fetch(`/admin/user/${userToDelete}`, {
-        method: 'DELETE'
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            bootstrap.Modal.getInstance(document.getElementById('deleteUserModal')).hide();
-            updateLists(currentUserPage, currentProjectPage);
-        } else {
-            alert(data.error || 'Failed to delete user');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Failed to delete user');
-    });
-}
 </script>
 {% endblock %}
