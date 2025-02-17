@@ -14,7 +14,7 @@
                 <div class="col-md-3">
                     <h6>CPU Usage</h6>
                     <div class="progress mb-2">
-                        <div class="progress-bar" role="progressbar" style="width: {{ cpu_percent }}%">
+                        <div class="progress-bar progress-bar-cpu" role="progressbar" style="width: {{ cpu_percent }}%">
                             {{ cpu_percent }}%
                         </div>
                     </div>
@@ -25,7 +25,7 @@
                 <div class="col-md-3">
                     <h6>Memory Usage</h6>
                     <div class="progress mb-2">
-                        <div class="progress-bar" role="progressbar" style="width: {{ memory_percent }}%">
+                        <div class="progress-bar progress-bar-memory" role="progressbar" style="width: {{ memory_percent }}%">
                             {{ memory_percent }}%
                         </div>
                     </div>
@@ -36,7 +36,7 @@
                 <div class="col-md-3">
                     <h6>Disk Usage</h6>
                     <div class="progress mb-2">
-                        <div class="progress-bar" role="progressbar" style="width: {{ disk_percent }}%">
+                        <div class="progress-bar progress-bar-disk" role="progressbar" style="width: {{ disk_percent }}%">
                             {{ disk_percent }}%
                         </div>
                     </div>
@@ -47,7 +47,7 @@
                 <div class="col-md-3">
                     <h6>GPU Usage</h6>
                     <div class="progress mb-2">
-                        <div class="progress-bar" role="progressbar" style="width: {{ gpu_percent|default(0) }}%">
+                        <div class="progress-bar progress-bar-gpu" role="progressbar" style="width: {{ gpu_percent|default(0) }}%">
                             {{ gpu_percent|default(0) }}%
                         </div>
                     </div>
@@ -292,7 +292,24 @@
     background-color: rgba(23, 162, 184, 0.7) !important;
 }
 
-/* Keep progress bar styling unchanged */
+/* Progress bar colors matching charts */
+.progress-bar-cpu {
+    background-color: rgb(65, 105, 225) !important;
+}
+
+.progress-bar-memory {
+    background-color: rgb(50, 168, 82) !important;
+}
+
+.progress-bar-disk {
+    background-color: rgb(147, 112, 219) !important;
+}
+
+.progress-bar-gpu {
+    background-color: rgb(255, 140, 0) !important;
+}
+
+/* Keep existing styles */
 .progress {
     background-color: rgba(0,0,0,0.2);
 }
