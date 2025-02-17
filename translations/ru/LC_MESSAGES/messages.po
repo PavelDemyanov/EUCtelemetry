@@ -237,7 +237,7 @@ msgid "Duration"
 msgstr "Длит."
 
 msgid "Proc. Time"
-msgstr "Время обр."
+msgstr "Обработ."
 
 msgid "Expires In"
 msgstr "Истекает"
