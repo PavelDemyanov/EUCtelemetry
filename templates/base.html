@@ -10,7 +10,12 @@
     <!-- Add JavaScript translations -->
     <script type="text/javascript">
         window.gettext = function(msgid) {
-            return "{{ _('") + msgid + "') }}";
+            try {
+                return {{ _('msgid') | tojson | safe }}.replace('msgid', msgid);
+            } catch (e) {
+                console.error('Translation error:', e);
+                return msgid;
+            }
         };
     </script>
 </head>

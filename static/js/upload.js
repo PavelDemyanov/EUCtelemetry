@@ -37,7 +37,12 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(gettext('Upload failed'));
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.error) throw new Error(data.error);
 
@@ -49,7 +54,7 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
         progressTitle.textContent = gettext('Error: ') + error.message;
         progressBar.classList.add('bg-danger');
         // Re-enable form
-        document.querySelectorAll('input, button').forEach(el => el.disabled = false);
+        this.querySelectorAll('input, button').forEach(el => el.disabled = false);
     });
 });
 
