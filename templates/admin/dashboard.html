@@ -354,11 +354,59 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function updateChart(resource, timeRange) {
         const labels = getLabelsForTimeRange(timeRange);
-        const data = Array.from({length: labels.length}, () => Math.random() * 100);
 
-        charts[resource].data.labels = labels;
-        charts[resource].data.datasets[0].data = data;
-        charts[resource].update();
+        // Get current time in user's timezone
+        const now = new Date();
+        const data = new Array(labels.length).fill(0);
+
+        fetch('/admin/stats')
+            .then(response => response.json())
+            .then(stats => {
+                const history = stats.history[resource];
+
+                // Fill data array based on timeRange
+                if (history && history.length > 0) {
+                    history.forEach(([timestamp, value]) => {
+                        // Convert server UTC time to user's local time
+                        const localTime = new Date(timestamp + 'Z');  // Add Z to parse as UTC
+
+                        // Find matching label index based on timeRange
+                        let index = -1;
+                        switch(timeRange) {
+                            case 'day':
+                                if (localTime.getDate() === now.getDate()) {
+                                    index = localTime.getHours();
+                                }
+                                break;
+                            case 'week':
+                                const dayDiff = Math.floor((now - localTime) / (1000 * 60 * 60 * 24));
+                                if (dayDiff < 7) {
+                                    index = 6 - dayDiff;
+                                }
+                                break;
+                            case 'month':
+                                if (localTime.getMonth() === now.getMonth()) {
+                                    index = localTime.getDate() - 1;
+                                }
+                                break;
+                            case 'year':
+                                if (localTime.getFullYear() === now.getFullYear()) {
+                                    index = localTime.getMonth();
+                                }
+                                break;
+                        }
+
+                        if (index >= 0) {
+                            data[index] = value;
+                        }
+                    });
+                }
+
+                // Update chart with real data
+                charts[resource].data.labels = labels;
+                charts[resource].data.datasets[0].data = data;
+                charts[resource].update();
+            });
     }
 
     // Update users table

@@ -20,6 +20,9 @@ from forms import (LoginForm, RegistrationForm, ProfileForm,
                   ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm, DeleteAccountForm)
 from models import User, Project
 from utils.email_sender import send_email
+from collections import defaultdict
+import threading
+import time
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -93,6 +96,37 @@ def get_system_stats():
     }
 
 
+# Global variable for storing statistics
+system_stats_history = {
+    'cpu': defaultdict(list),
+    'memory': defaultdict(list),
+    'disk': defaultdict(list),
+    'gpu': defaultdict(list)
+}
+
+stats_lock = threading.Lock()
+
+def collect_system_stats():
+    """Background thread to collect system statistics"""
+    while True:
+        stats = get_system_stats()
+        current_time = datetime.utcnow()
+
+        with stats_lock:
+            # Store stats with timestamp
+            for resource in ['cpu', 'memory', 'disk', 'gpu']:
+                system_stats_history[resource][current_time.strftime('%Y-%m-%d %H:%M')] = stats[f'{resource}_percent']
+
+            # Clean up old data (keep last 24 hours)
+            cleanup_time = current_time - timedelta(hours=24)
+            for resource in system_stats_history:
+                system_stats_history[resource] = {
+                    k: v for k, v in system_stats_history[resource].items()
+                    if datetime.strptime(k, '%Y-%m-%d %H:%M') > cleanup_time
+                }
+
+        time.sleep(60)  # Collect stats every minute
+
 @app.route('/admin')
 @login_required
 @admin_required
@@ -123,7 +157,19 @@ def admin_dashboard():
 @admin_required
 def admin_stats():
     """API endpoint to get updated system stats"""
-    return jsonify(get_system_stats())
+    current_stats = get_system_stats()
+
+    # Add historical data
+    with stats_lock:
+        history = {
+            resource: list(system_stats_history[resource].items())
+            for resource in system_stats_history
+        }
+
+    return jsonify({
+        'current': current_stats,
+        'history': history
+    })
 
 @app.route('/admin/lists')
 @login_required
@@ -791,3 +837,7 @@ def reset_password(token):
 
 with app.app_context():
     db.create_all()
+
+# Start collecting stats when the app starts
+stats_thread = threading.Thread(target=collect_system_stats, daemon=True)
+stats_thread.start()
