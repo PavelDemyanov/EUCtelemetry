@@ -96,9 +96,9 @@
                             <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
                             <td>
                                 {% if user.is_email_confirmed %}
-                                <span class="badge bg-success text-white">Confirmed</span>
+                                <span class="badge bg-success muted text-white">Confirmed</span>
                                 {% else %}
-                                <span class="badge bg-warning text-dark">Pending</span>
+                                <span class="badge bg-warning muted text-dark">Pending</span>
                                 {% endif %}
                             </td>
                         </tr>
@@ -149,10 +149,10 @@
                             <td>{{ project.user.email }}</td>
                             <td>{{ project.name }}</td>
                             <td>
-                                <span class="badge {% if project.status == 'completed' %}bg-success text-white
-                                              {% elif project.status == 'error' %}bg-danger text-white
-                                              {% elif project.status == 'processing' %}bg-primary text-white
-                                              {% else %}bg-secondary text-white{% endif %}">
+                                <span class="badge {% if project.status == 'completed' %}bg-success muted text-white
+                                              {% elif project.status == 'error' %}bg-danger muted text-white
+                                              {% elif project.status == 'processing' %}bg-primary muted text-white
+                                              {% else %}bg-secondary muted text-white{% endif %}">
                                     {{ project.status }}
                                 </span>
                             </td>
@@ -191,6 +191,27 @@
 </div>
 
 <style>
+/* Muted badge colors */
+.badge.bg-success.muted {
+    background-color: rgba(40, 167, 69, 0.7) !important;
+}
+
+.badge.bg-warning.muted {
+    background-color: rgba(255, 193, 7, 0.7) !important;
+}
+
+.badge.bg-danger.muted {
+    background-color: rgba(220, 53, 69, 0.7) !important;
+}
+
+.badge.bg-primary.muted {
+    background-color: rgba(0, 123, 255, 0.7) !important;
+}
+
+.badge.bg-secondary.muted {
+    background-color: rgba(108, 117, 125, 0.7) !important;
+}
+
 /* Keep progress bar styling unchanged */
 .progress {
     background-color: rgba(0,0,0,0.2);
@@ -457,8 +478,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td>${user.created_at}</td>
                 <td>
                     ${user.is_email_confirmed ? 
-                    '<span class="badge bg-success text-white">Confirmed</span>' : 
-                    '<span class="badge bg-warning text-dark">Pending</span>'}
+                    '<span class="badge bg-success muted text-white">Confirmed</span>' : 
+                    '<span class="badge bg-warning muted text-dark">Pending</span>'}
                 </td>
             </tr>
         `).join('');
@@ -477,10 +498,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td>${project.user_email}</td>
                 <td>${project.name}</td>
                 <td>
-                    <span class="badge ${project.status === 'completed' ? 'bg-success text-white' :
-                                      project.status === 'error' ? 'bg-danger text-white' :
-                                      project.status === 'processing' ? 'bg-primary text-white' :
-                                      'bg-secondary text-white'}">
+                    <span class="badge ${project.status === 'completed' ? 'bg-success muted text-white' :
+                                      project.status === 'error' ? 'bg-danger muted text-white' :
+                                      project.status === 'processing' ? 'bg-primary muted text-white' :
+                                      'bg-secondary muted text-white'}">
                         ${project.status}
                     </span>
                 </td>
