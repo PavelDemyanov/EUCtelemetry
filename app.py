@@ -189,7 +189,7 @@ def admin_lists():
         .order_by(User.created_at.desc())\
         .paginate(page=user_page, per_page=20, error_out=False)
 
-    # Format projects data
+    # Format projects data with additional fields
     projects_data = [{
         'id': p.id,
         'user_name': p.user.name,
@@ -197,7 +197,12 @@ def admin_lists():
         'name': p.name,
         'status': p.status,
         'created_at': p.created_at.strftime('%Y-%m-%d %H:%M'),
-        'progress': int(p.progress)  # Round progress to integer
+        'progress': int(p.progress),  # Round progress to integer
+        'duration': p.get_duration_str(),  # Add duration
+        'time_until_expiry': p.time_until_expiry(),  # Add expiry time
+        'processing_time': p.get_processing_time_str(),  # Add processing time
+        'fps': f"{p.fps:.2f}" if p.fps else '-',  # Add FPS
+        'resolution': p.resolution or '-'  # Add resolution
     } for p in projects.items]
 
     # Format users data

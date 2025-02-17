@@ -134,6 +134,11 @@
                             <th>Status</th>
                             <th>Created</th>
                             <th>Progress</th>
+                            <th>Duration</th>
+                            <th>Expiry</th>
+                            <th>Processing Time</th>
+                            <th>FPS</th>
+                            <th>Resolution</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -163,6 +168,11 @@
                                     </div>
                                 </div>
                             </td>
+                            <td>{{ project.get_duration_str() }}</td>
+                            <td>{{ project.time_until_expiry() }}</td>
+                            <td>{{ project.get_processing_time_str() }}</td>
+                            <td>{{ "%.2f"|format(project.fps) if project.fps else '-' }}</td>
+                            <td>{{ project.resolution or '-' }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -478,6 +488,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                     </div>
                 </td>
+                <td>${project.duration}</td>
+                <td>${project.time_until_expiry}</td>
+                <td>${project.processing_time}</td>
+                <td>${project.fps}</td>
+                <td>${project.resolution}</td>
             </tr>
         `).join('');
 
