@@ -459,9 +459,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 break;
             case 'day':
-                for(let i = 0; i < 24; i++) {
+                // Show last 24 hours from current time
+                for(let i = 23; i >= 0; i--) {
                     const date = new Date(now);
-                    date.setHours(i, 0, 0, 0);
+                    date.setHours(date.getHours() - i);
                     labels.push(formatTimeInUserTimezone(date, {
                         hour: '2-digit',
                         minute: '2-digit'
@@ -488,10 +489,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 break;
             case 'year':
-                for(let i = 0; i < 12; i++) {
-                    const date = new Date(now.getFullYear(), i, 1);
+                // Show last 12 months from current month
+                for(let i = 11; i >= 0; i--) {
+                    const date = new Date(now);
+                    date.setMonth(date.getMonth() - i);
                     labels.push(formatTimeInUserTimezone(date, {
-                        month: 'short'
+                        month: 'short',
+                        year: 'numeric'
                     }));
                 }
                 break;
@@ -501,8 +505,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function updateChart(resource, timeRange) {
         const labels = getLabelsForTimeRange(timeRange);
-
-        // Get current time in user's timezone
         const now = new Date();
         const data = new Array(labels.length).fill(0);
 
@@ -511,14 +513,11 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(stats => {
                 const history = stats.history[resource];
 
-                // Fill data array based on timeRange
                 if (history && history.length > 0) {
                     history.forEach(([timestamp, value]) => {
-                        // Convert server UTC time to user's local time
                         const localTime = new Date(timestamp + 'Z');  // Add Z to parse as UTC
-
-                        // Find matching label index based on timeRange
                         let index = -1;
+
                         switch(timeRange) {
                             case 'hour':
                                 const minutesDiff = Math.floor((now - localTime) / (1000 * 60));
@@ -527,8 +526,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                 }
                                 break;
                             case 'day':
-                                if (localTime.getDate() === now.getDate()) {
-                                    index = localTime.getHours();
+                                const hoursDiff = Math.floor((now - localTime) / (1000 * 60 * 60));
+                                if (hoursDiff < 24) {
+                                    index = 23 - hoursDiff;
                                 }
                                 break;
                             case 'week':
@@ -543,8 +543,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                 }
                                 break;
                             case 'year':
-                                if (localTime.getFullYear() === now.getFullYear()) {
-                                    index = localTime.getMonth();
+                                const monthDiff = (now.getFullYear() - localTime.getFullYear()) * 12 +
+                                                (now.getMonth() - localTime.getMonth());
+                                if (monthDiff < 12) {
+                                    index = 11 - monthDiff;
                                 }
                                 break;
                         }
@@ -555,7 +557,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                 }
 
-                // Update chart with real data
                 charts[resource].data.labels = labels;
                 charts[resource].data.datasets[0].data = data;
                 charts[resource].update();
