@@ -16,7 +16,8 @@ class User(UserMixin, db.Model):
     email_confirmation_sent_at = db.Column(db.DateTime)
     password_reset_token = db.Column(db.String(100), unique=True)
     password_reset_sent_at = db.Column(db.DateTime)
-    is_admin = db.Column(db.Boolean, default=False)  # New admin field
+    is_admin = db.Column(db.Boolean, default=False)
+    locale = db.Column(db.String(2), default='en')  # New field for language preference
     projects = db.relationship('Project', backref='user', lazy=True)
 
     def set_password(self, password):

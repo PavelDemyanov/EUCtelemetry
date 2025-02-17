@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="dark">
+<html lang="{{ get_locale() }}" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EUCTelemetry</title>
+    <title>{{ _('EUCTelemetry') }}</title>
     <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/custom.css') }}" rel="stylesheet">
@@ -13,10 +13,10 @@
         <div class="container">
             <a class="navbar-brand d-flex align-items-center" href="{{ url_for('index') }}">
                 <img src="{{ url_for('static', filename='icons/ecutelemetry-icon.png') }}" 
-                     alt="EUCTelemetry Icon" 
+                     alt="{{ _('EUCTelemetry Icon') }}" 
                      class="me-2"
                      style="height: 24px; width: auto;">
-                EUCTelemetry
+                {{ _('EUCTelemetry') }}
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -24,39 +24,50 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('home') }}">Home</a>
+                        <a class="nav-link" href="{{ url_for('home') }}">{{ _('Home') }}</a>
                     </li>
                     {% if current_user.is_authenticated %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('index') }}">Create Project</a>
+                        <a class="nav-link" href="{{ url_for('index') }}">{{ _('Create Project') }}</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('list_projects') }}">My Projects</a>
+                        <a class="nav-link" href="{{ url_for('list_projects') }}">{{ _('My Projects') }}</a>
                     </li>
                     {% endif %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('about') }}">About</a>
+                        <a class="nav-link" href="{{ url_for('about') }}">{{ _('About') }}</a>
                     </li>
                     {% if current_user.is_authenticated and current_user.is_admin %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('admin_dashboard') }}">Admin</a>
+                        <a class="nav-link" href="{{ url_for('admin_dashboard') }}">{{ _('Admin') }}</a>
                     </li>
                     {% endif %}
                 </ul>
                 <ul class="navbar-nav">
+                    <!-- Language Switcher -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="languageDropdown" role="button" 
+                           data-bs-toggle="dropdown" aria-expanded="false">
+                            {{ _('Language') }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="languageDropdown">
+                            <li><a class="dropdown-item" href="?lang=en">English</a></li>
+                            <li><a class="dropdown-item" href="?lang=ru">Русский</a></li>
+                        </ul>
+                    </li>
                     {% if current_user.is_authenticated %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('profile') }}">Profile: {{ current_user.name }}</a>
+                        <a class="nav-link" href="{{ url_for('profile') }}">{{ _('Profile') }}: {{ current_user.name }}</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
+                        <a class="nav-link" href="{{ url_for('logout') }}">{{ _('Logout') }}</a>
                     </li>
                     {% else %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('login') }}">Login</a>
+                        <a class="nav-link" href="{{ url_for('login') }}">{{ _('Login') }}</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('register') }}">Register</a>
+                        <a class="nav-link" href="{{ url_for('register') }}">{{ _('Register') }}</a>
                     </li>
                     {% endif %}
                 </ul>
@@ -85,25 +96,25 @@
                 <div class="col-lg-8">
                     <div class="row">
                         <div class="col-md-4 mb-3">
-                            <h5>EUCTelemetry</h5>
+                            <h5>{{ _('EUCTelemetry') }}</h5>
                             <p class="text-muted">
-                                Transform your EUC ride videos with professional telemetry overlays.
+                                {{ _('Transform your EUC ride videos with professional telemetry overlays.') }}
                             </p>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <h5>Quick Links</h5>
+                            <h5>{{ _('Quick Links') }}</h5>
                             <ul class="list-unstyled">
-                                <li><a href="{{ url_for('home') }}" class="text-decoration-none text-light">Home</a></li>
-                                <li><a href="{{ url_for('about') }}" class="text-decoration-none text-light">About</a></li>
+                                <li><a href="{{ url_for('home') }}" class="text-decoration-none text-light">{{ _('Home') }}</a></li>
+                                <li><a href="{{ url_for('about') }}" class="text-decoration-none text-light">{{ _('About') }}</a></li>
                                 {% if current_user.is_authenticated %}
-                                <li><a href="{{ url_for('list_projects') }}" class="text-decoration-none text-light">My Projects</a></li>
+                                <li><a href="{{ url_for('list_projects') }}" class="text-decoration-none text-light">{{ _('My Projects') }}</a></li>
                                 {% else %}
-                                <li><a href="{{ url_for('register') }}" class="text-decoration-none text-light">Register</a></li>
+                                <li><a href="{{ url_for('register') }}" class="text-decoration-none text-light">{{ _('Register') }}</a></li>
                                 {% endif %}
                             </ul>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <h5>Connect</h5>
+                            <h5>{{ _('Connect') }}</h5>
                             <div class="d-flex gap-3">
                                 <a href="https://t.me/paveldemyanov" target="_blank" class="text-light">
                                     <i class="bi bi-telegram"></i>
@@ -122,7 +133,7 @@
                     </div>
                     <hr class="my-3">
                     <div class="text-center text-muted">
-                        <small>&copy; {{ now.year }} EUCTelemetry. Created by Pavel Demyanov. All rights reserved.</small>
+                        <small>&copy; {{ now.year }} {{ _('EUCTelemetry. Created by Pavel Demyanov. All rights reserved.') }}</small>
                     </div>
                 </div>
             </div>

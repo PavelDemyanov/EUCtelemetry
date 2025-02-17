@@ -27,4 +27,5 @@ dependencies = [
     "twilio>=9.4.5",
     "python-dotenv>=1.0.1",
     "psutil>=7.0.0",
+    "flask-babel>=4.0.0",
 ]

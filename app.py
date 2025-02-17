@@ -27,6 +27,8 @@ from utils.email_sender import send_email
 from forms import (LoginForm, RegistrationForm, ProfileForm, 
                   ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm, DeleteAccountForm)
 from models import User, Project
+from flask_babel import Babel, gettext as _, get_locale
+from flask import request
 
 # Project name characters
 PROJECT_NAME_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
@@ -322,6 +324,22 @@ for directory in ['uploads', 'frames', 'videos', 'processed_data', 'previews']:
 
 db.init_app(app)
 migrate = Migrate(app, db)
+
+# Babel configuration
+babel = Babel(app)
+
+@babel.localeselector
+def get_locale():
+    # Try to get locale from query string
+    locale = request.args.get('lang')
+    if locale in ['en', 'ru']:
+        return locale
+    # Try to get locale from user settings
+    if current_user.is_authenticated and hasattr(current_user, 'locale'):
+        return current_user.locale
+    # Try to get locale from request header
+    return request.accept_languages.best_match(['en', 'ru'])
+
 
 # Authentication routes
 @app.route('/login', methods=['GET', 'POST'])
