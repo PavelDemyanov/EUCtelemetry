@@ -9,13 +9,28 @@
     <link href="{{ url_for('static', filename='css/custom.css') }}" rel="stylesheet">
     <!-- Add JavaScript translations -->
     <script type="text/javascript">
+        var translations = {
+            'Uploading CSV...': "{{ _('Uploading CSV...') }}",
+            'Creating frames...': "{{ _('Creating frames...') }}",
+            'Encoding video...': "{{ _('Encoding video...') }}",
+            'Complete!': "{{ _('Complete!') }}",
+            'Error: ': "{{ _('Error: ') }}",
+            'Processing failed': "{{ _('Processing failed') }}",
+            'Waiting to start...': "{{ _('Waiting to start...') }}",
+            'No status received from server': "{{ _('No status received from server') }}",
+            'An error occurred during video processing.': "{{ _('An error occurred during video processing.') }}",
+            'Error: Unexpected status': "{{ _('Error: Unexpected status') }}",
+            'An unexpected error occurred.': "{{ _('An unexpected error occurred.') }}",
+            'Error checking status: ': "{{ _('Error checking status: ') }}",
+            'An error occurred while checking the processing status.': "{{ _('An error occurred while checking the processing status.') }}",
+            'An error occurred while starting the video processing.': "{{ _('An error occurred while starting the video processing.') }}",
+            'Video processing completed successfully!': "{{ _('Video processing completed successfully!') }}",
+            'You can close your browser and come back later - the video processing will continue in the background.': "{{ _('You can close your browser and come back later - the video processing will continue in the background.') }}",
+            'Alternatively, you can go to the Projects section to monitor the progress there.': "{{ _('Alternatively, you can go to the Projects section to monitor the progress there.') }}"
+        };
+
         window.gettext = function(msgid) {
-            try {
-                return {{ _('msgid') | tojson | safe }}.replace('msgid', msgid);
-            } catch (e) {
-                console.error('Translation error:', e);
-                return msgid;
-            }
+            return translations[msgid] || msgid;
         };
     </script>
 </head>
