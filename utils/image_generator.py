@@ -205,7 +205,7 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
         logging.error(f"Error in create_frame: {e}")
         raise
 
-def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, text_settings=None, progress_callback=None):
+def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, text_settings=None, progress_callback=None, interpolate_values=True):
     try:
         frames_dir = f'frames/project_{folder_number}'
         if os.path.exists(frames_dir):
@@ -223,7 +223,7 @@ def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, tex
         T_min = df['timestamp'].min()
         T_max = df['timestamp'].max()
         frame_count = int((T_max - T_min) * fps)
-        logging.info(f"Generating {frame_count} frames at {fps} fps")
+        logging.info(f"Generating {frame_count} frames at {fps} fps with interpolation {'enabled' if interpolate_values else 'disabled'}")
         frame_timestamps = np.linspace(T_min, T_max, frame_count)
 
         completed_frames = 0
@@ -231,8 +231,8 @@ def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, tex
 
         def process_frame(i, timestamp):
             nonlocal completed_frames
-            # Use interpolated values for frame generation
-            values = find_nearest_values(df, timestamp)
+            # Use interpolated values for frame generation if enabled
+            values = find_nearest_values(df, timestamp, interpolate=interpolate_values)
             output_path = f'{frames_dir}/frame_{i:06d}.png'
             create_frame(values, resolution, output_path, text_settings)
 
@@ -253,8 +253,8 @@ def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, tex
         logging.error(f"Error in generate_frames: {e}")
         raise
 
-def find_nearest_values(df, timestamp):
-    """Find interpolated values for the given timestamp"""
+def find_nearest_values(df, timestamp, interpolate=True):
+    """Find nearest or interpolated values for the given timestamp"""
     # If timestamp is before the first data point, return zeros
     if timestamp < df['timestamp'].iloc[0]:
         return {key: 0 for key in ['speed','max_speed','gps','voltage','temperature',
@@ -284,20 +284,24 @@ def find_nearest_values(df, timestamp):
     after_idx = df[after_mask].index[0]
     before_idx = df[before_mask].index[-1]
 
-    # If exact match found, return those values
-    if before_idx == after_idx:
+    # If exact match found or interpolation is disabled, return nearest values
+    if before_idx == after_idx or not interpolate:
+        use_idx = before_idx
+        if not interpolate and timestamp - df.loc[before_idx, 'timestamp'] > df.loc[after_idx, 'timestamp'] - timestamp:
+            use_idx = after_idx
+
         result = {
-            'speed': int(df.loc[before_idx, 'speed']),
-            'gps': int(df.loc[before_idx, 'gps']),
-            'voltage': int(df.loc[before_idx, 'voltage']),
-            'temperature': int(df.loc[before_idx, 'temperature']),
-            'current': int(df.loc[before_idx, 'current']),
-            'battery': int(df.loc[before_idx, 'battery']),
-            'mileage': int(df.loc[before_idx, 'mileage']),
-            'pwm': int(df.loc[before_idx, 'pwm']),
-            'power': int(df.loc[before_idx, 'power'])
+            'speed': int(df.loc[use_idx, 'speed']),
+            'gps': int(df.loc[use_idx, 'gps']),
+            'voltage': int(df.loc[use_idx, 'voltage']),
+            'temperature': int(df.loc[use_idx, 'temperature']),
+            'current': int(df.loc[use_idx, 'current']),
+            'battery': int(df.loc[use_idx, 'battery']),
+            'mileage': int(df.loc[use_idx, 'mileage']),
+            'pwm': int(df.loc[use_idx, 'pwm']),
+            'power': int(df.loc[use_idx, 'power'])
         }
-        result['max_speed'] = int(df.loc[:before_idx, 'speed'].max())
+        result['max_speed'] = int(df.loc[:use_idx, 'speed'].max())
         return result
 
     # Calculate interpolation factor
