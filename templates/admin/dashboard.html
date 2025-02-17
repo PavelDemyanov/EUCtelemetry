@@ -542,12 +542,14 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(stats => {
                 // Обновляем прогресс-бары
-                document.querySelectorAll('.progress-bar').forEach(bar => {
-                    const resource = bar.closest('.col-md-3').querySelector('h6').textContent.toLowerCase().replace(' usage', '');
-                    const value = stats[`${resource}_percent`];
-                    bar.style.width = `${value}%`;
-                    bar.textContent = `${value}%`;
-                });
+                for (const resource of resources) {
+                    const value = stats.current[`${resource}_percent`];
+                    const bar = document.querySelector(`.col-md-3:nth-child(${resources.indexOf(resource) + 1}) .progress-bar`);
+                    if (bar) {
+                        bar.style.width = `${value}%`;
+                        bar.textContent = `${value}%`;
+                    }
+                }
 
                 // Обновляем графики
                 resources.forEach(resource => {
@@ -558,6 +560,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Обновление списков с сохранением текущей страницы
         updateLists(currentUserPage, currentProjectPage);
     }
+
+    // Функция updateChart остается без изменений, так как она уже правильно обрабатывает новый формат данных
 
     // Функция обновления списков
     function updateLists(userPage = null, projectPage = null) {
@@ -573,11 +577,11 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
 
-    // Обновляем данные каждые 5 секунд
+    // Запускаем периодическое обновление
     setInterval(updateData, 5000);
 
-    // Initial load of lists
-    updateLists(currentUserPage, currentProjectPage);
+    // Initial load of lists and stats
+    updateData();
 });
 </script>
 {% endblock %}
