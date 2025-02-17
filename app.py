@@ -11,7 +11,7 @@ from functools import wraps
 
 import psutil
 from dotenv import load_dotenv
-from flask import (Flask, render_template, request, jsonify, send_file, 
+from flask import (Flask, render_template, request, jsonify, send_file,
                   url_for, send_from_directory, flash, redirect, abort)
 from flask_migrate import Migrate
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
@@ -25,7 +25,7 @@ from utils.video_creator import create_video
 from utils.background_processor import process_project
 from utils.env_setup import setup_env_variables
 from utils.email_sender import send_email
-from forms import (LoginForm, RegistrationForm, ProfileForm, 
+from forms import (LoginForm, RegistrationForm, ProfileForm,
                   ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm, DeleteAccountForm)
 from models import User, Project
 
@@ -243,7 +243,7 @@ def admin_dashboard():
         .order_by(User.created_at.desc())\
         .paginate(page=user_page, per_page=20, error_out=False)
 
-    return render_template('admin/dashboard.html', 
+    return render_template('admin/dashboard.html',
                          projects=projects,
                          users=users,
                          today=today,
@@ -375,7 +375,7 @@ def register():
     form = RegistrationForm()
     if form.validate_on_submit():
         if User.query.filter_by(email=form.email.data).first():
-            flash('This email is already registered')
+            flash(_('This email is already registered'))
             return redirect(url_for('register'))
 
         # Check if this is the first user
@@ -399,6 +399,7 @@ def register():
             # Prepare email content based on locale
             confirmation_link = url_for('confirm_email', token=confirmation_token, _external=True)
             if user_locale == 'ru':
+                subject = "Подтвердите регистрацию"
                 confirmation_html = f"""
                 <h2>Подтвердите регистрацию</h2>
                 <p>Здравствуйте, {user.name},</p>
@@ -408,6 +409,7 @@ def register():
                 <p>С наилучшими пожеланиями,<br>Команда EUCTelemetry</p>
                 """
             else:
+                subject = "Confirm Your Email Address"
                 confirmation_html = f"""
                 <h2>Confirm Your Registration</h2>
                 <p>Hello {user.name},</p>
@@ -417,9 +419,11 @@ def register():
                 <p>Best regards,<br>EUCTelemetry Team</p>
                 """
 
-            if send_email(user.email, "Confirm Your Email Address", confirmation_html):
+            if send_email(user.email, subject, confirmation_html):
+                # Use localized flash message
                 flash(_('Please check your email to complete registration.'))
             else:
+                # Use localized error message
                 flash(_('Error sending confirmation email. Please try registering again.'))
                 db.session.delete(user)
                 db.session.commit()
@@ -478,8 +482,8 @@ def profile():
         flash(_('Profile updated successfully'))
         return redirect(url_for('profile'))
 
-    return render_template('profile.html', 
-                         profile_form=profile_form, 
+    return render_template('profile.html',
+                         profile_form=profile_form,
                          password_form=password_form,
                          delete_form=delete_form)
 
@@ -585,7 +589,7 @@ def upload_file():
                     return jsonify({'error': 'Invalid file encoding. Please ensure your CSV file is properly encoded.'}), 400
 
             # Check for DarknessBot format
-            darkness_bot_columns = {'Date', 'Speed', 'GPS Speed', 'Voltage', 'Temperature', 
+            darkness_bot_columns = {'Date', 'Speed', 'GPS Speed', 'Voltage', 'Temperature',
                                       'Current', 'Battery level', 'Total mileage', 'PWM', 'Power'}
             # Check for WheelLog format
             wheellog_columns = {'date', 'speed', 'gps_speed', 'voltage', 'system_temp',
@@ -664,6 +668,10 @@ def generate_project_frames(project_id):
         codec = data.get('codec', 'h264')
         interpolate_values = data.get('interpolate_values', True)  # New parameter
 
+        # Get current locale
+        current_locale = get_locale()
+        logging.info(f"Using locale: {current_locale} for frame generation")
+
         # Update project settings immediately
         project.fps = fps
         project.resolution = resolution
@@ -690,8 +698,8 @@ def generate_project_frames(project_id):
 
         logging.info(f"Starting processing with settings: {text_settings}, interpolate_values: {interpolate_values}")
 
-        # Start background processing with text settings and interpolation flag
-        process_project(project_id, resolution, fps, codec, text_settings, interpolate_values)
+        # Start background processing with text settings, interpolation flag and locale
+        process_project(project_id, resolution, fps, codec, text_settings, interpolate_values, locale=current_locale)
 
         return jsonify({'success': True, 'message': 'Processing started'})
     except Exception as e:
@@ -737,7 +745,7 @@ def download_file(project_id, type):
     elif type == 'processed_csv':
         processed_csv = os.path.join('processed_data', f'project_{project.folder_number}_{project.csv_file}')
         if os.path.exists(processed_csv):
-            return send_file(processed_csv, as_attachment=True, 
+            return send_file(processed_csv, as_attachment=True,
                            download_name=f'processed_{project.csv_file}')
 
     return jsonify({'error': 'File not found'}), 404
@@ -812,18 +820,220 @@ def generate_preview(project_id):
             'indicator_x': float(data.get('indicator_x', 50)),
             'indicator_y': float(data.get('indicator_y', 80)),
             'speed_y': int(data.get('speed_y', 0)),
-            'unit_y': int(data.get('unit_y',0)),'speed_size': float(data.get('speed_size', 100)),
+            'unit_y': int(data.get('unit_y',0)),
+            'speed_size': float(data.get('speed_size', 100)),
             'unit_size': float(data.get('unit_size', 100)),
             'indicator_scale': float(data.get('indicator_scale', 100))
         }
 
         logging.info(f"Generating preview with settings: {text_settings}")
 
+        # Get current locale
+        current_locale = get_locale()
+        logging.info(f"Using locale: {current_locale} for preview generation")
+
         preview_path = create_preview_frame(
             os.path.join(app.config['UPLOAD_FOLDER'], project.csv_file),
             project_id,
             resolution,
-            text_settings
+            text_settings,
+            locale=current_locale  # Pass locale to preview generation
+        )
+
+        return jsonify({
+            'success': True,
+            'preview_url': url_for('serve_preview', filename=f'{project_id}_preview.png')
+        })
+    except Exception as e:
+        logging.error(f"Error generating preview: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+# Update frame generation route
+@app.route('/generate_frames/<int:project_id>', methods=['POST'])
+@login_required
+def generate_project_frames(project_id):
+    project = Project.query.get_or_404(project_id)
+    if project.user_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    try:
+        # Get settings from request
+        data = request.get_json() if request.is_json else {}
+        resolution = data.get('resolution', 'fullhd')
+        fps = float(data.get('fps', 29.97))  # Get FPS from request
+        codec = data.get('codec', 'h264')
+        interpolate_values = data.get('interpolate_values', True)  # New parameter
+
+        # Get current locale
+        current_locale = get_locale()
+        logging.info(f"Using locale: {current_locale} for frame generation")
+
+        # Update project settings immediately
+        project.fps = fps
+        project.resolution = resolution
+        project.codec = codec
+        project.processing_started_at = datetime.now()  # Record start time
+        db.session.commit()
+
+        # Get text display settings with explicit defaults
+        text_settings = {
+            'vertical_position': int(data.get('vertical_position', 50)),
+            'top_padding': int(data.get('top_padding', 10)),
+            'bottom_padding': int(data.get('bottom_padding', 30)),
+            'spacing': int(data.get('spacing', 20)),
+            'font_size': int(data.get('font_size', 26)),
+            'border_radius': int(data.get('border_radius', 13)),
+            'indicator_x': float(data.get('indicator_x', 50)),
+            'indicator_y': float(data.get('indicator_y', 80)),
+            'speed_y': int(data.get('speed_y', 0)),
+            'unit_y': int(data.get('unit_y', 0)),
+            'speed_size': float(data.get('speed_size', 100)),
+            'unit_size': float(data.get('unit_size', 100)),
+            'indicator_scale': float(data.get('indicator_scale', 100))
+        }
+
+        logging.info(f"Starting processing with settings: {text_settings}, interpolate_values: {interpolate_values}")
+
+        # Start background processing with text settings, interpolation flag and locale
+        process_project(project_id, resolution, fps, codec, text_settings, interpolate_values, locale=current_locale)
+
+        return jsonify({'success': True, 'message': 'Processing started'})
+    except Exception as e:
+        logging.error(f"Error starting processing: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/project_status/<int:project_id>')
+@login_required
+def project_status(project_id):
+    project = Project.query.get_or_404(project_id)
+    if project.user_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
+    return jsonify({
+        'status': project.status,
+        'frame_count': project.frame_count,
+        'video_file': project.video_file,
+        'error_message': project.error_message,
+        'progress': project.progress,  # Add progress to the response
+        'processing_time': project.get_processing_time_str()
+    })
+
+@app.route('/projects')
+@login_required
+def list_projects():
+    page = request.args.get('page', 1, type=int)
+    projects = Project.query.filter_by(user_id=current_user.id)\
+        .order_by(Project.created_at.desc())\
+        .paginate(page=page, per_page=10, error_out=False)
+    return render_template('projects.html', projects=projects)
+
+@app.route('/download/<int:project_id>/<type>')
+@login_required
+def download_file(project_id, type):
+    project = Project.query.get_or_404(project_id)
+    if project.user_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    if type == 'video' and project.video_file:
+        return send_file(f'videos/{project.video_file}')
+    elif type == 'frames':
+        # TODO: Implement frame download as ZIP
+        pass
+    elif type == 'processed_csv':
+        processed_csv = os.path.join('processed_data', f'project_{project.folder_number}_{project.csv_file}')
+        if os.path.exists(processed_csv):
+            return send_file(processed_csv, as_attachment=True,
+                           download_name=f'processed_{project.csv_file}')
+
+    return jsonify({'error': 'File not found'}), 404
+
+@app.route('/delete/<int:project_id>', methods=['POST'])
+@login_required
+def delete_project(project_id):
+    project = Project.query.get_or_404(project_id)
+    if project.user_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    try:
+        # Delete associated files if they exist
+        if project.csv_file:
+            csv_path = os.path.join(app.config['UPLOAD_FOLDER'], project.csv_file)
+            if os.path.exists(csv_path):
+                os.remove(csv_path)
+
+        # Delete preview file if exists
+        preview_path = os.path.join('previews', f'{project_id}_preview.png')
+        if os.path.exists(preview_path):
+            os.remove(preview_path)
+
+        if project.video_file:
+            video_path = os.path.join('videos', project.video_file)
+            if os.path.exists(video_path):
+                os.remove(video_path)
+
+        # Delete frames directory if it exists
+        frames_dir = f'frames/project_{project.folder_number}'
+        if os.path.exists(frames_dir):
+            shutil.rmtree(frames_dir)
+
+        # Delete processed CSV file if exists
+        if project.csv_file:
+            processed_csv = os.path.join('processed_data', f'project_{project.folder_number}_{project.csv_file}')
+            if os.path.exists(processed_csv):
+                os.remove(processed_csv)
+
+        # Delete project from database
+        db.session.delete(project)
+        db.session.commit()
+
+        return jsonify({'success': True})
+    except Exception as e:
+        logging.error(f"Error deleting project: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/previews/<path:filename>')
+def serve_preview(filename):
+    return send_from_directory('previews', filename)
+
+@app.route('/preview/<int:project_id>', methods=['POST'])
+@login_required
+def generate_preview(project_id):
+    project = Project.query.get_or_404(project_id)
+    if project.user_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    try:
+        # Get text display settings from request
+        data = request.get_json() if request.is_json else {}
+        resolution = data.get('resolution', 'fullhd')
+        text_settings = {
+            'vertical_position': int(data.get('vertical_position', 50)),
+            'top_padding': int(data.get('top_padding', 10)),
+            'bottom_padding': int(data.get('bottom_padding', 30)),
+            'spacing': int(data.get('spacing', 20)),
+            'font_size': int(data.get('font_size', 26)),
+            'border_radius': int(data.get('border_radius', 13)),
+            # Speed indicator settings
+            'indicator_x': float(data.get('indicator_x', 50)),
+            'indicator_y': float(data.get('indicator_y', 80)),
+            'speed_y': int(data.get('speed_y', 0)),
+            'unit_y': int(data.get('unit_y',0)),
+            'speed_size': float(data.get('speed_size', 100)),
+            'unit_size': float(data.get('unit_size', 100)),
+            'indicator_scale': float(data.get('indicator_scale', 100))
+        }
+
+        logging.info(f"Generating preview with settings: {text_settings}")
+
+        # Get current locale
+        current_locale = get_locale()
+        logging.info(f"Using locale: {current_locale} for preview generation")
+
+        preview_path = create_preview_frame(
+            os.path.join(app.config['UPLOAD_FOLDER'], project.csv_file),
+            project_id,
+            resolution,
+            text_settings,
+            locale=current_locale  # Pass locale to preview generation
         )
 
         return jsonify({

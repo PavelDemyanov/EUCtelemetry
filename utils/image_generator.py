@@ -63,7 +63,10 @@ def create_rounded_box(width, height, radius):
         logging.debug(f"Created and cached rounded box {cache_key}")
     return _box_cache[cache_key].copy()
 
-def create_frame(values, resolution='fullhd', output_path=None, text_settings=None):
+def create_frame(values, resolution='fullhd', output_path=None, text_settings=None, locale='en'):
+    """
+    Create a frame with localized text based on the current locale
+    """
     try:
         # Определяем разрешение и масштаб
         if resolution == "4k":
@@ -96,6 +99,58 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
         logging.info(f"Unit text size: {unit_size}%, offset Y: {unit_y_offset}px")
         logging.info(f"Indicator scale: {indicator_scale}%")
 
+        # Локализованные заголовки параметров
+        param_labels = {
+            'en': {
+                'Speed': 'Speed',
+                'Max Speed': 'Max Speed',
+                'GPS': 'GPS',
+                'Voltage': 'Voltage',
+                'Temp': 'Temp',
+                'Current': 'Current',
+                'Battery': 'Battery',
+                'Mileage': 'Mileage',
+                'PWM': 'PWM',
+                'Power': 'Power'
+            },
+            'ru': {
+                'Speed': 'Скорость',
+                'Max Speed': 'Макс. скорость',
+                'GPS': 'GPS',
+                'Voltage': 'Напряжение',
+                'Temp': 'Темп',
+                'Current': 'Ток',
+                'Battery': 'Батарея',
+                'Mileage': 'Пробег',
+                'PWM': 'ШИМ',
+                'Power': 'Мощность'
+            }
+        }
+
+        # Локализованные единицы измерения
+        units = {
+            'en': {
+                'speed': 'km/h',
+                'voltage': 'V',
+                'temperature': '°C',
+                'current': 'A',
+                'battery': '%',
+                'mileage': 'km',
+                'pwm': '%',
+                'power': 'W'
+            },
+            'ru': {
+                'speed': 'км/ч',
+                'voltage': 'В',
+                'temperature': '°C',
+                'current': 'А',
+                'battery': '%',
+                'mileage': 'км',
+                'pwm': '%',
+                'power': 'Вт'
+            }
+        }
+
         # Создаем индикатор скорости с учетом смещений текста и масштаба
         speed_indicator = create_speed_indicator(
             values['speed'], 
@@ -105,7 +160,8 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
             speed_size=speed_size,
             unit_size=unit_size,
             indicator_scale=indicator_scale,
-            resolution=resolution
+            resolution=resolution,
+            locale=locale
         )
 
         # Позиционируем индикатор скорости на основе процентных значений
@@ -128,16 +184,16 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
             raise
 
         params = [
-            ('Speed', f"{values['speed']}", 'km/h'),
-            ('Max Speed', f"{values['max_speed']}", 'km/h'),
-            ('GPS', f"{values['gps']}", 'km/h'),
-            ('Voltage', f"{values['voltage']}", 'V'),
-            ('Temp', f"{values['temperature']}", '°C'),
-            ('Current', f"{values['current']}", 'A'),
-            ('Battery', f"{values['battery']}", '%'),
-            ('Mileage', f"{values['mileage']}", 'km'),
-            ('PWM', f"{values['pwm']}", '%'),
-            ('Power', f"{values['power']}", 'W')
+            (param_labels[locale]['Speed'], f"{values['speed']}", units[locale]['speed']),
+            (param_labels[locale]['Max Speed'], f"{values['max_speed']}", units[locale]['speed']),
+            (param_labels[locale]['GPS'], f"{values['gps']}", units[locale]['speed']),
+            (param_labels[locale]['Voltage'], f"{values['voltage']}", units[locale]['voltage']),
+            (param_labels[locale]['Temp'], f"{values['temperature']}", units[locale]['temperature']),
+            (param_labels[locale]['Current'], f"{values['current']}", units[locale]['current']),
+            (param_labels[locale]['Battery'], f"{values['battery']}", units[locale]['battery']),
+            (param_labels[locale]['Mileage'], f"{values['mileage']}", units[locale]['mileage']),
+            (param_labels[locale]['PWM'], f"{values['pwm']}", units[locale]['pwm']),
+            (param_labels[locale]['Power'], f"{values['power']}", units[locale]['power'])
         ]
 
         element_widths = []

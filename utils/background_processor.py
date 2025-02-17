@@ -9,7 +9,7 @@ from utils.hardware_detection import get_hardware_info
 import os
 from datetime import datetime
 
-def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', text_settings=None, interpolate_values=True):
+def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', text_settings=None, interpolate_values=True, locale='en'):
     """Process project in background thread"""
     def _process():
         from app import app  # Import app here to avoid circular import
@@ -25,7 +25,7 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                 # Log hardware information at the start of processing
                 hardware_info = get_hardware_info()
                 logging.info(f"Starting project processing with hardware configuration: {hardware_info}")
-                logging.info(f"Processing settings - Resolution: {resolution}, FPS: {fps}, Codec: {codec}, Interpolation: {'enabled' if interpolate_values else 'disabled'}")
+                logging.info(f"Processing settings - Resolution: {resolution}, FPS: {fps}, Codec: {codec}, Interpolation: {'enabled' if interpolate_values else 'disabled'}, Locale: {locale}")
 
                 project.status = 'processing'
                 project.fps = float(fps)  # Convert to float explicitly
@@ -70,7 +70,7 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     except Exception as e:
                         logging.error(f"Error updating progress: {e}")
 
-                # Generate frames with progress tracking and interpolation setting
+                # Generate frames with progress tracking, interpolation setting, and locale
                 frame_count, duration = generate_frames(
                     csv_file,
                     project.folder_number,
@@ -78,7 +78,8 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     fps,
                     text_settings,
                     progress_callback,
-                    interpolate_values
+                    interpolate_values,
+                    locale=locale  # Pass locale to frame generation
                 )
 
                 # Convert numpy values to Python native types
