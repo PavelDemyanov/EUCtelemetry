@@ -188,7 +188,7 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
             # Apply interpolation if requested
             if interpolate_values:
                 columns_to_interpolate = ['speed', 'gps', 'voltage', 'temperature', 'current', 
-                                        'battery', 'mileage', 'pwm', 'power']
+                                      'battery', 'mileage', 'pwm', 'power']
                 processed_data = interpolate_numeric_data(processed_data, columns_to_interpolate)
 
             # Remove consecutive duplicates
@@ -214,18 +214,39 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
             # Filter out rows with invalid timestamps
             df = df[valid_timestamp_mask]
 
-            processed_data = {
+            raw_data = {
                 'timestamp': df['timestamp'],
-                'speed': clean_numeric_column(df['Speed']),
-                'gps': clean_numeric_column(df['GPS Speed']),
-                'voltage': clean_numeric_column(df['Voltage']),
-                'temperature': clean_numeric_column(df['Temperature']),
-                'current': clean_numeric_column(df['Current']),
-                'battery': clean_numeric_column(df['Battery level']),
-                'mileage': process_mileage(df['Total mileage'], csv_type),
-                'pwm': clean_numeric_column(df['PWM']),
-                'power': clean_numeric_column(df['Power'])
+                'speed': pd.to_numeric(df['Speed'], errors='coerce'),
+                'gps': pd.to_numeric(df['GPS Speed'], errors='coerce'),
+                'voltage': pd.to_numeric(df['Voltage'], errors='coerce'),
+                'temperature': pd.to_numeric(df['Temperature'], errors='coerce'),
+                'current': pd.to_numeric(df['Current'], errors='coerce'),
+                'battery': pd.to_numeric(df['Battery level'], errors='coerce'),
+                'mileage': pd.to_numeric(df['Total mileage'], errors='coerce'),
+                'pwm': pd.to_numeric(df['PWM'], errors='coerce'),
+                'power': pd.to_numeric(df['Power'], errors='coerce')
             }
+
+            # Apply interpolation before cleaning if requested
+            if interpolate_values:
+                columns_to_interpolate = ['speed', 'gps', 'voltage', 'temperature', 'current', 
+                                      'battery', 'mileage', 'pwm', 'power']
+                raw_data = interpolate_numeric_data(raw_data, columns_to_interpolate)
+
+            # Clean and process the data
+            processed_data = {
+                'timestamp': raw_data['timestamp'],
+                'speed': clean_numeric_column(pd.Series(raw_data['speed'])),
+                'gps': clean_numeric_column(pd.Series(raw_data['gps'])),
+                'voltage': clean_numeric_column(pd.Series(raw_data['voltage'])),
+                'temperature': clean_numeric_column(pd.Series(raw_data['temperature'])),
+                'current': clean_numeric_column(pd.Series(raw_data['current'])),
+                'battery': clean_numeric_column(pd.Series(raw_data['battery'])),
+                'mileage': process_mileage(pd.Series(raw_data['mileage']), csv_type),
+                'pwm': clean_numeric_column(pd.Series(raw_data['pwm'])),
+                'power': clean_numeric_column(pd.Series(raw_data['power']))
+            }
+
         else:  # wheellog
             # Parse timestamps and create a mask for valid timestamps
             df['timestamp'] = df.apply(lambda x: parse_timestamp_wheellog(x['date'], x['time']), axis=1)
@@ -234,24 +255,38 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
             # Filter out rows with invalid timestamps
             df = df[valid_timestamp_mask]
 
-            processed_data = {
+            raw_data = {
                 'timestamp': df['timestamp'],
-                'speed': clean_numeric_column(df['speed']),
-                'gps': clean_numeric_column(df['gps_speed']),
-                'voltage': clean_numeric_column(df['voltage']),
-                'temperature': clean_numeric_column(df['system_temp']),
-                'current': clean_numeric_column(df['current']),
-                'battery': clean_numeric_column(df['battery_level']),
-                'mileage': process_mileage(df['totaldistance'], csv_type),
-                'pwm': clean_numeric_column(df['pwm']),
-                'power': clean_numeric_column(df['power'])
+                'speed': pd.to_numeric(df['speed'], errors='coerce'),
+                'gps': pd.to_numeric(df['gps_speed'], errors='coerce'),
+                'voltage': pd.to_numeric(df['voltage'], errors='coerce'),
+                'temperature': pd.to_numeric(df['system_temp'], errors='coerce'),
+                'current': pd.to_numeric(df['current'], errors='coerce'),
+                'battery': pd.to_numeric(df['battery_level'], errors='coerce'),
+                'mileage': pd.to_numeric(df['totaldistance'], errors='coerce'),
+                'pwm': pd.to_numeric(df['pwm'], errors='coerce'),
+                'power': pd.to_numeric(df['power'], errors='coerce')
             }
 
-        # Apply interpolation if requested
-        if interpolate_values:
-            columns_to_interpolate = ['speed', 'gps', 'voltage', 'temperature', 'current', 
-                                    'battery', 'mileage', 'pwm', 'power']
-            processed_data = interpolate_numeric_data(processed_data, columns_to_interpolate)
+            # Apply interpolation before cleaning if requested
+            if interpolate_values:
+                columns_to_interpolate = ['speed', 'gps', 'voltage', 'temperature', 'current', 
+                                      'battery', 'mileage', 'pwm', 'power']
+                raw_data = interpolate_numeric_data(raw_data, columns_to_interpolate)
+
+            # Clean and process the data
+            processed_data = {
+                'timestamp': raw_data['timestamp'],
+                'speed': clean_numeric_column(pd.Series(raw_data['speed'])),
+                'gps': clean_numeric_column(pd.Series(raw_data['gps'])),
+                'voltage': clean_numeric_column(pd.Series(raw_data['voltage'])),
+                'temperature': clean_numeric_column(pd.Series(raw_data['temperature'])),
+                'current': clean_numeric_column(pd.Series(raw_data['current'])),
+                'battery': clean_numeric_column(pd.Series(raw_data['battery'])),
+                'mileage': process_mileage(pd.Series(raw_data['mileage']), csv_type),
+                'pwm': clean_numeric_column(pd.Series(raw_data['pwm'])),
+                'power': clean_numeric_column(pd.Series(raw_data['power']))
+            }
 
         # Remove consecutive duplicates
         processed_data = remove_consecutive_duplicates(processed_data)
