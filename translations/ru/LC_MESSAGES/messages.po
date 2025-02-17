@@ -19,6 +19,19 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.17.0\n"
 
+# Project status translations
+msgid "pending"
+msgstr "в ожидании"
+
+msgid "processing"
+msgstr "обработка"
+
+msgid "completed"
+msgstr "завершено"
+
+msgid "error"
+msgstr "ошибка"
+
 # Email and registration messages
 msgid "Please check your email to complete registration."
 msgstr "Пожалуйста, проверьте вашу почту для завершения регистрации."
