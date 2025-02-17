@@ -27,7 +27,7 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
     // Show progress for upload, but not the video processing info
     progressDiv.classList.remove('d-none');
     videoProcessingInfo.classList.add('d-none');  // Ensure video processing info is hidden
-    progressTitle.textContent = 'Uploading CSV...';
+    progressTitle.textContent = gettext('Uploading CSV...');
 
     // Disable form
     this.querySelectorAll('input, button').forEach(el => el.disabled = true);
@@ -46,7 +46,7 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
     })
     .catch(error => {
         console.error('Error:', error);
-        progressTitle.textContent = 'Error: ' + error.message;
+        progressTitle.textContent = gettext('Error: ') + error.message;
         progressBar.classList.add('bg-danger');
         // Re-enable form
         document.querySelectorAll('input, button').forEach(el => el.disabled = false);
@@ -119,7 +119,7 @@ function updatePreview(projectId) {
     })
     .catch(error => {
         console.error('Error:', error);
-        progressTitle.textContent = 'Error: ' + error.message;
+        progressTitle.textContent = gettext('Error: ') + error.message;
         progressBar.classList.add('bg-danger');
         // Re-enable form
         document.querySelectorAll('input, button').forEach(el => el.disabled = false);
@@ -254,7 +254,7 @@ document.getElementById('startProcessButton').addEventListener('click', function
     this.disabled = true;
 
     // Set initial background processing message
-    videoProcessingInfo.textContent = "You can close your browser and come back later - the video processing will continue in the background. Alternatively, you can go to the Projects section to monitor the progress there.";
+    videoProcessingInfo.textContent = gettext("You can close your browser and come back later - the video processing will continue in the background.");
 
     // Get all current settings
     const settings = {
@@ -296,60 +296,60 @@ document.getElementById('startProcessButton').addEventListener('click', function
                 .then(statusData => {
                     // Ensure we have a valid status
                     if (!statusData.status) {
-                        throw new Error('No status received from server');
+                        throw new Error(gettext('No status received from server'));
                     }
 
                     switch(statusData.status) {
                         case 'processing':
                             const progress = statusData.progress || 0;
                             progressTitle.textContent = progress <= 50 ? 
-                                'Creating frames...' : 
-                                'Encoding video...';
+                                gettext('Creating frames...') : 
+                                gettext('Encoding video...');
                             progressBar.style.width = `${progress}%`;
                             progressBar.textContent = `${progress.toFixed(1)}%`;
                             // Show processing stage below the main message
-                            videoProcessingInfo.textContent = "You can close your browser and come back later - the video processing will continue in the background. Alternatively, you can go to the Projects section to monitor the progress there.";
-                            // Poll more frequently during frame creation (every 200ms)
+                            videoProcessingInfo.textContent = gettext('You can close your browser and come back later - the video processing will continue in the background.') + ' ' +
+                                gettext('Alternatively, you can go to the Projects section to monitor the progress there.');
                             setTimeout(checkStatus, progress <= 50 ? 200 : 1000);
                             break;
 
                         case 'completed':
                             progressBar.style.width = '100%';
                             progressBar.textContent = '100%';
-                            progressTitle.textContent = 'Complete!';
-                            videoProcessingInfo.textContent = 'Video processing completed successfully!';
+                            progressTitle.textContent = gettext('Complete!');
+                            videoProcessingInfo.textContent = gettext('Video processing completed successfully!');
                             setTimeout(() => {
                                 window.location.href = '/projects';
                             }, 1000);
                             break;
 
                         case 'pending':
-                            progressTitle.textContent = 'Waiting to start...';
-                            videoProcessingInfo.textContent = "You can close your browser and come back later - the video processing will continue in the background. Alternatively, you can go to the Projects section to monitor the progress there.";
+                            progressTitle.textContent = gettext('Waiting to start...');
+                            videoProcessingInfo.textContent = gettext('You can close your browser and come back later - the video processing will continue in the background.');
                             setTimeout(checkStatus, 500);
                             break;
 
                         case 'error':
-                            const errorMsg = statusData.error_message || 'Processing failed';
-                            progressTitle.textContent = 'Error: ' + errorMsg;
+                            const errorMsg = statusData.error_message || gettext('Processing failed');
+                            progressTitle.textContent = gettext('Error: ') + errorMsg;
                             progressBar.classList.add('bg-danger');
-                            videoProcessingInfo.textContent = 'An error occurred during video processing.';
+                            videoProcessingInfo.textContent = gettext('An error occurred during video processing.');
                             this.disabled = false;
                             break;
 
                         default:
                             console.error('Unexpected status:', statusData.status);
-                            progressTitle.textContent = 'Error: Unexpected status';
+                            progressTitle.textContent = gettext('Error: Unexpected status');
                             progressBar.classList.add('bg-danger');
-                            videoProcessingInfo.textContent = 'An unexpected error occurred.';
+                            videoProcessingInfo.textContent = gettext('An unexpected error occurred.');
                             this.disabled = false;
                     }
                 })
                 .catch(error => {
                     console.error('Status check error:', error);
-                    progressTitle.textContent = 'Error checking status: ' + error.message;
+                    progressTitle.textContent = gettext('Error checking status: ') + error.message;
                     progressBar.classList.add('bg-danger');
-                    videoProcessingInfo.textContent = 'An error occurred while checking the processing status.';
+                    videoProcessingInfo.textContent = gettext('An error occurred while checking the processing status.');
                     this.disabled = false;
                 });
         };
@@ -359,9 +359,9 @@ document.getElementById('startProcessButton').addEventListener('click', function
     })
     .catch(error => {
         console.error('Error:', error);
-        progressTitle.textContent = 'Error: ' + error.message;
+        progressTitle.textContent = gettext('Error: ') + error.message;
         progressBar.classList.add('bg-danger');
-        videoProcessingInfo.textContent = 'An error occurred while starting the video processing.';
+        videoProcessingInfo.textContent = gettext('An error occurred while starting the video processing.');
         this.disabled = false;
     });
 });

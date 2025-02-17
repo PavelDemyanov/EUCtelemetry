@@ -412,6 +412,7 @@ msgstr "Завершено!"
 msgid "Creating frames... Complete!"
 msgstr "Создание кадров... Завершено!"
 
+
 msgid "Processing video... Complete!"
 msgstr "Обработка видео... Завершено!"
 
@@ -429,3 +430,45 @@ msgstr "Загрузка CSV... Завершено!"
 
 msgid "Current status:"
 msgstr "Текущий статус:"
+
+msgid "Waiting to start..."
+msgstr "Ожидание начала..."
+
+msgid "Encoding video..."
+msgstr "Кодирование видео..."
+
+msgid "Error: "
+msgstr "Ошибка: "
+
+msgid "No status received from server"
+msgstr "Не получен статус от сервера"
+
+msgid "Processing failed"
+msgstr "Обработка не удалась"
+
+msgid "An error occurred during video processing."
+msgstr "Произошла ошибка при обработке видео."
+
+msgid "Error: Unexpected status"
+msgstr "Ошибка: Неожиданный статус"
+
+msgid "An unexpected error occurred."
+msgstr "Произошла непредвиденная ошибка."
+
+msgid "Error checking status: "
+msgstr "Ошибка при проверке статуса: "
+
+msgid "An error occurred while checking the processing status."
+msgstr "Произошла ошибка при проверке статуса обработки."
+
+msgid "An error occurred while starting the video processing."
+msgstr "Произошла ошибка при запуске обработки видео."
+
+msgid "Video processing completed successfully!"
+msgstr "Обработка видео успешно завершена!"
+
+msgid "You can close your browser and come back later - the video processing will continue in the background."
+msgstr "Вы можете закрыть браузер и вернуться позже - обработка видео продолжится в фоновом режиме."
+
+msgid "Alternatively, you can go to the Projects section to monitor the progress there."
+msgstr "Кроме того, вы можете перейти в раздел Проекты, чтобы отслеживать прогресс там."
