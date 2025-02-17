@@ -169,7 +169,6 @@ msgstr "Выровняйте данные телеметрии с вашей п�
 msgid "Export the video with your desired quality settings"
 msgstr "Экспортируйте видео с желаемыми настройками качества"
 
-# New translations for about page
 msgid "About the Creator"
 msgstr "О создателе"
 
@@ -272,7 +271,6 @@ msgstr "Предыдущая"
 msgid "Next"
 msgstr "Следующая"
 
-# Новые переводы для страницы index
 msgid "Create New Project"
 msgstr "Создать новый проект"
 
