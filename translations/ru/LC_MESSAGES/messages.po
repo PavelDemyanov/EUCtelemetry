@@ -387,3 +387,21 @@ msgstr "Текущее:"
 
 msgid "px"
 msgstr "пх"
+
+msgid "Creating frames..."
+msgstr "Создание кадров..."
+
+msgid "Processing video..."
+msgstr "Обработка видео..."
+
+msgid "Analyzing CSV data..."
+msgstr "Анализ CSV данных..."
+
+msgid "Generating preview..."
+msgstr "Создание предпросмотра..."
+
+msgid "Initializing..."
+msgstr "Инициализация..."
+
+msgid "Preview frame"
+msgstr "Кадр предпросмотра"
