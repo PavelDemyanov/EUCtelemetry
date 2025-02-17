@@ -5,7 +5,7 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header">
-                <h2 class="card-title">Sign In</h2>
+                <h2 class="card-title">{{ _('Sign In') }}</h2>
             </div>
             <div class="card-body">
                 <form method="POST" action="{{ url_for('login') }}">
@@ -26,10 +26,10 @@
                     </div>
                     <div class="mb-3">
                         {{ form.submit(class="btn btn-primary") }}
-                        <a href="{{ url_for('forgot_password') }}" class="ms-2">Forgot password?</a>
+                        <a href="{{ url_for('forgot_password') }}" class="ms-2">{{ _('Forgot password?') }}</a>
                     </div>
                 </form>
-                <p>Don't have an account? <a href="{{ url_for('register') }}">Register</a></p>
+                <p>{{ _("Don't have an account?") }} <a href="{{ url_for('register') }}">{{ _('Register') }}</a></p>
             </div>
         </div>
     </div>

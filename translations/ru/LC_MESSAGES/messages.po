@@ -19,6 +19,77 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.17.0\n"
 
+# Authentication pages translations
+msgid "Sign In"
+msgstr "Войти"
+
+msgid "Email"
+msgstr "Электронная почта"
+
+msgid "Password"
+msgstr "Пароль"
+
+msgid "Forgot password?"
+msgstr "Забыли пароль?"
+
+msgid "Don't have an account?"
+msgstr "Нет аккаунта?"
+
+msgid "Register"
+msgstr "Регистрация"
+
+msgid "Registration"
+msgstr "Регистрация"
+
+msgid "Name"
+msgstr "Имя"
+
+msgid "Confirm Password"
+msgstr "Подтвердите пароль"
+
+msgid "Already have an account?"
+msgstr "Уже есть аккаунт?"
+
+msgid "Sign in"
+msgstr "Войти"
+
+msgid "Set New Password"
+msgstr "Установить новый пароль"
+
+msgid "Reset Password"
+msgstr "Сбросить пароль"
+
+msgid "Remember your password?"
+msgstr "Вспомнили пароль?"
+
+msgid "Send Reset Link"
+msgstr "Отправить ссылку для сброса"
+
+msgid "New Password"
+msgstr "Новый пароль"
+
+msgid "Confirm New Password"
+msgstr "Подтвердите новый пароль"
+
+msgid "Current Password"
+msgstr "Текущий пароль"
+
+msgid "Change Password"
+msgstr "Изменить пароль"
+
+msgid "Save Changes"
+msgstr "Сохранить изменения"
+
+msgid "Delete Account"
+msgstr "Удалить аккаунт"
+
+# Form validation messages
+msgid "Passwords must match"
+msgstr "Пароли должны совпадать"
+
+msgid "Password must be at least 6 characters long"
+msgstr "Пароль должен быть не менее 6 символов"
+
 msgid "Profile Settings"
 msgstr "Настройки профиля"
 
@@ -472,7 +543,6 @@ msgstr "Вы можете закрыть браузер и вернуться п
 msgid "Alternatively, you can go to the Projects section to monitor the progress there."
 msgstr "Кроме того, вы можете перейти в раздел Проекты, чтобы отслеживать прогресс там."
 
-# Add new translations for main.js
 msgid "Are you sure you want to stop and delete this project?"
 msgstr "Вы уверены, что хотите остановить и удалить этот проект?"
 
