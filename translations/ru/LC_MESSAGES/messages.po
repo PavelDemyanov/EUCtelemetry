@@ -97,6 +97,75 @@ msgstr "Связаться"
 msgid "EUCTelemetry. Created by Pavel Demyanov. All rights reserved."
 msgstr "EUCTelemetry. Создано Павлом Демьяновым. Все права защищены."
 
-# Новые переводы для главной страницы
 msgid "The program is designed to extract telemetry data (speed, PWM, GPS speed, power, current, voltage, battery charge, trip mileage, temperature) from popular programs like DarknessBot and WheelLog and overlay them on a blue background (chroma key) for further integration of telemetry data onto your video recorded during a trip or from cameras such as insta360, GoPro, iPhone, or any other camera."
 msgstr "Программа предназначена для извлечения данных телеметрии (скорость, ШИМ, GPS скорость, мощность, ток, напряжение, заряд батареи, пробег, температура) из популярных программ, таких как DarknessBot и WheelLog, и наложения их на синий фон (хромакей) для дальнейшей интеграции данных телеметрии на ваше видео, записанное во время поездки или с камер, таких как insta360, GoPro, iPhone или любой другой камеры."
+
+# Новые переводы для домашней страницы
+msgid "How to Export Telemetry Data"
+msgstr "Как экспортировать данные телеметрии"
+
+msgid "From DarknessBot:"
+msgstr "Из DarknessBot:"
+
+msgid "Open DarknessBot and go to the \"Trips\" section"
+msgstr "Откройте DarknessBot и перейдите в раздел \"Поездки\""
+
+msgid "Select the desired \"Trip\""
+msgstr "Выберите нужную \"Поездку\""
+
+msgid "Click the export button"
+msgstr "Нажмите кнопку экспорта"
+
+msgid "Save the CSV file of the trip to a convenient location"
+msgstr "Сохраните CSV файл поездки в удобное место"
+
+msgid "Your browser does not support the video tag."
+msgstr "Ваш браузер не поддерживает тег видео."
+
+msgid "From WheelLog:"
+msgstr "Из WheelLog:"
+
+msgid "Open WheelLog and go to the section"
+msgstr "Откройте WheelLog и перейдите в раздел"
+
+msgid "Additional steps"
+msgstr "Дополнительные шаги"
+
+msgid "Running the Program"
+msgstr "Запуск программы"
+
+msgid "Open the CSV file"
+msgstr "Откройте CSV файл"
+
+msgid "Choose the desired FPS, resolution (FullHD or 4K), and codec settings"
+msgstr "Выберите желаемые настройки FPS, разрешения (FullHD или 4K) и кодека"
+
+msgid "Set up the display of telemetry elements on the video"
+msgstr "Настройте отображение элементов телеметрии на видео"
+
+msgid "Start the process of creating a video on the blue background (Chroma Key)"
+msgstr "Запустите процесс создания видео на синем фоне (Хромакей)"
+
+msgid "Go to the \"My Projects\" section to download the finished video"
+msgstr "Перейдите в раздел \"Мои проекты\" для загрузки готового видео"
+
+msgid "Overlaying on Your Trip Video from iPhone, insta360, GoPro, and Other Cameras"
+msgstr "Наложение на видео вашей поездки с iPhone, insta360, GoPro и других камер"
+
+msgid "You can use any video editor that supports chroma key removal, such as Davinci Resolve"
+msgstr "Вы можете использовать любой видеоредактор, поддерживающий удаление хромакея, например Davinci Resolve"
+
+msgid "Open your camera video in Davinci Resolve"
+msgstr "Откройте видео с вашей камеры в Davinci Resolve"
+
+msgid "Overlay the video created by euctelemetry.app on top"
+msgstr "Наложите видео, созданное euctelemetry.app, сверху"
+
+msgid "Apply the 3D keyer effect to the video from euctelemetry.app"
+msgstr "Примените эффект 3D keyer к видео из euctelemetry.app"
+
+msgid "Align the telemetry data with your trip on the timeline"
+msgstr "Выровняйте данные телеметрии с вашей поездкой на временной шкале"
+
+msgid "Export the video with your desired quality settings"
+msgstr "Экспортируйте видео с желаемыми настройками качества"

@@ -2,26 +2,26 @@
 <section class="mb-5">
     <div class="row">
         <div class="col-md-8 offset-md-2">
-            <h2 class="mb-4">How to Export Telemetry Data</h2>
+            <h2 class="mb-4">{{ _('How to Export Telemetry Data') }}</h2>
 
-            <h3 class="mb-3">From DarknessBot:</h3>
+            <h3 class="mb-3">{{ _('From DarknessBot:') }}</h3>
             <ol class="mb-4">
-                <li>Open DarknessBot and go to the "Trips" section</li>
-                <li>Select the desired "Trip"</li>
-                <li>Click the export button</li>
-                <li>Save the CSV file of the trip to a convenient location</li>
+                <li>{{ _('Open DarknessBot and go to the "Trips" section') }}</li>
+                <li>{{ _('Select the desired "Trip"') }}</li>
+                <li>{{ _('Click the export button') }}</li>
+                <li>{{ _('Save the CSV file of the trip to a convenient location') }}</li>
             </ol>
             <video class="img-fluid rounded shadow mb-4" autoplay loop muted playsinline>
                 <source src="{{ url_for('static', filename='mp4/darkman01.mp4') }}" type="video/mp4">
-                Your browser does not support the video tag.
+                {{ _('Your browser does not support the video tag.') }}
             </video>
 
-            <h3 class="mb-3">From WheelLog:</h3>
+            <h3 class="mb-3">{{ _('From WheelLog:') }}</h3>
             <ol class="mb-4">
-                <li>Open WheelLog and go to the section</li>
-                <li>Additional steps</li>
-                <li>Additional steps</li>
-                <li>Additional steps</li>
+                <li>{{ _('Open WheelLog and go to the section') }}</li>
+                <li>{{ _('Additional steps') }}</li>
+                <li>{{ _('Additional steps') }}</li>
+                <li>{{ _('Additional steps') }}</li>
             </ol>
         </div>
     </div>
@@ -31,17 +31,17 @@
 <section class="mb-5">
     <div class="row">
         <div class="col-md-8 offset-md-2">
-            <h2 class="mb-4">Running the Program</h2>
+            <h2 class="mb-4">{{ _('Running the Program') }}</h2>
             <ol class="mb-4">
-                <li>Open the CSV file</li>
-                <li>Choose the desired FPS, resolution (FullHD or 4K), and codec settings</li>
-                <li>Set up the display of telemetry elements on the video</li>
-                <li>Start the process of creating a video on the blue background (Chroma Key)</li>
-                <li>Go to the "My Projects" section to download the finished video</li>
+                <li>{{ _('Open the CSV file') }}</li>
+                <li>{{ _('Choose the desired FPS, resolution (FullHD or 4K), and codec settings') }}</li>
+                <li>{{ _('Set up the display of telemetry elements on the video') }}</li>
+                <li>{{ _('Start the process of creating a video on the blue background (Chroma Key)') }}</li>
+                <li>{{ _('Go to the "My Projects" section to download the finished video') }}</li>
             </ol>
             <video class="img-fluid rounded shadow" autoplay loop muted playsinline>
                 <source src="{{ url_for('static', filename='mp4/webman01.mp4') }}" type="video/mp4">
-                Your browser does not support the video tag.
+                {{ _('Your browser does not support the video tag.') }}
             </video>
         </div>
     </div>
@@ -51,18 +51,18 @@
 <section class="mb-5">
     <div class="row">
         <div class="col-md-8 offset-md-2">
-            <h2 class="mb-4">Overlaying on Your Trip Video from iPhone, insta360, GoPro, and Other Cameras</h2>
+            <h2 class="mb-4">{{ _('Overlaying on Your Trip Video from iPhone, insta360, GoPro, and Other Cameras') }}</h2>
             <ol class="mb-4">
-                <li>You can use any video editor that supports chroma key removal, such as Davinci Resolve</li>
-                <li>Open your camera video in Davinci Resolve</li>
-                <li>Overlay the video created by euctelemetry.app on top</li>
-                <li>Apply the 3D keyer effect to the video from euctelemetry.app</li>
-                <li>Align the telemetry data with your trip on the timeline</li>
-                <li>Export the video with your desired quality settings</li>
+                <li>{{ _('You can use any video editor that supports chroma key removal, such as Davinci Resolve') }}</li>
+                <li>{{ _('Open your camera video in Davinci Resolve') }}</li>
+                <li>{{ _('Overlay the video created by euctelemetry.app on top') }}</li>
+                <li>{{ _('Apply the 3D keyer effect to the video from euctelemetry.app') }}</li>
+                <li>{{ _('Align the telemetry data with your trip on the timeline') }}</li>
+                <li>{{ _('Export the video with your desired quality settings') }}</li>
             </ol>
             <video class="img-fluid rounded shadow" autoplay loop muted playsinline>
                 <source src="{{ url_for('static', filename='mp4/davman01.mp4') }}" type="video/mp4">
-                Your browser does not support the video tag.
+                {{ _('Your browser does not support the video tag.') }}
             </video>
             <br><br><br>
         </div>
