@@ -100,7 +100,6 @@ msgstr "EUCTelemetry. Создано Павлом Демьяновым. Все �
 msgid "The program is designed to extract telemetry data (speed, PWM, GPS speed, power, current, voltage, battery charge, trip mileage, temperature) from popular programs like DarknessBot and WheelLog and overlay them on a blue background (chroma key) for further integration of telemetry data onto your video recorded during a trip or from cameras such as insta360, GoPro, iPhone, or any other camera."
 msgstr "Программа предназначена для извлечения данных телеметрии (скорость, ШИМ, GPS скорость, мощность, ток, напряжение, заряд батареи, пробег, температура) из популярных программ, таких как DarknessBot и WheelLog, и наложения их на синий фон (хромакей) для дальнейшей интеграции данных телеметрии на ваше видео, записанное во время поездки или с камер, таких как insta360, GoPro, iPhone или любой другой камеры."
 
-# Новые переводы для домашней страницы
 msgid "How to Export Telemetry Data"
 msgstr "Как экспортировать данные телеметрии"
 
@@ -169,3 +168,40 @@ msgstr "Выровняйте данные телеметрии с вашей п�
 
 msgid "Export the video with your desired quality settings"
 msgstr "Экспортируйте видео с желаемыми настройками качества"
+
+# New translations for about page
+msgid "About the Creator"
+msgstr "О создателе"
+
+msgid "Pavel Demyanov"
+msgstr "Павел Демьянов"
+
+msgid "About EUCtelemetry"
+msgstr "О EUCtelemetry"
+
+msgid "EUCtelemetry is an application designed to process and visualize Electric Unicycle telemetry data, creating professional-looking overlays for your ride videos. As the creator of this tool, I'm committed to helping the EUC community enhance their riding content."
+msgstr "EUCtelemetry - это приложение, разработанное для обработки и визуализации данных телеметрии электрических моноколес, создающее профессионально выглядящие наложения для ваших видео поездок. Как создатель этого инструмента, я стремлюсь помочь сообществу EUC улучшить качество их контента."
+
+msgid "Contact Information"
+msgstr "Контактная информация"
+
+msgid "Telegram"
+msgstr "Telegram"
+
+msgid "Facebook"
+msgstr "Facebook"
+
+msgid "Instagram"
+msgstr "Instagram"
+
+msgid "Email"
+msgstr "Email"
+
+msgid "Open Source"
+msgstr "Открытый исходный код"
+
+msgid "The application is open source and available on GitHub. You can download, fork, or distribute it according to the license terms. I appreciate attribution when you use or modify the software."
+msgstr "Приложение имеет открытый исходный код и доступно на GitHub. Вы можете скачать, форкнуть или распространять его в соответствии с условиями лицензии. Я буду признателен за указание авторства при использовании или модификации программного обеспечения."
+
+msgid "Access the GitHub Repository"
+msgstr "Перейти в репозиторий GitHub"
