@@ -84,8 +84,24 @@
                             {{ _('Language') }}
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="languageDropdown">
-                            <li><a class="dropdown-item" href="{{ url_for('set_language', lang='en') }}">English</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('set_language', lang='ru') }}">Русский</a></li>
+                            <li>
+                                <a class="dropdown-item d-flex align-items-center" href="{{ url_for('set_language', lang='en') }}">
+                                    <img src="{{ url_for('static', filename='icons/flag-en.svg') }}" 
+                                         alt="English Flag"
+                                         class="me-2"
+                                         style="width: 20px; height: auto;">
+                                    English
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item d-flex align-items-center" href="{{ url_for('set_language', lang='ru') }}">
+                                    <img src="{{ url_for('static', filename='icons/flag-ru.svg') }}" 
+                                         alt="Russian Flag"
+                                         class="me-2"
+                                         style="width: 20px; height: auto;">
+                                    Русский
+                                </a>
+                            </li>
                         </ul>
                     </li>
                     {% if current_user.is_authenticated %}
