@@ -19,3 +19,80 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.17.0\n"
 
+msgid "Profile Settings"
+msgstr "Настройки профиля"
+
+msgid "Email"
+msgstr "Электронная почта"
+
+msgid "Email cannot be changed"
+msgstr "Электронную почту нельзя изменить"
+
+msgid "Preferred Language"
+msgstr "Предпочитаемый язык"
+
+msgid "Change Password"
+msgstr "Изменить пароль"
+
+msgid "Delete Account"
+msgstr "Удалить аккаунт"
+
+msgid "Warning!"
+msgstr "Внимание!"
+
+msgid "This action cannot be undone. All your data will be permanently deleted."
+msgstr "Это действие нельзя отменить. Все ваши данные будут удалены безвозвратно."
+
+msgid "Are you sure you want to delete your account? This action cannot be undone."
+msgstr "Вы уверены, что хотите удалить свой аккаунт? Это действие нельзя отменить."
+
+msgid "Profile updated successfully"
+msgstr "Профиль успешно обновлен"
+
+msgid "EUCTelemetry"
+msgstr "EUCTelemetry"
+
+msgid "EUCTelemetry Icon"
+msgstr "Иконка EUCTelemetry"
+
+msgid "Home"
+msgstr "Главная"
+
+msgid "Create Project"
+msgstr "Создать проект"
+
+msgid "My Projects"
+msgstr "Мои проекты"
+
+msgid "About"
+msgstr "О программе"
+
+msgid "Admin"
+msgstr "Админ"
+
+msgid "Language"
+msgstr "Язык"
+
+msgid "Profile"
+msgstr "Профиль"
+
+msgid "Logout"
+msgstr "Выйти"
+
+msgid "Login"
+msgstr "Войти"
+
+msgid "Register"
+msgstr "Регистрация"
+
+msgid "Transform your EUC ride videos with professional telemetry overlays."
+msgstr "Преобразуйте ваши видео поездок на моноколесе с помощью профессиональных наложений телеметрии."
+
+msgid "Quick Links"
+msgstr "Быстрые ссылки"
+
+msgid "Connect"
+msgstr "Связаться"
+
+msgid "EUCTelemetry. Created by Pavel Demyanov. All rights reserved."
+msgstr "EUCTelemetry. Создано Павлом Демьяновым. Все права защищены."

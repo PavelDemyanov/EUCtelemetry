@@ -16,6 +16,7 @@ from flask import (Flask, render_template, request, jsonify, send_file,
 from flask_migrate import Migrate
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.utils import secure_filename
+from flask_babel import Babel, gettext as _, get_locale
 
 from extensions import db
 from utils.csv_processor import process_csv_file
@@ -27,8 +28,38 @@ from utils.email_sender import send_email
 from forms import (LoginForm, RegistrationForm, ProfileForm, 
                   ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm, DeleteAccountForm)
 from models import User, Project
-from flask_babel import Babel, gettext as _, get_locale
-from flask import request
+
+app = Flask(__name__)
+app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', os.urandom(32))
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_recycle': 300,
+    'pool_pre_ping': True,
+}
+app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+app.config['WTF_CSRF_ENABLED'] = True
+app.config['BABEL_DEFAULT_LOCALE'] = 'en'
+
+# Initialize Babel
+babel = Babel(app)
+
+def get_locale():
+    # Try to get locale from query string
+    locale = request.args.get('lang')
+    if locale in ['en', 'ru']:
+        return locale
+    # Try to get locale from user settings
+    if current_user.is_authenticated and hasattr(current_user, 'locale'):
+        return current_user.locale
+    # Try to get locale from request header
+    return request.accept_languages.best_match(['en', 'ru'])
+
+# Configure Babel with locale selector
+babel.init_app(app, locale_selector=get_locale)
+
+# Make get_locale available in templates
+app.jinja_env.globals['get_locale'] = get_locale
 
 # Project name characters
 PROJECT_NAME_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
@@ -112,18 +143,6 @@ def cleanup_expired_projects():
 
         # Sleep for 1 hour before next cleanup
         time.sleep(3600)
-
-app = Flask(__name__)
-# Set a strong secret key for CSRF protection
-app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', os.urandom(32))
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'pool_recycle': 300,
-    'pool_pre_ping': True,
-}
-app.config['UPLOAD_FOLDER'] = 'uploads'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
-app.config['WTF_CSRF_ENABLED'] = True  # Enable CSRF protection
 
 # Initialize Flask-Login
 login_manager = LoginManager()
@@ -325,21 +344,6 @@ for directory in ['uploads', 'frames', 'videos', 'processed_data', 'previews']:
 db.init_app(app)
 migrate = Migrate(app, db)
 
-# Babel configuration
-babel = Babel(app)
-
-@babel.localeselector
-def get_locale():
-    # Try to get locale from query string
-    locale = request.args.get('lang')
-    if locale in ['en', 'ru']:
-        return locale
-    # Try to get locale from user settings
-    if current_user.is_authenticated and hasattr(current_user, 'locale'):
-        return current_user.locale
-    # Try to get locale from request header
-    return request.accept_languages.best_match(['en', 'ru'])
-
 
 # Authentication routes
 @app.route('/login', methods=['GET', 'POST'])
@@ -448,13 +452,12 @@ def profile():
 
     if profile_form.validate_on_submit():
         current_user.name = profile_form.name.data
-        if profile_form.email.data != current_user.email:
-            if User.query.filter_by(email=profile_form.email.data).first():
-                flash('This email is already in use')
-                return redirect(url_for('profile'))
-            current_user.email = profile_form.email.data
+        # Save the selected locale
+        locale = request.form.get('locale')
+        if locale in ['en', 'ru']:
+            current_user.locale = locale
         db.session.commit()
-        flash('Profile updated successfully')
+        flash(_('Profile updated successfully'))
         return redirect(url_for('profile'))
 
     return render_template('profile.html', 
@@ -510,7 +513,6 @@ def delete_account():
         else:
             flash('Incorrect password')
     return redirect(url_for('profile'))
-
 
 
 @app.route('/')
@@ -792,7 +794,7 @@ def generate_preview(project_id):
             'indicator_x': float(data.get('indicator_x', 50)),
             'indicator_y': float(data.get('indicator_y', 80)),
             'speed_y': int(data.get('speed_y', 0)),
-            'unit_y': int(data.get('unit_y', 0)),
+            'unit_y': int(data.get('unit_y',0)),
             'speed_size': float(data.get('speed_size', 100)),
             'unit_size': float(data.get('unit_size', 100)),
             'indicator_scale': float(data.get('indicator_scale', 100))

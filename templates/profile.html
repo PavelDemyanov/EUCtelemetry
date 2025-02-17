@@ -5,13 +5,13 @@
     <div class="col-md-6">
         <div class="card mb-4">
             <div class="card-header">
-                <h2 class="card-title">Profile Settings</h2>
+                <h2 class="card-title">{{ _('Profile Settings') }}</h2>
             </div>
             <div class="card-body">
                 <div class="mb-3">
-                    <label class="form-label">Email</label>
+                    <label class="form-label">{{ _('Email') }}</label>
                     <input type="email" class="form-control" value="{{ current_user.email }}" readonly disabled>
-                    <small class="text-muted">Email cannot be changed</small>
+                    <small class="text-muted">{{ _('Email cannot be changed') }}</small>
                 </div>
                 <form method="POST" action="{{ url_for('profile') }}">
                     {{ profile_form.csrf_token }}
@@ -23,6 +23,13 @@
                         {% endfor %}
                     </div>
                     <div class="mb-3">
+                        <label class="form-label">{{ _('Preferred Language') }}</label>
+                        <select name="locale" class="form-control">
+                            <option value="en" {% if current_user.locale == 'en' %}selected{% endif %}>English</option>
+                            <option value="ru" {% if current_user.locale == 'ru' %}selected{% endif %}>Русский</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
                         {{ profile_form.submit(class="btn btn-primary") }}
                     </div>
                 </form>
@@ -31,7 +38,7 @@
 
         <div class="card mb-4">
             <div class="card-header">
-                <h2 class="card-title">Change Password</h2>
+                <h2 class="card-title">{{ _('Change Password') }}</h2>
             </div>
             <div class="card-body">
                 <form method="POST" action="{{ url_for('change_password') }}">
@@ -66,11 +73,11 @@
 
         <div class="card border-danger">
             <div class="card-header bg-danger text-white">
-                <h2 class="card-title">Delete Account</h2>
+                <h2 class="card-title">{{ _('Delete Account') }}</h2>
             </div>
             <div class="card-body">
                 <div class="alert alert-warning">
-                    <strong>Warning!</strong> This action cannot be undone. All your data will be permanently deleted.
+                    <strong>{{ _('Warning!') }}</strong> {{ _('This action cannot be undone. All your data will be permanently deleted.') }}
                 </div>
                 <form method="POST" action="{{ url_for('delete_account') }}" id="deleteAccountForm">
                     {{ delete_form.csrf_token }}
@@ -82,7 +89,7 @@
                         {% endfor %}
                     </div>
                     <div class="mb-3">
-                        {{ delete_form.submit(class="btn btn-danger", onclick="return confirm('Are you sure you want to delete your account? This action cannot be undone.');") }}
+                        {{ delete_form.submit(class="btn btn-danger", onclick="return confirm('{{ _('Are you sure you want to delete your account? This action cannot be undone.') }}');") }}
                     </div>
                 </form>
             </div>
