@@ -259,6 +259,17 @@ def admin_lists():
         .order_by(User.created_at.desc())\
         .paginate(page=user_page, per_page=20, error_out=False)
 
+    # Format users data with additional fields
+    users_data = [{
+        'id': u.id,
+        'name': u.name,
+        'email': u.email,
+        'created_at': u.created_at.strftime('%Y-%m-%d %H:%M'),
+        'is_email_confirmed': u.is_email_confirmed,
+        'is_new': u.created_at.date() == today,
+        'is_admin': u.is_admin
+    } for u in users.items]
+
     # Format projects data with additional fields
     projects_data = [{
         'id': p.id,
@@ -274,15 +285,6 @@ def admin_lists():
         'fps': f"{p.fps:.2f}" if p.fps else '-',  # Add FPS
         'resolution': p.resolution or '-'  # Add resolution
     } for p in projects.items]
-
-    # Format users data
-    users_data = [{
-        'name': u.name,
-        'email': u.email,
-        'created_at': u.created_at.strftime('%Y-%m-%d %H:%M'),
-        'is_email_confirmed': u.is_email_confirmed,
-        'is_new': u.created_at.date() == today
-    } for u in users.items]
 
     return jsonify({
         'projects': {
@@ -489,6 +491,7 @@ def delete_account():
         else:
             flash('Incorrect password')
     return redirect(url_for('profile'))
+
 
 
 @app.route('/')
@@ -906,6 +909,63 @@ def reset_password(token):
         flash('Your password has been reset')
         return redirect(url_for('login'))
     return render_template('reset_password.html', form=form)
+
+@app.route('/admin/user/<int:user_id>', methods=['PUT'])
+@login_required
+@admin_required
+def update_user(user_id):
+    """Update user details"""
+    user = User.query.get_or_404(user_id)
+    data = request.get_json()
+
+    try:
+        # Update user details
+        user.name = data.get('name', user.name)
+        new_email = data.get('email')
+
+        # Check if email is being changed and if it's already in use
+        if new_email and new_email != user.email:
+            existing_user = User.query.filter_by(email=new_email).first()
+            if existing_user:
+                return jsonify({'error': 'Email already in use'}), 400
+            user.email = new_email
+
+        # Update admin status
+        user.is_admin = data.get('is_admin', user.is_admin)
+
+        db.session.commit()
+        return jsonify({'success': True})
+
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Error updating user: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/admin/user/<int:user_id>', methods=['DELETE'])
+@login_required
+@admin_required
+def delete_admin_user(user_id):
+    """Delete user and all associated data"""
+    user = User.query.get_or_404(user_id)
+
+    try:
+        # Delete all user's projects first
+        projects = Project.query.filter_by(user_id=user.id).all()
+        for project in projects:
+            if not cleanup_project_files(project):
+                return jsonify({'error': f'Failed to clean up files for project {project.id}'}), 500
+            db.session.delete(project)
+
+        # Delete the user
+        db.session.delete(user)
+        db.session.commit()
+
+        return jsonify({'success': True})
+
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Error deleting user: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 with app.app_context():
     db.create_all()

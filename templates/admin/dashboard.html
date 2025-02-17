@@ -81,6 +81,7 @@
                             <th>Email</th>
                             <th>Registration Date</th>
                             <th>Email Status</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -89,7 +90,7 @@
                             <td>
                                 {{ user.name }}
                                 {% if user.created_at.date() == today %}
-                                <span class="badge bg-success">New User</span>
+                                <span class="badge bg-success muted text-white">New User</span>
                                 {% endif %}
                             </td>
                             <td>{{ user.email }}</td>
@@ -100,6 +101,14 @@
                                 {% else %}
                                 <span class="badge bg-warning muted text-dark">Pending</span>
                                 {% endif %}
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" onclick="editUser({{ user.id }}, '{{ user.name }}', '{{ user.email }}', {{ user.is_admin|tojson }})">
+                                    <i class="fas fa-edit"></i> Edit
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="confirmDeleteUser({{ user.id }}, '{{ user.email }}')">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
                             </td>
                         </tr>
                         {% endfor %}
@@ -186,6 +195,65 @@
                 </ul>
             </nav>
             {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal fade" id="editUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editUserForm">
+                    <input type="hidden" id="editUserId">
+                    <div class="mb-3">
+                        <label for="editUserName" class="form-label">Name</label>
+                        <input type="text" class="form-control" id="editUserName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editUserEmail" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="editUserEmail" required>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="editUserIsAdmin">
+                        <label class="form-check-label" for="editUserIsAdmin">Admin Access</label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveUserChanges()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete User Confirmation Modal -->
+<div class="modal fade" id="deleteUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete User Account</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the user account <strong id="deleteUserEmail"></strong>?</p>
+                <p class="text-danger">This action will:</p>
+                <ul class="text-danger">
+                    <li>Delete all user's projects</li>
+                    <li>Remove all associated files (previews, frames, videos, etc.)</li>
+                    <li>Delete the user account permanently</li>
+                </ul>
+                <p class="text-danger"><strong>This action cannot be undone!</strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="deleteUser()">Delete User</button>
+            </div>
         </div>
     </div>
 </div>
@@ -472,7 +540,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <tr>
                 <td>
                     ${user.name}
-                    ${user.is_new ? '<span class="badge bg-success text-white">New User</span>' : ''}
+                    ${user.is_new ? '<span class="badge bg-success muted text-white">New User</span>' : ''}
                 </td>
                 <td>${user.email}</td>
                 <td>${user.created_at}</td>
@@ -480,6 +548,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     ${user.is_email_confirmed ? 
                     '<span class="badge bg-success muted text-white">Confirmed</span>' : 
                     '<span class="badge bg-warning muted text-dark">Pending</span>'}
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-primary" onclick="editUser(${user.id}, '${user.name}', '${user.email}', ${user.is_admin})">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="confirmDeleteUser(${user.id}, '${user.email}')">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
                 </td>
             </tr>
         `).join('');
@@ -643,5 +719,72 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initial load of lists and stats
     updateData();
 });
+
+let userToDelete = null;
+
+function editUser(userId, name, email, isAdmin) {
+    document.getElementById('editUserId').value = userId;
+    document.getElementById('editUserName').value = name;
+    document.getElementById('editUserEmail').value = email;
+    document.getElementById('editUserIsAdmin').checked = isAdmin;
+    new bootstrap.Modal(document.getElementById('editUserModal')).show();
+}
+
+function confirmDeleteUser(userId, email) {
+    userToDelete = userId;
+    document.getElementById('deleteUserEmail').textContent = email;
+    new bootstrap.Modal(document.getElementById('deleteUserModal')).show();
+}
+
+function saveUserChanges() {
+    const userId = document.getElementById('editUserId').value;
+    const data = {
+        name: document.getElementById('editUserName').value,
+        email: document.getElementById('editUserEmail').value,
+        is_admin: document.getElementById('editUserIsAdmin').checked
+    };
+
+    fetch(`/admin/user/${userId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('editUserModal')).hide();
+            updateLists(currentUserPage, currentProjectPage);
+        } else {
+            alert(data.error || 'Failed to update user');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to update user');
+    });
+}
+
+function deleteUser() {
+    if (!userToDelete) return;
+
+    fetch(`/admin/user/${userToDelete}`, {
+        method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('deleteUserModal')).hide();
+            updateLists(currentUserPage, currentProjectPage);
+        } else {
+            alert(data.error || 'Failed to delete user');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to delete user');
+    });
+}
 </script>
 {% endblock %}
