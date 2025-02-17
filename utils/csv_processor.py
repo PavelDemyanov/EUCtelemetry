@@ -109,6 +109,28 @@ def clean_numeric_column(series):
     # Round and convert to integer
     return series.round().astype(int)
 
+def remove_consecutive_duplicates(data):
+    """Remove consecutive duplicate rows based on specified columns"""
+    try:
+        # Create DataFrame from the processed data
+        df = pd.DataFrame(data)
+
+        # Define columns to check for duplicates
+        columns_to_check = ['speed', 'gps', 'voltage', 'temperature', 'current', 
+                          'battery', 'mileage', 'pwm', 'power']
+
+        # Create mask for consecutive duplicates
+        duplicate_mask = ~(df[columns_to_check].shift() == df[columns_to_check]).all(axis=1)
+
+        # Keep first row and non-consecutive duplicates
+        clean_df = df[duplicate_mask]
+
+        # Convert back to dictionary format
+        return {col: clean_df[col].tolist() for col in df.columns}
+    except Exception as e:
+        logging.error(f"Error removing consecutive duplicates: {e}")
+        raise
+
 def process_csv_file(file_path, folder_number=None, existing_csv_type=None):
     """Process CSV file and save processed data with unique project identifier"""
     try:
@@ -127,7 +149,8 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None):
             df = pd.read_csv(processed_csv_path)
             csv_type = existing_csv_type or ('darnkessbot' if 'Date' in df.columns else 'wheellog')
 
-            return csv_type, {
+            # Convert DataFrame to dictionary format
+            processed_data = {
                 'timestamp': df['timestamp'].tolist(),
                 'speed': df['speed'].tolist(),
                 'gps': df['gps'].tolist(),
@@ -139,6 +162,10 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None):
                 'pwm': df['pwm'].tolist(),
                 'power': df['power'].tolist()
             }
+
+            # Remove consecutive duplicates
+            processed_data = remove_consecutive_duplicates(processed_data)
+            return csv_type, processed_data
 
         # If file doesn't exist, process the CSV
         df = pd.read_csv(file_path)
@@ -191,6 +218,9 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None):
                 'pwm': clean_numeric_column(df['pwm']),
                 'power': clean_numeric_column(df['power'])
             }
+
+        # Remove consecutive duplicates
+        processed_data = remove_consecutive_duplicates(processed_data)
 
         # Save processed data if folder_number is provided
         if processed_csv_path:
