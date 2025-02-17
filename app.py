@@ -914,32 +914,34 @@ def reset_password(token):
 @login_required
 @admin_required
 def update_user(user_id):
-    """Update user details"""
-    user = User.query.get_or_404(user_id)
-    data = request.get_json()
-
+    """Update user details from admin panel"""
     try:
-        # Update user details
-        user.name = data.get('name', user.name)
-        new_email = data.get('email')
+        user = User.query.get_or_404(user_id)
+        data = request.get_json()
 
-        # Check if email is being changed and if it's already in use
-        if new_email and new_email != user.email:
-            existing_user = User.query.filter_by(email=new_email).first()
-            if existing_user:
-                return jsonify({'error': 'Email already in use'}), 400
-            user.email = new_email
-
-        # Update admin status
-        user.is_admin = data.get('is_admin', user.is_admin)
+        if 'name' in data:
+            user.name = data['name']
+        if 'email' in data:
+            # Check if email is already taken by another user
+            existing_user = User.query.filter_by(email=data['email']).first()
+            if existing_user and existing_user.id != user_id:
+                return jsonify({'success': False, 'error': 'Email already taken'}), 400
+            user.email = data['email']
+        if 'is_admin' in data:
+            user.is_admin = bool(data['is_admin'])
 
         db.session.commit()
-        return jsonify({'success': True})
-
+        return jsonify({
+            'success': True,
+            'message': 'User updated successfully'
+        })
     except Exception as e:
-        db.session.rollback()
         logging.error(f"Error updating user: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 @app.route('/admin/user/<int:user_id>', methods=['DELETE'])
 @login_required

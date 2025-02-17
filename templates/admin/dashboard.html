@@ -784,13 +784,20 @@ function saveUserChanges() {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
+            'Accept': 'application/json'
         },
         body: JSON.stringify(data)
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => Promise.reject(err));
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             bootstrap.Modal.getInstance(document.getElementById('editUserModal')).hide();
+            // Обновляем таблицу после успешного сохранения
             updateLists(currentUserPage, currentProjectPage);
         } else {
             alert(data.error || 'Failed to update user');
@@ -798,7 +805,7 @@ function saveUserChanges() {
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Failed to update user');
+        alert(error.error || 'Failed to update user');
     });
 }
 
