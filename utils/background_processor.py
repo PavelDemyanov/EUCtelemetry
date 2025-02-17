@@ -9,7 +9,7 @@ from utils.hardware_detection import get_hardware_info
 import os
 from datetime import datetime
 
-def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', text_settings=None):
+def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', text_settings=None, interpolate_values=True):
     """Process project in background thread"""
     def _process():
         from app import app  # Import app here to avoid circular import
@@ -45,9 +45,9 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     shutil.rmtree(frames_dir)
                 os.makedirs(frames_dir, exist_ok=True)
 
-                # Process CSV file using existing project csv_type
+                # Process CSV file using existing project csv_type and interpolation flag
                 csv_file = os.path.join('uploads', project.csv_file)
-                _, _ = process_csv_file(csv_file, project.folder_number, project.csv_type)
+                _, _ = process_csv_file(csv_file, project.folder_number, project.csv_type, interpolate_values)
 
                 def progress_callback(current_frame, total_frames, stage='frames'):
                     """Update progress in database"""

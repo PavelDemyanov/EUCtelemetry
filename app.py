@@ -624,6 +624,7 @@ def generate_project_frames(project_id):
         resolution = data.get('resolution', 'fullhd')
         fps = float(data.get('fps', 29.97))  # Get FPS from request
         codec = data.get('codec', 'h264')
+        interpolate_values = data.get('interpolate_values', True)  # New parameter
 
         # Update project settings immediately
         project.fps = fps
@@ -640,20 +641,19 @@ def generate_project_frames(project_id):
             'spacing': int(data.get('spacing', 20)),
             'font_size': int(data.get('font_size', 26)),
             'border_radius': int(data.get('border_radius', 13)),
-            # Speed indicator settings
             'indicator_x': float(data.get('indicator_x', 50)),
             'indicator_y': float(data.get('indicator_y', 80)),
             'speed_y': int(data.get('speed_y', 0)),
             'unit_y': int(data.get('unit_y', 0)),
             'speed_size': float(data.get('speed_size', 100)),
             'unit_size': float(data.get('unit_size', 100)),
-            'indicator_scale': float(data.get('indicator_scale', 100))  # Added new parameter
+            'indicator_scale': float(data.get('indicator_scale', 100))
         }
 
-        logging.info(f"Starting processing with settings: {text_settings}")
+        logging.info(f"Starting processing with settings: {text_settings}, interpolate_values: {interpolate_values}")
 
-        # Start background processing with text settings
-        process_project(project_id, resolution, fps, codec, text_settings)
+        # Start background processing with text settings and interpolation flag
+        process_project(project_id, resolution, fps, codec, text_settings, interpolate_values)
 
         return jsonify({'success': True, 'message': 'Processing started'})
     except Exception as e:

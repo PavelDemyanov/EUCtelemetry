@@ -261,6 +261,7 @@ document.getElementById('startProcessButton').addEventListener('click', function
         resolution: document.querySelector('input[name="resolution"]:checked').value,
         fps: document.querySelector('input[name="fps"]:checked').value,
         codec: document.querySelector('input[name="codec"]:checked').value,
+        interpolate_values: document.getElementById('interpolateValues').checked,
         vertical_position: document.getElementById('verticalPosition').value,
         top_padding: document.getElementById('topPadding').value,
         bottom_padding: document.getElementById('bottomPadding').value,

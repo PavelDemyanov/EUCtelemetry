@@ -131,7 +131,29 @@ def remove_consecutive_duplicates(data):
         logging.error(f"Error removing consecutive duplicates: {e}")
         raise
 
-def process_csv_file(file_path, folder_number=None, existing_csv_type=None):
+def interpolate_numeric_data(data, columns_to_interpolate):
+    """Interpolate missing values in numeric columns using two-way interpolation"""
+    try:
+        # Create DataFrame from the data
+        df = pd.DataFrame(data)
+
+        # Interpolate specified columns
+        for col in columns_to_interpolate:
+            if col in df.columns:
+                # Convert to float for interpolation
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+                # Apply two-way interpolation
+                df[col] = df[col].interpolate(method='linear', limit_direction='both')
+                # Round and convert back to integer
+                df[col] = df[col].round().astype(int)
+
+        # Convert back to dictionary format
+        return {col: df[col].tolist() for col in df.columns}
+    except Exception as e:
+        logging.error(f"Error during interpolation: {e}")
+        raise
+
+def process_csv_file(file_path, folder_number=None, existing_csv_type=None, interpolate_values=True):
     """Process CSV file and save processed data with unique project identifier"""
     try:
         # Create processed data directory if it doesn't exist
@@ -162,6 +184,12 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None):
                 'pwm': df['pwm'].tolist(),
                 'power': df['power'].tolist()
             }
+
+            # Apply interpolation if requested
+            if interpolate_values:
+                columns_to_interpolate = ['speed', 'gps', 'voltage', 'temperature', 'current', 
+                                        'battery', 'mileage', 'pwm', 'power']
+                processed_data = interpolate_numeric_data(processed_data, columns_to_interpolate)
 
             # Remove consecutive duplicates
             processed_data = remove_consecutive_duplicates(processed_data)
@@ -218,6 +246,12 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None):
                 'pwm': clean_numeric_column(df['pwm']),
                 'power': clean_numeric_column(df['power'])
             }
+
+        # Apply interpolation if requested
+        if interpolate_values:
+            columns_to_interpolate = ['speed', 'gps', 'voltage', 'temperature', 'current', 
+                                    'battery', 'mileage', 'pwm', 'power']
+            processed_data = interpolate_numeric_data(processed_data, columns_to_interpolate)
 
         # Remove consecutive duplicates
         processed_data = remove_consecutive_duplicates(processed_data)
