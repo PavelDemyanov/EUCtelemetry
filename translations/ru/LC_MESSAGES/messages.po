@@ -420,3 +420,12 @@ msgstr "Анализ CSV данных... Завершено!"
 
 msgid "Generating preview... Complete!"
 msgstr "Создание предпросмотра... Завершено!"
+
+msgid "Uploading CSV..."
+msgstr "Загрузка CSV..."
+
+msgid "Uploading CSV... Complete!"
+msgstr "Загрузка CSV... Завершено!"
+
+msgid "Current status:"
+msgstr "Текущий статус:"
