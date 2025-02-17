@@ -538,8 +538,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                 }
                                 break;
                             case 'month':
-                                if (localTime.getMonth() === now.getMonth()) {
-                                    index = localTime.getDate() - 1;
+                                const daysDiff = Math.floor((now - localTime) / (1000 * 60 * 60 * 24));
+                                if (daysDiff < 30) {
+                                    index = 29 - daysDiff;
                                 }
                                 break;
                             case 'year':
