@@ -58,6 +58,7 @@
             </div>
             <!-- Time Range Selector -->
             <div class="btn-group mt-3">
+                <button type="button" class="btn btn-outline-primary" data-range="hour">1 час</button>
                 <button type="button" class="btn btn-outline-primary active" data-range="day">1 день</button>
                 <button type="button" class="btn btn-outline-primary" data-range="week">Неделя</button>
                 <button type="button" class="btn btn-outline-primary" data-range="month">Месяц</button>
@@ -311,6 +312,16 @@ document.addEventListener('DOMContentLoaded', function() {
         const now = new Date();
 
         switch(range) {
+            case 'hour':
+                for(let i = 0; i < 60; i++) {
+                    const date = new Date(now);
+                    date.setMinutes(date.getMinutes() - i);
+                    labels.unshift(formatTimeInUserTimezone(date, {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    }));
+                }
+                break;
             case 'day':
                 for(let i = 0; i < 24; i++) {
                     const date = new Date(now);
@@ -373,6 +384,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Find matching label index based on timeRange
                         let index = -1;
                         switch(timeRange) {
+                            case 'hour':
+                                const minutesDiff = Math.floor((now - localTime) / (1000 * 60));
+                                if (minutesDiff < 60) {
+                                    index = 59 - minutesDiff;
+                                }
+                                break;
                             case 'day':
                                 if (localTime.getDate() === now.getDate()) {
                                     index = localTime.getHours();
@@ -561,7 +578,6 @@ document.addEventListener('DOMContentLoaded', function() {
         updateLists(currentUserPage, currentProjectPage);
     }
 
-    // Функция updateChart остается без изменений, так как она уже правильно обрабатывает новый формат данных
 
     // Функция обновления списков
     function updateLists(userPage = null, projectPage = null) {
