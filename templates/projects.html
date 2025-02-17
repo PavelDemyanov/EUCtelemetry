@@ -44,7 +44,7 @@
                             {% if project.status == 'error' and project.error_message %}
                             title="{{ project.error_message }}"
                             {% endif %}
-                            >{{ _(project.status.capitalize()) }}
+                            >{{ _(project.status) }}
                             {% if project.status == 'processing' %}
                             ({{ "%d"|format(project.progress) }}%)
                             {% endif %}
