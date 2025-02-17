@@ -412,7 +412,6 @@ msgstr "Завершено!"
 msgid "Creating frames... Complete!"
 msgstr "Создание кадров... Завершено!"
 
-
 msgid "Processing video... Complete!"
 msgstr "Обработка видео... Завершено!"
 
@@ -472,3 +471,22 @@ msgstr "Вы можете закрыть браузер и вернуться п
 
 msgid "Alternatively, you can go to the Projects section to monitor the progress there."
 msgstr "Кроме того, вы можете перейти в раздел Проекты, чтобы отслеживать прогресс там."
+
+# Add new translations for main.js
+msgid "Are you sure you want to stop and delete this project?"
+msgstr "Вы уверены, что хотите остановить и удалить этот проект?"
+
+msgid "Error stopping project: "
+msgstr "Ошибка при остановке проекта: "
+
+msgid "Error stopping project"
+msgstr "Ошибка при остановке проекта"
+
+msgid "Are you sure you want to delete this project?"
+msgstr "Вы уверены, что хотите удалить этот проект?"
+
+msgid "Error deleting project: "
+msgstr "Ошибка при удалении проекта: "
+
+msgid "Error deleting project"
+msgstr "Ошибка при удалении проекта"

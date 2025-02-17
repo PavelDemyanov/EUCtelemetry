@@ -1,5 +1,5 @@
 function stopProject(projectId) {
-    if (confirm('Are you sure you want to stop and delete this project?')) {
+    if (confirm(gettext('Are you sure you want to stop and delete this project?'))) {
         fetch(`/stop/${projectId}`, {
             method: 'POST',
         })
@@ -8,18 +8,18 @@ function stopProject(projectId) {
             if (data.success) {
                 location.reload();
             } else {
-                alert('Error stopping project: ' + data.error);
+                alert(gettext('Error stopping project: ') + data.error);
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error stopping project');
+            alert(gettext('Error stopping project'));
         });
     }
 }
 
 function deleteProject(projectId) {
-    if (confirm('Are you sure you want to delete this project?')) {
+    if (confirm(gettext('Are you sure you want to delete this project?'))) {
         fetch(`/delete/${projectId}`, {
             method: 'POST',
         })
@@ -28,12 +28,12 @@ function deleteProject(projectId) {
             if (data.success) {
                 location.reload();
             } else {
-                alert('Error deleting project: ' + data.error);
+                alert(gettext('Error deleting project: ') + data.error);
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error deleting project');
+            alert(gettext('Error deleting project'));
         });
     }
 }
@@ -56,6 +56,7 @@ function updateProjectStatuses() {
                              data.status === 'processing' ? 'warning' : 
                              data.status === 'error' ? 'danger' : 'secondary');
 
+                        // Use translated status
                         statusBadge.textContent = data.status.charAt(0).toUpperCase() + data.status.slice(1);
                         statusBadge.dataset.projectStatus = data.status;
 
