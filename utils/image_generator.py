@@ -94,11 +94,6 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
         unit_size = float(text_settings.get('unit_size', 100))
         indicator_scale = float(text_settings.get('indicator_scale', 100))
 
-        logging.info(f"Speed indicator settings - X: {indicator_x_percent}%, Y: {indicator_y_percent}%")
-        logging.info(f"Speed text size: {speed_size}%, offset Y: {speed_y_offset}px")
-        logging.info(f"Unit text size: {unit_size}%, offset Y: {unit_y_offset}px")
-        logging.info(f"Indicator scale: {indicator_scale}%")
-
         # Локализованные заголовки параметров
         param_labels = {
             'en': {
@@ -151,20 +146,20 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
             }
         }
 
-        # Создаем индикатор скорости с учетом смещений текста и масштаба
+        # Create speed indicator with localized text
         speed_indicator = create_speed_indicator(
             values['speed'], 
             size=indicator_size,
             speed_offset=(0, speed_y_offset),
             unit_offset=(0, unit_y_offset),
-            speed_size=speed_size,
-            unit_size=unit_size,
-            indicator_scale=indicator_scale,
+            speed_size=int(speed_size),
+            unit_size=int(unit_size),
+            indicator_scale=int(indicator_scale),
             resolution=resolution,
             locale=locale
         )
 
-        # Позиционируем индикатор скорости на основе процентных значений
+        # Position the speed indicator based on percentage values
         indicator_x = int((width - indicator_size) * indicator_x_percent / 100)
         indicator_y = int((height - indicator_size) * indicator_y_percent / 100)
         background.paste(speed_indicator, (indicator_x, indicator_y), speed_indicator)

@@ -664,11 +664,11 @@ def generate_project_frames(project_id):
         # Get settings from request
         data = request.get_json() if request.is_json else {}
         resolution = data.get('resolution', 'fullhd')
-        fps = float(data.get('fps', 29.97))  # Get FPS from request
+        fps = float(data.get('fps', 29.97))
         codec = data.get('codec', 'h264')
-        interpolate_values = data.get('interpolate_values', True)  # New parameter
+        interpolate_values = data.get('interpolate_values', True)
 
-        # Get current locale
+        # Get current locale from user settings or request
         current_locale = get_locale()
         logging.info(f"Using locale: {current_locale} for frame generation")
 
@@ -676,7 +676,7 @@ def generate_project_frames(project_id):
         project.fps = fps
         project.resolution = resolution
         project.codec = codec
-        project.processing_started_at = datetime.now()  # Record start time
+        project.processing_started_at = datetime.now()
         db.session.commit()
 
         # Get text display settings with explicit defaults
@@ -696,12 +696,10 @@ def generate_project_frames(project_id):
             'indicator_scale': float(data.get('indicator_scale', 100))
         }
 
-        logging.info(f"Starting processing with settings: {text_settings}, interpolate_values: {interpolate_values}")
-
         # Start background processing with text settings, interpolation flag and locale
         process_project(project_id, resolution, fps, codec, text_settings, interpolate_values, locale=current_locale)
-
         return jsonify({'success': True, 'message': 'Processing started'})
+
     except Exception as e:
         logging.error(f"Error starting processing: {str(e)}")
         return jsonify({'error': str(e)}), 500
@@ -805,8 +803,7 @@ def generate_preview(project_id):
     if project.user_id != current_user.id:
         return jsonify({'error': 'Unauthorized'}), 403
 
-    try:
-        # Get text display settings from request
+    try:        # Get text display settings from request
         data = request.get_json() if request.is_json else {}
         resolution = data.get('resolution', 'fullhd')
         text_settings = {
