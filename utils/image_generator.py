@@ -216,20 +216,12 @@ def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, tex
         csv_type, processed_data = process_csv_file(csv_file, folder_number)
         df = pd.DataFrame(processed_data)
 
-        ts_array = df['timestamp'].to_numpy()
-        speed_array = df['speed'].to_numpy(dtype=int)
-        gps_array = df['gps'].to_numpy(dtype=int)
-        voltage_array = df['voltage'].to_numpy(dtype=int)
-        temperature_array = df['temperature'].to_numpy(dtype=int)
-        current_array = df['current'].to_numpy(dtype=int)
-        battery_array = df['battery'].to_numpy(dtype=int)
-        mileage_array = df['mileage'].to_numpy(dtype=int)
-        pwm_array = df['pwm'].to_numpy(dtype=int)
-        power_array = df['power'].to_numpy(dtype=int)
-        max_speed_array = np.maximum.accumulate(speed_array)
+        # Sort dataframe by timestamp to ensure proper interpolation
+        df = df.sort_values('timestamp')
 
-        T_min = ts_array.min()
-        T_max = ts_array.max()
+        # Calculate frame timestamps
+        T_min = df['timestamp'].min()
+        T_max = df['timestamp'].max()
         frame_count = int((T_max - T_min) * fps)
         logging.info(f"Generating {frame_count} frames at {fps} fps")
         frame_timestamps = np.linspace(T_min, T_max, frame_count)
@@ -239,19 +231,11 @@ def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, tex
 
         def process_frame(i, timestamp):
             nonlocal completed_frames
-            idx = np.searchsorted(ts_array, timestamp, side='right') - 1
-            if idx < 0:
-                values = {key: 0 for key in ['speed', 'max_speed', 'gps', 'voltage', 'temperature',
-                                          'current', 'battery', 'mileage', 'pwm', 'power']}
-            else:
-                values = {key: int(arr[idx]) for key, arr in zip(
-                    ['speed', 'gps', 'voltage', 'temperature', 'current', 'battery', 'mileage', 'pwm', 'power'],
-                    [speed_array, gps_array, voltage_array, temperature_array, current_array, battery_array,
-                     mileage_array, pwm_array, power_array]
-                )}
-                values['max_speed'] = int(max_speed_array[idx])
+            # Use interpolated values for frame generation
+            values = find_nearest_values(df, timestamp)
             output_path = f'{frames_dir}/frame_{i:06d}.png'
             create_frame(values, resolution, output_path, text_settings)
+
             with lock:
                 completed_frames += 1
                 if progress_callback and (completed_frames % 10 == 0 or completed_frames == frame_count):
@@ -270,23 +254,69 @@ def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, tex
         raise
 
 def find_nearest_values(df, timestamp):
-    mask = df['timestamp'] <= timestamp
-    if not mask.any():
+    """Find interpolated values for the given timestamp"""
+    # If timestamp is before the first data point, return zeros
+    if timestamp < df['timestamp'].iloc[0]:
         return {key: 0 for key in ['speed','max_speed','gps','voltage','temperature',
                                    'current','battery','mileage','pwm','power']}
-    last_idx = df[mask].index[-1]
-    result = {
-        'speed': int(df.loc[last_idx, 'speed']),
-        'gps': int(df.loc[last_idx, 'gps']),
-        'voltage': int(df.loc[last_idx, 'voltage']),
-        'temperature': int(df.loc[last_idx, 'temperature']),
-        'current': int(df.loc[last_idx, 'current']),
-        'battery': int(df.loc[last_idx, 'battery']),
-        'mileage': int(df.loc[last_idx, 'mileage']),
-        'pwm': int(df.loc[last_idx, 'pwm']),
-        'power': int(df.loc[last_idx, 'power'])
-    }
-    result['max_speed'] = int(df.loc[mask, 'speed'].max())
+
+    # Find the indices of the surrounding data points
+    after_mask = df['timestamp'] >= timestamp
+    before_mask = df['timestamp'] <= timestamp
+
+    if not after_mask.any() or not before_mask.any():
+        # If timestamp is outside the range, use the last available values
+        last_idx = df.index[-1]
+        return {
+            'speed': int(df.loc[last_idx, 'speed']),
+            'gps': int(df.loc[last_idx, 'gps']),
+            'voltage': int(df.loc[last_idx, 'voltage']),
+            'temperature': int(df.loc[last_idx, 'temperature']),
+            'current': int(df.loc[last_idx, 'current']),
+            'battery': int(df.loc[last_idx, 'battery']),
+            'mileage': int(df.loc[last_idx, 'mileage']),
+            'pwm': int(df.loc[last_idx, 'pwm']),
+            'power': int(df.loc[last_idx, 'power']),
+            'max_speed': int(df.loc[:before_mask, 'speed'].max())
+        }
+
+    # Get indices of surrounding points
+    after_idx = df[after_mask].index[0]
+    before_idx = df[before_mask].index[-1]
+
+    # If exact match found, return those values
+    if before_idx == after_idx:
+        result = {
+            'speed': int(df.loc[before_idx, 'speed']),
+            'gps': int(df.loc[before_idx, 'gps']),
+            'voltage': int(df.loc[before_idx, 'voltage']),
+            'temperature': int(df.loc[before_idx, 'temperature']),
+            'current': int(df.loc[before_idx, 'current']),
+            'battery': int(df.loc[before_idx, 'battery']),
+            'mileage': int(df.loc[before_idx, 'mileage']),
+            'pwm': int(df.loc[before_idx, 'pwm']),
+            'power': int(df.loc[before_idx, 'power'])
+        }
+        result['max_speed'] = int(df.loc[:before_idx, 'speed'].max())
+        return result
+
+    # Calculate interpolation factor
+    t0 = df.loc[before_idx, 'timestamp']
+    t1 = df.loc[after_idx, 'timestamp']
+    factor = (timestamp - t0) / (t1 - t0)
+
+    # Interpolate all numeric values
+    result = {}
+    for key in ['speed', 'gps', 'voltage', 'temperature', 'current', 
+                'battery', 'mileage', 'pwm', 'power']:
+        v0 = float(df.loc[before_idx, key])
+        v1 = float(df.loc[after_idx, key])
+        interpolated_value = v0 + factor * (v1 - v0)
+        result[key] = int(round(interpolated_value))
+
+    # Calculate max speed up to current point
+    result['max_speed'] = int(df.loc[:before_idx, 'speed'].max())
+
     return result
 
 def get_column_name(csv_type, base_name):
