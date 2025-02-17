@@ -234,13 +234,13 @@ msgid "Codec"
 msgstr "Кодек"
 
 msgid "Duration"
-msgstr "Длительность"
+msgstr "Длит."
 
 msgid "Proc. Time"
-msgstr "Время обработки"
+msgstr "Время обр."
 
 msgid "Expires In"
-msgstr "Истекает через"
+msgstr "Истекает"
 
 msgid "Actions"
 msgstr "Действия"
