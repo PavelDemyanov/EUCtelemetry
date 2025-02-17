@@ -205,3 +205,69 @@ msgstr "Приложение имеет открытый исходный код
 
 msgid "Access the GitHub Repository"
 msgstr "Перейти в репозиторий GitHub"
+
+msgid "Projects"
+msgstr "Проекты"
+
+msgid "Name"
+msgstr "Название"
+
+msgid "Created"
+msgstr "Создано"
+
+msgid "Type"
+msgstr "Тип"
+
+msgid "Status"
+msgstr "Статус"
+
+msgid "Frames"
+msgstr "Кадры"
+
+msgid "FPS"
+msgstr "FPS"
+
+msgid "Resolution"
+msgstr "Разрешение"
+
+msgid "Codec"
+msgstr "Кодек"
+
+msgid "Duration"
+msgstr "Длительность"
+
+msgid "Proc. Time"
+msgstr "Время обработки"
+
+msgid "Expires In"
+msgstr "Истекает через"
+
+msgid "Actions"
+msgstr "Действия"
+
+msgid "Processing"
+msgstr "Обработка"
+
+msgid "Completed"
+msgstr "Завершено"
+
+msgid "Error"
+msgstr "Ошибка"
+
+msgid "CSV"
+msgstr "CSV"
+
+msgid "Video"
+msgstr "Видео"
+
+msgid "Stop"
+msgstr "Остановить"
+
+msgid "Delete"
+msgstr "Удалить"
+
+msgid "Previous"
+msgstr "Предыдущая"
+
+msgid "Next"
+msgstr "Следующая"
