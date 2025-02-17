@@ -271,3 +271,121 @@ msgstr "Предыдущая"
 
 msgid "Next"
 msgstr "Следующая"
+
+# Новые переводы для страницы index
+msgid "Create New Project"
+msgstr "Создать новый проект"
+
+msgid "Project Name"
+msgstr "Название проекта"
+
+msgid "Leave empty for auto-generation"
+msgstr "Оставьте пустым для автоматической генерации"
+
+msgid "Project name can only contain letters and numbers (max 7 characters)"
+msgstr "Название проекта может содержать только буквы и цифры (макс. 7 символов)"
+
+msgid "CSV File"
+msgstr "CSV файл"
+
+msgid "Resolution"
+msgstr "Разрешение"
+
+msgid "Full HD (1920x1080)"
+msgstr "Full HD (1920x1080)"
+
+msgid "4K (3840x2160)"
+msgstr "4K (3840x2160)"
+
+msgid "Fast"
+msgstr "Быстро"
+
+msgid "Slow"
+msgstr "Медленно"
+
+msgid "Medium"
+msgstr "Средне"
+
+msgid "FPS"
+msgstr "FPS"
+
+msgid "Video Codec"
+msgstr "Видеокодек"
+
+msgid "Interpolate Missing Values"
+msgstr "Интерполировать отсутствующие значения"
+
+msgid "Two-way interpolation"
+msgstr "Двухсторонняя интерполяция"
+
+msgid "Automatically fill missing values using two-way interpolation"
+msgstr "Автоматически заполнять пропущенные значения используя двухстороннюю интерполяцию"
+
+msgid "Upload and Show Preview"
+msgstr "Загрузить и показать предпросмотр"
+
+msgid "Preview"
+msgstr "Предпросмотр"
+
+msgid "Text Display Settings"
+msgstr "Настройки отображения текста"
+
+msgid "Vertical Position"
+msgstr "Вертикальное положение"
+
+msgid "Corner Radius"
+msgstr "Радиус углов"
+
+msgid "Box Width"
+msgstr "Ширина блока"
+
+msgid "Box Height"
+msgstr "Высота блока"
+
+msgid "Spacing Between Items"
+msgstr "Расстояние между элементами"
+
+msgid "Font Size"
+msgstr "Размер шрифта"
+
+msgid "Speed Indicator Display Settings"
+msgstr "Настройки отображения индикатора скорости"
+
+msgid "Indicator Scale"
+msgstr "Масштаб индикатора"
+
+msgid "Indicator Horizontal Position"
+msgstr "Горизонтальное положение индикатора"
+
+msgid "Indicator Vertical Position"
+msgstr "Вертикальное положение индикатора"
+
+msgid "Speed Value Size"
+msgstr "Размер значения скорости"
+
+msgid "Speed Text Vertical Offset"
+msgstr "Вертикальное смещение текста скорости"
+
+msgid "Unit Text Size"
+msgstr "Размер текста единиц измерения"
+
+msgid "Unit Text Vertical Offset"
+msgstr "Вертикальное смещение текста единиц измерения"
+
+msgid "Start Processing"
+msgstr "Начать обработку"
+
+msgid "Processing..."
+msgstr "Обработка..."
+
+msgid "You can close your browser and come back later - the video processing will continue in the background."
+msgstr "Вы можете закрыть браузер и вернуться позже - обработка видео продолжится в фоновом режиме."
+
+msgid "Alternatively, you can go to the Projects section to monitor the progress there."
+msgstr "Кроме того, вы можете перейти в раздел Проекты, чтобы отслеживать прогресс там."
+
+msgid "Current:"
+msgstr "Текущее:"
+
+msgid "px"
+msgstr "пх"
