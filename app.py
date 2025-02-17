@@ -794,8 +794,7 @@ def generate_preview(project_id):
             'indicator_x': float(data.get('indicator_x', 50)),
             'indicator_y': float(data.get('indicator_y', 80)),
             'speed_y': int(data.get('speed_y', 0)),
-            'unit_y': int(data.get('unit_y',0)),
-            'speed_size': float(data.get('speed_size', 100)),
+            'unit_y': int(data.get('unit_y',0)),'speed_size': float(data.get('speed_size', 100)),
             'unit_size': float(data.get('unit_size', 100)),
             'indicator_scale': float(data.get('indicator_scale', 100))
         }
@@ -1089,6 +1088,24 @@ def cleanup_storage():
             'success': False,
             'error': str(e)
         }), 500
+
+@app.route('/set_language/<lang>')
+def set_language(lang):
+    if lang not in ['en', 'ru']:
+        return redirect(request.referrer or url_for('index'))
+
+    # Save language preference for logged in users
+    if current_user.is_authenticated:
+        current_user.locale = lang
+        db.session.commit()
+
+    # Store language in query parameter for the redirect
+    next_url = request.referrer or url_for('index')
+    if '?' in next_url:
+        next_url = next_url.split('?')[0]
+    next_url = f"{next_url}?lang={lang}"
+
+    return redirect(next_url)
 
 with app.app_context():
     db.create_all()

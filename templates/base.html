@@ -51,8 +51,8 @@
                             {{ _('Language') }}
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="languageDropdown">
-                            <li><a class="dropdown-item" href="?lang=en">English</a></li>
-                            <li><a class="dropdown-item" href="?lang=ru">Русский</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('set_language', lang='en') }}">English</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('set_language', lang='ru') }}">Русский</a></li>
                         </ul>
                     </li>
                     {% if current_user.is_authenticated %}
