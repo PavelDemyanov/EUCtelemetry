@@ -207,32 +207,23 @@ def create_frame(values,
         loc = _LOCALIZATION.get(locale, _LOCALIZATION['en'])
         params = []
         if show_speed:
-            params.append(
-                (loc['speed'], f"{values['speed']}", loc['units']['speed']))
+            params.append((loc['speed'], f"{values['speed']}", loc['units']['speed']))
         if show_max_speed:
-            params.append((loc['max_speed'], f"{values['max_speed']}",
-                           loc['units']['speed']))
-        if show_gps:  # Handle GPS the same way as other parameters
-            params.append(
-                (loc['gps'], f"{values['gps']}", loc['units']['speed']))
+            params.append((loc['max_speed'], f"{values['max_speed']}", loc['units']['speed']))
+        if show_gps and 'gps' in values:  # Only add if GPS exists in values and is visible
+            params.append((loc['gps'], f"{values['gps']}", loc['units']['speed']))
         if show_voltage:
-            params.append((loc['voltage'], f"{values['voltage']}",
-                           loc['units']['voltage']))
+            params.append((loc['voltage'], f"{values['voltage']}", loc['units']['voltage']))
         if show_temp:
-            params.append((loc['temp'], f"{values['temperature']}",
-                           loc['units']['temp']))
+            params.append((loc['temp'], f"{values['temperature']}", loc['units']['temp']))
         if show_battery:
-            params.append((loc['battery'], f"{values['battery']}",
-                           loc['units']['battery']))
+            params.append((loc['battery'], f"{values['battery']}", loc['units']['battery']))
         if show_mileage:
-            params.append((loc['mileage'], f"{values['mileage']}",
-                           loc['units']['mileage']))
+            params.append((loc['mileage'], f"{values['mileage']}", loc['units']['mileage']))
         if show_pwm:
-            params.append(
-                (loc['pwm'], f"{values['pwm']}", loc['units']['pwm']))
+            params.append((loc['pwm'], f"{values['pwm']}", loc['units']['pwm']))
         if show_power:
-            params.append(
-                (loc['power'], f"{values['power']}", loc['units']['power']))
+            params.append((loc['power'], f"{values['power']}", loc['units']['power']))
 
         if params:  # Only proceed if there are visible elements
             element_widths = []
@@ -400,9 +391,9 @@ def find_nearest_values(df, timestamp, interpolate=True):
         return {
             key: 0
             for key in [
-                'speed', 'max_speed', 'gps', 'voltage', 'temperature',
+                'speed', 'max_speed', 'voltage', 'temperature',
                 'current', 'battery', 'mileage', 'pwm', 'power'
-            ]
+            ]  # Remove GPS from default keys
         }
 
     # Find the indices of the surrounding data points
@@ -412,9 +403,8 @@ def find_nearest_values(df, timestamp, interpolate=True):
     if not after_mask.any() or not before_mask.any():
         # If timestamp is outside the range, use the last available values
         last_idx = df.index[-1]
-        return {
+        result = {
             'speed': int(df.loc[last_idx, 'speed']),
-            'gps': int(df.loc[last_idx, 'gps']),
             'voltage': int(df.loc[last_idx, 'voltage']),
             'temperature': int(df.loc[last_idx, 'temperature']),
             'current': int(df.loc[last_idx, 'current']),
@@ -422,8 +412,11 @@ def find_nearest_values(df, timestamp, interpolate=True):
             'mileage': int(df.loc[last_idx, 'mileage']),
             'pwm': int(df.loc[last_idx, 'pwm']),
             'power': int(df.loc[last_idx, 'power']),
-            'max_speed': int(df.loc[:before_mask, 'speed'].max())
         }
+        result['max_speed'] = int(df.loc[:before_mask, 'speed'].max())
+        if 'gps' in df.columns:  # Only add GPS if it exists in columns
+            result['gps'] = int(df.loc[last_idx, 'gps'])
+        return result
 
     # Get indices of surrounding points
     after_idx = df[after_mask].index[0]
@@ -439,7 +432,6 @@ def find_nearest_values(df, timestamp, interpolate=True):
 
         result = {
             'speed': int(df.loc[use_idx, 'speed']),
-            'gps': int(df.loc[use_idx, 'gps']),
             'voltage': int(df.loc[use_idx, 'voltage']),
             'temperature': int(df.loc[use_idx, 'temperature']),
             'current': int(df.loc[use_idx, 'current']),
@@ -448,6 +440,8 @@ def find_nearest_values(df, timestamp, interpolate=True):
             'pwm': int(df.loc[use_idx, 'pwm']),
             'power': int(df.loc[use_idx, 'power'])
         }
+        if 'gps' in df.columns:  # Only add GPS if it exists in columns
+            result['gps'] = int(df.loc[use_idx, 'gps'])
         result['max_speed'] = int(df.loc[:use_idx, 'speed'].max())
         return result
 
@@ -459,13 +453,20 @@ def find_nearest_values(df, timestamp, interpolate=True):
     # Interpolate all numeric values
     result = {}
     for key in [
-            'speed', 'gps', 'voltage', 'temperature', 'current', 'battery',
+            'speed', 'voltage', 'temperature', 'current', 'battery',
             'mileage', 'pwm', 'power'
-    ]:
+    ]:  # Remove GPS from default interpolation
         v0 = float(df.loc[before_idx, key])
         v1 = float(df.loc[after_idx, key])
         interpolated_value = v0 + factor * (v1 - v0)
         result[key] = int(round(interpolated_value))
+
+    # Only interpolate GPS if it exists in columns
+    if 'gps' in df.columns:
+        v0 = float(df.loc[before_idx, 'gps'])
+        v1 = float(df.loc[after_idx, 'gps'])
+        interpolated_value = v0 + factor * (v1 - v0)
+        result['gps'] = int(round(interpolated_value))
 
     # Calculate max speed up to current point
     result['max_speed'] = int(df.loc[:before_idx, 'speed'].max())
