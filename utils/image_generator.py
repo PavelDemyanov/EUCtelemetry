@@ -141,7 +141,7 @@ def create_frame(values,
         # Get visibility settings with defaults to True
         show_speed = text_settings.get('show_speed', True)
         show_max_speed = text_settings.get('show_max_speed', True)
-        show_gps = text_settings.get('show_gps', True)  # Added show_gps
+        show_gps = text_settings.get('show_gps', True)
         show_voltage = text_settings.get('show_voltage', True)
         show_temp = text_settings.get('show_temp', True)
         show_battery = text_settings.get('show_battery', True)
@@ -206,7 +206,7 @@ def create_frame(values,
         if show_max_speed:
             params.append((loc['max_speed'], f"{values['max_speed']}",
                            loc['units']['speed']))
-        if show_gps:  # Добавляем GPS параметр
+        if show_gps and 'gps' in values:  # Add GPS only if visible and value exists
             params.append(
                 (loc['gps'], f"{values['gps']}", loc['units']['speed']))
         if show_voltage:
