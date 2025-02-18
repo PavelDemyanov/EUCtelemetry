@@ -97,10 +97,10 @@ def _get_params_by_locale(locale_str=None):
         ]
 
 def create_frame(values,
-                 resolution='fullhd',
-                 output_path=None,
-                 text_settings=None,
-                 locale_str=None):
+                resolution='fullhd',
+                output_path=None,
+                text_settings=None,
+                locale_str=None):
     try:
         # Определяем разрешение и масштаб
         if resolution == "4k":
@@ -122,11 +122,16 @@ def create_frame(values,
         # Получаем настройки позиционирования индикатора и текста
         indicator_x_percent = float(text_settings.get('indicator_x', 50))
         indicator_y_percent = float(text_settings.get('indicator_y', 80))
-        speed_y_offset = int(text_settings.get('speed_y', 0))
-        unit_y_offset = int(text_settings.get('unit_y', 0))
+        speed_y_offset = int(text_settings.get('speed_y', -28))
+        unit_y_offset = int(text_settings.get('unit_y', 36))
         speed_size = float(text_settings.get('speed_size', 100))
         unit_size = float(text_settings.get('unit_size', 100))
         indicator_scale = float(text_settings.get('indicator_scale', 100))
+        font_size = int(text_settings.get('font_size', 26))
+        border_radius = int(text_settings.get('border_radius', 13))
+        box_width = int(text_settings.get('box_width', 0))  # Новый параметр
+        box_height = int(text_settings.get('box_height', 47))  # Новый параметр
+        spacing = int(text_settings.get('spacing', 10))  # Новый параметр
 
         # Создаем индикатор скорости с учетом смещений текста и масштаба
         speed_indicator = create_speed_indicator(
@@ -147,9 +152,9 @@ def create_frame(values,
 
         try:
             regular_font = _get_font("fonts/sf-ui-display-regular.otf",
-                                     int(26 * scale_factor))
+                                     int(font_size * scale_factor))
             bold_font = _get_font("fonts/sf-ui-display-bold.otf",
-                                  int(26 * scale_factor))
+                                  int(font_size * scale_factor))
         except Exception as e:
             logging.error(f"Error loading font: {e}")
             raise
@@ -174,26 +179,26 @@ def create_frame(values,
                               value_bbox[3] - value_bbox[1],
                               unit_bbox[3] - unit_bbox[1])
 
-            element_width = text_width + (2 * int(14 * scale_factor))
+            # Используем заданную ширину бокса, если она указана
+            element_width = box_width if box_width > 0 else (text_width + (2 * int(14 * scale_factor)))
             element_widths.append(element_width)
             text_widths.append(text_width)
             text_heights.append(text_height)
             total_width += element_width
 
-        total_width += int(10 * scale_factor) * (len(params) - 1)
+        # Используем заданный spacing между элементами
+        total_width += spacing * (len(params) - 1)
         start_x = (width - total_width) // 2
         y_position = int((height * float(text_settings.get('vertical_position', 1))) / 100)
 
         max_text_height = max(text_heights)
-        box_height = int(47 * scale_factor)
         box_vertical_center = y_position + (box_height // 2)
         text_baseline_y = box_vertical_center - (max_text_height // 2)
 
         x_position = start_x
         for i, ((label, value, unit), element_width, text_width) in enumerate(
                 zip(params, element_widths, text_widths)):
-            box = create_rounded_box(element_width, box_height,
-                                    int(13 * scale_factor))
+            box = create_rounded_box(element_width, box_height, border_radius)
             overlay.paste(box, (x_position, y_position), box)
 
             # Рисуем каждую часть текста отдельно с соответствующим шрифтом
@@ -223,7 +228,7 @@ def create_frame(values,
                       fill=(255, 255, 255, 255),
                       font=regular_font)
 
-            x_position += element_width + int(10 * scale_factor)
+            x_position += element_width + spacing
 
         result = Image.alpha_composite(background, overlay)
 

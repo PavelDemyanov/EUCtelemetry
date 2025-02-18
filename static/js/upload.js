@@ -65,30 +65,17 @@ function updatePreview(projectId) {
     const progressBar = progressDiv.querySelector('.progress-bar');
     const progressTitle = document.getElementById('progressTitle');
 
-    // Check resolution and adjust offsets if needed
-    const resolution = document.querySelector('input[name="resolution"]:checked').value;
-    if (resolution === '4k') {
-        document.getElementById('speedY').value = -50;
-        document.getElementById('speedYValue').textContent = '-50';
-        document.getElementById('unitY').value = 65;
-        document.getElementById('unitYValue').textContent = '65';
-    } else {
-        document.getElementById('speedY').value = -28;
-        document.getElementById('speedYValue').textContent = '-28';
-        document.getElementById('unitY').value = 36;
-        document.getElementById('unitYValue').textContent = '36';
-    }
-
-    // Get current values with updated settings
+    // Get all current settings
     const settings = {
-        resolution: resolution,
+        resolution: document.querySelector('input[name="resolution"]:checked').value,
+        // Text Display Settings
         vertical_position: document.getElementById('verticalPosition').value,
-        top_padding: document.getElementById('topPadding').value,
-        bottom_padding: document.getElementById('bottomPadding').value,
-        spacing: document.getElementById('spacing').value,
         font_size: document.getElementById('fontSize').value,
         border_radius: document.getElementById('borderRadius').value,
-        // Speed indicator settings
+        box_width: document.getElementById('boxWidth').value,
+        box_height: document.getElementById('boxHeight').value,
+        spacing: document.getElementById('spacing').value,
+        // Speed Indicator Settings
         indicator_scale: document.getElementById('indicatorScale').value,
         indicator_x: document.getElementById('indicatorX').value,
         indicator_y: document.getElementById('indicatorY').value,
@@ -150,7 +137,7 @@ document.getElementById('projectName').addEventListener('input', function() {
 });
 
 // Add event listeners for text display settings
-const textSettings = ['verticalPosition', 'topPadding', 'bottomPadding', 'spacing', 'fontSize', 'borderRadius'];
+const textSettings = ['verticalPosition', 'fontSize', 'borderRadius', 'boxWidth', 'boxHeight', 'spacing'];
 const speedIndicatorSettings = ['indicatorScale', 'indicatorX', 'indicatorY', 'speedSize', 'speedY', 'unitSize', 'unitY'];
 
 // Combine all settings
@@ -161,24 +148,12 @@ document.querySelectorAll('input[name="resolution"]').forEach(radio => {
     radio.addEventListener('change', function() {
         const projectId = document.getElementById('startProcessButton').dataset.projectId;
         if (projectId) {
-            // Adjust slider values based on resolution
-            if (this.value === '4k') {
-                document.getElementById('speedY').value = -50;
-                document.getElementById('speedYValue').textContent = '-50';
-                document.getElementById('unitY').value = 65;
-                document.getElementById('unitYValue').textContent = '65';
-            } else {
-                document.getElementById('speedY').value = -28;
-                document.getElementById('speedYValue').textContent = '-28';
-                document.getElementById('unitY').value = 36;
-                document.getElementById('unitYValue').textContent = '36';
-            }
-            // Update preview with new settings
             updatePreview(projectId);
         }
     });
 });
 
+// Add event listeners for all settings
 allSettings.forEach(setting => {
     const input = document.getElementById(setting);
     const valueDisplay = document.getElementById(setting + 'Value');
@@ -224,19 +199,21 @@ document.getElementById('startProcessButton').addEventListener('click', function
         fps: document.querySelector('input[name="fps"]:checked').value,
         codec: document.querySelector('input[name="codec"]:checked').value,
         interpolate_values: document.getElementById('interpolateValues').checked,
+        // Text Display Settings
         vertical_position: document.getElementById('verticalPosition').value,
-        top_padding: document.getElementById('topPadding').value,
-        bottom_padding: document.getElementById('bottomPadding').value,
-        spacing: document.getElementById('spacing').value,
         font_size: document.getElementById('fontSize').value,
         border_radius: document.getElementById('borderRadius').value,
+        box_width: document.getElementById('boxWidth').value,
+        box_height: document.getElementById('boxHeight').value,
+        spacing: document.getElementById('spacing').value,
+        // Speed Indicator Settings
+        indicator_scale: document.getElementById('indicatorScale').value,
         indicator_x: document.getElementById('indicatorX').value,
         indicator_y: document.getElementById('indicatorY').value,
         speed_y: document.getElementById('speedY').value,
         unit_y: document.getElementById('unitY').value,
         speed_size: document.getElementById('speedSize').value,
-        unit_size: document.getElementById('unitSize').value,
-        indicator_scale: document.getElementById('indicatorScale').value
+        unit_size: document.getElementById('unitSize').value
     };
 
     // Start processing
@@ -256,7 +233,6 @@ document.getElementById('startProcessButton').addEventListener('click', function
             fetch(`/project_status/${projectId}`)
                 .then(response => response.json())
                 .then(statusData => {
-                    // Ensure we have a valid status
                     if (!statusData.status) {
                         throw new Error(gettext('No status received from server'));
                     }
@@ -269,7 +245,6 @@ document.getElementById('startProcessButton').addEventListener('click', function
                                 gettext('Encoding video...');
                             progressBar.style.width = `${progress}%`;
                             progressBar.textContent = `${progress.toFixed(1)}%`;
-                            // Show processing stage below the main message
                             videoProcessingInfo.textContent = gettext('You can close your browser and come back later - the video processing will continue in the background.') + ' ' +
                                 gettext('Alternatively, you can go to the Projects section to monitor the progress there.');
                             setTimeout(checkStatus, progress <= 50 ? 200 : 1000);
