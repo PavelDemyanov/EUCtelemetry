@@ -114,6 +114,7 @@ function updatePreview(projectId) {
         // Show preview
         progressDiv.classList.add('d-none');
         previewSection.classList.remove('d-none');
+        // Add timestamp to prevent browser caching
         document.getElementById('previewImage').src = data.preview_url + '?t=' + new Date().getTime();
 
         // Re-enable form
@@ -162,13 +163,11 @@ document.querySelectorAll('input[name="resolution"]').forEach(radio => {
         if (projectId) {
             // Adjust slider values based on resolution
             if (this.value === '4k') {
-                // Set specific values for 4K
                 document.getElementById('speedY').value = -50;
                 document.getElementById('speedYValue').textContent = '-50';
                 document.getElementById('unitY').value = 65;
                 document.getElementById('unitYValue').textContent = '65';
             } else {
-                // Reset to default values for Full HD
                 document.getElementById('speedY').value = -28;
                 document.getElementById('speedYValue').textContent = '-28';
                 document.getElementById('unitY').value = 36;
@@ -186,62 +185,20 @@ allSettings.forEach(setting => {
     if (!input || !valueDisplay) return; // Skip if elements don't exist
 
     input.addEventListener('input', function() {
-        // Update value display without adding unit if it's already in the display text
-        const currentText = valueDisplay.textContent;
-        const value = this.value;
+        // Update value display
+        valueDisplay.textContent = this.value + (
+            this.id === 'speedSize' || this.id === 'unitSize' || this.id.includes('indicator') ? '%' : 'px'
+        );
 
-        // Check if the current text already contains a unit
-        if (currentText.includes('%') || currentText.includes('px')) {
-            valueDisplay.textContent = value;
-        } else {
-            // Add unit only if it's not already present
-            valueDisplay.textContent = value + (
-                this.id === 'speedSize' || this.id === 'unitSize' || this.id.includes('indicator') ? '%' : 'px'
-            );
+        // Get projectId and update preview
+        const projectId = document.getElementById('startProcessButton').dataset.projectId;
+        if (projectId) {
+            // Debounce the preview update
+            clearTimeout(this.timeout);
+            this.timeout = setTimeout(() => {
+                updatePreview(projectId);
+            }, 300);
         }
-
-        // Debounce the preview update
-        clearTimeout(this.timeout);
-        this.timeout = setTimeout(() => {
-            const projectId = document.getElementById('startProcessButton').dataset.projectId;
-            if (projectId) {
-                // Get current values for all settings
-                const settings = {
-                    resolution: document.querySelector('input[name="resolution"]:checked').value,
-                    vertical_position: document.getElementById('verticalPosition').value,
-                    top_padding: document.getElementById('topPadding').value,
-                    bottom_padding: document.getElementById('bottomPadding').value,
-                    spacing: document.getElementById('spacing').value,
-                    font_size: document.getElementById('fontSize').value,
-                    border_radius: document.getElementById('borderRadius').value,
-                    // Speed indicator settings
-                    indicator_x: document.getElementById('indicatorX').value,
-                    indicator_y: document.getElementById('indicatorY').value,
-                    speed_y: document.getElementById('speedY').value,
-                    unit_y: document.getElementById('unitY').value,
-                    speed_size: document.getElementById('speedSize').value,
-                    unit_size: document.getElementById('unitSize').value,
-                    indicator_scale: document.getElementById('indicatorScale').value
-                };
-
-                // Update preview with all current settings
-                fetch(`/preview/${projectId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(settings)
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) throw new Error(data.error);
-                    document.getElementById('previewImage').src = data.preview_url + '?t=' + new Date().getTime();
-                })
-                .catch(error => {
-                    console.error('Error updating preview:', error);
-                });
-            }
-        }, 300);
     });
 });
 
