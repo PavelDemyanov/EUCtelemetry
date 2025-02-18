@@ -39,7 +39,7 @@ _LOCALIZATION = {
     },
     'ru': {
         'speed': 'Скорость',
-        'max_speed': 'Макс. скорость',
+        'max_speed': 'Максимум',
         'gps': 'GPS',
         'voltage': 'Напряжение',
         'temp': 'Температура',
@@ -60,6 +60,7 @@ _LOCALIZATION = {
         }
     }
 }
+
 
 def _initialize_metal():
     global _metal_context, _metal_device, _metal_initialized
@@ -84,6 +85,7 @@ def _initialize_metal():
 
 _font_cache = {}
 
+
 def _get_font(font_path, size):
     cache_key = f"{font_path}_{size}"
     if cache_key not in _font_cache:
@@ -98,6 +100,7 @@ def _get_font(font_path, size):
 
 _box_cache = {}
 
+
 def create_rounded_box(width, height, radius):
     cache_key = f"{width}_{height}_{radius}"
     if cache_key not in _box_cache:
@@ -110,6 +113,7 @@ def create_rounded_box(width, height, radius):
         _box_cache[cache_key] = image
         logging.debug(f"Created and cached rounded box {cache_key}")
     return _box_cache[cache_key].copy()
+
 
 def create_frame(values,
                  resolution='fullhd',
@@ -137,7 +141,7 @@ def create_frame(values,
         # Get visibility settings with defaults to True
         show_speed = text_settings.get('show_speed', True)
         show_max_speed = text_settings.get('show_max_speed', True)
-        show_gps = text_settings.get('show_gps', True) # Added show_gps
+        show_gps = text_settings.get('show_gps', True)  # Added show_gps
         show_voltage = text_settings.get('show_voltage', True)
         show_temp = text_settings.get('show_temp', True)
         show_battery = text_settings.get('show_battery', True)
@@ -169,20 +173,25 @@ def create_frame(values,
                 resolution=resolution,
                 locale=locale)
 
-            indicator_x = int((width - indicator_size) * indicator_x_percent / 100)
-            indicator_y = int((height - indicator_size) * indicator_y_percent / 100)
+            indicator_x = int(
+                (width - indicator_size) * indicator_x_percent / 100)
+            indicator_y = int(
+                (height - indicator_size) * indicator_y_percent / 100)
             background.paste(speed_indicator, (indicator_x, indicator_y),
-                               speed_indicator)
+                             speed_indicator)
 
         font_size = int(text_settings.get('font_size', 26) * scale_factor)
         top_padding = int(text_settings.get('top_padding', 14) * scale_factor)
-        box_height = int(text_settings.get('bottom_padding', 47) * scale_factor)
+        box_height = int(
+            text_settings.get('bottom_padding', 47) * scale_factor)
         spacing = int(text_settings.get('spacing', 10) * scale_factor)
         vertical_position = int(text_settings.get('vertical_position', 1))
-        border_radius = int(text_settings.get('border_radius', 13) * scale_factor)
+        border_radius = int(
+            text_settings.get('border_radius', 13) * scale_factor)
 
         try:
-            regular_font = _get_font("fonts/sf-ui-display-regular.otf", font_size)
+            regular_font = _get_font("fonts/sf-ui-display-regular.otf",
+                                     font_size)
             bold_font = _get_font("fonts/sf-ui-display-bold.otf", font_size)
         except Exception as e:
             logging.error(f"Error loading font: {e}")
@@ -192,23 +201,32 @@ def create_frame(values,
         loc = _LOCALIZATION.get(locale, _LOCALIZATION['en'])
         params = []
         if show_speed:
-            params.append((loc['speed'], f"{values['speed']}", loc['units']['speed']))
+            params.append(
+                (loc['speed'], f"{values['speed']}", loc['units']['speed']))
         if show_max_speed:
-            params.append((loc['max_speed'], f"{values['max_speed']}", loc['units']['speed']))
+            params.append((loc['max_speed'], f"{values['max_speed']}",
+                           loc['units']['speed']))
         if show_gps:  # Добавляем GPS параметр
-            params.append((loc['gps'], f"{values['gps']}", loc['units']['speed']))
+            params.append(
+                (loc['gps'], f"{values['gps']}", loc['units']['speed']))
         if show_voltage:
-            params.append((loc['voltage'], f"{values['voltage']}", loc['units']['voltage']))
+            params.append((loc['voltage'], f"{values['voltage']}",
+                           loc['units']['voltage']))
         if show_temp:
-            params.append((loc['temp'], f"{values['temperature']}", loc['units']['temp']))
+            params.append((loc['temp'], f"{values['temperature']}",
+                           loc['units']['temp']))
         if show_battery:
-            params.append((loc['battery'], f"{values['battery']}", loc['units']['battery']))
+            params.append((loc['battery'], f"{values['battery']}",
+                           loc['units']['battery']))
         if show_mileage:
-            params.append((loc['mileage'], f"{values['mileage']}", loc['units']['mileage']))
+            params.append((loc['mileage'], f"{values['mileage']}",
+                           loc['units']['mileage']))
         if show_pwm:
-            params.append((loc['pwm'], f"{values['pwm']}", loc['units']['pwm']))
+            params.append(
+                (loc['pwm'], f"{values['pwm']}", loc['units']['pwm']))
         if show_power:
-            params.append((loc['power'], f"{values['power']}", loc['units']['power']))
+            params.append(
+                (loc['power'], f"{values['power']}", loc['units']['power']))
 
         if params:  # Only proceed if there are visible elements
             element_widths = []
@@ -217,15 +235,20 @@ def create_frame(values,
             total_width = 0
 
             for label, value, unit in params:
-                label_bbox = draw.textbbox((0, 0), f"{label}: ", font=regular_font)
+                label_bbox = draw.textbbox((0, 0),
+                                           f"{label}: ",
+                                           font=regular_font)
                 value_bbox = draw.textbbox((0, 0), value, font=bold_font)
-                unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
+                unit_bbox = draw.textbbox((0, 0),
+                                          f" {unit}",
+                                          font=regular_font)
 
                 text_width = (label_bbox[2] - label_bbox[0]) + (
-                    value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])
+                    value_bbox[2] - value_bbox[0]) + (unit_bbox[2] -
+                                                      unit_bbox[0])
                 text_height = max(label_bbox[3] - label_bbox[1],
-                                    value_bbox[3] - value_bbox[1],
-                                    unit_bbox[3] - unit_bbox[1])
+                                  value_bbox[3] - value_bbox[1],
+                                  unit_bbox[3] - unit_bbox[1])
 
                 element_width = text_width + (2 * top_padding)
                 element_widths.append(element_width)
@@ -243,16 +266,20 @@ def create_frame(values,
                 text_baseline_y = box_vertical_center - (max_text_height // 2)
 
                 x_position = start_x
-                for i, ((label, value, unit), element_width, text_width) in enumerate(
-                        zip(params, element_widths, text_widths)):
-                    box = create_rounded_box(element_width, box_height, border_radius)
+                for i, ((label, value, unit), element_width,
+                        text_width) in enumerate(
+                            zip(params, element_widths, text_widths)):
+                    box = create_rounded_box(element_width, box_height,
+                                             border_radius)
                     overlay.paste(box, (x_position, y_position), box)
 
                     text_x = x_position + ((element_width - text_width) // 2)
                     baseline_offset = int(max_text_height * 0.2)
                     text_y = text_baseline_y - baseline_offset
 
-                    label_bbox = draw.textbbox((0, 0), f"{label}: ", font=regular_font)
+                    label_bbox = draw.textbbox((0, 0),
+                                               f"{label}: ",
+                                               font=regular_font)
                     label_width = label_bbox[2] - label_bbox[0]
                     draw.text((text_x, text_y),
                               f"{label}: ",
@@ -277,9 +304,9 @@ def create_frame(values,
 
         if output_path:
             result.convert('RGB').save(output_path,
-                                        format='PNG',
-                                        quality=95,
-                                        optimize=True)
+                                       format='PNG',
+                                       quality=95,
+                                       optimize=True)
             logging.debug(f"Saved frame to {output_path}")
 
         return result
@@ -326,15 +353,19 @@ def generate_frames(csv_file,
             nonlocal completed_frames
             # Use interpolated values for frame generation if enabled
             values = find_nearest_values(df,
-                                        timestamp,
-                                        interpolate=interpolate_values)
+                                         timestamp,
+                                         interpolate=interpolate_values)
             output_path = f'{frames_dir}/frame_{i:06d}.png'
-            create_frame(values, resolution, output_path, text_settings, locale=locale)
+            create_frame(values,
+                         resolution,
+                         output_path,
+                         text_settings,
+                         locale=locale)
 
             with lock:
                 completed_frames += 1
                 if progress_callback and (completed_frames % 10 == 0
-                                        or completed_frames == frame_count):
+                                          or completed_frames == frame_count):
                     progress_callback(completed_frames, frame_count, 'frames')
 
         max_workers = os.cpu_count() or 4
@@ -495,8 +526,13 @@ def create_preview_frame(csv_file,
             preview_path = f'previews/{project_id}_preview.png'
             if os.path.exists(preview_path):
                 os.remove(preview_path)
-            create_frame(values, resolution, preview_path, text_settings, locale=locale)
-            logging.info(f"Created preview frame: {preview_path} with locale: {locale}")
+            create_frame(values,
+                         resolution,
+                         preview_path,
+                         text_settings,
+                         locale=locale)
+            logging.info(
+                f"Created preview frame: {preview_path} with locale: {locale}")
             return preview_path
 
     except Exception as e:
