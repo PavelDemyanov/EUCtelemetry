@@ -27,6 +27,9 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                 logging.info(f"Starting project processing with hardware configuration: {hardware_info}")
                 logging.info(f"Processing settings - Resolution: {resolution}, FPS: {fps}, Codec: {codec}, Interpolation: {'enabled' if interpolate_values else 'disabled'}")
 
+                # Add logging for text settings
+                logging.info(f"Text settings for frame generation: {text_settings}")
+
                 project.status = 'processing'
                 project.fps = float(fps)  # Convert to float explicitly
                 project.resolution = resolution
@@ -70,13 +73,36 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     except Exception as e:
                         logging.error(f"Error updating progress: {e}")
 
+                # Ensure text_settings is not None and has all required visibility flags
+                if text_settings is None:
+                    text_settings = {}
+
+                # Add default visibility settings if not present
+                default_visibility = {
+                    'show_speed': True,
+                    'show_max_speed': True,
+                    'show_voltage': True,
+                    'show_temp': True,
+                    'show_battery': True,
+                    'show_mileage': True,
+                    'show_pwm': True,
+                    'show_power': True,
+                    'show_gps': True,
+                    'show_bottom_elements': True
+                }
+
+                # Update text_settings with defaults for any missing keys
+                for key, default_value in default_visibility.items():
+                    if key not in text_settings:
+                        text_settings[key] = default_value
+
                 # Generate frames with progress tracking, interpolation setting and locale
                 frame_count, duration = generate_frames(
                     csv_file,
                     project.folder_number,
                     resolution,
                     fps,
-                    text_settings,
+                    text_settings,  # Now includes all visibility settings
                     progress_callback,
                     interpolate_values,
                     locale  # Pass locale to generate_frames
