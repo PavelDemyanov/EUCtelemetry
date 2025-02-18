@@ -7,13 +7,14 @@ import shutil
 import concurrent.futures
 import threading
 from functools import lru_cache
+from flask import current_app, request
+from flask_babel import get_locale
 from utils.hardware_detection import is_apple_silicon
 from utils.image_processor import create_speed_indicator
 
 _metal_initialized = False
 _metal_context = None
 _metal_device = None
-
 
 def _initialize_metal():
     global _metal_context, _metal_device, _metal_initialized
@@ -38,7 +39,6 @@ def _initialize_metal():
 
 _font_cache = {}
 
-
 def _get_font(font_path, size):
     cache_key = f"{font_path}_{size}"
     if cache_key not in _font_cache:
@@ -53,7 +53,6 @@ def _get_font(font_path, size):
 
 _box_cache = {}
 
-
 def create_rounded_box(width, height, radius):
     cache_key = f"{width}_{height}_{radius}"
     if cache_key not in _box_cache:
@@ -67,6 +66,35 @@ def create_rounded_box(width, height, radius):
         logging.debug(f"Created and cached rounded box {cache_key}")
     return _box_cache[cache_key].copy()
 
+
+def _get_params_by_locale():
+    locale = str(get_locale())
+    if locale.startswith('ru'):
+        return [
+            ('Скорость', 'speed', 'км/ч'),
+            ('Макс. скорость', 'max_speed', 'км/ч'),
+            ('GPS', 'gps', 'км/ч'),
+            ('Напряжение', 'voltage', 'В'),
+            ('Температура', 'temperature', '°C'),
+            ('Ток', 'current', 'А'),
+            ('Батарея', 'battery', '%'),
+            ('Пробег', 'mileage', 'км'),
+            ('ШИМ', 'pwm', '%'),
+            ('Мощность', 'power', 'Вт')
+        ]
+    else:
+        return [
+            ('Speed', 'speed', 'km/h'),
+            ('Max Speed', 'max_speed', 'km/h'),
+            ('GPS', 'gps', 'km/h'),
+            ('Voltage', 'voltage', 'V'),
+            ('Temp', 'temperature', '°C'),
+            ('Current', 'current', 'A'),
+            ('Battery', 'battery', '%'),
+            ('Mileage', 'mileage', 'km'),
+            ('PWM', 'pwm', '%'),
+            ('Power', 'power', 'W')
+        ]
 
 def create_frame(values,
                  resolution='fullhd',
@@ -143,16 +171,8 @@ def create_frame(values,
             logging.error(f"Error loading font: {e}")
             raise
 
-        params = [('Скорость', f"{values['speed']}", 'км/ч'),
-                  ('Макс. скорость', f"{values['max_speed']}", 'км/ч'),
-                  ('GPS', f"{values['gps']}", 'км/ч'),
-                  ('Напряжение', f"{values['voltage']}", 'В'),
-                  ('Температура', f"{values['temperature']}", '°C'),
-                  ('Ток', f"{values['current']}", 'А'),
-                  ('Батарея', f"{values['battery']}", '%'),
-                  ('Пробег', f"{values['mileage']}", 'км'),
-                  ('ШИМ', f"{values['pwm']}", '%'),
-                  ('Мощность', f"{values['power']}", 'Вт')]
+        params = [(label, f"{values[value_key]}", unit) 
+                 for label, value_key, unit in _get_params_by_locale()]
 
         element_widths = []
         text_widths = []
