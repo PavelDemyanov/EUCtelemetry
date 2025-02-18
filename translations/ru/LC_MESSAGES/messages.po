@@ -32,6 +32,37 @@ msgstr "завершено"
 msgid "error"
 msgstr "ошибка"
 
+# Telemetry elements translations
+msgid "Telemetry Elements Visibility"
+msgstr "Отображение элементов телеметрии"
+
+msgid "Speed"
+msgstr "Скорость"
+
+msgid "Max Speed"
+msgstr "Максимальная скорость"
+
+msgid "Voltage"
+msgstr "Напряжение"
+
+msgid "Temperature"
+msgstr "Температура"
+
+msgid "Battery"
+msgstr "Батарея"
+
+msgid "Mileage"
+msgstr "Пробег"
+
+msgid "PWM"
+msgstr "ШИМ"
+
+msgid "Power"
+msgstr "Мощность"
+
+msgid "Bottom Elements (Arc and Speed)"
+msgstr "Нижние элементы (Дуга и скорость)"
+
 # Email and registration messages
 msgid "Please check your email to complete registration."
 msgstr "Пожалуйста, проверьте вашу почту для завершения регистрации."
