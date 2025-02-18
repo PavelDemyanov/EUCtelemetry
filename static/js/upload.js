@@ -215,7 +215,7 @@ allSettings.forEach(setting => {
         this.timeout = setTimeout(() => {
             const projectId = document.getElementById('startProcessButton').dataset.projectId;
             if (projectId) {
-                // Get current values for all settings
+                // Get current values for all settings including visibility
                 const settings = {
                     resolution: document.querySelector('input[name="resolution"]:checked').value,
                     vertical_position: document.getElementById('verticalPosition').value,
@@ -231,7 +231,17 @@ allSettings.forEach(setting => {
                     unit_y: document.getElementById('unitY').value,
                     speed_size: document.getElementById('speedSize').value,
                     unit_size: document.getElementById('unitSize').value,
-                    indicator_scale: document.getElementById('indicatorScale').value
+                    indicator_scale: document.getElementById('indicatorScale').value,
+                    // Add visibility settings
+                    show_speed: document.getElementById('showSpeed').checked,
+                    show_max_speed: document.getElementById('showMaxSpeed').checked,
+                    show_voltage: document.getElementById('showVoltage').checked,
+                    show_temp: document.getElementById('showTemp').checked,
+                    show_battery: document.getElementById('showBattery').checked,
+                    show_mileage: document.getElementById('showMileage').checked,
+                    show_pwm: document.getElementById('showPWM').checked,
+                    show_power: document.getElementById('showPower').checked,
+                    show_bottom_elements: document.getElementById('showBottomElements').checked
                 };
 
                 // Update preview with all current settings
