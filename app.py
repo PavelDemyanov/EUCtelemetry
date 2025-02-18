@@ -660,16 +660,23 @@ def generate_project_frames(project_id):
     try:
         # Get settings from request
         data = request.get_json() if request.is_json else {}
+
+        # Add detailed logging for visibility settings
+        logging.info(f"Received frame generation request for project {project_id}")
+        logging.info(f"Raw request data: {data}")
+        logging.info(f"GPS visibility setting received: {data.get('show_gps')}")
+        logging.info(f"Battery visibility setting received: {data.get('show_battery')}")
+
         resolution = data.get('resolution', 'fullhd')
-        fps = float(data.get('fps', 29.97))  # Get FPS from request
+        fps = float(data.get('fps', 29.97))
         codec = data.get('codec', 'h264')
-        interpolate_values = data.get('interpolate_values', True)  # New parameter
+        interpolate_values = data.get('interpolate_values', True)
 
         # Update project settings immediately
         project.fps = fps
         project.resolution = resolution
         project.codec = codec
-        project.processing_started_at = datetime.now()  # Record start time
+        project.processing_started_at = datetime.now()
         db.session.commit()
 
         # Get text display settings with explicit defaults
@@ -687,19 +694,22 @@ def generate_project_frames(project_id):
             'speed_size': float(data.get('speed_size', 100)),
             'unit_size': float(data.get('unit_size', 100)),
             'indicator_scale': float(data.get('indicator_scale', 100)),
-            # Add visibility settings
+            # Add visibility settings with explicit logging
             'show_speed': data.get('show_speed', True),
             'show_max_speed': data.get('show_max_speed', True),
+            'show_gps': data.get('show_gps', True),  # Log this value
             'show_voltage': data.get('show_voltage', True),
             'show_temp': data.get('show_temp', True),
-            'show_battery': data.get('show_battery', True),
+            'show_battery': data.get('show_battery', True),  # Log this value
             'show_mileage': data.get('show_mileage', True),
             'show_pwm': data.get('show_pwm', True),
             'show_power': data.get('show_power', True),
             'show_bottom_elements': data.get('show_bottom_elements', True)
         }
 
-        logging.info(f"Starting processing with settings: {text_settings}, interpolate_values: {interpolate_values}")
+        logging.info(f"Final text settings for visibility:")
+        logging.info(f"show_gps: {text_settings['show_gps']}")
+        logging.info(f"show_battery: {text_settings['show_battery']}")
 
         # Get user's preferred locale
         user_locale = 'ru' if current_user.is_authenticated and hasattr(current_user, 'locale') and current_user.locale == 'ru' else 'en'
@@ -776,7 +786,7 @@ def delete_project(project_id):
             os.remove(preview_path)
 
         if project.video_file:
-            video_path = os.path.join('videos', project.video_file)
+            video_path = os.path.path.join('videos', project.video_file)
             if os.path.exists(video_path):
                 os.remove(video_path)
 

@@ -121,6 +121,9 @@ def create_frame(values,
                  text_settings=None,
                  locale='en'):
     try:
+        # Add logging for text settings
+        logging.info(f"Creating frame with text settings: {text_settings}")
+
         # Определяем разрешение и масштаб
         if resolution == "4k":
             width, height = 3840, 2160
@@ -131,8 +134,9 @@ def create_frame(values,
             scale_factor = 1.0
             indicator_size = 500  # Стандартный размер для Full HD
 
-        # Add logging for text settings
-        logging.info(f"Creating frame with text settings: {text_settings}")
+        # Add logging for GPS and Battery visibility
+        logging.info(f"GPS visibility check: show_gps={text_settings.get('show_gps', True)}, has_gps={'gps' in values}")
+        logging.info(f"Battery visibility check: show_battery={text_settings.get('show_battery', True)}, has_battery={'battery' in values}")
 
         # Создаем синий фон и прозрачный оверлей
         background = Image.new('RGBA', (width, height), (0, 0, 255, 255))
@@ -153,9 +157,6 @@ def create_frame(values,
         show_power = text_settings.get('show_power', True)
         show_bottom_elements = text_settings.get('show_bottom_elements', True)
 
-        # Add logging for GPS and Battery visibility
-        logging.info(f"GPS visibility check: show_gps={show_gps}, has_gps={'gps' in values}")
-        logging.info(f"Battery visibility check: show_battery={show_battery}, has_battery={'battery' in values}")
 
         # Получаем настройки позиционирования индикатора и текста
         indicator_x_percent = float(text_settings.get('indicator_x', 50))
