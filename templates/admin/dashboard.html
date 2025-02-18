@@ -58,11 +58,11 @@
             </div>
             <!-- Time Range Selector -->
             <div class="btn-group mt-3">
-                <button type="button" class="btn btn-outline-primary" data-range="hour">1 час</button>
-                <button type="button" class="btn btn-outline-primary active" data-range="day">1 день</button>
-                <button type="button" class="btn btn-outline-primary" data-range="week">Неделя</button>
-                <button type="button" class="btn btn-outline-primary" data-range="month">Месяц</button>
-                <button type="button" class="btn btn-outline-primary" data-range="year">Год</button>
+                <button type="button" class="btn btn-outline-primary" data-range="hour">1 Hour</button>
+                <button type="button" class="btn btn-outline-primary active" data-range="day">1 Day</button>
+                <button type="button" class="btn btn-outline-primary" data-range="week">Week</button>
+                <button type="button" class="btn btn-outline-primary" data-range="month">Month</button>
+                <button type="button" class="btn btn-outline-primary" data-range="year">Year</button>
             </div>
         </div>
     </div>
@@ -871,7 +871,7 @@ function cleanupStorage() {
             }, 5000);
         } else {
             alert(data.error || 'Failed to cleanup storage');
-        }
+                }
     })
     .catch(error => {
         console.error('Error:', error);
