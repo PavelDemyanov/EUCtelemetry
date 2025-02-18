@@ -67,9 +67,9 @@ def create_rounded_box(width, height, radius):
     return _box_cache[cache_key].copy()
 
 
-def _get_params_by_locale():
-    locale = str(get_locale())
-    if locale.startswith('ru'):
+def _get_params_by_locale(locale_str=None):
+    """Get parameters based on locale string"""
+    if locale_str and locale_str.startswith('ru'):
         return [
             ('Скорость', 'speed', 'км/ч'),
             ('Макс. скорость', 'max_speed', 'км/ч'),
@@ -99,7 +99,8 @@ def _get_params_by_locale():
 def create_frame(values,
                  resolution='fullhd',
                  output_path=None,
-                 text_settings=None):
+                 text_settings=None,
+                 locale_str=None):
     try:
         # Определяем разрешение и масштаб
         if resolution == "4k":
@@ -172,7 +173,7 @@ def create_frame(values,
             raise
 
         params = [(label, f"{values[value_key]}", unit) 
-                 for label, value_key, unit in _get_params_by_locale()]
+                 for label, value_key, unit in _get_params_by_locale(locale_str)]
 
         element_widths = []
         text_widths = []
@@ -287,6 +288,7 @@ def generate_frames(csv_file,
 
         completed_frames = 0
         lock = threading.Lock()
+        current_locale = str(get_locale())
 
         def process_frame(i, timestamp):
             nonlocal completed_frames
@@ -295,7 +297,7 @@ def generate_frames(csv_file,
                                          timestamp,
                                          interpolate=interpolate_values)
             output_path = f'{frames_dir}/frame_{i:06d}.png'
-            create_frame(values, resolution, output_path, text_settings)
+            create_frame(values, resolution, output_path, text_settings, locale_str=current_locale)
 
             with lock:
                 completed_frames += 1
