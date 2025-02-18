@@ -141,7 +141,7 @@ def create_frame(values,
         # Get visibility settings with defaults to True
         show_speed = text_settings.get('show_speed', True)
         show_max_speed = text_settings.get('show_max_speed', True)
-        show_gps = text_settings.get('show_gps', True)  # Added show_gps
+        show_gps = text_settings.get('show_gps', True)
         show_voltage = text_settings.get('show_voltage', True)
         show_temp = text_settings.get('show_temp', True)
         show_battery = text_settings.get('show_battery', True)
@@ -149,6 +149,11 @@ def create_frame(values,
         show_pwm = text_settings.get('show_pwm', True)
         show_power = text_settings.get('show_power', True)
         show_bottom_elements = text_settings.get('show_bottom_elements', True)
+
+        logging.info(f"Visibility settings from text_settings:")
+        logging.info(f"GPS visibility: show_gps={show_gps}, has_gps={'gps' in values}")
+        logging.info(f"Battery visibility: show_battery={show_battery}, has_battery={'battery' in values}")
+        logging.info(f"Raw text_settings: {text_settings}")
 
         # Получаем настройки позиционирования индикатора и текста
         indicator_x_percent = float(text_settings.get('indicator_x', 50))
@@ -200,15 +205,21 @@ def create_frame(values,
         # Filter params based on visibility settings
         loc = _LOCALIZATION.get(locale, _LOCALIZATION['en'])
         params = []
+
+        # Add each parameter only if its visibility is enabled
         if show_speed:
             params.append(
                 (loc['speed'], f"{values['speed']}", loc['units']['speed']))
         if show_max_speed:
             params.append((loc['max_speed'], f"{values['max_speed']}",
                            loc['units']['speed']))
-        if show_gps:  # Добавляем GPS параметр
+        if show_gps:
+            logging.info("Adding GPS to params due to show_gps=True")
             params.append(
                 (loc['gps'], f"{values['gps']}", loc['units']['speed']))
+        else:
+            logging.info("Skipping GPS due to show_gps=False")
+
         if show_voltage:
             params.append((loc['voltage'], f"{values['voltage']}",
                            loc['units']['voltage']))
@@ -216,8 +227,12 @@ def create_frame(values,
             params.append((loc['temp'], f"{values['temperature']}",
                            loc['units']['temp']))
         if show_battery:
+            logging.info("Adding battery to params due to show_battery=True")
             params.append((loc['battery'], f"{values['battery']}",
                            loc['units']['battery']))
+        else:
+            logging.info("Skipping battery due to show_battery=False")
+
         if show_mileage:
             params.append((loc['mileage'], f"{values['mileage']}",
                            loc['units']['mileage']))
@@ -227,6 +242,9 @@ def create_frame(values,
         if show_power:
             params.append(
                 (loc['power'], f"{values['power']}", loc['units']['power']))
+
+        logging.info(f"Final params list contains {len(params)} items")
+        logging.info(f"Params labels: {[p[0] for p in params]}")
 
         if params:  # Only proceed if there are visible elements
             element_widths = []
@@ -268,7 +286,7 @@ def create_frame(values,
                 x_position = start_x
                 for i, ((label, value, unit), element_width,
                         text_width) in enumerate(
-                            zip(params, element_widths, text_widths)):
+                    zip(params, element_widths, text_widths)):
                     box = create_rounded_box(element_width, box_height,
                                              border_radius)
                     overlay.paste(box, (x_position, y_position), box)
