@@ -11,6 +11,9 @@ from datetime import datetime
 
 def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', text_settings=None, interpolate_values=True, locale='en'):
     """Process project in background thread"""
+    if text_settings is None:
+        text_settings = {}
+
     def _process():
         from app import app  # Import app here to avoid circular import
 
@@ -72,10 +75,6 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                                 logging.info(f"Progress updated in DB: {progress:.1f}% for stage: {stage}")
                     except Exception as e:
                         logging.error(f"Error updating progress: {e}")
-
-                # Ensure text_settings is not None and has all required visibility flags
-                if text_settings is None:
-                    text_settings = {}
 
                 # Add default visibility settings if not present
                 default_visibility = {
