@@ -244,7 +244,8 @@ def generate_frames(csv_file,
                     fps=29.97,
                     text_settings=None,
                     progress_callback=None,
-                    interpolate_values=True):
+                    interpolate_values=True,
+                    locale='en'):  # Add locale parameter
     try:
         frames_dir = f'frames/project_{folder_number}'
         if os.path.exists(frames_dir):
@@ -274,15 +275,15 @@ def generate_frames(csv_file,
             nonlocal completed_frames
             # Use interpolated values for frame generation if enabled
             values = find_nearest_values(df,
-                                         timestamp,
-                                         interpolate=interpolate_values)
+                                        timestamp,
+                                        interpolate=interpolate_values)
             output_path = f'{frames_dir}/frame_{i:06d}.png'
-            create_frame(values, resolution, output_path, text_settings)
+            create_frame(values, resolution, output_path, text_settings, locale=locale)  # Pass locale here
 
             with lock:
                 completed_frames += 1
                 if progress_callback and (completed_frames % 10 == 0
-                                          or completed_frames == frame_count):
+                                        or completed_frames == frame_count):
                     progress_callback(completed_frames, frame_count, 'frames')
 
         max_workers = os.cpu_count() or 4

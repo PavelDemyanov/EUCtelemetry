@@ -689,8 +689,11 @@ def generate_project_frames(project_id):
 
         logging.info(f"Starting processing with settings: {text_settings}, interpolate_values: {interpolate_values}")
 
-        # Start background processing with text settings and interpolation flag
-        process_project(project_id, resolution, fps, codec, text_settings, interpolate_values)
+        # Get user's preferred locale
+        user_locale = 'ru' if current_user.is_authenticated and hasattr(current_user, 'locale') and current_user.locale == 'ru' else 'en'
+
+        # Start background processing with text settings, interpolation flag and locale
+        process_project(project_id, resolution, fps, codec, text_settings, interpolate_values, locale=user_locale)
 
         return jsonify({'success': True, 'message': 'Processing started'})
     except Exception as e:
