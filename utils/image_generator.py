@@ -14,6 +14,7 @@ _metal_initialized = False
 _metal_context = None
 _metal_device = None
 
+
 def _initialize_metal():
     global _metal_context, _metal_device, _metal_initialized
     if _metal_initialized:
@@ -25,7 +26,8 @@ def _initialize_metal():
             _metal_device = MTLCreateSystemDefaultDevice()
             if _metal_device:
                 _metal_context = CIContext.contextWithMTLDevice_(_metal_device)
-                logging.info("Successfully initialized Metal context and device")
+                logging.info(
+                    "Successfully initialized Metal context and device")
                 _metal_initialized = True
                 return True
         except Exception as e:
@@ -33,7 +35,9 @@ def _initialize_metal():
             _metal_initialized = True
     return False
 
+
 _font_cache = {}
+
 
 def _get_font(font_path, size):
     cache_key = f"{font_path}_{size}"
@@ -46,24 +50,28 @@ def _get_font(font_path, size):
             raise ValueError(f"Could not load font {font_path}")
     return _font_cache[cache_key]
 
+
 _box_cache = {}
+
 
 def create_rounded_box(width, height, radius):
     cache_key = f"{width}_{height}_{radius}"
     if cache_key not in _box_cache:
         image = Image.new('RGBA', (width, height), (0, 0, 0, 0))
         draw = ImageDraw.Draw(image)
-        draw.rounded_rectangle(
-            [(0, 0), (width - 1, height - 1)],
-            radius=radius,
-            fill=(0, 0, 0, 255)
-        )
+        draw.rounded_rectangle([(0, 0), (width - 1, height - 1)],
+                               radius=radius,
+                               fill=(0, 0, 0, 255))
         image = image.filter(ImageFilter.GaussianBlur(radius=0.5))
         _box_cache[cache_key] = image
         logging.debug(f"Created and cached rounded box {cache_key}")
     return _box_cache[cache_key].copy()
 
-def create_frame(values, resolution='fullhd', output_path=None, text_settings=None):
+
+def create_frame(values,
+                 resolution='fullhd',
+                 output_path=None,
+                 text_settings=None):
     try:
         # Определяем разрешение и масштаб
         if resolution == "4k":
@@ -91,54 +99,60 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
         unit_size = float(text_settings.get('unit_size', 100))
         indicator_scale = float(text_settings.get('indicator_scale', 100))
 
-        logging.info(f"Speed indicator settings - X: {indicator_x_percent}%, Y: {indicator_y_percent}%")
-        logging.info(f"Speed text size: {speed_size}%, offset Y: {speed_y_offset}px")
-        logging.info(f"Unit text size: {unit_size}%, offset Y: {unit_y_offset}px")
+        logging.info(
+            f"Speed indicator settings - X: {indicator_x_percent}%, Y: {indicator_y_percent}%"
+        )
+        logging.info(
+            f"Speed text size: {speed_size}%, offset Y: {speed_y_offset}px")
+        logging.info(
+            f"Unit text size: {unit_size}%, offset Y: {unit_y_offset}px")
         logging.info(f"Indicator scale: {indicator_scale}%")
 
         # Создаем индикатор скорости с учетом смещений текста и масштаба
         speed_indicator = create_speed_indicator(
-            values['speed'], 
+            values['speed'],
             size=indicator_size,
             speed_offset=(0, speed_y_offset),
             unit_offset=(0, unit_y_offset),
             speed_size=speed_size,
             unit_size=unit_size,
             indicator_scale=indicator_scale,
-            resolution=resolution
-        )
+            resolution=resolution)
 
         # Позиционируем индикатор скорости на основе процентных значений
         indicator_x = int((width - indicator_size) * indicator_x_percent / 100)
-        indicator_y = int((height - indicator_size) * indicator_y_percent / 100)
-        background.paste(speed_indicator, (indicator_x, indicator_y), speed_indicator)
+        indicator_y = int(
+            (height - indicator_size) * indicator_y_percent / 100)
+        background.paste(speed_indicator, (indicator_x, indicator_y),
+                         speed_indicator)
 
         font_size = int(text_settings.get('font_size', 26) * scale_factor)
         top_padding = int(text_settings.get('top_padding', 14) * scale_factor)
-        box_height = int(text_settings.get('bottom_padding', 47) * scale_factor)
+        box_height = int(
+            text_settings.get('bottom_padding', 47) * scale_factor)
         spacing = int(text_settings.get('spacing', 10) * scale_factor)
         vertical_position = int(text_settings.get('vertical_position', 1))
-        border_radius = int(text_settings.get('border_radius', 13) * scale_factor)
+        border_radius = int(
+            text_settings.get('border_radius', 13) * scale_factor)
 
         try:
-            regular_font = _get_font("fonts/sf-ui-display-regular.otf", font_size)
+            regular_font = _get_font("fonts/sf-ui-display-regular.otf",
+                                     font_size)
             bold_font = _get_font("fonts/sf-ui-display-bold.otf", font_size)
         except Exception as e:
             logging.error(f"Error loading font: {e}")
             raise
 
-        params = [
-            ('Speed', f"{values['speed']}", 'km/h'),
-            ('Max Speed', f"{values['max_speed']}", 'km/h'),
-            ('GPS', f"{values['gps']}", 'km/h'),
-            ('Voltage', f"{values['voltage']}", 'V'),
-            ('Temp', f"{values['temperature']}", '°C'),
-            ('Current', f"{values['current']}", 'A'),
-            ('Battery', f"{values['battery']}", '%'),
-            ('Mileage', f"{values['mileage']}", 'km'),
-            ('PWM', f"{values['pwm']}", '%'),
-            ('Power', f"{values['power']}", 'W')
-        ]
+        params = [('Speed', f"{values['speed']}", 'km/h'),
+                  ('Max Speed', f"{values['max_speed']}", 'km/h'),
+                  ('GPS', f"{values['gps']}", 'km/h'),
+                  ('Voltage', f"{values['voltage']}", 'V'),
+                  ('Temp', f"{values['temperature']}", '°C'),
+                  ('Current', f"{values['current']}", 'A'),
+                  ('Battery', f"{values['battery']}", '%'),
+                  ('Mileage', f"{values['mileage']}", 'km'),
+                  ('PWM', f"{values['pwm']}", '%'),
+                  ('Power', f"{values['power']}", 'W')]
 
         element_widths = []
         text_widths = []
@@ -151,8 +165,11 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
             value_bbox = draw.textbbox((0, 0), value, font=bold_font)
             unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
 
-            text_width = (label_bbox[2] - label_bbox[0]) + (value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])
-            text_height = max(label_bbox[3] - label_bbox[1], value_bbox[3] - value_bbox[1], unit_bbox[3] - unit_bbox[1])
+            text_width = (label_bbox[2] - label_bbox[0]) + (
+                value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])
+            text_height = max(label_bbox[3] - label_bbox[1],
+                              value_bbox[3] - value_bbox[1],
+                              unit_bbox[3] - unit_bbox[1])
 
             element_width = text_width + (2 * top_padding)
             element_widths.append(element_width)
@@ -169,7 +186,8 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
         text_baseline_y = box_vertical_center - (max_text_height // 2)
 
         x_position = start_x
-        for i, ((label, value, unit), element_width, text_width) in enumerate(zip(params, element_widths, text_widths)):
+        for i, ((label, value, unit), element_width, text_width) in enumerate(
+                zip(params, element_widths, text_widths)):
             box = create_rounded_box(element_width, box_height, border_radius)
             overlay.paste(box, (x_position, y_position), box)
 
@@ -181,22 +199,34 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
             # Рисуем метку regular шрифтом
             label_bbox = draw.textbbox((0, 0), f"{label}: ", font=regular_font)
             label_width = label_bbox[2] - label_bbox[0]
-            draw.text((text_x, text_y), f"{label}: ", fill=(255, 255, 255, 255), font=regular_font)
+            draw.text((text_x, text_y),
+                      f"{label}: ",
+                      fill=(255, 255, 255, 255),
+                      font=regular_font)
 
             # Рисуем значение bold шрифтом
             value_bbox = draw.textbbox((0, 0), value, font=bold_font)
             value_width = value_bbox[2] - value_bbox[0]
-            draw.text((text_x + label_width, text_y), value, fill=(255, 255, 255, 255), font=bold_font)
+            draw.text((text_x + label_width, text_y),
+                      value,
+                      fill=(255, 255, 255, 255),
+                      font=bold_font)
 
             # Рисуем единицу измерения regular шрифтом
-            draw.text((text_x + label_width + value_width, text_y), f" {unit}", fill=(255, 255, 255, 255), font=regular_font)
+            draw.text((text_x + label_width + value_width, text_y),
+                      f" {unit}",
+                      fill=(255, 255, 255, 255),
+                      font=regular_font)
 
             x_position += element_width + spacing
 
         result = Image.alpha_composite(background, overlay)
 
         if output_path:
-            result.convert('RGB').save(output_path, format='PNG', quality=95, optimize=True)
+            result.convert('RGB').save(output_path,
+                                       format='PNG',
+                                       quality=95,
+                                       optimize=True)
             logging.debug(f"Saved frame to {output_path}")
 
         return result
@@ -205,7 +235,14 @@ def create_frame(values, resolution='fullhd', output_path=None, text_settings=No
         logging.error(f"Error in create_frame: {e}")
         raise
 
-def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, text_settings=None, progress_callback=None, interpolate_values=True):
+
+def generate_frames(csv_file,
+                    folder_number,
+                    resolution='fullhd',
+                    fps=29.97,
+                    text_settings=None,
+                    progress_callback=None,
+                    interpolate_values=True):
     try:
         frames_dir = f'frames/project_{folder_number}'
         if os.path.exists(frames_dir):
@@ -223,7 +260,9 @@ def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, tex
         T_min = df['timestamp'].min()
         T_max = df['timestamp'].max()
         frame_count = int((T_max - T_min) * fps)
-        logging.info(f"Generating {frame_count} frames at {fps} fps with interpolation {'enabled' if interpolate_values else 'disabled'}")
+        logging.info(
+            f"Generating {frame_count} frames at {fps} fps with interpolation {'enabled' if interpolate_values else 'disabled'}"
+        )
         frame_timestamps = np.linspace(T_min, T_max, frame_count)
 
         completed_frames = 0
@@ -232,18 +271,25 @@ def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, tex
         def process_frame(i, timestamp):
             nonlocal completed_frames
             # Use interpolated values for frame generation if enabled
-            values = find_nearest_values(df, timestamp, interpolate=interpolate_values)
+            values = find_nearest_values(df,
+                                         timestamp,
+                                         interpolate=interpolate_values)
             output_path = f'{frames_dir}/frame_{i:06d}.png'
             create_frame(values, resolution, output_path, text_settings)
 
             with lock:
                 completed_frames += 1
-                if progress_callback and (completed_frames % 10 == 0 or completed_frames == frame_count):
+                if progress_callback and (completed_frames % 10 == 0
+                                          or completed_frames == frame_count):
                     progress_callback(completed_frames, frame_count, 'frames')
 
         max_workers = os.cpu_count() or 4
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = [executor.submit(process_frame, i, ts) for i, ts in enumerate(frame_timestamps)]
+        with concurrent.futures.ThreadPoolExecutor(
+                max_workers=max_workers) as executor:
+            futures = [
+                executor.submit(process_frame, i, ts)
+                for i, ts in enumerate(frame_timestamps)
+            ]
             concurrent.futures.wait(futures)
 
         logging.info(f"Successfully generated {frame_count} frames")
@@ -253,12 +299,18 @@ def generate_frames(csv_file, folder_number, resolution='fullhd', fps=29.97, tex
         logging.error(f"Error in generate_frames: {e}")
         raise
 
+
 def find_nearest_values(df, timestamp, interpolate=True):
     """Find nearest or interpolated values for the given timestamp"""
     # If timestamp is before the first data point, return zeros
     if timestamp < df['timestamp'].iloc[0]:
-        return {key: 0 for key in ['speed','max_speed','gps','voltage','temperature',
-                                   'current','battery','mileage','pwm','power']}
+        return {
+            key: 0
+            for key in [
+                'speed', 'max_speed', 'gps', 'voltage', 'temperature',
+                'current', 'battery', 'mileage', 'pwm', 'power'
+            ]
+        }
 
     # Find the indices of the surrounding data points
     after_mask = df['timestamp'] >= timestamp
@@ -287,7 +339,9 @@ def find_nearest_values(df, timestamp, interpolate=True):
     # If exact match found or interpolation is disabled, return nearest values
     if before_idx == after_idx or not interpolate:
         use_idx = before_idx
-        if not interpolate and timestamp - df.loc[before_idx, 'timestamp'] > df.loc[after_idx, 'timestamp'] - timestamp:
+        if not interpolate and timestamp - df.loc[
+                before_idx, 'timestamp'] > df.loc[after_idx,
+                                                  'timestamp'] - timestamp:
             use_idx = after_idx
 
         result = {
@@ -311,8 +365,10 @@ def find_nearest_values(df, timestamp, interpolate=True):
 
     # Interpolate all numeric values
     result = {}
-    for key in ['speed', 'gps', 'voltage', 'temperature', 'current', 
-                'battery', 'mileage', 'pwm', 'power']:
+    for key in [
+            'speed', 'gps', 'voltage', 'temperature', 'current', 'battery',
+            'mileage', 'pwm', 'power'
+    ]:
         v0 = float(df.loc[before_idx, key])
         v1 = float(df.loc[after_idx, key])
         interpolated_value = v0 + factor * (v1 - v0)
@@ -322,6 +378,7 @@ def find_nearest_values(df, timestamp, interpolate=True):
     result['max_speed'] = int(df.loc[:before_idx, 'speed'].max())
 
     return result
+
 
 def get_column_name(csv_type, base_name):
     column_mapping = {
@@ -350,6 +407,7 @@ def get_column_name(csv_type, base_name):
     }
     return column_mapping[csv_type][base_name]
 
+
 def detect_csv_type(df):
     if 'Date' in df.columns and 'Speed' in df.columns:
         return 'darnkessbot'
@@ -358,7 +416,11 @@ def detect_csv_type(df):
     else:
         raise ValueError("Unknown CSV format")
 
-def create_preview_frame(csv_file, project_id, resolution='fullhd', text_settings=None):
+
+def create_preview_frame(csv_file,
+                         project_id,
+                         resolution='fullhd',
+                         text_settings=None):
     try:
         from utils.csv_processor import process_csv_file
         from models import Project
@@ -368,7 +430,8 @@ def create_preview_frame(csv_file, project_id, resolution='fullhd', text_setting
             project = Project.query.get(project_id)
             if not project:
                 raise ValueError(f"Project {project_id} not found")
-            csv_type, processed_data = process_csv_file(csv_file, project.folder_number)
+            csv_type, processed_data = process_csv_file(
+                csv_file, project.folder_number)
             df = pd.DataFrame(processed_data)
             max_speed_idx = df['speed'].idxmax()
             max_speed_timestamp = df.loc[max_speed_idx, 'timestamp']
