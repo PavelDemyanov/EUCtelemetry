@@ -137,6 +137,7 @@ def create_frame(values,
         # Get visibility settings with defaults to True
         show_speed = text_settings.get('show_speed', True)
         show_max_speed = text_settings.get('show_max_speed', True)
+        show_gps = text_settings.get('show_gps', True) # Added show_gps
         show_voltage = text_settings.get('show_voltage', True)
         show_temp = text_settings.get('show_temp', True)
         show_battery = text_settings.get('show_battery', True)
@@ -171,7 +172,7 @@ def create_frame(values,
             indicator_x = int((width - indicator_size) * indicator_x_percent / 100)
             indicator_y = int((height - indicator_size) * indicator_y_percent / 100)
             background.paste(speed_indicator, (indicator_x, indicator_y),
-                           speed_indicator)
+                               speed_indicator)
 
         font_size = int(text_settings.get('font_size', 26) * scale_factor)
         top_padding = int(text_settings.get('top_padding', 14) * scale_factor)
@@ -194,6 +195,8 @@ def create_frame(values,
             params.append((loc['speed'], f"{values['speed']}", loc['units']['speed']))
         if show_max_speed:
             params.append((loc['max_speed'], f"{values['max_speed']}", loc['units']['speed']))
+        if show_gps:  # Добавляем GPS параметр
+            params.append((loc['gps'], f"{values['gps']}", loc['units']['speed']))
         if show_voltage:
             params.append((loc['voltage'], f"{values['voltage']}", loc['units']['voltage']))
         if show_temp:
@@ -221,8 +224,8 @@ def create_frame(values,
                 text_width = (label_bbox[2] - label_bbox[0]) + (
                     value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])
                 text_height = max(label_bbox[3] - label_bbox[1],
-                                value_bbox[3] - value_bbox[1],
-                                unit_bbox[3] - unit_bbox[1])
+                                    value_bbox[3] - value_bbox[1],
+                                    unit_bbox[3] - unit_bbox[1])
 
                 element_width = text_width + (2 * top_padding)
                 element_widths.append(element_width)
@@ -252,21 +255,21 @@ def create_frame(values,
                     label_bbox = draw.textbbox((0, 0), f"{label}: ", font=regular_font)
                     label_width = label_bbox[2] - label_bbox[0]
                     draw.text((text_x, text_y),
-                            f"{label}: ",
-                            fill=(255, 255, 255, 255),
-                            font=regular_font)
+                              f"{label}: ",
+                              fill=(255, 255, 255, 255),
+                              font=regular_font)
 
                     value_bbox = draw.textbbox((0, 0), value, font=bold_font)
                     value_width = value_bbox[2] - value_bbox[0]
                     draw.text((text_x + label_width, text_y),
-                            value,
-                            fill=(255, 255, 255, 255),
-                            font=bold_font)
+                              value,
+                              fill=(255, 255, 255, 255),
+                              font=bold_font)
 
                     draw.text((text_x + label_width + value_width, text_y),
-                            f" {unit}",
-                            fill=(255, 255, 255, 255),
-                            font=regular_font)
+                              f" {unit}",
+                              fill=(255, 255, 255, 255),
+                              font=regular_font)
 
                     x_position += element_width + spacing
 
@@ -274,9 +277,9 @@ def create_frame(values,
 
         if output_path:
             result.convert('RGB').save(output_path,
-                                    format='PNG',
-                                    quality=95,
-                                    optimize=True)
+                                        format='PNG',
+                                        quality=95,
+                                        optimize=True)
             logging.debug(f"Saved frame to {output_path}")
 
         return result
