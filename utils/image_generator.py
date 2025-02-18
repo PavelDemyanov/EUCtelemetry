@@ -143,16 +143,16 @@ def create_frame(values,
             logging.error(f"Error loading font: {e}")
             raise
 
-        params = [('Speed', f"{values['speed']}", 'km/h'),
-                  ('Max Speed', f"{values['max_speed']}", 'km/h'),
-                  ('GPS', f"{values['gps']}", 'km/h'),
-                  ('Voltage', f"{values['voltage']}", 'V'),
-                  ('Temp', f"{values['temperature']}", '°C'),
-                  ('Current', f"{values['current']}", 'A'),
-                  ('Battery', f"{values['battery']}", '%'),
-                  ('Mileage', f"{values['mileage']}", 'km'),
-                  ('PWM', f"{values['pwm']}", '%'),
-                  ('Power', f"{values['power']}", 'W')]
+        params = [('Скорость', f"{values['speed']}", 'км/ч'),
+                  ('Макс. скорость', f"{values['max_speed']}", 'км/ч'),
+                  ('GPS', f"{values['gps']}", 'км/ч'),
+                  ('Напряжение', f"{values['voltage']}", 'В'),
+                  ('Температура', f"{values['temperature']}", '°C'),
+                  ('Ток', f"{values['current']}", 'А'),
+                  ('Батарея', f"{values['battery']}", '%'),
+                  ('Пробег', f"{values['mileage']}", 'км'),
+                  ('ШИМ', f"{values['pwm']}", '%'),
+                  ('Мощность', f"{values['power']}", 'Вт')]
 
         element_widths = []
         text_widths = []
