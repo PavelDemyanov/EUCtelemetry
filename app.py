@@ -807,7 +807,7 @@ def serve_preview(filename):
 @app.route('/preview/<int:project_id>', methods=['POST'])
 @login_required
 def generate_preview(project_id):
-    project= Project.query.get_or_404(project_id)
+    project = Project.query.get_or_404(project_id)
     if project.user_id != current_user.id:
         return jsonify({'error': 'Unauthorized'}), 403
 
@@ -815,6 +815,9 @@ def generate_preview(project_id):
         # Get text display settings from request
         data = request.get_json() if request.is_json else {}
         resolution = data.get('resolution', 'fullhd')
+
+        # Get all visibility settings with explicit defaults of False if not present
+        # This ensures we don't reset to True when the setting is missing
         text_settings = {
             'vertical_position': int(data.get('vertical_position', 50)),
             'top_padding': int(data.get('top_padding', 10)),
@@ -830,16 +833,16 @@ def generate_preview(project_id):
             'speed_size': float(data.get('speed_size', 100)),
             'unit_size': float(data.get('unit_size', 100)),
             'indicator_scale': float(data.get('indicator_scale', 100)),
-            # Visibility settings
-            'show_speed': data.get('show_speed', True),
-            'show_max_speed': data.get('show_max_speed', True),
-            'show_voltage': data.get('show_voltage', True),
-            'show_temp': data.get('show_temp', True),
-            'show_battery': data.get('show_battery', True),
-            'show_mileage': data.get('show_mileage', True),
-            'show_pwm': data.get('show_pwm', True),
-            'show_power': data.get('show_power', True),
-            'show_bottom_elements': data.get('show_bottom_elements', True)
+            # Visibility settings - default to False if not present
+            'show_speed': bool(data.get('show_speed', False)),
+            'show_max_speed': bool(data.get('show_max_speed', False)),
+            'show_voltage': bool(data.get('show_voltage', False)),
+            'show_temp': bool(data.get('show_temp', False)),
+            'show_battery': bool(data.get('show_battery', False)),
+            'show_mileage': bool(data.get('show_mileage', False)),
+            'show_pwm': bool(data.get('show_pwm', False)),
+            'show_power': bool(data.get('show_power', False)),
+            'show_bottom_elements': bool(data.get('show_bottom_elements', False))
         }
 
         logging.info(f"Generating preview with settings: {text_settings}")
