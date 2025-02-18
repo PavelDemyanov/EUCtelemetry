@@ -421,32 +421,41 @@ def detect_csv_type(df):
     else:
         raise ValueError("Unknown CSV format")
 
+import os
+import logging
+from flask import current_app
+from flask_babel import get_locale
+from utils.image_processor import create_speed_indicator
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 def create_preview_frame(csv_file,
-                         project_id,
-                         resolution='fullhd',
-                         text_settings=None):
+                        project_id,
+                        resolution='fullhd',
+                        text_settings=None):
     try:
         from utils.csv_processor import process_csv_file
         from models import Project
-        from flask import current_app
-        from flask_babel import get_locale
 
         with current_app.app_context():
             project = Project.query.get(project_id)
             if not project:
                 raise ValueError(f"Project {project_id} not found")
-            csv_type, processed_data = process_csv_file(
-                csv_file, project.folder_number)
+
+            csv_type, processed_data = process_csv_file(csv_file, project.folder_number)
             df = pd.DataFrame(processed_data)
             max_speed_idx = df['speed'].idxmax()
             max_speed_timestamp = df.loc[max_speed_idx, 'timestamp']
             values = find_nearest_values(df, max_speed_timestamp)
+
+            # Get current locale from request context
             current_locale = str(get_locale())
+            logging.info(f"Creating preview with locale: {current_locale}")
+
             os.makedirs('previews', exist_ok=True)
             preview_path = f'previews/{project_id}_preview.png'
             if os.path.exists(preview_path):
                 os.remove(preview_path)
+
             create_frame(values, resolution, preview_path, text_settings, locale_str=current_locale)
             logging.info(f"Created preview frame: {preview_path}")
             return preview_path
