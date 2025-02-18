@@ -58,6 +58,12 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
     });
 });
 
+// Function to safely get element value with default
+function getElementValueOrDefault(elementId, defaultValue) {
+    const element = document.getElementById(elementId);
+    return element ? element.value : defaultValue;
+}
+
 // Function to update preview with current settings
 function updatePreview(projectId) {
     const previewSection = document.getElementById('previewSection');
@@ -65,27 +71,25 @@ function updatePreview(projectId) {
     const progressBar = progressDiv.querySelector('.progress-bar');
     const progressTitle = document.getElementById('progressTitle');
 
-    // Get all current settings
+    // Get all current settings with safe defaults
     const settings = {
-        resolution: document.querySelector('input[name="resolution"]:checked').value,
+        resolution: document.querySelector('input[name="resolution"]:checked')?.value || 'fullhd',
         // Text Display Settings
-        vertical_position: document.getElementById('verticalPosition').value,
-        font_size: document.getElementById('fontSize').value,
-        border_radius: document.getElementById('borderRadius').value,
-        box_width: document.getElementById('boxWidth').value,
-        box_height: document.getElementById('boxHeight').value,
-        spacing: document.getElementById('spacing').value,
+        vertical_position: getElementValueOrDefault('verticalPosition', 1),
+        font_size: getElementValueOrDefault('fontSize', 26),
+        border_radius: getElementValueOrDefault('borderRadius', 13),
+        box_width: getElementValueOrDefault('boxWidth', 0),
+        box_height: getElementValueOrDefault('boxHeight', 47),
+        spacing: getElementValueOrDefault('spacing', 10),
         // Speed Indicator Settings
-        indicator_scale: document.getElementById('indicatorScale').value,
-        indicator_x: document.getElementById('indicatorX').value,
-        indicator_y: document.getElementById('indicatorY').value,
-        speed_y: document.getElementById('speedY').value,
-        unit_y: document.getElementById('unitY').value,
-        speed_size: document.getElementById('speedSize').value,
-        unit_size: document.getElementById('unitSize').value
+        indicator_scale: getElementValueOrDefault('indicatorScale', 100),
+        indicator_x: getElementValueOrDefault('indicatorX', 50),
+        indicator_y: getElementValueOrDefault('indicatorY', 80),
+        speed_y: getElementValueOrDefault('speedY', -28),
+        unit_y: getElementValueOrDefault('unitY', 36),
+        speed_size: getElementValueOrDefault('speedSize', 100),
+        unit_size: getElementValueOrDefault('unitSize', 100)
     };
-
-    console.log('Sending preview settings:', settings);
 
     fetch(`/preview/${projectId}`, {
         method: 'POST',
@@ -193,27 +197,27 @@ document.getElementById('startProcessButton').addEventListener('click', function
     // Set initial background processing message
     videoProcessingInfo.textContent = gettext("You can close your browser and come back later - the video processing will continue in the background.");
 
-    // Get all current settings
+    // Get all current settings with safe defaults
     const settings = {
-        resolution: document.querySelector('input[name="resolution"]:checked').value,
-        fps: document.querySelector('input[name="fps"]:checked').value,
-        codec: document.querySelector('input[name="codec"]:checked').value,
-        interpolate_values: document.getElementById('interpolateValues').checked,
+        resolution: document.querySelector('input[name="resolution"]:checked')?.value || 'fullhd',
+        fps: document.querySelector('input[name="fps"]:checked')?.value || '29.97',
+        codec: document.querySelector('input[name="codec"]:checked')?.value || 'h264',
+        interpolate_values: document.getElementById('interpolateValues')?.checked || true,
         // Text Display Settings
-        vertical_position: document.getElementById('verticalPosition').value,
-        font_size: document.getElementById('fontSize').value,
-        border_radius: document.getElementById('borderRadius').value,
-        box_width: document.getElementById('boxWidth').value,
-        box_height: document.getElementById('boxHeight').value,
-        spacing: document.getElementById('spacing').value,
+        vertical_position: getElementValueOrDefault('verticalPosition', 1),
+        font_size: getElementValueOrDefault('fontSize', 26),
+        border_radius: getElementValueOrDefault('borderRadius', 13),
+        box_width: getElementValueOrDefault('boxWidth', 0),
+        box_height: getElementValueOrDefault('boxHeight', 47),
+        spacing: getElementValueOrDefault('spacing', 10),
         // Speed Indicator Settings
-        indicator_scale: document.getElementById('indicatorScale').value,
-        indicator_x: document.getElementById('indicatorX').value,
-        indicator_y: document.getElementById('indicatorY').value,
-        speed_y: document.getElementById('speedY').value,
-        unit_y: document.getElementById('unitY').value,
-        speed_size: document.getElementById('speedSize').value,
-        unit_size: document.getElementById('unitSize').value
+        indicator_scale: getElementValueOrDefault('indicatorScale', 100),
+        indicator_x: getElementValueOrDefault('indicatorX', 50),
+        indicator_y: getElementValueOrDefault('indicatorY', 80),
+        speed_y: getElementValueOrDefault('speedY', -28),
+        unit_y: getElementValueOrDefault('unitY', 36),
+        speed_size: getElementValueOrDefault('speedSize', 100),
+        unit_size: getElementValueOrDefault('unitSize', 100)
     };
 
     // Start processing
