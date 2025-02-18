@@ -839,6 +839,7 @@ def generate_preview(project_id):
             'show_voltage': data.get('show_voltage', True),
             'show_temp': data.get('show_temp', True),
             'show_battery': data.get('show_battery', True),
+            'show_gps': data.get('show_gps', True),  # Добавляем параметр GPS
             'show_mileage': data.get('show_mileage', True),
             'show_pwm': data.get('show_pwm', True),
             'show_power': data.get('show_power', True),
