@@ -95,7 +95,17 @@ function updatePreview(projectId) {
         speed_y: document.getElementById('speedY').value,
         unit_y: document.getElementById('unitY').value,
         speed_size: document.getElementById('speedSize').value,
-        unit_size: document.getElementById('unitSize').value
+        unit_size: document.getElementById('unitSize').value,
+        // Visibility settings
+        show_speed: document.getElementById('showSpeed').checked,
+        show_max_speed: document.getElementById('showMaxSpeed').checked,
+        show_voltage: document.getElementById('showVoltage').checked,
+        show_temp: document.getElementById('showTemp').checked,
+        show_battery: document.getElementById('showBattery').checked,
+        show_mileage: document.getElementById('showMileage').checked,
+        show_pwm: document.getElementById('showPWM').checked,
+        show_power: document.getElementById('showPower').checked,
+        show_bottom_elements: document.getElementById('showBottomElements').checked
     };
 
     console.log('Sending preview settings:', settings);
@@ -245,6 +255,25 @@ allSettings.forEach(setting => {
     });
 });
 
+// Add event listeners for visibility checkboxes
+const visibilitySettings = [
+    'showSpeed', 'showMaxSpeed', 'showVoltage', 'showTemp', 
+    'showBattery', 'showMileage', 'showPWM', 'showPower', 
+    'showBottomElements'
+];
+
+visibilitySettings.forEach(setting => {
+    const checkbox = document.getElementById(setting);
+    if (checkbox) {
+        checkbox.addEventListener('change', function() {
+            const projectId = document.getElementById('startProcessButton').dataset.projectId;
+            if (projectId) {
+                updatePreview(projectId);
+            }
+        });
+    }
+});
+
 // Handle start processing button click
 document.getElementById('startProcessButton').addEventListener('click', function() {
     const projectId = this.dataset.projectId;
@@ -279,7 +308,17 @@ document.getElementById('startProcessButton').addEventListener('click', function
         unit_y: document.getElementById('unitY').value,
         speed_size: document.getElementById('speedSize').value,
         unit_size: document.getElementById('unitSize').value,
-        indicator_scale: document.getElementById('indicatorScale').value
+        indicator_scale: document.getElementById('indicatorScale').value,
+        // Add visibility settings
+        show_speed: document.getElementById('showSpeed').checked,
+        show_max_speed: document.getElementById('showMaxSpeed').checked,
+        show_voltage: document.getElementById('showVoltage').checked,
+        show_temp: document.getElementById('showTemp').checked,
+        show_battery: document.getElementById('showBattery').checked,
+        show_mileage: document.getElementById('showMileage').checked,
+        show_pwm: document.getElementById('showPWM').checked,
+        show_power: document.getElementById('showPower').checked,
+        show_bottom_elements: document.getElementById('showBottomElements').checked
     };
 
     // Start processing
