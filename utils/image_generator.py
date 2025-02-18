@@ -137,24 +137,18 @@ def create_frame(values,
         draw = ImageDraw.Draw(overlay)
 
         text_settings = text_settings or {}
-        # Get visibility settings with explicit boolean conversions
-        show_speed = bool(text_settings.get('show_speed', True))
-        show_max_speed = bool(text_settings.get('show_max_speed', True))
-        show_gps = bool(text_settings.get('show_gps', True))
-        show_voltage = bool(text_settings.get('show_voltage', True))
-        show_temp = bool(text_settings.get('show_temp', True))
-        show_battery = bool(text_settings.get('show_battery', True))
-        show_mileage = bool(text_settings.get('show_mileage', True))
-        show_pwm = bool(text_settings.get('show_pwm', True))
-        show_power = bool(text_settings.get('show_power', True))
-        show_bottom_elements = bool(
-            text_settings.get('show_bottom_elements', True))
 
-        # Log visibility settings for debugging
-        logging.info(
-            f"Frame creation visibility settings - GPS: {show_gps}, Battery: {show_battery}"
-        )
-        logging.info(f"Raw text_settings: {text_settings}")
+        # Get visibility settings with defaults to True
+        show_speed = text_settings.get('show_speed', True)
+        show_max_speed = text_settings.get('show_max_speed', True)
+        show_gps = text_settings.get('show_gps', True)  # Added show_gps
+        show_voltage = text_settings.get('show_voltage', True)
+        show_temp = text_settings.get('show_temp', True)
+        show_battery = text_settings.get('show_battery', True)
+        show_mileage = text_settings.get('show_mileage', True)
+        show_pwm = text_settings.get('show_pwm', True)
+        show_power = text_settings.get('show_power', True)
+        show_bottom_elements = text_settings.get('show_bottom_elements', True)
 
         # Получаем настройки позиционирования индикатора и текста
         indicator_x_percent = float(text_settings.get('indicator_x', 50))
@@ -203,9 +197,6 @@ def create_frame(values,
             logging.error(f"Error loading font: {e}")
             raise
 
-        # Log values for debugging
-        logging.info(f"Available values for frame: {values.keys()}")
-
         # Filter params based on visibility settings
         loc = _LOCALIZATION.get(locale, _LOCALIZATION['en'])
         params = []
@@ -215,7 +206,7 @@ def create_frame(values,
         if show_max_speed:
             params.append((loc['max_speed'], f"{values['max_speed']}",
                            loc['units']['speed']))
-        if show_gps and 'gps' in values:  # Просто проверяем наличие GPS в values
+        if show_gps:  # Добавляем GPS параметр
             params.append(
                 (loc['gps'], f"{values['gps']}", loc['units']['speed']))
         if show_voltage:
@@ -360,11 +351,10 @@ def generate_frames(csv_file,
 
         def process_frame(i, timestamp):
             nonlocal completed_frames
-            # Передаем text_settings в find_nearest_values
+            # Use interpolated values for frame generation if enabled
             values = find_nearest_values(df,
                                          timestamp,
-                                         interpolate=interpolate_values,
-                                         text_settings=text_settings)
+                                         interpolate=interpolate_values)
             output_path = f'{frames_dir}/frame_{i:06d}.png'
             create_frame(values,
                          resolution,
@@ -395,32 +385,17 @@ def generate_frames(csv_file,
         raise
 
 
-def find_nearest_values(df, timestamp, interpolate=True, text_settings=None):
+def find_nearest_values(df, timestamp, interpolate=True):
     """Find nearest or interpolated values for the given timestamp"""
-    text_settings = text_settings or {}
-    show_gps = bool(text_settings.get('show_gps', True))
-    has_gps = 'gps' in df.columns
-
-    # Базовый набор полей, которые всегда будут в результате
-    base_fields = {
-        'speed': 0,
-        'max_speed': 0,
-        'voltage': 0,
-        'temperature': 0,
-        'current': 0,
-        'battery': 0,
-        'mileage': 0,
-        'pwm': 0,
-        'power': 0
-    }
-
     # If timestamp is before the first data point, return zeros
     if timestamp < df['timestamp'].iloc[0]:
-        result = base_fields.copy()
-        # Добавляем GPS только если он должен быть виден
-        if show_gps and has_gps:
-            result['gps'] = 0
-        return result
+        return {
+            key: 0
+            for key in [
+                'speed', 'max_speed', 'gps', 'voltage', 'temperature',
+                'current', 'battery', 'mileage', 'pwm', 'power'
+            ]
+        }
 
     # Find the indices of the surrounding data points
     after_mask = df['timestamp'] >= timestamp
@@ -429,18 +404,18 @@ def find_nearest_values(df, timestamp, interpolate=True, text_settings=None):
     if not after_mask.any() or not before_mask.any():
         # If timestamp is outside the range, use the last available values
         last_idx = df.index[-1]
-        result = {}
-        # Копируем значения базовых полей
-        for key in base_fields.keys():
-            if key != 'max_speed':  # max_speed обрабатываем отдельно
-                result[key] = int(df.loc[last_idx, key])
-
-        # Добавляем GPS только если он должен быть виден и существует
-        if show_gps and has_gps:
-            result['gps'] = int(df.loc[last_idx, 'gps'])
-
-        result['max_speed'] = int(df.loc[:before_mask, 'speed'].max())
-        return result
+        return {
+            'speed': int(df.loc[last_idx, 'speed']),
+            'gps': int(df.loc[last_idx, 'gps']),
+            'voltage': int(df.loc[last_idx, 'voltage']),
+            'temperature': int(df.loc[last_idx, 'temperature']),
+            'current': int(df.loc[last_idx, 'current']),
+            'battery': int(df.loc[last_idx, 'battery']),
+            'mileage': int(df.loc[last_idx, 'mileage']),
+            'pwm': int(df.loc[last_idx, 'pwm']),
+            'power': int(df.loc[last_idx, 'power']),
+            'max_speed': int(df.loc[:before_mask, 'speed'].max())
+        }
 
     # Get indices of surrounding points
     after_idx = df[after_mask].index[0]
@@ -454,16 +429,17 @@ def find_nearest_values(df, timestamp, interpolate=True, text_settings=None):
                                                   'timestamp'] - timestamp:
             use_idx = after_idx
 
-        result = {}
-        # Копируем значения базовых полей
-        for key in base_fields.keys():
-            if key != 'max_speed':  # max_speed обрабатываем отдельно
-                result[key] = int(df.loc[use_idx, key])
-
-        # Добавляем GPS только если он должен быть виден и существует
-        if show_gps and has_gps:
-            result['gps'] = int(df.loc[use_idx, 'gps'])
-
+        result = {
+            'speed': int(df.loc[use_idx, 'speed']),
+            'gps': int(df.loc[use_idx, 'gps']),
+            'voltage': int(df.loc[use_idx, 'voltage']),
+            'temperature': int(df.loc[use_idx, 'temperature']),
+            'current': int(df.loc[use_idx, 'current']),
+            'battery': int(df.loc[use_idx, 'battery']),
+            'mileage': int(df.loc[use_idx, 'mileage']),
+            'pwm': int(df.loc[use_idx, 'pwm']),
+            'power': int(df.loc[use_idx, 'power'])
+        }
         result['max_speed'] = int(df.loc[:use_idx, 'speed'].max())
         return result
 
@@ -472,21 +448,16 @@ def find_nearest_values(df, timestamp, interpolate=True, text_settings=None):
     t1 = df.loc[after_idx, 'timestamp']
     factor = (timestamp - t0) / (t1 - t0)
 
-    # Interpolate basic values
+    # Interpolate all numeric values
     result = {}
-    for key in base_fields.keys():
-        if key != 'max_speed':  # max_speed обрабатываем отдельно
-            v0 = float(df.loc[before_idx, key])
-            v1 = float(df.loc[after_idx, key])
-            interpolated_value = v0 + factor * (v1 - v0)
-            result[key] = int(round(interpolated_value))
-
-    # Interpolate GPS only if it should be visible and exists
-    if show_gps and has_gps:
-        v0 = float(df.loc[before_idx, 'gps'])
-        v1 = float(df.loc[after_idx, 'gps'])
+    for key in [
+            'speed', 'gps', 'voltage', 'temperature', 'current', 'battery',
+            'mileage', 'pwm', 'power'
+    ]:
+        v0 = float(df.loc[before_idx, key])
+        v1 = float(df.loc[after_idx, key])
         interpolated_value = v0 + factor * (v1 - v0)
-        result['gps'] = int(round(interpolated_value))
+        result[key] = int(round(interpolated_value))
 
     # Calculate max speed up to current point
     result['max_speed'] = int(df.loc[:before_idx, 'speed'].max())

@@ -11,9 +11,6 @@ from datetime import datetime
 
 def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', text_settings=None, interpolate_values=True, locale='en'):
     """Process project in background thread"""
-    if text_settings is None:
-        text_settings = {}
-
     def _process():
         from app import app  # Import app here to avoid circular import
 
@@ -31,7 +28,7 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                 logging.info(f"Processing settings - Resolution: {resolution}, FPS: {fps}, Codec: {codec}, Interpolation: {'enabled' if interpolate_values else 'disabled'}")
 
                 # Add logging for text settings
-                logging.info(f"Initial text settings for frame generation: {text_settings}")
+                logging.info(f"Text settings for frame generation: {text_settings}")
 
                 project.status = 'processing'
                 project.fps = float(fps)  # Convert to float explicitly
@@ -76,6 +73,10 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     except Exception as e:
                         logging.error(f"Error updating progress: {e}")
 
+                # Ensure text_settings is not None and has all required visibility flags
+                if text_settings is None:
+                    text_settings = {}
+
                 # Add default visibility settings if not present
                 default_visibility = {
                     'show_speed': True,
@@ -94,12 +95,6 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                 for key, default_value in default_visibility.items():
                     if key not in text_settings:
                         text_settings[key] = default_value
-                    else:
-                        # Ensure boolean values
-                        text_settings[key] = bool(text_settings[key])
-
-                # Log the final text settings being used
-                logging.info(f"Final text settings after applying defaults: {text_settings}")
 
                 # Generate frames with progress tracking, interpolation setting and locale
                 frame_count, duration = generate_frames(
@@ -107,7 +102,7 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     project.folder_number,
                     resolution,
                     fps,
-                    text_settings,  # Now includes all visibility settings as boolean values
+                    text_settings,  # Now includes all visibility settings
                     progress_callback,
                     interpolate_values,
                     locale  # Pass locale to generate_frames
