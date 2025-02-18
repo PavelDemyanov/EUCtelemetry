@@ -212,8 +212,7 @@ def create_frame(values,
         if show_max_speed:
             params.append((loc['max_speed'], f"{values['max_speed']}",
                            loc['units']['speed']))
-        if show_gps and values.get('gps') is not None:
-            logging.info(f"GPS visibility check - show_gps: {show_gps}, gps value: {values.get('gps')}")
+        if show_gps:  # Handle GPS the same way as other parameters
             params.append(
                 (loc['gps'], f"{values['gps']}", loc['units']['speed']))
         if show_voltage:
