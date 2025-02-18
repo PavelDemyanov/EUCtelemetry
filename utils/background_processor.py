@@ -1,6 +1,5 @@
 import threading
 import logging
-import shutil
 from extensions import db
 from utils.csv_processor import process_csv_file
 from utils.image_generator import generate_frames
@@ -12,6 +11,13 @@ from flask_babel import get_locale
 
 def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', text_settings=None, interpolate_values=True):
     """Process project in background thread"""
+    # Get current locale before starting background process
+    try:
+        current_locale = str(get_locale())
+    except RuntimeError:
+        current_locale = 'en'  # Default to English if no request context
+    logging.info(f"Using locale: {current_locale} for frame generation")
+
     def _process():
         from app import app  # Import app here to avoid circular import
 
@@ -71,13 +77,6 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     except Exception as e:
                         logging.error(f"Error updating progress: {e}")
 
-                # Get current locale before starting background process
-                try:
-                    current_locale = str(get_locale())
-                except RuntimeError:
-                    current_locale = 'en'  # Default to English if no request context
-                logging.info(f"Using locale: {current_locale} for frame generation")
-
                 # Generate frames with progress tracking and interpolation setting
                 frame_count, duration = generate_frames(
                     csv_file,
@@ -87,7 +86,7 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     text_settings,
                     progress_callback,
                     interpolate_values,
-                    locale_str=current_locale  # Pass locale to frame generation
+                    locale_str=current_locale  # Pass locale from outer scope
                 )
 
                 # Convert numpy values to Python native types
