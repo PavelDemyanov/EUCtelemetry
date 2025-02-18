@@ -150,6 +150,9 @@ def create_frame(values,
         show_power = text_settings.get('show_power', True)
         show_bottom_elements = text_settings.get('show_bottom_elements', True)
 
+        # Log visibility settings for debugging
+        logging.info(f"Frame creation visibility settings - GPS: {show_gps}, Battery: {show_battery}")
+
         # Получаем настройки позиционирования индикатора и текста
         indicator_x_percent = float(text_settings.get('indicator_x', 50))
         indicator_y_percent = float(text_settings.get('indicator_y', 80))
@@ -178,7 +181,7 @@ def create_frame(values,
             indicator_y = int(
                 (height - indicator_size) * indicator_y_percent / 100)
             background.paste(speed_indicator, (indicator_x, indicator_y),
-                             speed_indicator)
+                           speed_indicator)
 
         font_size = int(text_settings.get('font_size', 26) * scale_factor)
         top_padding = int(text_settings.get('top_padding', 14) * scale_factor)
@@ -197,6 +200,9 @@ def create_frame(values,
             logging.error(f"Error loading font: {e}")
             raise
 
+        # Log values for debugging
+        logging.info(f"Available values for frame: {values.keys()}")
+
         # Filter params based on visibility settings
         loc = _LOCALIZATION.get(locale, _LOCALIZATION['en'])
         params = []
@@ -206,7 +212,8 @@ def create_frame(values,
         if show_max_speed:
             params.append((loc['max_speed'], f"{values['max_speed']}",
                            loc['units']['speed']))
-        if show_gps and 'gps' in values:  # Add GPS only if visible and value exists
+        if show_gps and values.get('gps') is not None:  # Only add GPS if visible and value exists
+            logging.info(f"Adding GPS to frame parameters with value: {values.get('gps')}")
             params.append(
                 (loc['gps'], f"{values['gps']}", loc['units']['speed']))
         if show_voltage:
@@ -263,17 +270,19 @@ def create_frame(values,
 
                 max_text_height = max(text_heights)
                 box_vertical_center = y_position + (box_height // 2)
-                text_baseline_y = box_vertical_center - (max_text_height // 2)
+                text_baseline_y = box_vertical_center - (
+                    max_text_height // 2)
 
                 x_position = start_x
                 for i, ((label, value, unit), element_width,
                         text_width) in enumerate(
-                            zip(params, element_widths, text_widths)):
+                    zip(params, element_widths, text_widths)):
                     box = create_rounded_box(element_width, box_height,
                                              border_radius)
                     overlay.paste(box, (x_position, y_position), box)
 
-                    text_x = x_position + ((element_width - text_width) // 2)
+                    text_x = x_position + (
+                        (element_width - text_width) // 2)
                     baseline_offset = int(max_text_height * 0.2)
                     text_y = text_baseline_y - baseline_offset
 

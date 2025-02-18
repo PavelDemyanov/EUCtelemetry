@@ -95,6 +95,9 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     if key not in text_settings:
                         text_settings[key] = default_value
 
+                # Log the final text settings being used
+                logging.info(f"Final text settings after applying defaults: {text_settings}")
+
                 # Generate frames with progress tracking, interpolation setting and locale
                 frame_count, duration = generate_frames(
                     csv_file,
