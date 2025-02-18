@@ -686,7 +686,17 @@ def generate_project_frames(project_id):
             'unit_y': int(data.get('unit_y', 0)),
             'speed_size': float(data.get('speed_size', 100)),
             'unit_size': float(data.get('unit_size', 100)),
-            'indicator_scale': float(data.get('indicator_scale', 100))
+            'indicator_scale': float(data.get('indicator_scale', 100)),
+            # Add visibility settings
+            'show_speed': data.get('show_speed', True),
+            'show_max_speed': data.get('show_max_speed', True),
+            'show_voltage': data.get('show_voltage', True),
+            'show_temp': data.get('show_temp', True),
+            'show_battery': data.get('show_battery', True),
+            'show_mileage': data.get('show_mileage', True),
+            'show_pwm': data.get('show_pwm', True),
+            'show_power': data.get('show_power', True),
+            'show_bottom_elements': data.get('show_bottom_elements', True)
         }
 
         logging.info(f"Starting processing with settings: {text_settings}, interpolate_values: {interpolate_values}")
