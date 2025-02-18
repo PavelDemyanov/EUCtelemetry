@@ -213,12 +213,12 @@ def create_frame(values,
         if show_max_speed:
             params.append((loc['max_speed'], f"{values['max_speed']}",
                            loc['units']['speed']))
-        if show_gps:
-            logging.info("Adding GPS to params due to show_gps=True")
+        if show_gps and 'gps' in values:  # Check both visibility and existence
+            logging.info("Adding GPS to params due to show_gps=True and gps exists in values")
             params.append(
                 (loc['gps'], f"{values['gps']}", loc['units']['speed']))
         else:
-            logging.info("Skipping GPS due to show_gps=False")
+            logging.info(f"Skipping GPS due to show_gps={show_gps} or gps not in values")
 
         if show_voltage:
             params.append((loc['voltage'], f"{values['voltage']}",
@@ -226,12 +226,12 @@ def create_frame(values,
         if show_temp:
             params.append((loc['temp'], f"{values['temperature']}",
                            loc['units']['temp']))
-        if show_battery:
-            logging.info("Adding battery to params due to show_battery=True")
+        if show_battery and 'battery' in values:  # Check both visibility and existence
+            logging.info("Adding battery to params due to show_battery=True and battery exists in values")
             params.append((loc['battery'], f"{values['battery']}",
                            loc['units']['battery']))
         else:
-            logging.info("Skipping battery due to show_battery=False")
+            logging.info(f"Skipping battery due to show_battery={show_battery} or battery not in values")
 
         if show_mileage:
             params.append((loc['mileage'], f"{values['mileage']}",
