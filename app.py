@@ -76,7 +76,9 @@ def validate_project_name(name):
     """Validate project name"""
     if not name:
         return False
-    return len(name) <= 7 and bool(re.match(r'^[\w\d]+$', name, re.UNICODE))
+    # Allow alphanumeric characters, dashes, and underscores
+    # with length between 1 and 7 characters
+    return bool(re.match(r'^[\w\d-]{1,7}$', name))
 
 def cleanup_project_files(project):
     """Delete all files associated with a project"""
@@ -550,18 +552,18 @@ def about():
 @login_required
 def upload_file():
     if 'file' not in request.files:
-        return jsonify({'error': 'No file provided'}), 400
+        return jsonify({'error': _('No file provided')}), 400
 
     file = request.files['file']
     if file.filename == '':
-        return jsonify({'error': 'No file selected'}), 400
+        return jsonify({'error': _('No file selected')}), 400
 
     project_name = request.form.get('project_name', '').strip()
 
     # Validate project name
     if project_name:
         if not validate_project_name(project_name):
-            return jsonify({'error': 'Invalid project name. Use up to 7 letters or numbers.'}), 400
+            return jsonify({'error': _('Invalid project name. Use up to 7 letters, numbers, dashes or underscores.')}), 400
     else:
         project_name = generate_project_name()
 
@@ -795,61 +797,61 @@ def serve_preview(filename):
 @app.route('/preview/<int:project_id>', methods=['POST'])
 @login_required
 def generate_preview(project_id):
-    project = Project.query.get_or_404(project_id)
+    project= Project.query.get_or_404(project_id)
     if project.user_id != current_user.id:
         return jsonify({'error': 'Unauthorized'}), 403
 
-        try:
-            # Get text display settings from request
-            data = request.get_json() if request.is_json else {}
-            resolution = data.get('resolution', 'fullhd')
-            text_settings = {
-                'vertical_position': int(data.get('vertical_position', 50)),
-                'top_padding': int(data.get('top_padding', 10)),
-                'bottom_padding': int(data.get('bottom_padding', 30)),
-                'spacing': int(data.get('spacing', 20)),
-                'font_size': int(data.get('font_size', 26)),
-                'border_radius': int(data.get('border_radius', 13)),
-                # Speed indicator settings
-                'indicator_x': float(data.get('indicator_x', 50)),
-                'indicator_y': float(data.get('indicator_y', 80)),
-                'speed_y': int(data.get('speed_y', 0)),
-                'unit_y': int(data.get('unit_y', 0)),
-                'speed_size': float(data.get('speed_size', 100)),
-                'unit_size': float(data.get('unit_size', 100)),
-                'indicator_scale': float(data.get('indicator_scale', 100)),
-                # Visibility settings
-                'show_speed': data.get('show_speed', True),
-                'show_max_speed': data.get('show_max_speed', True),
-                'show_voltage': data.get('show_voltage', True),
-                'show_temp': data.get('show_temp', True),
-                'show_battery': data.get('show_battery', True),
-                'show_mileage': data.get('show_mileage', True),
-                'show_pwm': data.get('show_pwm', True),
-                'show_power': data.get('show_power', True),
-                'show_bottom_elements': data.get('show_bottom_elements', True)
-            }
+    try:
+        # Get text display settings from request
+        data = request.get_json() if request.is_json else {}
+        resolution = data.get('resolution', 'fullhd')
+        text_settings = {
+            'vertical_position': int(data.get('vertical_position', 50)),
+            'top_padding': int(data.get('top_padding', 10)),
+            'bottom_padding': int(data.get('bottom_padding', 30)),
+            'spacing': int(data.get('spacing', 20)),
+            'font_size': int(data.get('font_size', 26)),
+            'border_radius': int(data.get('border_radius', 13)),
+            # Speed indicator settings
+            'indicator_x': float(data.get('indicator_x', 50)),
+            'indicator_y': float(data.get('indicator_y', 80)),
+            'speed_y': int(data.get('speed_y', 0)),
+            'unit_y': int(data.get('unit_y', 0)),
+            'speed_size': float(data.get('speed_size', 100)),
+            'unit_size': float(data.get('unit_size', 100)),
+            'indicator_scale': float(data.get('indicator_scale', 100)),
+            # Visibility settings
+            'show_speed': data.get('show_speed', True),
+            'show_max_speed': data.get('show_max_speed', True),
+            'show_voltage': data.get('show_voltage', True),
+            'show_temp': data.get('show_temp', True),
+            'show_battery': data.get('show_battery', True),
+            'show_mileage': data.get('show_mileage', True),
+            'show_pwm': data.get('show_pwm', True),
+            'show_power': data.get('show_power', True),
+            'show_bottom_elements': data.get('show_bottom_elements', True)
+        }
 
-            logging.info(f"Generating preview with settings: {text_settings}")
+        logging.info(f"Generating preview with settings: {text_settings}")
 
-            # Get user's preferred locale
-            user_locale = 'ru' if current_user.is_authenticated and hasattr(current_user, 'locale') and current_user.locale == 'ru' else 'en'
+        # Get user's preferred locale
+        user_locale = 'ru' if current_user.is_authenticated and hasattr(current_user, 'locale') and current_user.locale == 'ru' else 'en'
 
-            preview_path = create_preview_frame(
-                os.path.join(app.config['UPLOAD_FOLDER'], project.csv_file),
-                project.id,
-                resolution,
-                text_settings,
-                locale=user_locale
-            )
+        preview_path = create_preview_frame(
+            os.path.join(app.config['UPLOAD_FOLDER'], project.csv_file),
+            project.id,
+            resolution,
+            text_settings,
+            locale=user_locale
+        )
 
-            return jsonify({
-                'success': True,
-                'preview_url': url_for('serve_preview', filename=f'{project.id}_preview.png')
-            })
-        except Exception as e:
-            logging.error(f"Error generating preview: {str(e)}")
-            return jsonify({'error': str(e)}), 500
+        return jsonify({
+            'success': True,
+            'preview_url': url_for('serve_preview', filename=f'{project.id}_preview.png')
+        })
+    except Exception as e:
+        logging.error(f"Error generating preview: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/stop/<int:project_id>', methods=['POST'])
 @login_required
