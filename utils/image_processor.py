@@ -24,7 +24,8 @@ def create_speed_indicator(speed,
                            speed_size=100,
                            unit_size=100,
                            indicator_scale=100,
-                           resolution='fullhd'):
+                           resolution='fullhd',
+                           locale='en'):
     """
     Создает индикатор скорости в виде полукруглой дуги
     :param speed: Скорость (0-100 км/ч)
@@ -35,6 +36,7 @@ def create_speed_indicator(speed,
     :param unit_size: Размер текста единиц измерения в процентах (100 = стандартный)
     :param indicator_scale: Масштаб дуги в процентах (100 = стандартный)
     :param resolution: Разрешение кадра ('fullhd' или '4k')
+    :param locale: Язык локализации ('en' или 'ru')
     :return: PIL Image объект
     """
     # Создаем изображение стандартного размера (не масштабированное)
@@ -130,7 +132,8 @@ def create_speed_indicator(speed,
 
     # Масштабируем базовые размеры шрифта в зависимости от разрешения
     resolution_scale = 1.0  #Always 1.0 now
-    base_speed_font_size = int((size // 4) * speed_size / 100 * resolution_scale)
+    base_speed_font_size = int(
+        (size // 4) * speed_size / 100 * resolution_scale)
     base_unit_font_size = int((size // 8) * unit_size / 100 * resolution_scale)
 
     try:
@@ -147,8 +150,8 @@ def create_speed_indicator(speed,
     speed_text_width = speed_bbox[2] - speed_bbox[0]
     speed_text_height = speed_bbox[3] - speed_bbox[1]
 
-    # Отрисовка "KM/H"
-    unit_text = "KM/H"
+    # Отрисовка "KM/H" или "КМ/Ч" в зависимости от локали
+    unit_text = "КМ/Ч" if locale == 'ru' else "KM/H"
     unit_bbox = draw.textbbox((0, 0), unit_text, font=unit_font)
     unit_text_width = unit_bbox[2] - unit_bbox[0]
     unit_text_height = unit_bbox[3] - unit_bbox[1]
@@ -190,7 +193,8 @@ def overlay_speed_indicator(base_image,
                             speed_size=100,
                             unit_size=100,
                             indicator_scale=100,
-                            resolution='fullhd'):
+                            resolution='fullhd',
+                            locale='en'):
     """
     Накладывает индикатор скорости на базовое изображение
     :param base_image: Базовое изображение (PIL Image)
@@ -203,12 +207,13 @@ def overlay_speed_indicator(base_image,
     :param unit_size: Размер текста единиц измерения в процентах (100 = стандартный)
     :param indicator_scale: Общий масштаб индикатора в процентах (100 = стандартный)
     :param resolution: Разрешение кадра ('fullhd' или '4k')
+    :param locale: Язык локализации ('en' или 'ru')
     :return: PIL Image с наложенным индикатором
     """
     speed_indicator = create_speed_indicator(speed, size, speed_offset,
                                              unit_offset, speed_size,
                                              unit_size, indicator_scale,
-                                             resolution)
+                                             resolution, locale)
     if base_image.mode != 'RGBA':
         base_image = base_image.convert('RGBA')
     base_image.paste(speed_indicator, position, speed_indicator)
