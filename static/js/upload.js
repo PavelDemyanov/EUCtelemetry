@@ -302,7 +302,7 @@ document.getElementById('startProcessButton').addEventListener('click', function
     // Set initial background processing message
     videoProcessingInfo.textContent = gettext("You can close your browser and come back later - the video processing will continue in the background.");
 
-    // Get all current settings
+    // Get all current settings with explicit boolean values for visibility
     const settings = {
         resolution: document.querySelector('input[name="resolution"]:checked').value,
         fps: document.querySelector('input[name="fps"]:checked').value,
@@ -321,18 +321,20 @@ document.getElementById('startProcessButton').addEventListener('click', function
         speed_size: document.getElementById('speedSize').value,
         unit_size: document.getElementById('unitSize').value,
         indicator_scale: document.getElementById('indicatorScale').value,
-        // Add visibility settings
-        show_speed: document.getElementById('showSpeed').checked,
-        show_max_speed: document.getElementById('showMaxSpeed').checked,
-        show_voltage: document.getElementById('showVoltage').checked,
-        show_temp: document.getElementById('showTemp').checked,
-        show_battery: document.getElementById('showBattery').checked,
-        show_mileage: document.getElementById('showMileage').checked,
-        show_pwm: document.getElementById('showPWM').checked,
-        show_power: document.getElementById('showPower').checked,
-        show_gps: document.getElementById('showGPS').checked,
-        show_bottom_elements: document.getElementById('showBottomElements').checked
+        // Add visibility settings with explicit boolean values
+        show_speed: Boolean(document.getElementById('showSpeed').checked),
+        show_max_speed: Boolean(document.getElementById('showMaxSpeed').checked),
+        show_voltage: Boolean(document.getElementById('showVoltage').checked),
+        show_temp: Boolean(document.getElementById('showTemp').checked),
+        show_battery: Boolean(document.getElementById('showBattery').checked),
+        show_mileage: Boolean(document.getElementById('showMileage').checked),
+        show_pwm: Boolean(document.getElementById('showPWM').checked),
+        show_power: Boolean(document.getElementById('showPower').checked),
+        show_gps: Boolean(document.getElementById('showGPS').checked),
+        show_bottom_elements: Boolean(document.getElementById('showBottomElements').checked)
     };
+
+    console.log('Sending settings to generate frames:', settings);  // Add logging
 
     // Start processing
     fetch(`/generate_frames/${projectId}`, {

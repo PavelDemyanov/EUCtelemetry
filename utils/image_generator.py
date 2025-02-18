@@ -137,21 +137,21 @@ def create_frame(values,
         draw = ImageDraw.Draw(overlay)
 
         text_settings = text_settings or {}
-
-        # Get visibility settings with defaults to True
-        show_speed = text_settings.get('show_speed', True)
-        show_max_speed = text_settings.get('show_max_speed', True)
-        show_gps = text_settings.get('show_gps', True)
-        show_voltage = text_settings.get('show_voltage', True)
-        show_temp = text_settings.get('show_temp', True)
-        show_battery = text_settings.get('show_battery', True)
-        show_mileage = text_settings.get('show_mileage', True)
-        show_pwm = text_settings.get('show_pwm', True)
-        show_power = text_settings.get('show_power', True)
-        show_bottom_elements = text_settings.get('show_bottom_elements', True)
+        # Get visibility settings with explicit boolean conversions
+        show_speed = bool(text_settings.get('show_speed', True))
+        show_max_speed = bool(text_settings.get('show_max_speed', True))
+        show_gps = bool(text_settings.get('show_gps', True))
+        show_voltage = bool(text_settings.get('show_voltage', True))
+        show_temp = bool(text_settings.get('show_temp', True))
+        show_battery = bool(text_settings.get('show_battery', True))
+        show_mileage = bool(text_settings.get('show_mileage', True))
+        show_pwm = bool(text_settings.get('show_pwm', True))
+        show_power = bool(text_settings.get('show_power', True))
+        show_bottom_elements = bool(text_settings.get('show_bottom_elements', True))
 
         # Log visibility settings for debugging
         logging.info(f"Frame creation visibility settings - GPS: {show_gps}, Battery: {show_battery}")
+        logging.info(f"Raw text_settings: {text_settings}")
 
         # Получаем настройки позиционирования индикатора и текста
         indicator_x_percent = float(text_settings.get('indicator_x', 50))
@@ -181,7 +181,7 @@ def create_frame(values,
             indicator_y = int(
                 (height - indicator_size) * indicator_y_percent / 100)
             background.paste(speed_indicator, (indicator_x, indicator_y),
-                           speed_indicator)
+                             speed_indicator)
 
         font_size = int(text_settings.get('font_size', 26) * scale_factor)
         top_padding = int(text_settings.get('top_padding', 14) * scale_factor)
@@ -212,8 +212,8 @@ def create_frame(values,
         if show_max_speed:
             params.append((loc['max_speed'], f"{values['max_speed']}",
                            loc['units']['speed']))
-        if show_gps and values.get('gps') is not None:  # Only add GPS if visible and value exists
-            logging.info(f"Adding GPS to frame parameters with value: {values.get('gps')}")
+        if show_gps and values.get('gps') is not None:
+            logging.info(f"GPS visibility check - show_gps: {show_gps}, gps value: {values.get('gps')}")
             params.append(
                 (loc['gps'], f"{values['gps']}", loc['units']['speed']))
         if show_voltage:
@@ -374,7 +374,7 @@ def generate_frames(csv_file,
             with lock:
                 completed_frames += 1
                 if progress_callback and (completed_frames % 10 == 0
-                                          or completed_frames == frame_count):
+                                           or completed_frames == frame_count):
                     progress_callback(completed_frames, frame_count, 'frames')
 
         max_workers = os.cpu_count() or 4

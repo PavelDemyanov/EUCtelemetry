@@ -31,7 +31,7 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                 logging.info(f"Processing settings - Resolution: {resolution}, FPS: {fps}, Codec: {codec}, Interpolation: {'enabled' if interpolate_values else 'disabled'}")
 
                 # Add logging for text settings
-                logging.info(f"Text settings for frame generation: {text_settings}")
+                logging.info(f"Initial text settings for frame generation: {text_settings}")
 
                 project.status = 'processing'
                 project.fps = float(fps)  # Convert to float explicitly
@@ -94,6 +94,9 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                 for key, default_value in default_visibility.items():
                     if key not in text_settings:
                         text_settings[key] = default_value
+                    else:
+                        # Ensure boolean values
+                        text_settings[key] = bool(text_settings[key])
 
                 # Log the final text settings being used
                 logging.info(f"Final text settings after applying defaults: {text_settings}")
@@ -104,7 +107,7 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     project.folder_number,
                     resolution,
                     fps,
-                    text_settings,  # Now includes all visibility settings
+                    text_settings,  # Now includes all visibility settings as boolean values
                     progress_callback,
                     interpolate_values,
                     locale  # Pass locale to generate_frames
