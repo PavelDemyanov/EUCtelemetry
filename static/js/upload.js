@@ -334,6 +334,11 @@ document.getElementById('startProcessButton').addEventListener('click', function
         show_bottom_elements: document.getElementById('showBottomElements').checked
     };
 
+    // Add debug logging for settings
+    console.log("Отправляем настройки для генерации кадров:", settings);
+    console.log("GPS visibility setting:", settings.show_gps);
+    console.log("Battery visibility setting:", settings.show_battery);
+
     // Start processing
     fetch(`/generate_frames/${projectId}`, {
         method: 'POST',
