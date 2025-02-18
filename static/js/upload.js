@@ -105,7 +105,7 @@ function updatePreview(projectId) {
         show_mileage: document.getElementById('showMileage').checked,
         show_pwm: document.getElementById('showPWM').checked,
         show_power: document.getElementById('showPower').checked,
-        show_gps: document.getElementById('showGPS').checked, // Added show_gps
+        show_gps: document.getElementById('showGPS').checked,
         show_bottom_elements: document.getElementById('showBottomElements').checked
     };
 
@@ -242,7 +242,7 @@ allSettings.forEach(setting => {
                     show_mileage: document.getElementById('showMileage').checked,
                     show_pwm: document.getElementById('showPWM').checked,
                     show_power: document.getElementById('showPower').checked,
-                    show_gps: document.getElementById('showGPS').checked, // Added show_gps
+                    show_gps: document.getElementById('showGPS').checked,
                     show_bottom_elements: document.getElementById('showBottomElements').checked
                 };
 
@@ -330,7 +330,7 @@ document.getElementById('startProcessButton').addEventListener('click', function
         show_mileage: document.getElementById('showMileage').checked,
         show_pwm: document.getElementById('showPWM').checked,
         show_power: document.getElementById('showPower').checked,
-        show_gps: document.getElementById('showGPS').checked, // Added show_gps
+        show_gps: document.getElementById('showGPS').checked,
         show_bottom_elements: document.getElementById('showBottomElements').checked
     };
 
