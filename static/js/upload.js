@@ -159,7 +159,7 @@ document.getElementById('projectName').addEventListener('input', function() {
 });
 
 // Add event listeners for text display settings
-const textSettings = ['verticalPosition', 'topPadding', 'bottomPadding', 'spacing', 'borderRadius'];
+const textSettings = ['verticalPosition', 'topPadding', 'bottomPadding', 'spacing', 'fontSize', 'borderRadius'];
 const speedIndicatorSettings = ['indicatorScale', 'indicatorX', 'indicatorY', 'speedSize', 'speedY', 'unitSize', 'unitY'];
 
 // Combine all settings
@@ -189,11 +189,6 @@ document.querySelectorAll('input[name="resolution"]').forEach(radio => {
         }
     });
 });
-
-<label for="fontSize" class="form-label">{{ _('Font Size') }}</label>
-<input type="range" class="form-range" id="fontSize" name="font_size" 
-       min="12" max="72" value="27" step="1">
-<div class="text-muted small">{{ _('Current:') }} <span id="fontSizeValue">27</span>{{ _('px') }}</div>
 
 allSettings.forEach(setting => {
     const input = document.getElementById(setting);
