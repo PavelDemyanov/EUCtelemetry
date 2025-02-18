@@ -269,6 +269,87 @@
                         </div>
                     </div>
 
+                    <!-- New Telemetry Elements Visibility Settings -->
+                    <div class="card mb-3">
+                        <div class="card-header" role="button" data-bs-toggle="collapse" data-bs-target="#telemetryElementsSettings" aria-expanded="false" aria-controls="telemetryElementsSettings">
+                            <h5 class="mb-0 d-flex justify-content-between align-items-center">
+                                {{ _('Telemetry Elements Visibility') }}
+                                <i class="fas fa-chevron-down"></i>
+                            </h5>
+                        </div>
+                        <div id="telemetryElementsSettings" class="collapse">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="showSpeed" checked>
+                                                <label class="form-check-label" for="showSpeed">
+                                                    {{ _('Speed') }}
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="showMaxSpeed" checked>
+                                                <label class="form-check-label" for="showMaxSpeed">
+                                                    {{ _('Max Speed') }}
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="showVoltage" checked>
+                                                <label class="form-check-label" for="showVoltage">
+                                                    {{ _('Voltage') }}
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="showTemp" checked>
+                                                <label class="form-check-label" for="showTemp">
+                                                    {{ _('Temperature') }}
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="showBattery" checked>
+                                                <label class="form-check-label" for="showBattery">
+                                                    {{ _('Battery') }}
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="showMileage" checked>
+                                                <label class="form-check-label" for="showMileage">
+                                                    {{ _('Mileage') }}
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="showPWM" checked>
+                                                <label class="form-check-label" for="showPWM">
+                                                    {{ _('PWM') }}
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="showPower" checked>
+                                                <label class="form-check-label" for="showPower">
+                                                    {{ _('Power') }}
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <hr>
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="showBottomElements" checked>
+                                                <label class="form-check-label" for="showBottomElements">
+                                                    {{ _('Bottom Elements (Arc and Speed)') }}
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <button type="button" class="btn btn-success" id="startProcessButton">{{ _('Start Processing') }}</button>
                 </div>
 
