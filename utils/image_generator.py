@@ -14,6 +14,52 @@ _metal_initialized = False
 _metal_context = None
 _metal_device = None
 
+_LOCALIZATION = {
+    'en': {
+        'speed': 'Speed',
+        'max_speed': 'Max Speed',
+        'gps': 'GPS',
+        'voltage': 'Voltage',
+        'temp': 'Temp',
+        'current': 'Current',
+        'battery': 'Battery',
+        'mileage': 'Mileage',
+        'pwm': 'PWM',
+        'power': 'Power',
+        'units': {
+            'speed': 'km/h',
+            'voltage': 'V',
+            'temp': '°C',
+            'current': 'A',
+            'battery': '%',
+            'mileage': 'km',
+            'pwm': '%',
+            'power': 'W'
+        }
+    },
+    'ru': {
+        'speed': 'Скорость',
+        'max_speed': 'Макс. скорость',
+        'gps': 'GPS',
+        'voltage': 'Напряжение',
+        'temp': 'Температура',
+        'current': 'Ток',
+        'battery': 'Батарея',
+        'mileage': 'Пробег',
+        'pwm': 'ШИМ',
+        'power': 'Мощность',
+        'units': {
+            'speed': 'км/ч',
+            'voltage': 'В',
+            'temp': '°C',
+            'current': 'А',
+            'battery': '%',
+            'mileage': 'км',
+            'pwm': '%',
+            'power': 'Вт'
+        }
+    }
+}
 
 def _initialize_metal():
     global _metal_context, _metal_device, _metal_initialized
@@ -110,6 +156,7 @@ def create_frame(values,
         logging.info(f"Indicator scale: {indicator_scale}%")
 
         # Создаем индикатор скорости с учетом смещений текста и масштаба
+        loc = _LOCALIZATION.get(locale, _LOCALIZATION['en'])
         speed_indicator = create_speed_indicator(
             values['speed'],
             size=indicator_size,
@@ -145,16 +192,18 @@ def create_frame(values,
             logging.error(f"Error loading font: {e}")
             raise
 
-        params = [('Speed', f"{values['speed']}", 'km/h'),
-                  ('Max Speed', f"{values['max_speed']}", 'km/h'),
-                  ('GPS', f"{values['gps']}", 'km/h'),
-                  ('Voltage', f"{values['voltage']}", 'V'),
-                  ('Temp', f"{values['temperature']}", '°C'),
-                  ('Current', f"{values['current']}", 'A'),
-                  ('Battery', f"{values['battery']}", '%'),
-                  ('Mileage', f"{values['mileage']}", 'km'),
-                  ('PWM', f"{values['pwm']}", '%'),
-                  ('Power', f"{values['power']}", 'W')]
+        params = [
+            (loc['speed'], f"{values['speed']}", loc['units']['speed']),
+            (loc['max_speed'], f"{values['max_speed']}", loc['units']['speed']),
+            (loc['gps'], f"{values['gps']}", loc['units']['speed']),
+            (loc['voltage'], f"{values['voltage']}", loc['units']['voltage']),
+            (loc['temp'], f"{values['temperature']}", loc['units']['temp']),
+            (loc['current'], f"{values['current']}", loc['units']['current']),
+            (loc['battery'], f"{values['battery']}", loc['units']['battery']),
+            (loc['mileage'], f"{values['mileage']}", loc['units']['mileage']),
+            (loc['pwm'], f"{values['pwm']}", loc['units']['pwm']),
+            (loc['power'], f"{values['power']}", loc['units']['power'])
+        ]
 
         element_widths = []
         text_widths = []
@@ -245,7 +294,7 @@ def generate_frames(csv_file,
                     text_settings=None,
                     progress_callback=None,
                     interpolate_values=True,
-                    locale='en'):  # Add locale parameter
+                    locale='en'):
     try:
         frames_dir = f'frames/project_{folder_number}'
         if os.path.exists(frames_dir):
@@ -278,7 +327,7 @@ def generate_frames(csv_file,
                                         timestamp,
                                         interpolate=interpolate_values)
             output_path = f'{frames_dir}/frame_{i:06d}.png'
-            create_frame(values, resolution, output_path, text_settings, locale=locale)  # Pass locale here
+            create_frame(values, resolution, output_path, text_settings, locale=locale)
 
             with lock:
                 completed_frames += 1
