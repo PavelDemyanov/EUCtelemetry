@@ -141,10 +141,10 @@ def create_frame(values,
         # Get visibility settings with defaults to True
         show_speed = text_settings.get('show_speed', True)
         show_max_speed = text_settings.get('show_max_speed', True)
-        show_gps = text_settings.get('show_gps', True)
+        show_gps = text_settings.get('show_gps', False)  # Default to False for GPS
         show_voltage = text_settings.get('show_voltage', True)
         show_temp = text_settings.get('show_temp', True)
-        show_battery = text_settings.get('show_battery', True)
+        show_battery = text_settings.get('show_battery', False)  # Default to False for battery
         show_mileage = text_settings.get('show_mileage', True)
         show_pwm = text_settings.get('show_pwm', True)
         show_power = text_settings.get('show_power', True)
@@ -213,7 +213,7 @@ def create_frame(values,
         if show_max_speed:
             params.append((loc['max_speed'], f"{values['max_speed']}",
                            loc['units']['speed']))
-        if show_gps and 'gps' in values:  # Check both visibility and existence
+        if show_gps and 'gps' in values and text_settings.get('show_gps', False):  # Stricter GPS visibility check
             logging.info("Adding GPS to params due to show_gps=True and gps exists in values")
             params.append(
                 (loc['gps'], f"{values['gps']}", loc['units']['speed']))
@@ -226,7 +226,7 @@ def create_frame(values,
         if show_temp:
             params.append((loc['temp'], f"{values['temperature']}",
                            loc['units']['temp']))
-        if show_battery and 'battery' in values:  # Check both visibility and existence
+        if show_battery and 'battery' in values and text_settings.get('show_battery', False):  # Stricter battery visibility check
             logging.info("Adding battery to params due to show_battery=True and battery exists in values")
             params.append((loc['battery'], f"{values['battery']}",
                            loc['units']['battery']))
