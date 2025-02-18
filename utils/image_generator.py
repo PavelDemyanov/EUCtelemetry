@@ -71,7 +71,8 @@ def create_rounded_box(width, height, radius):
 def create_frame(values,
                  resolution='fullhd',
                  output_path=None,
-                 text_settings=None):
+                 text_settings=None,
+                 locale='en'):
     try:
         # Определяем разрешение и масштаб
         if resolution == "4k":
@@ -117,7 +118,8 @@ def create_frame(values,
             speed_size=speed_size,
             unit_size=unit_size,
             indicator_scale=indicator_scale,
-            resolution=resolution)
+            resolution=resolution,
+            locale=locale)
 
         # Позиционируем индикатор скорости на основе процентных значений
         indicator_x = int((width - indicator_size) * indicator_x_percent / 100)
@@ -420,7 +422,8 @@ def detect_csv_type(df):
 def create_preview_frame(csv_file,
                          project_id,
                          resolution='fullhd',
-                         text_settings=None):
+                         text_settings=None,
+                         locale='en'):
     try:
         from utils.csv_processor import process_csv_file
         from models import Project
@@ -440,8 +443,8 @@ def create_preview_frame(csv_file,
             preview_path = f'previews/{project_id}_preview.png'
             if os.path.exists(preview_path):
                 os.remove(preview_path)
-            create_frame(values, resolution, preview_path, text_settings)
-            logging.info(f"Created preview frame: {preview_path}")
+            create_frame(values, resolution, preview_path, text_settings, locale=locale)
+            logging.info(f"Created preview frame: {preview_path} with locale: {locale}")
             return preview_path
 
     except Exception as e:

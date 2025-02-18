@@ -17,7 +17,6 @@ from flask_migrate import Migrate
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.utils import secure_filename
 from flask_babel import Babel, gettext as _, get_locale
-
 from extensions import db
 from utils.csv_processor import process_csv_file
 from utils.image_generator import generate_frames, create_preview_frame
@@ -801,8 +800,7 @@ def generate_preview(project_id):
         # Get text display settings from request
         data = request.get_json() if request.is_json else {}
         resolution = data.get('resolution', 'fullhd')
-        text_settings = {
-            'vertical_position': int(data.get('vertical_position', 50)),
+        text_settings = {'vertical_position': int(data.get('vertical_position', 50)),
             'top_padding': int(data.get('top_padding', 10)),
             'bottom_padding': int(data.get('bottom_padding', 30)),
             'spacing': int(data.get('spacing', 20)),
@@ -819,11 +817,15 @@ def generate_preview(project_id):
 
         logging.info(f"Generating preview with settings: {text_settings}")
 
+        # Get user's preferred locale
+        user_locale = 'ru' if current_user.is_authenticated and hasattr(current_user, 'locale') and current_user.locale == 'ru' else 'en'
+
         preview_path = create_preview_frame(
             os.path.join(app.config['UPLOAD_FOLDER'], project.csv_file),
             project_id,
             resolution,
-            text_settings
+            text_settings,
+            locale=user_locale  # Pass the user's locale
         )
 
         return jsonify({
