@@ -27,11 +27,6 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                 logging.info(f"Starting project processing with hardware configuration: {hardware_info}")
                 logging.info(f"Processing settings - Resolution: {resolution}, FPS: {fps}, Codec: {codec}, Interpolation: {'enabled' if interpolate_values else 'disabled'}")
 
-                # Add logging for visibility settings
-                logging.info(f"Text settings in background processor:")
-                logging.info(f"show_gps: {text_settings.get('show_gps')}")
-                logging.info(f"show_battery: {text_settings.get('show_battery')}")
-
                 project.status = 'processing'
                 project.fps = float(fps)  # Convert to float explicitly
                 project.resolution = resolution
