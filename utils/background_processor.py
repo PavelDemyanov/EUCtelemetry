@@ -8,6 +8,7 @@ from utils.video_creator import create_video
 from utils.hardware_detection import get_hardware_info
 import os
 from datetime import datetime
+from flask_babel import get_locale
 
 def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', text_settings=None, interpolate_values=True):
     """Process project in background thread"""
@@ -70,6 +71,13 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     except Exception as e:
                         logging.error(f"Error updating progress: {e}")
 
+                # Get current locale before starting background process
+                try:
+                    current_locale = str(get_locale())
+                except RuntimeError:
+                    current_locale = 'en'  # Default to English if no request context
+                logging.info(f"Using locale: {current_locale} for frame generation")
+
                 # Generate frames with progress tracking and interpolation setting
                 frame_count, duration = generate_frames(
                     csv_file,
@@ -78,7 +86,8 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     fps,
                     text_settings,
                     progress_callback,
-                    interpolate_values
+                    interpolate_values,
+                    locale_str=current_locale  # Pass locale to frame generation
                 )
 
                 # Convert numpy values to Python native types

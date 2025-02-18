@@ -128,51 +128,33 @@ def create_frame(values,
         unit_size = float(text_settings.get('unit_size', 100))
         indicator_scale = float(text_settings.get('indicator_scale', 100))
 
-        logging.info(
-            f"Speed indicator settings - X: {indicator_x_percent}%, Y: {indicator_y_percent}%"
-        )
-        logging.info(
-            f"Speed text size: {speed_size}%, offset Y: {speed_y_offset}px")
-        logging.info(
-            f"Unit text size: {unit_size}%, offset Y: {unit_y_offset}px")
-        logging.info(f"Indicator scale: {indicator_scale}%")
-
         # Создаем индикатор скорости с учетом смещений текста и масштаба
         speed_indicator = create_speed_indicator(
             values['speed'],
             size=indicator_size,
             speed_offset=(0, speed_y_offset),
             unit_offset=(0, unit_y_offset),
-            speed_size=speed_size,
-            unit_size=unit_size,
-            indicator_scale=indicator_scale,
+            speed_size=int(speed_size),
+            unit_size=int(unit_size),
+            indicator_scale=int(indicator_scale),
             resolution=resolution)
 
         # Позиционируем индикатор скорости на основе процентных значений
         indicator_x = int((width - indicator_size) * indicator_x_percent / 100)
-        indicator_y = int(
-            (height - indicator_size) * indicator_y_percent / 100)
+        indicator_y = int((height - indicator_size) * indicator_y_percent / 100)
         background.paste(speed_indicator, (indicator_x, indicator_y),
                          speed_indicator)
 
-        font_size = int(text_settings.get('font_size', 26) * scale_factor)
-        top_padding = int(text_settings.get('top_padding', 14) * scale_factor)
-        box_height = int(
-            text_settings.get('bottom_padding', 47) * scale_factor)
-        spacing = int(text_settings.get('spacing', 10) * scale_factor)
-        vertical_position = int(text_settings.get('vertical_position', 1))
-        border_radius = int(
-            text_settings.get('border_radius', 13) * scale_factor)
-
         try:
             regular_font = _get_font("fonts/sf-ui-display-regular.otf",
-                                     font_size)
-            bold_font = _get_font("fonts/sf-ui-display-bold.otf", font_size)
+                                     int(26 * scale_factor))
+            bold_font = _get_font("fonts/sf-ui-display-bold.otf",
+                                  int(26 * scale_factor))
         except Exception as e:
             logging.error(f"Error loading font: {e}")
             raise
 
-        params = [(label, f"{values[value_key]}", unit) 
+        params = [(label, f"{values[value_key]}", unit)
                  for label, value_key, unit in _get_params_by_locale(locale_str)]
 
         element_widths = []
@@ -192,24 +174,26 @@ def create_frame(values,
                               value_bbox[3] - value_bbox[1],
                               unit_bbox[3] - unit_bbox[1])
 
-            element_width = text_width + (2 * top_padding)
+            element_width = text_width + (2 * int(14 * scale_factor))
             element_widths.append(element_width)
             text_widths.append(text_width)
             text_heights.append(text_height)
             total_width += element_width
 
-        total_width += spacing * (len(params) - 1)
+        total_width += int(10 * scale_factor) * (len(params) - 1)
         start_x = (width - total_width) // 2
-        y_position = int((height * vertical_position) / 100)
+        y_position = int((height * float(text_settings.get('vertical_position', 1))) / 100)
 
         max_text_height = max(text_heights)
+        box_height = int(47 * scale_factor)
         box_vertical_center = y_position + (box_height // 2)
         text_baseline_y = box_vertical_center - (max_text_height // 2)
 
         x_position = start_x
         for i, ((label, value, unit), element_width, text_width) in enumerate(
                 zip(params, element_widths, text_widths)):
-            box = create_rounded_box(element_width, box_height, border_radius)
+            box = create_rounded_box(element_width, box_height,
+                                    int(13 * scale_factor))
             overlay.paste(box, (x_position, y_position), box)
 
             # Рисуем каждую часть текста отдельно с соответствующим шрифтом
@@ -239,7 +223,7 @@ def create_frame(values,
                       fill=(255, 255, 255, 255),
                       font=regular_font)
 
-            x_position += element_width + spacing
+            x_position += element_width + int(10 * scale_factor)
 
         result = Image.alpha_composite(background, overlay)
 
@@ -256,14 +240,14 @@ def create_frame(values,
         logging.error(f"Error in create_frame: {e}")
         raise
 
-
 def generate_frames(csv_file,
                     folder_number,
                     resolution='fullhd',
                     fps=29.97,
                     text_settings=None,
                     progress_callback=None,
-                    interpolate_values=True):
+                    interpolate_values=True,
+                    locale_str=None):
     try:
         frames_dir = f'frames/project_{folder_number}'
         if os.path.exists(frames_dir):
@@ -288,16 +272,15 @@ def generate_frames(csv_file,
 
         completed_frames = 0
         lock = threading.Lock()
-        current_locale = str(get_locale())
 
         def process_frame(i, timestamp):
             nonlocal completed_frames
-            # Use interpolated values for frame generation if enabled
+            # Use interpolated values for frame generation
             values = find_nearest_values(df,
                                          timestamp,
                                          interpolate=interpolate_values)
             output_path = f'{frames_dir}/frame_{i:06d}.png'
-            create_frame(values, resolution, output_path, text_settings, locale_str=current_locale)
+            create_frame(values, resolution, output_path, text_settings, locale_str=locale_str)
 
             with lock:
                 completed_frames += 1
@@ -447,6 +430,7 @@ def create_preview_frame(csv_file,
         from utils.csv_processor import process_csv_file
         from models import Project
         from flask import current_app
+        from flask_babel import get_locale
 
         with current_app.app_context():
             project = Project.query.get(project_id)
@@ -458,11 +442,12 @@ def create_preview_frame(csv_file,
             max_speed_idx = df['speed'].idxmax()
             max_speed_timestamp = df.loc[max_speed_idx, 'timestamp']
             values = find_nearest_values(df, max_speed_timestamp)
+            current_locale = str(get_locale())
             os.makedirs('previews', exist_ok=True)
             preview_path = f'previews/{project_id}_preview.png'
             if os.path.exists(preview_path):
                 os.remove(preview_path)
-            create_frame(values, resolution, preview_path, text_settings)
+            create_frame(values, resolution, preview_path, text_settings, locale_str=current_locale)
             logging.info(f"Created preview frame: {preview_path}")
             return preview_path
 
