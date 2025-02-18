@@ -210,7 +210,7 @@ def create_frame(values,
             params.append((loc['speed'], f"{values['speed']}", loc['units']['speed']))
         if show_max_speed:
             params.append((loc['max_speed'], f"{values['max_speed']}", loc['units']['speed']))
-        if show_gps and 'gps' in values:  # Only add if GPS exists in values and is visible
+        if show_gps and values['gps'] != 0:  # Only show GPS if visible and has non-zero value
             params.append((loc['gps'], f"{values['gps']}", loc['units']['speed']))
         if show_voltage:
             params.append((loc['voltage'], f"{values['voltage']}", loc['units']['voltage']))
@@ -391,9 +391,9 @@ def find_nearest_values(df, timestamp, interpolate=True):
         return {
             key: 0
             for key in [
-                'speed', 'max_speed', 'voltage', 'temperature',
+                'speed', 'max_speed', 'gps', 'voltage', 'temperature',
                 'current', 'battery', 'mileage', 'pwm', 'power'
-            ]  # Remove GPS from default keys
+            ]
         }
 
     # Find the indices of the surrounding data points
@@ -405,6 +405,7 @@ def find_nearest_values(df, timestamp, interpolate=True):
         last_idx = df.index[-1]
         result = {
             'speed': int(df.loc[last_idx, 'speed']),
+            'gps': int(df.loc[last_idx, 'gps']) if 'gps' in df.columns else 0,
             'voltage': int(df.loc[last_idx, 'voltage']),
             'temperature': int(df.loc[last_idx, 'temperature']),
             'current': int(df.loc[last_idx, 'current']),
@@ -414,8 +415,6 @@ def find_nearest_values(df, timestamp, interpolate=True):
             'power': int(df.loc[last_idx, 'power']),
         }
         result['max_speed'] = int(df.loc[:before_mask, 'speed'].max())
-        if 'gps' in df.columns:  # Only add GPS if it exists in columns
-            result['gps'] = int(df.loc[last_idx, 'gps'])
         return result
 
     # Get indices of surrounding points
@@ -432,6 +431,7 @@ def find_nearest_values(df, timestamp, interpolate=True):
 
         result = {
             'speed': int(df.loc[use_idx, 'speed']),
+            'gps': int(df.loc[use_idx, 'gps']) if 'gps' in df.columns else 0,
             'voltage': int(df.loc[use_idx, 'voltage']),
             'temperature': int(df.loc[use_idx, 'temperature']),
             'current': int(df.loc[use_idx, 'current']),
@@ -440,8 +440,6 @@ def find_nearest_values(df, timestamp, interpolate=True):
             'pwm': int(df.loc[use_idx, 'pwm']),
             'power': int(df.loc[use_idx, 'power'])
         }
-        if 'gps' in df.columns:  # Only add GPS if it exists in columns
-            result['gps'] = int(df.loc[use_idx, 'gps'])
         result['max_speed'] = int(df.loc[:use_idx, 'speed'].max())
         return result
 
@@ -455,18 +453,20 @@ def find_nearest_values(df, timestamp, interpolate=True):
     for key in [
             'speed', 'voltage', 'temperature', 'current', 'battery',
             'mileage', 'pwm', 'power'
-    ]:  # Remove GPS from default interpolation
+    ]:
         v0 = float(df.loc[before_idx, key])
         v1 = float(df.loc[after_idx, key])
         interpolated_value = v0 + factor * (v1 - v0)
         result[key] = int(round(interpolated_value))
 
-    # Only interpolate GPS if it exists in columns
+    # Handle GPS interpolation
     if 'gps' in df.columns:
         v0 = float(df.loc[before_idx, 'gps'])
         v1 = float(df.loc[after_idx, 'gps'])
         interpolated_value = v0 + factor * (v1 - v0)
         result['gps'] = int(round(interpolated_value))
+    else:
+        result['gps'] = 0
 
     # Calculate max speed up to current point
     result['max_speed'] = int(df.loc[:before_idx, 'speed'].max())
