@@ -131,6 +131,9 @@ def create_frame(values,
             scale_factor = 1.0
             indicator_size = 500  # Стандартный размер для Full HD
 
+        # Add logging for text settings
+        logging.info(f"Creating frame with text settings: {text_settings}")
+
         # Создаем синий фон и прозрачный оверлей
         background = Image.new('RGBA', (width, height), (0, 0, 255, 255))
         overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
@@ -141,7 +144,7 @@ def create_frame(values,
         # Get visibility settings with defaults to True
         show_speed = text_settings.get('show_speed', True)
         show_max_speed = text_settings.get('show_max_speed', True)
-        show_gps = text_settings.get('show_gps', True)  # Added show_gps
+        show_gps = text_settings.get('show_gps', True)
         show_voltage = text_settings.get('show_voltage', True)
         show_temp = text_settings.get('show_temp', True)
         show_battery = text_settings.get('show_battery', True)
@@ -149,6 +152,10 @@ def create_frame(values,
         show_pwm = text_settings.get('show_pwm', True)
         show_power = text_settings.get('show_power', True)
         show_bottom_elements = text_settings.get('show_bottom_elements', True)
+
+        # Add logging for GPS and Battery visibility
+        logging.info(f"GPS visibility check: show_gps={show_gps}, has_gps={'gps' in values}")
+        logging.info(f"Battery visibility check: show_battery={show_battery}, has_battery={'battery' in values}")
 
         # Получаем настройки позиционирования индикатора и текста
         indicator_x_percent = float(text_settings.get('indicator_x', 50))
@@ -206,7 +213,7 @@ def create_frame(values,
         if show_max_speed:
             params.append((loc['max_speed'], f"{values['max_speed']}",
                            loc['units']['speed']))
-        if show_gps:  # Добавляем GPS параметр
+        if show_gps:
             params.append(
                 (loc['gps'], f"{values['gps']}", loc['units']['speed']))
         if show_voltage:
@@ -268,7 +275,7 @@ def create_frame(values,
                 x_position = start_x
                 for i, ((label, value, unit), element_width,
                         text_width) in enumerate(
-                            zip(params, element_widths, text_widths)):
+                    zip(params, element_widths, text_widths)):
                     box = create_rounded_box(element_width, box_height,
                                              border_radius)
                     overlay.paste(box, (x_position, y_position), box)
