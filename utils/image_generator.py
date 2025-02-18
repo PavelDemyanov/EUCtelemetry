@@ -7,14 +7,13 @@ import shutil
 import concurrent.futures
 import threading
 from functools import lru_cache
-from flask import current_app, request
-from flask_babel import get_locale
 from utils.hardware_detection import is_apple_silicon
 from utils.image_processor import create_speed_indicator
 
 _metal_initialized = False
 _metal_context = None
 _metal_device = None
+
 
 def _initialize_metal():
     global _metal_context, _metal_device, _metal_initialized
@@ -39,6 +38,7 @@ def _initialize_metal():
 
 _font_cache = {}
 
+
 def _get_font(font_path, size):
     cache_key = f"{font_path}_{size}"
     if cache_key not in _font_cache:
@@ -53,6 +53,7 @@ def _get_font(font_path, size):
 
 _box_cache = {}
 
+
 def create_rounded_box(width, height, radius):
     cache_key = f"{width}_{height}_{radius}"
     if cache_key not in _box_cache:
@@ -66,187 +67,167 @@ def create_rounded_box(width, height, radius):
         logging.debug(f"Created and cached rounded box {cache_key}")
     return _box_cache[cache_key].copy()
 
-def _get_params_by_locale(locale_str=None):
-    """Get parameters based on locale string"""
-    logging.info(f"Getting parameters for locale: {locale_str}")
-    if locale_str and locale_str.startswith('ru'):
-        return [
-            ('Скорость', 'speed', 'км/ч'),
-            ('Макс. скорость', 'max_speed', 'км/ч'),
-            ('GPS', 'gps', 'км/ч'),
-            ('Напряжение', 'voltage', 'В'),
-            ('Температура', 'temperature', '°C'),
-            ('Ток', 'current', 'А'),
-            ('Батарея', 'battery', '%'),
-            ('Пробег', 'mileage', 'км'),
-            ('ШИМ', 'pwm', '%'),
-            ('Мощность', 'power', 'Вт')
-        ]
-    else:
-        return [
-            ('Speed', 'speed', 'km/h'),
-            ('Max Speed', 'max_speed', 'km/h'),
-            ('GPS', 'gps', 'km/h'),
-            ('Voltage', 'voltage', 'V'),
-            ('Temp', 'temperature', '°C'),
-            ('Current', 'current', 'A'),
-            ('Battery', 'battery', '%'),
-            ('Mileage', 'mileage', 'km'),
-            ('PWM', 'pwm', '%'),
-            ('Power', 'power', 'W')
-        ]
 
 def create_frame(values,
-                resolution='fullhd',
-                output_path=None,
-                text_settings=None,
-                locale_str=None):
+                 resolution='fullhd',
+                 output_path=None,
+                 text_settings=None):
     try:
-        logging.info(f"Creating frame with locale: {locale_str}, resolution: {resolution}")
-        logging.info(f"Text settings: {text_settings}")
-
         # Определяем разрешение и масштаб
         if resolution == "4k":
             width, height = 3840, 2160
             scale_factor = 2.0
-            indicator_size = 1000
+            indicator_size = 1000  # Увеличенный размер для 4K
         else:  # fullhd
             width, height = 1920, 1080
             scale_factor = 1.0
-            indicator_size = 500
+            indicator_size = 500  # Стандартный размер для Full HD
 
-        # Создаем фон и оверлей
+        # Создаем синий фон и прозрачный оверлей
         background = Image.new('RGBA', (width, height), (0, 0, 255, 255))
         overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
         draw = ImageDraw.Draw(overlay)
 
         text_settings = text_settings or {}
 
-        # Настройки по умолчанию
-        defaults = {
-            'indicator_x': 50,
-            'indicator_y': 80,
-            'speed_y': -28,
-            'unit_y': 36,
-            'speed_size': 100,
-            'unit_size': 100,
-            'indicator_scale': 100,
-            'font_size': 26,
-            'border_radius': 13,
-            'box_width': 0,
-            'box_height': 47,
-            'spacing': 10,
-            'vertical_position': 1
-        }
+        # Получаем настройки позиционирования индикатора и текста
+        indicator_x_percent = float(text_settings.get('indicator_x', 50))
+        indicator_y_percent = float(text_settings.get('indicator_y', 80))
+        speed_y_offset = int(text_settings.get('speed_y', 0))
+        unit_y_offset = int(text_settings.get('unit_y', 0))
+        speed_size = float(text_settings.get('speed_size', 100))
+        unit_size = float(text_settings.get('unit_size', 100))
+        indicator_scale = float(text_settings.get('indicator_scale', 100))
 
-        # Применяем настройки с значениями по умолчанию
-        settings = {k: float(text_settings.get(k, v)) for k, v in defaults.items()}
+        logging.info(
+            f"Speed indicator settings - X: {indicator_x_percent}%, Y: {indicator_y_percent}%"
+        )
+        logging.info(
+            f"Speed text size: {speed_size}%, offset Y: {speed_y_offset}px")
+        logging.info(
+            f"Unit text size: {unit_size}%, offset Y: {unit_y_offset}px")
+        logging.info(f"Indicator scale: {indicator_scale}%")
 
-        # Создаем индикатор скорости
+        # Создаем индикатор скорости с учетом смещений текста и масштаба
         speed_indicator = create_speed_indicator(
             values['speed'],
             size=indicator_size,
-            speed_offset=(0, int(settings['speed_y'])),
-            unit_offset=(0, int(settings['unit_y'])),
-            speed_size=int(settings['speed_size']),
-            unit_size=int(settings['unit_size']),
-            indicator_scale=int(settings['indicator_scale']),
-            resolution=resolution
-        )
+            speed_offset=(0, speed_y_offset),
+            unit_offset=(0, unit_y_offset),
+            speed_size=speed_size,
+            unit_size=unit_size,
+            indicator_scale=indicator_scale,
+            resolution=resolution)
 
-        # Позиционируем индикатор
-        indicator_x = int((width - indicator_size) * settings['indicator_x'] / 100)
-        indicator_y = int((height - indicator_size) * settings['indicator_y'] / 100)
-        background.paste(speed_indicator, (indicator_x, indicator_y), speed_indicator)
+        # Позиционируем индикатор скорости на основе процентных значений
+        indicator_x = int((width - indicator_size) * indicator_x_percent / 100)
+        indicator_y = int(
+            (height - indicator_size) * indicator_y_percent / 100)
+        background.paste(speed_indicator, (indicator_x, indicator_y),
+                         speed_indicator)
+
+        font_size = int(text_settings.get('font_size', 26) * scale_factor)
+        top_padding = int(text_settings.get('top_padding', 14) * scale_factor)
+        box_height = int(
+            text_settings.get('bottom_padding', 47) * scale_factor)
+        spacing = int(text_settings.get('spacing', 10) * scale_factor)
+        vertical_position = int(text_settings.get('vertical_position', 1))
+        border_radius = int(
+            text_settings.get('border_radius', 13) * scale_factor)
 
         try:
             regular_font = _get_font("fonts/sf-ui-display-regular.otf",
-                                   int(settings['font_size'] * scale_factor))
-            bold_font = _get_font("fonts/sf-ui-display-bold.otf",
-                                 int(settings['font_size'] * scale_factor))
+                                     font_size)
+            bold_font = _get_font("fonts/sf-ui-display-bold.otf", font_size)
         except Exception as e:
             logging.error(f"Error loading font: {e}")
             raise
 
-        params = _get_params_by_locale(locale_str)
+        params = [('Speed', f"{values['speed']}", 'km/h'),
+                  ('Max Speed', f"{values['max_speed']}", 'km/h'),
+                  ('GPS', f"{values['gps']}", 'km/h'),
+                  ('Voltage', f"{values['voltage']}", 'V'),
+                  ('Temp', f"{values['temperature']}", '°C'),
+                  ('Current', f"{values['current']}", 'A'),
+                  ('Battery', f"{values['battery']}", '%'),
+                  ('Mileage', f"{values['mileage']}", 'km'),
+                  ('PWM', f"{values['pwm']}", '%'),
+                  ('Power', f"{values['power']}", 'W')]
 
         element_widths = []
         text_widths = []
         text_heights = []
         total_width = 0
 
-        for label, value_key, unit in params:
-            # Измеряем размеры текста
+        for label, value, unit in params:
+            # Измеряем ширину для каждой части текста отдельно
             label_bbox = draw.textbbox((0, 0), f"{label}: ", font=regular_font)
-            value_bbox = draw.textbbox((0, 0), str(values[value_key]), font=bold_font)
+            value_bbox = draw.textbbox((0, 0), value, font=bold_font)
             unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
 
             text_width = (label_bbox[2] - label_bbox[0]) + (
                 value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])
             text_height = max(label_bbox[3] - label_bbox[1],
-                            value_bbox[3] - value_bbox[1],
-                            unit_bbox[3] - unit_bbox[1])
+                              value_bbox[3] - value_bbox[1],
+                              unit_bbox[3] - unit_bbox[1])
 
-            # Определяем ширину элемента
-            element_width = int(settings['box_width']) if settings['box_width'] > 0 else (
-                text_width + (2 * int(14 * scale_factor)))
+            element_width = text_width + (2 * top_padding)
             element_widths.append(element_width)
             text_widths.append(text_width)
             text_heights.append(text_height)
             total_width += element_width
 
-        # Рассчитываем позиции
-        total_width += int(settings['spacing']) * (len(params) - 1)
+        total_width += spacing * (len(params) - 1)
         start_x = (width - total_width) // 2
-        y_position = int((height * settings['vertical_position']) / 100)
+        y_position = int((height * vertical_position) / 100)
 
         max_text_height = max(text_heights)
-        box_height = int(settings['box_height'])
         box_vertical_center = y_position + (box_height // 2)
         text_baseline_y = box_vertical_center - (max_text_height // 2)
 
         x_position = start_x
-        for i, ((label, value_key, unit), element_width, text_width) in enumerate(
+        for i, ((label, value, unit), element_width, text_width) in enumerate(
                 zip(params, element_widths, text_widths)):
-            # Создаем фон для текста
-            box = create_rounded_box(element_width, box_height,
-                                   int(settings['border_radius']))
+            box = create_rounded_box(element_width, box_height, border_radius)
             overlay.paste(box, (x_position, y_position), box)
 
-            # Центрируем текст
+            # Рисуем каждую часть текста отдельно с соответствующим шрифтом
             text_x = x_position + ((element_width - text_width) // 2)
-            text_y = text_baseline_y
+            baseline_offset = int(max_text_height * 0.2)
+            text_y = text_baseline_y - baseline_offset
 
-            # Рисуем компоненты текста
+            # Рисуем метку regular шрифтом
             label_bbox = draw.textbbox((0, 0), f"{label}: ", font=regular_font)
             label_width = label_bbox[2] - label_bbox[0]
             draw.text((text_x, text_y),
-                     f"{label}: ",
-                     fill=(255, 255, 255, 255),
-                     font=regular_font)
+                      f"{label}: ",
+                      fill=(255, 255, 255, 255),
+                      font=regular_font)
 
-            value_bbox = draw.textbbox((0, 0), str(values[value_key]), font=bold_font)
+            # Рисуем значение bold шрифтом
+            value_bbox = draw.textbbox((0, 0), value, font=bold_font)
             value_width = value_bbox[2] - value_bbox[0]
             draw.text((text_x + label_width, text_y),
-                     str(values[value_key]),
-                     fill=(255, 255, 255, 255),
-                     font=bold_font)
+                      value,
+                      fill=(255, 255, 255, 255),
+                      font=bold_font)
 
+            # Рисуем единицу измерения regular шрифтом
             draw.text((text_x + label_width + value_width, text_y),
-                     f" {unit}",
-                     fill=(255, 255, 255, 255),
-                     font=regular_font)
+                      f" {unit}",
+                      fill=(255, 255, 255, 255),
+                      font=regular_font)
 
-            x_position += element_width + int(settings['spacing'])
+            x_position += element_width + spacing
 
         result = Image.alpha_composite(background, overlay)
 
         if output_path:
             result.convert('RGB').save(output_path,
-                                     format='PNG',
-                                     quality=95,
-                                     optimize=True)
-            logging.info(f"Saved frame to {output_path}")
+                                       format='PNG',
+                                       quality=95,
+                                       optimize=True)
+            logging.debug(f"Saved frame to {output_path}")
 
         return result
 
@@ -254,14 +235,14 @@ def create_frame(values,
         logging.error(f"Error in create_frame: {e}")
         raise
 
+
 def generate_frames(csv_file,
                     folder_number,
                     resolution='fullhd',
                     fps=29.97,
                     text_settings=None,
                     progress_callback=None,
-                    interpolate_values=True,
-                    locale_str=None):
+                    interpolate_values=True):
     try:
         frames_dir = f'frames/project_{folder_number}'
         if os.path.exists(frames_dir):
@@ -289,12 +270,12 @@ def generate_frames(csv_file,
 
         def process_frame(i, timestamp):
             nonlocal completed_frames
-            # Use interpolated values for frame generation
+            # Use interpolated values for frame generation if enabled
             values = find_nearest_values(df,
                                          timestamp,
                                          interpolate=interpolate_values)
             output_path = f'{frames_dir}/frame_{i:06d}.png'
-            create_frame(values, resolution, output_path, text_settings, locale_str=locale_str)
+            create_frame(values, resolution, output_path, text_settings)
 
             with lock:
                 completed_frames += 1
@@ -435,42 +416,31 @@ def detect_csv_type(df):
     else:
         raise ValueError("Unknown CSV format")
 
-import os
-import logging
-from flask import current_app
-from flask_babel import get_locale
-from utils.image_processor import create_speed_indicator
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 def create_preview_frame(csv_file,
-                        project_id,
-                        resolution='fullhd',
-                        text_settings=None):
+                         project_id,
+                         resolution='fullhd',
+                         text_settings=None):
     try:
         from utils.csv_processor import process_csv_file
         from models import Project
+        from flask import current_app
 
         with current_app.app_context():
             project = Project.query.get(project_id)
             if not project:
                 raise ValueError(f"Project {project_id} not found")
-
-            csv_type, processed_data = process_csv_file(csv_file, project.folder_number)
+            csv_type, processed_data = process_csv_file(
+                csv_file, project.folder_number)
             df = pd.DataFrame(processed_data)
             max_speed_idx = df['speed'].idxmax()
             max_speed_timestamp = df.loc[max_speed_idx, 'timestamp']
             values = find_nearest_values(df, max_speed_timestamp)
-
-            # Get current locale from request context
-            current_locale = str(get_locale())
-            logging.info(f"Creating preview with locale: {current_locale}")
-
             os.makedirs('previews', exist_ok=True)
             preview_path = f'previews/{project_id}_preview.png'
             if os.path.exists(preview_path):
                 os.remove(preview_path)
-
-            create_frame(values, resolution, preview_path, text_settings, locale_str=current_locale)
+            create_frame(values, resolution, preview_path, text_settings)
             logging.info(f"Created preview frame: {preview_path}")
             return preview_path
 

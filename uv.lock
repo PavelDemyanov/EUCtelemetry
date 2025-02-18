@@ -918,15 +918,6 @@ wheels = [
 ]
 
 [[package]]
-name = "oauthlib"
-version = "3.2.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/6d/fa/fbf4001037904031639e6bfbfc02badfc7e12f137a8afa254df6c4c8a670/oauthlib-3.2.2.tar.gz", hash = "sha256:9859c40929662bec5d64f34d01c99e093149682a3f38915dc0655d5a633dd918", size = 177352 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/7e/80/cab10959dc1faead58dc8384a781dfbf93cb4d33d50988f7a69f1b7c9bbe/oauthlib-3.2.2-py3-none-any.whl", hash = "sha256:8139f29aac13e25d502680e9e19963e83f16838d48a0d71c287fe40e7067fbca", size = 151688 },
-]
-
-[[package]]
 name = "openai"
 version = "1.61.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1343,7 +1334,6 @@ dependencies = [
     { name = "flask-wtf" },
     { name = "gunicorn" },
     { name = "numpy" },
-    { name = "oauthlib" },
     { name = "openai" },
     { name = "pandas" },
     { name = "pillow" },
@@ -1372,7 +1362,6 @@ requires-dist = [
     { name = "flask-wtf", specifier = ">=1.2.2" },
     { name = "gunicorn", specifier = ">=23.0.0" },
     { name = "numpy", specifier = ">=2.2.2" },
-    { name = "oauthlib", specifier = ">=3.2.2" },
     { name = "openai", specifier = ">=1.61.1" },
     { name = "pandas", specifier = ">=2.2.3" },
     { name = "pillow", specifier = ">=11.1.0" },

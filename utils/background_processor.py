@@ -1,5 +1,6 @@
 import threading
 import logging
+import shutil
 from extensions import db
 from utils.csv_processor import process_csv_file
 from utils.image_generator import generate_frames
@@ -7,17 +8,9 @@ from utils.video_creator import create_video
 from utils.hardware_detection import get_hardware_info
 import os
 from datetime import datetime
-from flask_babel import get_locale
 
 def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', text_settings=None, interpolate_values=True):
     """Process project in background thread"""
-    # Get current locale before starting background process
-    try:
-        current_locale = str(get_locale())
-    except RuntimeError:
-        current_locale = 'en'  # Default to English if no request context
-    logging.info(f"Using locale: {current_locale} for frame generation")
-
     def _process():
         from app import app  # Import app here to avoid circular import
 
@@ -85,8 +78,7 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     fps,
                     text_settings,
                     progress_callback,
-                    interpolate_values,
-                    locale_str=current_locale  # Pass locale from outer scope
+                    interpolate_values
                 )
 
                 # Convert numpy values to Python native types

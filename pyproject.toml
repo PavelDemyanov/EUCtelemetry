@@ -28,5 +28,4 @@ dependencies = [
     "python-dotenv>=1.0.1",
     "psutil>=7.0.0",
     "flask-babel>=4.0.0",
-    "oauthlib>=3.2.2",
 ]
