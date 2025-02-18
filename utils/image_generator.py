@@ -66,9 +66,9 @@ def create_rounded_box(width, height, radius):
         logging.debug(f"Created and cached rounded box {cache_key}")
     return _box_cache[cache_key].copy()
 
-
 def _get_params_by_locale(locale_str=None):
     """Get parameters based on locale string"""
+    logging.info(f"Getting parameters for locale: {locale_str}")
     if locale_str and locale_str.startswith('ru'):
         return [
             ('Скорость', 'speed', 'км/ч'),
@@ -102,142 +102,151 @@ def create_frame(values,
                 text_settings=None,
                 locale_str=None):
     try:
+        logging.info(f"Creating frame with locale: {locale_str}, resolution: {resolution}")
+        logging.info(f"Text settings: {text_settings}")
+
         # Определяем разрешение и масштаб
         if resolution == "4k":
             width, height = 3840, 2160
             scale_factor = 2.0
-            indicator_size = 1000  # Увеличенный размер для 4K
+            indicator_size = 1000
         else:  # fullhd
             width, height = 1920, 1080
             scale_factor = 1.0
-            indicator_size = 500  # Стандартный размер для Full HD
+            indicator_size = 500
 
-        # Создаем синий фон и прозрачный оверлей
+        # Создаем фон и оверлей
         background = Image.new('RGBA', (width, height), (0, 0, 255, 255))
         overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
         draw = ImageDraw.Draw(overlay)
 
         text_settings = text_settings or {}
 
-        # Получаем настройки позиционирования индикатора и текста
-        indicator_x_percent = float(text_settings.get('indicator_x', 50))
-        indicator_y_percent = float(text_settings.get('indicator_y', 80))
-        speed_y_offset = int(text_settings.get('speed_y', -28))
-        unit_y_offset = int(text_settings.get('unit_y', 36))
-        speed_size = float(text_settings.get('speed_size', 100))
-        unit_size = float(text_settings.get('unit_size', 100))
-        indicator_scale = float(text_settings.get('indicator_scale', 100))
-        font_size = int(text_settings.get('font_size', 26))
-        border_radius = int(text_settings.get('border_radius', 13))
-        box_width = int(text_settings.get('box_width', 0))  # Новый параметр
-        box_height = int(text_settings.get('box_height', 47))  # Новый параметр
-        spacing = int(text_settings.get('spacing', 10))  # Новый параметр
+        # Настройки по умолчанию
+        defaults = {
+            'indicator_x': 50,
+            'indicator_y': 80,
+            'speed_y': -28,
+            'unit_y': 36,
+            'speed_size': 100,
+            'unit_size': 100,
+            'indicator_scale': 100,
+            'font_size': 26,
+            'border_radius': 13,
+            'box_width': 0,
+            'box_height': 47,
+            'spacing': 10,
+            'vertical_position': 1
+        }
 
-        # Создаем индикатор скорости с учетом смещений текста и масштаба
+        # Применяем настройки с значениями по умолчанию
+        settings = {k: float(text_settings.get(k, v)) for k, v in defaults.items()}
+
+        # Создаем индикатор скорости
         speed_indicator = create_speed_indicator(
             values['speed'],
             size=indicator_size,
-            speed_offset=(0, speed_y_offset),
-            unit_offset=(0, unit_y_offset),
-            speed_size=int(speed_size),
-            unit_size=int(unit_size),
-            indicator_scale=int(indicator_scale),
-            resolution=resolution)
+            speed_offset=(0, int(settings['speed_y'])),
+            unit_offset=(0, int(settings['unit_y'])),
+            speed_size=int(settings['speed_size']),
+            unit_size=int(settings['unit_size']),
+            indicator_scale=int(settings['indicator_scale']),
+            resolution=resolution
+        )
 
-        # Позиционируем индикатор скорости на основе процентных значений
-        indicator_x = int((width - indicator_size) * indicator_x_percent / 100)
-        indicator_y = int((height - indicator_size) * indicator_y_percent / 100)
-        background.paste(speed_indicator, (indicator_x, indicator_y),
-                         speed_indicator)
+        # Позиционируем индикатор
+        indicator_x = int((width - indicator_size) * settings['indicator_x'] / 100)
+        indicator_y = int((height - indicator_size) * settings['indicator_y'] / 100)
+        background.paste(speed_indicator, (indicator_x, indicator_y), speed_indicator)
 
         try:
             regular_font = _get_font("fonts/sf-ui-display-regular.otf",
-                                     int(font_size * scale_factor))
+                                   int(settings['font_size'] * scale_factor))
             bold_font = _get_font("fonts/sf-ui-display-bold.otf",
-                                  int(font_size * scale_factor))
+                                 int(settings['font_size'] * scale_factor))
         except Exception as e:
             logging.error(f"Error loading font: {e}")
             raise
 
-        params = [(label, f"{values[value_key]}", unit)
-                 for label, value_key, unit in _get_params_by_locale(locale_str)]
+        params = _get_params_by_locale(locale_str)
 
         element_widths = []
         text_widths = []
         text_heights = []
         total_width = 0
 
-        for label, value, unit in params:
-            # Измеряем ширину для каждой части текста отдельно
+        for label, value_key, unit in params:
+            # Измеряем размеры текста
             label_bbox = draw.textbbox((0, 0), f"{label}: ", font=regular_font)
-            value_bbox = draw.textbbox((0, 0), value, font=bold_font)
+            value_bbox = draw.textbbox((0, 0), str(values[value_key]), font=bold_font)
             unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
 
             text_width = (label_bbox[2] - label_bbox[0]) + (
                 value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])
             text_height = max(label_bbox[3] - label_bbox[1],
-                              value_bbox[3] - value_bbox[1],
-                              unit_bbox[3] - unit_bbox[1])
+                            value_bbox[3] - value_bbox[1],
+                            unit_bbox[3] - unit_bbox[1])
 
-            # Используем заданную ширину бокса, если она указана
-            element_width = box_width if box_width > 0 else (text_width + (2 * int(14 * scale_factor)))
+            # Определяем ширину элемента
+            element_width = int(settings['box_width']) if settings['box_width'] > 0 else (
+                text_width + (2 * int(14 * scale_factor)))
             element_widths.append(element_width)
             text_widths.append(text_width)
             text_heights.append(text_height)
             total_width += element_width
 
-        # Используем заданный spacing между элементами
-        total_width += spacing * (len(params) - 1)
+        # Рассчитываем позиции
+        total_width += int(settings['spacing']) * (len(params) - 1)
         start_x = (width - total_width) // 2
-        y_position = int((height * float(text_settings.get('vertical_position', 1))) / 100)
+        y_position = int((height * settings['vertical_position']) / 100)
 
         max_text_height = max(text_heights)
+        box_height = int(settings['box_height'])
         box_vertical_center = y_position + (box_height // 2)
         text_baseline_y = box_vertical_center - (max_text_height // 2)
 
         x_position = start_x
-        for i, ((label, value, unit), element_width, text_width) in enumerate(
+        for i, ((label, value_key, unit), element_width, text_width) in enumerate(
                 zip(params, element_widths, text_widths)):
-            box = create_rounded_box(element_width, box_height, border_radius)
+            # Создаем фон для текста
+            box = create_rounded_box(element_width, box_height,
+                                   int(settings['border_radius']))
             overlay.paste(box, (x_position, y_position), box)
 
-            # Рисуем каждую часть текста отдельно с соответствующим шрифтом
+            # Центрируем текст
             text_x = x_position + ((element_width - text_width) // 2)
-            baseline_offset = int(max_text_height * 0.2)
-            text_y = text_baseline_y - baseline_offset
+            text_y = text_baseline_y
 
-            # Рисуем метку regular шрифтом
+            # Рисуем компоненты текста
             label_bbox = draw.textbbox((0, 0), f"{label}: ", font=regular_font)
             label_width = label_bbox[2] - label_bbox[0]
             draw.text((text_x, text_y),
-                      f"{label}: ",
-                      fill=(255, 255, 255, 255),
-                      font=regular_font)
+                     f"{label}: ",
+                     fill=(255, 255, 255, 255),
+                     font=regular_font)
 
-            # Рисуем значение bold шрифтом
-            value_bbox = draw.textbbox((0, 0), value, font=bold_font)
+            value_bbox = draw.textbbox((0, 0), str(values[value_key]), font=bold_font)
             value_width = value_bbox[2] - value_bbox[0]
             draw.text((text_x + label_width, text_y),
-                      value,
-                      fill=(255, 255, 255, 255),
-                      font=bold_font)
+                     str(values[value_key]),
+                     fill=(255, 255, 255, 255),
+                     font=bold_font)
 
-            # Рисуем единицу измерения regular шрифтом
             draw.text((text_x + label_width + value_width, text_y),
-                      f" {unit}",
-                      fill=(255, 255, 255, 255),
-                      font=regular_font)
+                     f" {unit}",
+                     fill=(255, 255, 255, 255),
+                     font=regular_font)
 
-            x_position += element_width + spacing
+            x_position += element_width + int(settings['spacing'])
 
         result = Image.alpha_composite(background, overlay)
 
         if output_path:
             result.convert('RGB').save(output_path,
-                                       format='PNG',
-                                       quality=95,
-                                       optimize=True)
-            logging.debug(f"Saved frame to {output_path}")
+                                     format='PNG',
+                                     quality=95,
+                                     optimize=True)
+            logging.info(f"Saved frame to {output_path}")
 
         return result
 

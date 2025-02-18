@@ -1,71 +1,17 @@
-document.getElementById('uploadForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-
-    const projectNameInput = document.getElementById('projectName');
-    const projectName = projectNameInput.value.trim();
-
-    // Client-side validation
-    if (projectName) {
-        if (projectName.length > 7) {
-            projectNameInput.classList.add('is-invalid');
-            return;
-        }
-        if (!/^[\p{L}\d]+$/u.test(projectName)) {
-            projectNameInput.classList.add('is-invalid');
-            return;
-        }
-    }
-
-    const formData = new FormData(this);
-    const previewSection = document.getElementById('previewSection');
-    const progressDiv = document.getElementById('progress');
-    const progressBar = progressDiv.querySelector('.progress-bar');
-    const progressTitle = document.getElementById('progressTitle');
-    const videoProcessingInfo = document.getElementById('videoProcessingInfo');
-    let projectId;
-
-    // Show progress for upload, but not the video processing info
-    progressDiv.classList.remove('d-none');
-    videoProcessingInfo.classList.add('d-none');  // Ensure video processing info is hidden
-    progressTitle.textContent = gettext('Uploading CSV...');
-
-    // Disable form
-    this.querySelectorAll('input, button').forEach(el => el.disabled = true);
-
-    // Upload CSV and get preview
-    fetch('/upload', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(gettext('Upload failed'));
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.error) throw new Error(data.error);
-
-        projectId = data.project_id;
-        updatePreview(projectId);
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        progressTitle.textContent = gettext('Error: ') + error.message;
-        progressBar.classList.add('bg-danger');
-        // Re-enable form
-        this.querySelectorAll('input, button').forEach(el => el.disabled = false);
-    });
-});
-
 // Function to safely get element value with default
 function getElementValueOrDefault(elementId, defaultValue) {
     const element = document.getElementById(elementId);
-    return element ? element.value : defaultValue;
+    if (!element) {
+        console.log(`Element ${elementId} not found, using default value: ${defaultValue}`);
+        return defaultValue;
+    }
+    console.log(`Got value for ${elementId}: ${element.value}`);
+    return element.value;
 }
 
 // Function to update preview with current settings
 function updatePreview(projectId) {
+    console.log('Updating preview for project:', projectId);
     const previewSection = document.getElementById('previewSection');
     const progressDiv = document.getElementById('progress');
     const progressBar = progressDiv.querySelector('.progress-bar');
@@ -91,6 +37,8 @@ function updatePreview(projectId) {
         unit_size: getElementValueOrDefault('unitSize', 100)
     };
 
+    console.log('Preview settings:', settings);
+
     fetch(`/preview/${projectId}`, {
         method: 'POST',
         headers: {
@@ -102,14 +50,9 @@ function updatePreview(projectId) {
     .then(data => {
         if (data.error) throw new Error(data.error);
 
-        // Show preview
         progressDiv.classList.add('d-none');
         previewSection.classList.remove('d-none');
-        // Add timestamp to prevent browser caching
         document.getElementById('previewImage').src = data.preview_url + '?t=' + new Date().getTime();
-
-        // Re-enable form
-        document.querySelectorAll('input, button').forEach(el => el.disabled = false);
 
         // Store project ID for the start processing button
         document.getElementById('startProcessButton').dataset.projectId = projectId;
@@ -118,10 +61,108 @@ function updatePreview(projectId) {
         console.error('Error:', error);
         progressTitle.textContent = gettext('Error: ') + error.message;
         progressBar.classList.add('bg-danger');
-        // Re-enable form
-        document.querySelectorAll('input, button').forEach(el => el.disabled = false);
     });
 }
+
+// Add event listeners for text display settings
+const textSettings = ['verticalPosition', 'fontSize', 'borderRadius', 'boxWidth', 'boxHeight', 'spacing'];
+const speedIndicatorSettings = ['indicatorScale', 'indicatorX', 'indicatorY', 'speedSize', 'speedY', 'unitSize', 'unitY'];
+
+// Combine all settings
+const allSettings = [...textSettings, ...speedIndicatorSettings];
+
+// Add event listener for resolution change
+document.querySelectorAll('input[name="resolution"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        console.log('Resolution changed to:', this.value);
+        const projectId = document.getElementById('startProcessButton').dataset.projectId;
+        if (projectId) {
+            updatePreview(projectId);
+        }
+    });
+});
+
+// Add event listeners for all settings
+allSettings.forEach(setting => {
+    const input = document.getElementById(setting);
+    const valueDisplay = document.getElementById(setting + 'Value');
+    if (!input || !valueDisplay) {
+        console.log(`Skipping setup for ${setting} - elements not found`);
+        return;
+    }
+
+    input.addEventListener('input', function() {
+        console.log(`${setting} changed to:`, this.value);
+
+        // Update value display
+        const unit = this.id === 'speedSize' || this.id === 'unitSize' || this.id.includes('indicator') ? '%' : 'px';
+        valueDisplay.textContent = this.value + unit;
+
+        // Get projectId and update preview
+        const projectId = document.getElementById('startProcessButton').dataset.projectId;
+        if (projectId) {
+            clearTimeout(this.timeout);
+            this.timeout = setTimeout(() => {
+                updatePreview(projectId);
+            }, 300);
+        }
+    });
+});
+
+// Handle file upload form submission
+document.getElementById('uploadForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    console.log('Upload form submitted');
+
+    const projectNameInput = document.getElementById('projectName');
+    const projectName = projectNameInput.value.trim();
+
+    if (projectName) {
+        if (projectName.length > 7) {
+            projectNameInput.classList.add('is-invalid');
+            return;
+        }
+        if (!/^[\p{L}\d]+$/u.test(projectName)) {
+            projectNameInput.classList.add('is-invalid');
+            return;
+        }
+    }
+
+    const formData = new FormData(this);
+    const previewSection = document.getElementById('previewSection');
+    const progressDiv = document.getElementById('progress');
+    const progressBar = progressDiv.querySelector('.progress-bar');
+    const progressTitle = document.getElementById('progressTitle');
+    const videoProcessingInfo = document.getElementById('videoProcessingInfo');
+
+    // Show progress for upload
+    progressDiv.classList.remove('d-none');
+    videoProcessingInfo.classList.add('d-none');
+    progressTitle.textContent = gettext('Uploading CSV...');
+
+    // Disable form
+    this.querySelectorAll('input, button').forEach(el => el.disabled = true);
+
+    fetch('/upload', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) throw new Error(gettext('Upload failed'));
+        return response.json();
+    })
+    .then(data => {
+        if (data.error) throw new Error(data.error);
+        console.log('Upload successful, project ID:', data.project_id);
+        updatePreview(data.project_id);
+    })
+    .catch(error => {
+        console.error('Upload error:', error);
+        progressTitle.textContent = gettext('Error: ') + error.message;
+        progressBar.classList.add('bg-danger');
+        this.querySelectorAll('input, button').forEach(el => el.disabled = false);
+    });
+});
 
 // Add real-time validation for project name input
 document.getElementById('projectName').addEventListener('input', function() {
@@ -138,47 +179,6 @@ document.getElementById('projectName').addEventListener('input', function() {
     } else {
         this.classList.remove('is-invalid');
     }
-});
-
-// Add event listeners for text display settings
-const textSettings = ['verticalPosition', 'fontSize', 'borderRadius', 'boxWidth', 'boxHeight', 'spacing'];
-const speedIndicatorSettings = ['indicatorScale', 'indicatorX', 'indicatorY', 'speedSize', 'speedY', 'unitSize', 'unitY'];
-
-// Combine all settings
-const allSettings = [...textSettings, ...speedIndicatorSettings];
-
-// Add event listener for resolution change
-document.querySelectorAll('input[name="resolution"]').forEach(radio => {
-    radio.addEventListener('change', function() {
-        const projectId = document.getElementById('startProcessButton').dataset.projectId;
-        if (projectId) {
-            updatePreview(projectId);
-        }
-    });
-});
-
-// Add event listeners for all settings
-allSettings.forEach(setting => {
-    const input = document.getElementById(setting);
-    const valueDisplay = document.getElementById(setting + 'Value');
-    if (!input || !valueDisplay) return; // Skip if elements don't exist
-
-    input.addEventListener('input', function() {
-        // Update value display
-        valueDisplay.textContent = this.value + (
-            this.id === 'speedSize' || this.id === 'unitSize' || this.id.includes('indicator') ? '%' : 'px'
-        );
-
-        // Get projectId and update preview
-        const projectId = document.getElementById('startProcessButton').dataset.projectId;
-        if (projectId) {
-            // Debounce the preview update
-            clearTimeout(this.timeout);
-            this.timeout = setTimeout(() => {
-                updatePreview(projectId);
-            }, 300);
-        }
-    });
 });
 
 // Handle start processing button click
