@@ -1,6 +1,5 @@
 import threading
 import logging
-import shutil
 import time
 from extensions import db
 from utils.csv_processor import process_csv_file
@@ -133,7 +132,7 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     with app.app_context():
                         project = Project.query.get(project_id)
                         if project:
-                            if project.status != 'cancelled':  # Не перезаписываем статус, если проект был отменён
+                            if project.status != 'cancelled':  # Don't overwrite status if project was cancelled
                                 project.status = 'error'
                                 project.error_message = str(e)
                             project.processing_completed_at = datetime.now()
@@ -141,7 +140,7 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                 except Exception as db_error:
                     logging.error(f"Error updating project status: {str(db_error)}")
             finally:
-                # Очищаем флаги и потоки после завершения
+                # Clean up flags and threads after completion
                 if project_id in processing_threads:
                     del processing_threads[project_id]
                 if project_id in stop_events:
@@ -156,11 +155,8 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
 
     process_thread.start()
 
-def cleanup_project_files(project):
-    """Clean up project files safely"""
-    max_retries = 3
-    retry_delay = 2  # seconds
-
+def stop_project_processing(project):
+    """Stop project processing without cleaning up files"""
     try:
         # Set stop event if it exists
         if project.id in stop_events:
@@ -171,48 +167,12 @@ def cleanup_project_files(project):
         if project.id in processing_threads:
             logging.info(f"Waiting for processing thread to complete for project {project.id}")
             thread = processing_threads[project.id]
-            # Даём потоку время на корректное завершение
-            thread.join(timeout=15)  # Увеличиваем timeout до 15 секунд
+            thread.join(timeout=5)  # Short timeout, as we don't need to wait for all operations to finish
 
-            # Если поток всё ещё работает, пробуем более агрессивно
             if thread.is_alive():
                 logging.warning(f"Thread for project {project.id} is still alive after timeout")
-                # Дополнительное ожидание
-                time.sleep(5)
 
-        # Wait additional time to ensure all file operations are complete
-        time.sleep(5)  # Увеличиваем время ожидания
-
-        frames_dir = f'frames/project_{project.folder_number}'
-        if os.path.exists(frames_dir):
-            for attempt in range(max_retries):
-                try:
-                    logging.info(f"Attempting to clean up frames directory (attempt {attempt + 1})")
-
-                    # Force close any open file handles in the directory
-                    os.system(f"lsof +D {frames_dir} | grep -v COMMAND | awk '{{print $2}}' | xargs -r kill -9")
-
-                    # Синхронизируем все буферы файловой системы
-                    os.sync()
-
-                    # Подождём перед попыткой удаления
-                    time.sleep(retry_delay * (attempt + 1))  # Увеличиваем задержку с каждой попыткой
-
-                    # Попытка удаления директории
-                    shutil.rmtree(frames_dir, ignore_errors=True)
-
-                    # Проверяем, действительно ли директория удалена
-                    if not os.path.exists(frames_dir):
-                        logging.info(f"Successfully cleaned up frames directory: {frames_dir} on attempt {attempt + 1}")
-                        break
-                    else:
-                        logging.warning(f"Directory still exists after cleanup attempt {attempt + 1}")
-
-                except Exception as e:
-                    logging.error(f"Error cleaning up frames directory on attempt {attempt + 1}: {e}")
-                    if attempt == max_retries - 1:
-                        logging.error(f"Failed to clean up frames directory after {max_retries} attempts")
-
+        return True
     except Exception as e:
-        logging.error(f"Error in cleanup_project_files: {e}")
-        raise
+        logging.error(f"Error in stop_project_processing: {e}")
+        return False
