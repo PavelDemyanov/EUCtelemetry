@@ -227,7 +227,8 @@ def create_frame(values,
                 value_bbox = draw.textbbox((0, 0), value, font=bold_font)
                 unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
 
-                text_width = (label_bbox[2] - label_bbox[0]) + (value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])
+                text_width = (label_bbox[2] - label_bbox[0]) + (value_bbox[2] - value_bbox[0]) + (
+                            unit_bbox[2] - unit_bbox[0])
                 text_height = max(label_bbox[3] - label_bbox[1],
                                   value_bbox[3] - value_bbox[1],
                                   unit_bbox[3] - unit_bbox[1])
@@ -246,7 +247,8 @@ def create_frame(values,
             box_vertical_center = y_position + (box_height // 2)
 
             x_position = start_x
-            for i, ((label, value, unit), element_width, text_width) in enumerate(zip(params, element_widths, text_widths)):
+            for i, ((label, value, unit), element_width, text_width) in enumerate(
+                    zip(params, element_widths, text_widths)):
                 # Определяем цвет плашки и текста в зависимости от значения PWM и Battery
                 box_color = (0, 0, 0, 255)  # Стандартный черный цвет
                 text_color = (255, 255, 255, 255)  # Стандартный белый цвет
@@ -305,21 +307,32 @@ def create_frame(values,
                 box_center = y_position + (scaled_box_height // 2)
                 text_y = box_center - (cap_height // 2)
 
-                # Рисуем тексты
+                # Вычисляем все размеры заранее
+                label_text = f"{label}: "
+                value_text = value
+                unit_text = f" {unit}"
+
+                label_bbox = draw.textbbox((0, 0), label_text, font=scaled_regular_font)
+                value_bbox = draw.textbbox((0, 0), value_text, font=scaled_bold_font)
+                unit_bbox = draw.textbbox((0, 0), unit_text, font=scaled_regular_font)
+
+                label_width = label_bbox[2] - label_bbox[0]
+                value_width = value_bbox[2] - value_bbox[0]
+
+
+                # Рисуем элементы
                 draw.text((text_x, text_y),
-                         f"{label}: ",
+                         label_text,
                          fill=text_color,
                          font=scaled_regular_font)
 
-                value_bbox = draw.textbbox((0, 0), value, font=scaled_bold_font)
-                value_width = value_bbox[2] - value_bbox[0]
                 draw.text((text_x + label_width, text_y),
-                         value,
+                         value_text,
                          fill=text_color,
                          font=scaled_bold_font)
 
                 draw.text((text_x + label_width + value_width, text_y),
-                         f" {unit}",
+                         unit_text,
                          fill=text_color,
                          font=scaled_regular_font)
 
