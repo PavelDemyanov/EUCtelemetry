@@ -743,6 +743,30 @@ def generate_project_frames(project_id):
         logging.error(f"Error starting processing: {e}")
         return jsonify({'error': str(e)}), 500
 
+# After the generate_project_frames route, add the cancel project route
+@app.route('/cancel_project/<int:project_id>', methods=['POST'])
+@login_required
+def cancel_project(project_id):
+    try:
+        project = Project.query.get_or_404(project_id)
+        if project.user_id != current_user.id:
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        # Only allow cancellation of processing projects
+        if project.status != 'processing':
+            return jsonify({'error': 'Project is not in processing state'}), 400
+
+        # Update project status to cancelled
+        project.status = 'cancelled'
+        project.processing_completed_at = datetime.now()
+        db.session.commit()
+
+        # Cleanup will be handled by the background processor
+        return jsonify({'success': True, 'message': 'Project cancelled successfully'})
+    except Exception as e:
+        logging.error(f"Error cancelling project: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/project_status/<int:project_id>')
 @login_required
 def project_status(project_id):

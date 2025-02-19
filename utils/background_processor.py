@@ -13,6 +13,7 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
     """Process project in background thread"""
     # Initialize text_settings at the module level
     project_text_settings = text_settings if text_settings is not None else {}
+    process_thread = None
 
     def _process():
         from app import app  # Import app here to avoid circular import
@@ -47,7 +48,10 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                 # Create and clean project directory using unique folder number
                 frames_dir = f'frames/project_{project.folder_number}'
                 if os.path.exists(frames_dir):
-                    shutil.rmtree(frames_dir)
+                    try:
+                        shutil.rmtree(frames_dir)
+                    except Exception as e:
+                        logging.error(f"Error cleaning frames directory: {e}")
                 os.makedirs(frames_dir, exist_ok=True)
 
                 # Process CSV file using existing project csv_type and interpolation flag
@@ -59,7 +63,7 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     try:
                         with app.app_context():
                             project = Project.query.get(project_id)
-                            if project:
+                            if project and project.status != 'cancelled':
                                 if stage == 'frames':
                                     # Frame generation progress (0-50%)
                                     progress = (current_frame / total_frames) * 50
@@ -87,6 +91,13 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     interpolate_values,
                     locale
                 )
+
+                # Check if project was cancelled
+                project = Project.query.get(project_id)
+                if project.status == 'cancelled':
+                    logging.info(f"Project {project_id} was cancelled, cleaning up...")
+                    cleanup_project_files(project)
+                    return
 
                 # Convert numpy values to Python native types
                 project.frame_count = int(frame_count)
@@ -123,6 +134,19 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     logging.error(f"Error updating project status: {str(db_error)}")
 
     # Start background thread
-    thread = threading.Thread(target=_process)
-    thread.daemon = True
-    thread.start()
+    process_thread = threading.Thread(target=_process)
+    process_thread.daemon = True
+    process_thread.start()
+
+def cleanup_project_files(project):
+    """Clean up project files safely"""
+    try:
+        frames_dir = f'frames/project_{project.folder_number}'
+        if os.path.exists(frames_dir):
+            try:
+                shutil.rmtree(frames_dir)
+                logging.info(f"Successfully cleaned up frames directory: {frames_dir}")
+            except Exception as e:
+                logging.error(f"Error cleaning up frames directory: {e}")
+    except Exception as e:
+        logging.error(f"Error in cleanup_project_files: {e}")
