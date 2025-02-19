@@ -11,6 +11,9 @@ from datetime import datetime
 
 def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', text_settings=None, interpolate_values=True, locale='en'):
     """Process project in background thread"""
+    # Initialize text_settings at the module level
+    project_text_settings = text_settings if text_settings is not None else {}
+
     def _process():
         from app import app  # Import app here to avoid circular import
 
@@ -22,15 +25,11 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     logging.error(f"Project {project_id} not found")
                     return
 
-                # Initialize text_settings at the start if None
-                if text_settings is None:
-                    text_settings = {}
-
                 # Log hardware information and settings at the start of processing
                 hardware_info = get_hardware_info()
                 logging.info(f"Starting project processing with hardware configuration: {hardware_info}")
                 logging.info(f"Processing settings - Resolution: {resolution}, FPS: {fps}, Codec: {codec}, Interpolation: {'enabled' if interpolate_values else 'disabled'}")
-                logging.info(f"Text settings for processing: {text_settings}")
+                logging.info(f"Text settings for processing: {project_text_settings}")
 
                 project.status = 'processing'
                 project.fps = float(fps)  # Convert to float explicitly
@@ -58,8 +57,7 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                 def progress_callback(current_frame, total_frames, stage='frames'):
                     """Update progress in database"""
                     try:
-                        with app.app_context():  # Ensure we have application context
-                            # Reload project to avoid stale data
+                        with app.app_context():
                             project = Project.query.get(project_id)
                             if project:
                                 if stage == 'frames':
@@ -76,7 +74,7 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                         logging.error(f"Error updating progress: {e}")
 
                 # Log visibility settings before frame generation
-                logging.info(f"Visibility settings before frame generation: {text_settings}")
+                logging.info(f"Visibility settings before frame generation: {project_text_settings}")
 
                 # Generate frames with progress tracking, interpolation setting and locale
                 frame_count, duration = generate_frames(
@@ -84,7 +82,7 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     project.folder_number,
                     resolution,
                     fps,
-                    text_settings,  # Pass the complete text_settings dictionary
+                    project_text_settings,  # Pass the complete text_settings dictionary
                     progress_callback,
                     interpolate_values,
                     locale
