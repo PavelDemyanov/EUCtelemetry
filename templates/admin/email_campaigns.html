@@ -3,6 +3,12 @@
 <div class="container mt-4">
     <h2>{{ _('Email Campaigns') }}</h2>
 
+    <!-- Success Alert -->
+    <div id="successAlert" class="alert alert-success alert-dismissible fade d-none" role="alert">
+        {{ _('Campaign sent successfully!') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
     <!-- Campaign Form -->
     <div class="card mb-4">
         <div class="card-body">
@@ -89,6 +95,7 @@
 {% block scripts %}
 <script src="https://cdn.tiny.cloud/1/5socfhhkluswe0xy9rqk3vwrsjkst89r89p3rsifd1yty40f/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
 <script>
+    let editor;
     tinymce.init({
         selector: '#editor',
         plugins: 'lists link image table code help wordcount',
@@ -96,17 +103,56 @@
         height: 400,
         menubar: true,
         block_formats: 'Paragraph=p; Header 1=h1; Header 2=h2; Header 3=h3',
-        setup: function(editor) {
+        setup: function(ed) {
+            editor = ed;
             editor.on('change', function() {
-                editor.save(); // Save content to textarea
+                editor.save();
             });
         }
     });
 
     // Handle form submission
     document.getElementById('campaignForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
         // Make sure TinyMCE updates the textarea before form submission
         tinymce.triggerSave();
+
+        // Submit form using fetch
+        fetch(window.location.href, {
+            method: 'POST',
+            body: new FormData(this),
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Show success alert
+                const alert = document.getElementById('successAlert');
+                alert.classList.remove('d-none');
+                alert.classList.add('show');
+
+                // Reset form
+                document.getElementById('campaignForm').reset();
+                editor.setContent('');
+
+                // Hide alert after 5 seconds (increased from 3)
+                setTimeout(() => {
+                    alert.classList.remove('show');
+                    alert.classList.add('d-none');
+                    // After hiding alert, refresh the page
+                    window.location.reload();
+                }, 5000);
+            } else {
+                alert(data.error || 'An error occurred while sending the campaign');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while sending the campaign');
+        });
     });
 
     // View campaign content

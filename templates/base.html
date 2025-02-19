@@ -57,7 +57,7 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('home') }}">{{ _('Home') }}</a>
+                        <a class="nav-link" href="{{ url_for('index') }}">{{ _('Home') }}</a>
                     </li>
                     {% if current_user.is_authenticated %}
                     <li class="nav-item">
@@ -157,7 +157,7 @@
                         <div class="col-md-4 mb-3">
                             <h5>{{ _('Quick Links') }}</h5>
                             <ul class="list-unstyled">
-                                <li><a href="{{ url_for('home') }}" class="text-decoration-none text-light">{{ _('Home') }}</a></li>
+                                <li><a href="{{ url_for('index') }}" class="text-decoration-none text-light">{{ _('Home') }}</a></li>
                                 <li><a href="{{ url_for('about') }}" class="text-decoration-none text-light">{{ _('About') }}</a></li>
                                 {% if current_user.is_authenticated %}
                                 <li><a href="{{ url_for('list_projects') }}" class="text-decoration-none text-light">{{ _('My Projects') }}</a></li>
