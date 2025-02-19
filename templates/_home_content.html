@@ -23,6 +23,10 @@
                 <li>{{ _('Additional steps') }}</li>
                 <li>{{ _('Additional steps') }}</li>
             </ol>
+            <video class="img-fluid rounded shadow mb-4" autoplay loop muted playsinline>
+                <source src="{{ url_for('static', filename='mp4/wheelman01.mp4') }}" type="video/mp4">
+                {{ _('Your browser does not support the video tag.') }}
+            </video>
         </div>
     </div>
 </section>
