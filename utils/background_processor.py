@@ -41,6 +41,9 @@ def stop_project_processing(project_id):
             project.status = 'stopping'
             db.session.commit()
 
+            # Wait a bit for the processing to notice the stopping status
+            time.sleep(2)
+
             # Clean up project directories
             frames_dir = f'frames/project_{project.folder_number}'
             try:
@@ -107,6 +110,12 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                 remove_directory_with_retry(frames_dir)
                 os.makedirs(frames_dir, exist_ok=True)
 
+                def check_if_stopping():
+                    """Check if the project is being stopped"""
+                    with app.app_context():
+                        project = Project.query.get(project_id)
+                        return project and project.status == 'stopping'
+
                 # Process CSV file using existing project csv_type and interpolation flag
                 csv_file = os.path.join('uploads', project.csv_file)
                 _, _ = process_csv_file(csv_file, project.folder_number, project.csv_type, interpolate_values)
@@ -114,6 +123,11 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                 def progress_callback(current_frame, total_frames, stage='frames'):
                     """Update progress in database"""
                     try:
+                        # Check if project should stop
+                        if check_if_stopping():
+                            logging.info(f"Project {project_id} stop requested during {stage}")
+                            return False  # Signal to stop processing
+
                         with app.app_context():
                             project = Project.query.get(project_id)
                             if project:
@@ -127,8 +141,11 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                                 project.progress = progress
                                 db.session.commit()
                                 logging.info(f"Progress updated in DB: {progress:.1f}% for stage: {stage}")
+                                return True  # Continue processing
                     except Exception as e:
                         logging.error(f"Error updating progress: {e}")
+                        return False  # Signal to stop processing
+                    return True
 
                 # Log visibility settings before frame generation
                 logging.info(f"Visibility settings before frame generation: {project_text_settings}")
@@ -145,6 +162,11 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     locale
                 )
 
+                # Check if project was stopped during frame generation
+                if check_if_stopping():
+                    logging.info(f"Project {project_id} was stopped during frame generation")
+                    return
+
                 # Convert numpy values to Python native types
                 project.frame_count = int(frame_count)
                 project.video_duration = float(duration)
@@ -158,6 +180,11 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     resolution,
                     progress_callback
                 )
+
+                # Check if project was stopped during video creation
+                if check_if_stopping():
+                    logging.info(f"Project {project_id} was stopped during video creation")
+                    return
 
                 # Update project with video info and completion time
                 project.video_file = os.path.basename(video_path)
