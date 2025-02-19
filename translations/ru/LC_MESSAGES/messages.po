@@ -19,6 +19,22 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.17.0\n"
 
+# WheelLog Instructions
+msgid "For WheelLog:"
+msgstr "Для WheelLog:"
+
+msgid "Open the WheelLog app"
+msgstr "Откройте приложение WheelLog"
+
+msgid "Scroll right until your trip list appears"
+msgstr "Листайте экраны вправо до появления списка ваших поездок"
+
+msgid "Tap on the trip dropdown icon"
+msgstr "Нажмите на иконку выпадающего списка поездки"
+
+msgid "Tap \"Share\" to save the trip as a CSV"
+msgstr "Нажмите \"поделиться\" что бы сохранить CSV поездки"
+
 # Project status translations
 msgid "pending"
 msgstr "в ожидании"
