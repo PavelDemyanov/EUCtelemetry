@@ -2,6 +2,7 @@ import pandas as pd
 from datetime import datetime
 import logging
 import os
+import numpy as np
 
 def parse_timestamp_darnkessbot(date_str):
     try:
@@ -73,6 +74,9 @@ def process_mileage(series, csv_type):
         # Convert to numeric, replacing any non-numeric values with NaN
         series = pd.to_numeric(series, errors='coerce')
 
+        # Replace infinite values with NaN
+        series = series.replace([float('inf'), float('-inf')], np.nan)
+
         # Fill NaN values with 0
         series = series.fillna(0)
 
@@ -142,8 +146,19 @@ def interpolate_numeric_data(data, columns_to_interpolate):
             if col in df.columns:
                 # Convert to float for interpolation
                 df[col] = pd.to_numeric(df[col], errors='coerce')
+
+                # Replace infinite values with NaN
+                df[col] = df[col].replace([float('inf'), float('-inf')], np.nan)
+
+                # Fill NaN with 0 before interpolation
+                df[col] = df[col].fillna(0)
+
                 # Apply two-way interpolation
                 df[col] = df[col].interpolate(method='linear', limit_direction='both')
+
+                # Ensure all values are finite after interpolation
+                df[col] = df[col].replace([float('inf'), float('-inf')], 0)
+
                 # Round and convert back to integer
                 df[col] = df[col].round().astype(int)
 
