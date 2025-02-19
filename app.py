@@ -28,6 +28,21 @@ from forms import (LoginForm, RegistrationForm, ProfileForm,
                   ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm, DeleteAccountForm)
 from models import User, Project
 
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+# Load environment variables from .env file immediately
+logger.info("Loading environment variables from .env file...")
+load_dotenv()
+
+# Debug log environment variables (without sensitive data)
+logger.debug("Environment variables loaded:")
+logger.debug(f"SMTP_SERVER: {os.environ.get('SMTP_SERVER')}")
+logger.debug(f"SMTP_PORT: {os.environ.get('SMTP_PORT')}")
+logger.debug(f"SMTP_LOGIN is set: {bool(os.environ.get('SMTP_LOGIN'))}")
+logger.debug(f"SMTP_PASSWORD is set: {bool(os.environ.get('SMTP_PASSWORD'))}")
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', os.urandom(32))
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
@@ -39,6 +54,18 @@ app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 app.config['WTF_CSRF_ENABLED'] = True
 app.config['BABEL_DEFAULT_LOCALE'] = 'en'
+
+# Add Mail configuration
+logger.info("Configuring SMTP settings...")
+app.config['MAIL_SERVER'] = os.environ.get('SMTP_SERVER')
+app.config['MAIL_PORT'] = int(os.environ.get('SMTP_PORT', 465))
+app.config['MAIL_USERNAME'] = os.environ.get('SMTP_LOGIN')
+app.config['MAIL_PASSWORD'] = os.environ.get('SMTP_PASSWORD')
+app.config['MAIL_USE_TLS'] = False
+app.config['MAIL_USE_SSL'] = True
+
+# Initialize used_folders as an empty set
+used_folders = set()
 
 # Initialize Babel
 babel = Babel(app)
@@ -1059,7 +1086,7 @@ def cleanup_storage():
                 used_files.add(project.video_file)  # videos directory
             used_files.add(f'{project.id}_preview.png')  # previews directory
             # frames directory is handled by folder name
-            used_folders = {f'project_{project.folder_number}'}  # frames directory
+            used_folders.add(f'project_{project.folder_number}')  # frames directory
 
         deleted_files = []
         deleted_count = 0
