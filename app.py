@@ -1204,10 +1204,10 @@ def unsubscribe(token):
         return redirect(url_for('profile'))
     return redirect(url_for('index'))
 
-@app.route('/admin/email_campaign', methods=['GET', 'POST'])
+@app.route('/admin/email-campaigns', methods=['GET', 'POST'])
 @login_required
 @admin_required
-def email_campaign():
+def email_campaigns():
     form = EmailCampaignForm()
     if form.validate_on_submit():
         try:
@@ -1215,7 +1215,7 @@ def email_campaign():
             subscribed_users = User.query.filter_by(subscribed_to_emails=True).all()
             if not subscribed_users:
                 flash(_('No subscribed users found.'))
-                return redirect(url_for('email_campaign'))
+                return redirect(url_for('email_campaigns'))
 
             # Create campaign record
             campaign = EmailCampaign(
