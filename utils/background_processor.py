@@ -15,7 +15,16 @@ def remove_directory_with_retry(directory, max_retries=3, delay=1):
     for attempt in range(max_retries):
         try:
             if os.path.exists(directory):
+                # Add logging for debugging
+                logging.info(f"Attempting to remove directory {directory} (attempt {attempt + 1})")
+
+                # List directory contents before removal
+                if os.path.exists(directory):
+                    contents = os.listdir(directory)
+                    logging.info(f"Directory contents before removal: {contents}")
+
                 shutil.rmtree(directory)
+                logging.info(f"Successfully removed directory {directory}")
             return True
         except Exception as e:
             if attempt == max_retries - 1:
@@ -37,17 +46,22 @@ def stop_project_processing(project_id):
                 logging.error(f"Project {project_id} not found")
                 return False, "Project not found"
 
+            logging.info(f"Stopping project {project_id}")
+
             # Update project status to indicate stopping
             project.status = 'stopping'
             db.session.commit()
 
-            # Wait a bit for the processing to notice the stopping status
-            time.sleep(2)
+            # Wait for processing to notice the stopping status
+            time.sleep(3)
 
             # Clean up project directories
             frames_dir = f'frames/project_{project.folder_number}'
             try:
-                remove_directory_with_retry(frames_dir)
+                if remove_directory_with_retry(frames_dir):
+                    logging.info(f"Successfully cleaned up frames directory for project {project_id}")
+                else:
+                    logging.error(f"Failed to clean up frames directory for project {project_id}")
             except Exception as e:
                 logging.error(f"Error cleaning up project directories: {e}")
                 project.status = 'error'
@@ -58,7 +72,10 @@ def stop_project_processing(project_id):
             # Update project status
             project.status = 'stopped'
             project.progress = 0
+            project.processing_completed_at = datetime.now()
             db.session.commit()
+
+            logging.info(f"Project {project_id} stopped successfully")
             return True, "Project stopped successfully"
 
         except Exception as e:
@@ -93,22 +110,27 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                 logging.info(f"Text settings for processing: {project_text_settings}")
 
                 project.status = 'processing'
-                project.fps = float(fps)  # Convert to float explicitly
+                project.fps = float(fps)
                 project.resolution = resolution
                 project.codec = codec
                 project.processing_started_at = datetime.now()
-                project.progress = 0  # Initialize progress
+                project.progress = 0
                 db.session.commit()
 
                 # Get unique folder number if not already assigned
                 if project.folder_number is None:
                     project.folder_number = Project.get_next_folder_number()
-                db.session.commit()
+                    db.session.commit()
 
                 # Create and clean project directory using unique folder number
                 frames_dir = f'frames/project_{project.folder_number}'
-                remove_directory_with_retry(frames_dir)
-                os.makedirs(frames_dir, exist_ok=True)
+                try:
+                    remove_directory_with_retry(frames_dir)
+                    os.makedirs(frames_dir, exist_ok=True)
+                    logging.info(f"Created frames directory: {frames_dir}")
+                except Exception as e:
+                    logging.error(f"Error creating frames directory: {e}")
+                    raise
 
                 def check_if_stopping():
                     """Check if the project is being stopped"""
@@ -126,7 +148,7 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                         # Check if project should stop
                         if check_if_stopping():
                             logging.info(f"Project {project_id} stop requested during {stage}")
-                            return False  # Signal to stop processing
+                            return False
 
                         with app.app_context():
                             project = Project.query.get(project_id)
@@ -141,22 +163,19 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                                 project.progress = progress
                                 db.session.commit()
                                 logging.info(f"Progress updated in DB: {progress:.1f}% for stage: {stage}")
-                                return True  # Continue processing
+                                return True
                     except Exception as e:
                         logging.error(f"Error updating progress: {e}")
-                        return False  # Signal to stop processing
+                        return False
                     return True
 
-                # Log visibility settings before frame generation
-                logging.info(f"Visibility settings before frame generation: {project_text_settings}")
-
-                # Generate frames with progress tracking, interpolation setting and locale
+                # Generate frames with progress tracking
                 frame_count, duration = generate_frames(
                     csv_file,
                     project.folder_number,
                     resolution,
                     fps,
-                    project_text_settings,  # Pass the complete text_settings dictionary
+                    project_text_settings,
                     progress_callback,
                     interpolate_values,
                     locale
@@ -189,9 +208,10 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                 # Update project with video info and completion time
                 project.video_file = os.path.basename(video_path)
                 project.status = 'completed'
-                project.progress = 100  # Ensure progress is 100% when completed
+                project.progress = 100
                 project.processing_completed_at = datetime.now()
                 db.session.commit()
+                logging.info(f"Project {project_id} completed successfully")
 
             except Exception as e:
                 logging.error(f"Error processing project {project_id}: {str(e)}")
