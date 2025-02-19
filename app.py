@@ -743,7 +743,7 @@ def generate_project_frames(project_id):
         logging.error(f"Error starting processing: {e}")
         return jsonify({'error': str(e)}), 500
 
-# After the generate_project_frames route, add the cancel project route
+# Update cancel_project route
 @app.route('/cancel_project/<int:project_id>', methods=['POST'])
 @login_required
 def cancel_project(project_id):
@@ -767,7 +767,6 @@ def cancel_project(project_id):
         time.sleep(2)
 
         # Clean up project files
-        from utils.background_processor import cleanup_project_files
         cleanup_project_files(project)
 
         return jsonify({'success': True, 'message': 'Project cancelled successfully'})
@@ -797,7 +796,7 @@ def list_projects():
     projects = Project.query.filter_by(user_id=current_user.id)\
         .order_by(Project.created_at.desc())\
         .paginate(page=page, per_page=10, error_out=False)
-    return render_template('projects.html', projects=projects)
+    returnrender_template('projects.html', projects=projects)
 
 @app.route('/download/<int:project_id>/<type>')
 @login_required

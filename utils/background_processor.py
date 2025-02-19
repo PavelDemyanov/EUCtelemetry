@@ -10,14 +10,17 @@ from utils.hardware_detection import get_hardware_info
 import os
 from datetime import datetime
 
-# Global dictionary to track processing threads
+# Global dictionary to track processing threads and stop events
 processing_threads = {}
-processing_stop_flags = {}
+stop_events = {}
 
 def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', text_settings=None, interpolate_values=True, locale='en'):
     """Process project in background thread"""
     # Initialize text_settings at the module level
     project_text_settings = text_settings if text_settings is not None else {}
+
+    # Create stop event for this project
+    stop_events[project_id] = threading.Event()
 
     def _process():
         from app import app  # Import app here to avoid circular import
@@ -58,8 +61,11 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     try:
                         with app.app_context():
                             project = Project.query.get(project_id)
-                            # Check if project was cancelled
-                            if project and project.status != 'cancelled':
+                            # Check if project was cancelled or stop event is set
+                            if stop_events[project_id].is_set() or (project and project.status == 'cancelled'):
+                                raise Exception("Project cancelled")
+
+                            if project:
                                 if stage == 'frames':
                                     # Frame generation progress (0-50%)
                                     progress = (current_frame / total_frames) * 50
@@ -70,9 +76,6 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                                 project.progress = progress
                                 db.session.commit()
                                 logging.info(f"Progress updated in DB: {progress:.1f}% for stage: {stage}")
-                            else:
-                                # Если проект отменён, поднимаем исключение для остановки процесса
-                                raise Exception("Project cancelled")
                     except Exception as e:
                         logging.error(f"Error updating progress: {e}")
                         raise
@@ -81,9 +84,8 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                 csv_file = os.path.join('uploads', project.csv_file)
                 _, _ = process_csv_file(csv_file, project.folder_number)
 
-                # Check if project was cancelled before frame generation
-                project = Project.query.get(project_id)
-                if project.status == 'cancelled':
+                # Check if project was cancelled
+                if stop_events[project_id].is_set() or Project.query.get(project_id).status == 'cancelled':
                     logging.info(f"Project {project_id} was cancelled before frame generation")
                     return
 
@@ -100,8 +102,7 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                 )
 
                 # Check if project was cancelled after frame generation
-                project = Project.query.get(project_id)
-                if project.status == 'cancelled':
+                if stop_events[project_id].is_set() or Project.query.get(project_id).status == 'cancelled':
                     logging.info(f"Project {project_id} was cancelled after frame generation")
                     return
 
@@ -143,8 +144,8 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                 # Очищаем флаги и потоки после завершения
                 if project_id in processing_threads:
                     del processing_threads[project_id]
-                if project_id in processing_stop_flags:
-                    del processing_stop_flags[project_id]
+                if project_id in stop_events:
+                    del stop_events[project_id]
 
     # Create and start the processing thread
     process_thread = threading.Thread(target=_process)
@@ -152,7 +153,6 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
 
     # Store the thread in the global dictionary
     processing_threads[project_id] = process_thread
-    processing_stop_flags[project_id] = False
 
     process_thread.start()
 
@@ -162,16 +162,27 @@ def cleanup_project_files(project):
     retry_delay = 2  # seconds
 
     try:
-        # Ждём, пока процесс обработки точно завершится
+        # Set stop event if it exists
+        if project.id in stop_events:
+            stop_events[project.id].set()
+            logging.info(f"Set stop event for project {project.id}")
+
+        # Wait for processing thread to complete
         if project.id in processing_threads:
             logging.info(f"Waiting for processing thread to complete for project {project.id}")
-            processing_threads[project.id].join(timeout=10)  # Ждём максимум 10 секунд
+            processing_threads[project.id].join(timeout=10)
+
+        # Wait additional time to ensure all file operations are complete
+        time.sleep(3)
 
         frames_dir = f'frames/project_{project.folder_number}'
         if os.path.exists(frames_dir):
             for attempt in range(max_retries):
                 try:
-                    time.sleep(retry_delay)  # Ждём перед каждой попыткой
+                    # Force close any open file handles in the directory
+                    os.system(f"lsof +D {frames_dir} | grep -v COMMAND | awk '{{print $2}}' | xargs -r kill -9")
+
+                    time.sleep(retry_delay)  # Wait before attempting to remove
                     shutil.rmtree(frames_dir, ignore_errors=True)
                     logging.info(f"Successfully cleaned up frames directory: {frames_dir} on attempt {attempt + 1}")
                     break
@@ -179,5 +190,6 @@ def cleanup_project_files(project):
                     logging.error(f"Error cleaning up frames directory on attempt {attempt + 1}: {e}")
                     if attempt == max_retries - 1:
                         logging.error(f"Failed to clean up frames directory after {max_retries} attempts")
+
     except Exception as e:
         logging.error(f"Error in cleanup_project_files: {e}")
