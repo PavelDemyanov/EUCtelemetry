@@ -176,7 +176,7 @@ def create_frame(values,
             indicator_x = int((width - indicator_size) * indicator_x_percent / 100)
             indicator_y = int((height - indicator_size) * indicator_y_percent / 100)
             background.paste(speed_indicator, (indicator_x, indicator_y),
-                          speed_indicator)
+                              speed_indicator)
 
         font_size = int(text_settings.get('font_size', 26) * scale_factor)
         top_padding = int(text_settings.get('top_padding', 14) * scale_factor)
@@ -229,8 +229,8 @@ def create_frame(values,
 
                 text_width = (label_bbox[2] - label_bbox[0]) + (value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])
                 text_height = max(label_bbox[3] - label_bbox[1],
-                              value_bbox[3] - value_bbox[1],
-                              unit_bbox[3] - unit_bbox[1])
+                                  value_bbox[3] - value_bbox[1],
+                                  unit_bbox[3] - unit_bbox[1])
 
                 element_width = text_width + (2 * top_padding)
                 element_widths.append(element_width)
@@ -248,7 +248,7 @@ def create_frame(values,
 
             x_position = start_x
             for i, ((label, value, unit), element_width, text_width) in enumerate(zip(params, element_widths, text_widths)):
-                # Определяем цвет плашки и текста в зависимости от значения PWM
+                # Определяем цвет плашки и текста в зависимости от значения PWM и Battery
                 box_color = (0, 0, 0, 255)  # Стандартный черный цвет
                 text_color = (255, 255, 255, 255)  # Стандартный белый цвет
 
@@ -259,6 +259,14 @@ def create_frame(values,
                         text_color = (0, 0, 0, 255)  # Черный текст
                     elif pwm_value > 90:
                         box_color = (255, 0, 0, 255)  # Красный цвет для PWM > 90
+                        text_color = (0, 0, 0, 255)  # Черный текст
+                elif label == loc['battery']:
+                    battery_value = int(value)
+                    if 10 <= battery_value <= 30:
+                        box_color = (255, 255, 0, 255)  # Желтый цвет для Battery 10-30
+                        text_color = (0, 0, 0, 255)  # Черный текст
+                    elif battery_value < 10:
+                        box_color = (255, 0, 0, 255)  # Красный цвет для Battery < 10
                         text_color = (0, 0, 0, 255)  # Черный текст
 
                 box = create_rounded_box(element_width, box_height, border_radius)
@@ -299,9 +307,9 @@ def create_frame(values,
 
         if output_path:
             result.convert('RGB').save(output_path,
-                                    format='PNG',
-                                    quality=95,
-                                    optimize=True)
+                                        format='PNG',
+                                        quality=95,
+                                        optimize=True)
             logging.debug(f"Saved frame to {output_path}")
 
         return result
