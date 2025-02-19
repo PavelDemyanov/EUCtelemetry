@@ -21,7 +21,7 @@ from extensions import db
 from utils.csv_processor import process_csv_file
 from utils.image_generator import generate_frames, create_preview_frame
 from utils.video_creator import create_video
-from utils.background_processor import process_project
+from utils.background_processor import process_project, cleanup_project_files
 from utils.env_setup import setup_env_variables
 from utils.email_sender import send_email
 from forms import (LoginForm, RegistrationForm, ProfileForm, 
@@ -756,12 +756,20 @@ def cancel_project(project_id):
         if project.status != 'processing':
             return jsonify({'error': 'Project is not in processing state'}), 400
 
+        logging.info(f"Cancelling project {project_id}")
+
         # Update project status to cancelled
         project.status = 'cancelled'
         project.processing_completed_at = datetime.now()
         db.session.commit()
 
-        # Cleanup will be handled by the background processor
+        # Give some time for the processing thread to notice the cancellation
+        time.sleep(2)
+
+        # Clean up project files
+        from utils.background_processor import cleanup_project_files
+        cleanup_project_files(project)
+
         return jsonify({'success': True, 'message': 'Project cancelled successfully'})
     except Exception as e:
         logging.error(f"Error cancelling project: {str(e)}")
