@@ -1,6 +1,7 @@
 import threading
 import logging
 import shutil
+import time
 from extensions import db
 from utils.csv_processor import process_csv_file
 from utils.image_generator import generate_frames
@@ -49,9 +50,19 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                 frames_dir = f'frames/project_{project.folder_number}'
                 if os.path.exists(frames_dir):
                     try:
-                        shutil.rmtree(frames_dir)
+                        # Добавляем задержку перед удалением
+                        time.sleep(1)
+                        shutil.rmtree(frames_dir, ignore_errors=True)
+                        logging.info(f"Successfully cleaned frames directory: {frames_dir}")
                     except Exception as e:
                         logging.error(f"Error cleaning frames directory: {e}")
+                        # Если не удалось удалить директорию, пробуем ещё раз
+                        try:
+                            time.sleep(2)
+                            shutil.rmtree(frames_dir, ignore_errors=True)
+                        except Exception as e2:
+                            logging.error(f"Second attempt to clean frames directory failed: {e2}")
+
                 os.makedirs(frames_dir, exist_ok=True)
 
                 # Process CSV file using existing project csv_type and interpolation flag
@@ -140,13 +151,22 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
 
 def cleanup_project_files(project):
     """Clean up project files safely"""
+    max_retries = 3
+    retry_delay = 2  # seconds
+
     try:
         frames_dir = f'frames/project_{project.folder_number}'
         if os.path.exists(frames_dir):
-            try:
-                shutil.rmtree(frames_dir)
-                logging.info(f"Successfully cleaned up frames directory: {frames_dir}")
-            except Exception as e:
-                logging.error(f"Error cleaning up frames directory: {e}")
+            for attempt in range(max_retries):
+                try:
+                    # Добавляем задержку перед каждой попыткой
+                    time.sleep(retry_delay)
+                    shutil.rmtree(frames_dir, ignore_errors=True)
+                    logging.info(f"Successfully cleaned up frames directory: {frames_dir} on attempt {attempt + 1}")
+                    break
+                except Exception as e:
+                    logging.error(f"Error cleaning up frames directory on attempt {attempt + 1}: {e}")
+                    if attempt == max_retries - 1:
+                        logging.error(f"Failed to clean up frames directory after {max_retries} attempts")
     except Exception as e:
         logging.error(f"Error in cleanup_project_files: {e}")
