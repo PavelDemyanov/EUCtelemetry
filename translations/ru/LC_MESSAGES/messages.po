@@ -39,6 +39,10 @@ msgstr "Отображение элементов телеметрии"
 msgid "Speed"
 msgstr "Скорость"
 
+
+msgid "You can use any video editor that supports chroma key removal, such as"
+msgstr "Вы можете использовать любой видеоредактор, поддерживающий удаление хромакея, например"
+
 msgid "Max Speed"
 msgstr "Максимальная скорость"
 
