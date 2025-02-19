@@ -301,12 +301,11 @@ def create_frame(values,
                 # Перерасчитываем позиции текста с учетом нового масштаба
                 text_x = x_position + ((scaled_element_width - text_width * scale_factor) // 2)
 
-                # Центрируем текст по вертикали относительно центра плашки, используя высоту заглавной буквы
-                box_center_y = y_position + (scaled_box_height // 2)
-                text_y = box_center_y - (cap_height // 2)
+                # Центрируем текст по вертикали относительно центра плашки
+                box_center = y_position + (scaled_box_height // 2)
+                text_y = box_center - (cap_height // 2)
 
-                label_bbox = draw.textbbox((0, 0), f"{label}: ", font=scaled_regular_font)
-                label_width = label_bbox[2] - label_bbox[0]
+                # Рисуем тексты
                 draw.text((text_x, text_y),
                          f"{label}: ",
                          fill=text_color,
