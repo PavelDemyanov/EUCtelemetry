@@ -27,9 +27,24 @@
                         {% endfor %}
                     {% endif %}
                 </div>
-                {{ form.submit(class="btn btn-primary") }}
+                <button type="submit" class="btn btn-primary" id="submitBtn">
+                    <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true" id="submitSpinner"></span>
+                    <span id="submitText">{{ _('Send Campaign') }}</span>
+                </button>
             </form>
         </div>
+    </div>
+
+    <!-- Success Alert Template -->
+    <div class="alert alert-success alert-dismissible fade d-none" role="alert" id="successAlert">
+        <span id="successMessage"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <!-- Error Alert Template -->
+    <div class="alert alert-danger alert-dismissible fade d-none" role="alert" id="errorAlert">
+        <span id="errorMessage"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 
     <!-- Campaign History -->
@@ -83,7 +98,6 @@
         </div>
     </div>
 </div>
-
 {% endblock %}
 
 {% block scripts %}
@@ -105,8 +119,64 @@
 
     // Handle form submission
     document.getElementById('campaignForm').addEventListener('submit', function(e) {
-        // Make sure TinyMCE updates the textarea before form submission
+        e.preventDefault();
+
+        // Disable submit button and show spinner
+        const submitBtn = document.getElementById('submitBtn');
+        const submitSpinner = document.getElementById('submitSpinner');
+        const submitText = document.getElementById('submitText');
+
+        submitBtn.disabled = true;
+        submitSpinner.classList.remove('d-none');
+        submitText.textContent = '{{ _("Sending...") }}';
+
+        // Make sure TinyMCE updates the textarea
         tinymce.triggerSave();
+
+        // Send form data
+        fetch(window.location.pathname, {
+            method: 'POST',
+            body: new FormData(this),
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Show success message
+                const successAlert = document.getElementById('successAlert');
+                const successMessage = document.getElementById('successMessage');
+                successMessage.textContent = data.message;
+                successAlert.classList.remove('d-none');
+                successAlert.classList.add('show');
+
+                // Reset form
+                this.reset();
+                tinymce.get('editor').setContent('');
+
+                // Refresh the page after 2 seconds to update campaign history
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            } else {
+                throw new Error(data.error || '{{ _("Failed to send campaign") }}');
+            }
+        })
+        .catch(error => {
+            // Show error message
+            const errorAlert = document.getElementById('errorAlert');
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.textContent = error.message;
+            errorAlert.classList.remove('d-none');
+            errorAlert.classList.add('show');
+        })
+        .finally(() => {
+            // Re-enable submit button and hide spinner
+            submitBtn.disabled = false;
+            submitSpinner.classList.add('d-none');
+            submitText.textContent = '{{ _("Send Campaign") }}';
+        });
     });
 
     // View campaign content

@@ -26,7 +26,7 @@ from utils.env_setup import setup_env_variables
 from utils.email_sender import send_email
 from forms import (LoginForm, RegistrationForm, ProfileForm, 
                   ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm, DeleteAccountForm)
-from models import User, Project, EmailCampaign  # Updated this line to include EmailCampaign
+from models import User, Project, EmailCampaign
 from forms import EmailCampaignForm
 
 
@@ -1202,45 +1202,55 @@ cleanup_thread.start()
 @admin_required
 def email_campaigns():
     form = EmailCampaignForm()
-    if form.validate_on_submit():
-        try:
-            # Get all confirmed users
-            confirmed_users = User.query.filter_by(is_email_confirmed=True).all()
 
-            # Create campaign record
-            campaign = EmailCampaign(
-                subject=form.subject.data,
-                html_content=form.html_content.data,
-                sender_id=current_user.id,
-                recipients_count=len(confirmed_users)
-            )
-            db.session.add(campaign)
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            try:
+                # Get all confirmed users
+                confirmed_users = User.query.filter_by(is_email_confirmed=True).all()
+                if not confirmed_users:
+                    return jsonify({'error': _('No confirmed users found')}), 400
 
-            # Send emails to all confirmed users
-            for user in confirmed_users:
-                if send_email(user.email, campaign.subject, campaign.html_content):
-                    logging.info(f"Email sent to {user.email}")
+                # Create campaign record
+                campaign = EmailCampaign(
+                    subject=form.subject.data,
+                    html_content=form.html_content.data,
+                    sender_id=current_user.id,
+                    recipients_count=len(confirmed_users)
+                )
+                db.session.add(campaign)
+
+                # Send emails to all confirmed users
+                success_count = 0
+                for user in confirmed_users:
+                    if send_email(user.email, campaign.subject, campaign.html_content):
+                        success_count += 1
+
+                if success_count > 0:
+                    db.session.commit()
+                    return jsonify({
+                        'success': True,
+                        'message': _('Campaign sent successfully to %(count)d recipients', count=success_count)
+                    })
                 else:
-                    logging.error(f"Failed to send email to {user.email}")
+                    db.session.rollback()
+                    return jsonify({'error': _('Failed to send emails')}), 500
 
-            db.session.commit()
-            flash(_('Campaign sent successfully'))
-            return redirect(url_for('email_campaigns'))
+            except Exception as e:
+                db.session.rollback()
+                logging.error(f"Error sending campaign: {str(e)}")
+                return jsonify({'error': str(e)}), 500
 
-        except Exception as e:
-            db.session.rollback()
-            logging.error(f"Error sending campaign: {str(e)}")
-            flash(_('Error sending campaign'))
-            return redirect(url_for('email_campaigns'))
+        return jsonify({'error': _('Invalid form data')}), 400
 
-    # Get campaign history
+    # GET request - display the form and campaign history
     campaigns = EmailCampaign.query.order_by(EmailCampaign.created_at.desc()).all()
     return render_template('admin/email_campaigns.html', form=form, campaigns=campaigns)
 
 @app.route('/admin/campaign/<int:campaign_id>')
 @login_required
 @admin_required
-def view_campaign(campaign_id):
+def get_campaign(campaign_id):
     campaign = EmailCampaign.query.get_or_404(campaign_id)
     return jsonify({
         'subject': campaign.subject,
