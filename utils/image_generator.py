@@ -300,13 +300,6 @@ def create_frame(values,
                 H_bbox = draw.textbbox((0, 0), "H", font=scaled_regular_font)
                 cap_height = H_bbox[3] - H_bbox[1]
 
-                # Перерасчитываем позиции текста с учетом нового масштаба
-                text_x = x_position + ((scaled_element_width - text_width * scale_factor) // 2)
-
-                # Центрируем текст по вертикали относительно центра плашки
-                box_center = y_position + (scaled_box_height // 2)
-                text_y = box_center - (cap_height // 2)
-
                 # Вычисляем все размеры заранее
                 label_text = f"{label}: "
                 value_text = value
@@ -319,22 +312,28 @@ def create_frame(values,
                 label_width = label_bbox[2] - label_bbox[0]
                 value_width = value_bbox[2] - value_bbox[0]
 
+                # Центрируем текст по горизонтали
+                text_x = x_position + ((scaled_element_width - text_width * scale_factor) // 2)
+
+                # Центрируем текст по вертикали относительно центра плашки
+                box_center = y_position + (scaled_box_height // 2)
+                text_y = box_center - (cap_height // 2)
 
                 # Рисуем элементы
                 draw.text((text_x, text_y),
-                         label_text,
-                         fill=text_color,
-                         font=scaled_regular_font)
+                          label_text,
+                          fill=text_color,
+                          font=scaled_regular_font)
 
                 draw.text((text_x + label_width, text_y),
-                         value_text,
-                         fill=text_color,
-                         font=scaled_bold_font)
+                          value_text,
+                          fill=text_color,
+                          font=scaled_bold_font)
 
                 draw.text((text_x + label_width + value_width, text_y),
-                         unit_text,
-                         fill=text_color,
-                         font=scaled_regular_font)
+                          unit_text,
+                          fill=text_color,
+                          font=scaled_regular_font)
 
                 # Обновляем позицию для следующей плашки с учетом масштабирования
                 x_position += scaled_element_width + spacing
