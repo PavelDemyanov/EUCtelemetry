@@ -138,21 +138,20 @@ def create_frame(values,
 
         text_settings = text_settings or {}
 
-        # Get visibility settings with defaults to True
+        # Get visibility settings with defaults
         show_speed = text_settings.get('show_speed', True)
         show_max_speed = text_settings.get('show_max_speed', True)
-        show_gps = text_settings.get('show_gps', False)  # Default to False for GPS
+        show_gps = text_settings.get('show_gps', False)
         show_voltage = text_settings.get('show_voltage', True)
         show_temp = text_settings.get('show_temp', True)
-        show_battery = text_settings.get('show_battery', False)  # Default to False for battery
+        show_battery = text_settings.get('show_battery', False)
         show_mileage = text_settings.get('show_mileage', True)
         show_pwm = text_settings.get('show_pwm', True)
         show_power = text_settings.get('show_power', True)
         show_bottom_elements = text_settings.get('show_bottom_elements', True)
 
-        logging.info(f"Visibility settings from text_settings:")
-        logging.info(f"GPS visibility: show_gps={show_gps}, has_gps={'gps' in values}")
-        logging.info(f"Battery visibility: show_battery={show_battery}, has_battery={'battery' in values}")
+        logging.info(f"Visibility settings in create_frame:")
+        logging.info(f"GPS visibility: show_gps={show_gps}")
         logging.info(f"Raw text_settings: {text_settings}")
 
         # Получаем настройки позиционирования индикатора и текста
@@ -213,12 +212,10 @@ def create_frame(values,
         if show_max_speed:
             params.append((loc['max_speed'], f"{values['max_speed']}",
                            loc['units']['speed']))
-        if show_gps and 'gps' in values and text_settings.get('show_gps', False):  # Stricter GPS visibility check
-            logging.info("Adding GPS to params due to show_gps=True and gps exists in values")
+        if show_gps and 'gps' in values:  # Simplified GPS visibility check
+            logging.info("Adding GPS to params due to show_gps=True")
             params.append(
                 (loc['gps'], f"{values['gps']}", loc['units']['speed']))
-        else:
-            logging.info(f"Skipping GPS due to show_gps={show_gps} or gps not in values")
 
         if show_voltage:
             params.append((loc['voltage'], f"{values['voltage']}",
@@ -226,12 +223,10 @@ def create_frame(values,
         if show_temp:
             params.append((loc['temp'], f"{values['temperature']}",
                            loc['units']['temp']))
-        if show_battery and 'battery' in values and text_settings.get('show_battery', False):  # Stricter battery visibility check
-            logging.info("Adding battery to params due to show_battery=True and battery exists in values")
+        if show_battery and 'battery' in values:  # Simplified battery visibility check
+            logging.info("Adding battery to params due to show_battery=True")
             params.append((loc['battery'], f"{values['battery']}",
                            loc['units']['battery']))
-        else:
-            logging.info(f"Skipping battery due to show_battery={show_battery} or battery not in values")
 
         if show_mileage:
             params.append((loc['mileage'], f"{values['mileage']}",

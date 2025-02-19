@@ -26,6 +26,7 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                 hardware_info = get_hardware_info()
                 logging.info(f"Starting project processing with hardware configuration: {hardware_info}")
                 logging.info(f"Processing settings - Resolution: {resolution}, FPS: {fps}, Codec: {codec}, Interpolation: {'enabled' if interpolate_values else 'disabled'}")
+                logging.info(f"Text settings for processing: {text_settings}")  # Добавляем лог настроек
 
                 project.status = 'processing'
                 project.fps = float(fps)  # Convert to float explicitly
@@ -70,16 +71,23 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     except Exception as e:
                         logging.error(f"Error updating progress: {e}")
 
+                # Ensure text_settings contains all necessary visibility flags
+                if text_settings is None:
+                    text_settings = {}
+
+                # Log visibility settings before frame generation
+                logging.info(f"Visibility settings before frame generation: {text_settings}")
+
                 # Generate frames with progress tracking, interpolation setting and locale
                 frame_count, duration = generate_frames(
                     csv_file,
                     project.folder_number,
                     resolution,
                     fps,
-                    text_settings,
+                    text_settings,  # Передаем полные настройки текста и видимости
                     progress_callback,
                     interpolate_values,
-                    locale  # Pass locale to generate_frames
+                    locale
                 )
 
                 # Convert numpy values to Python native types
