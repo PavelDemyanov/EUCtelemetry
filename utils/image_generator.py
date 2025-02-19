@@ -244,7 +244,6 @@ def create_frame(values,
 
             max_text_height = max(text_heights)
             box_vertical_center = y_position + (box_height // 2)
-            #text_baseline_y = box_vertical_center - (max_text_height // 2)
 
             x_position = start_x
             for i, ((label, value, unit), element_width, text_width) in enumerate(zip(params, element_widths, text_widths)):
@@ -295,16 +294,16 @@ def create_frame(values,
                 scaled_regular_font = _get_font("fonts/sf-ui-display-regular.otf", scaled_font_size)
                 scaled_bold_font = _get_font("fonts/sf-ui-display-bold.otf", scaled_font_size)
 
+                # Измеряем высоту заглавной буквы для определения центра текста
+                H_bbox = draw.textbbox((0, 0), "H", font=scaled_regular_font)
+                cap_height = H_bbox[3] - H_bbox[1]
+
                 # Перерасчитываем позиции текста с учетом нового масштаба
                 text_x = x_position + ((scaled_element_width - text_width * scale_factor) // 2)
-                # Центрируем текст по вертикали относительно центра плашки
+
+                # Центрируем текст по вертикали относительно центра плашки, используя высоту заглавной буквы
                 box_center_y = y_position + (scaled_box_height // 2)
-                text_height = max(
-                    draw.textbbox((0, 0), f"{label}: ", font=scaled_regular_font)[3],
-                    draw.textbbox((0, 0), value, font=scaled_bold_font)[3],
-                    draw.textbbox((0, 0), f" {unit}", font=scaled_regular_font)[3]
-                )
-                text_y = box_center_y - (text_height // 2)
+                text_y = box_center_y - (cap_height // 2)
 
                 label_bbox = draw.textbbox((0, 0), f"{label}: ", font=scaled_regular_font)
                 label_width = label_bbox[2] - label_bbox[0]
