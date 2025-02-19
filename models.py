@@ -41,7 +41,6 @@ class User(UserMixin, db.Model):
             return False
         return self.password_reset_sent_at > datetime.utcnow() - timedelta(hours=24)
 
-
 class Project(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
