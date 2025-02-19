@@ -115,21 +115,21 @@ def create_rounded_box(width, height, radius):
     return _box_cache[cache_key].copy()
 
 
-        def create_frame(values,
-              resolution='fullhd',
-              output_path=None,
-              text_settings=None,
-              locale='en'):
-        try:
+def create_frame(values,
+                  resolution='fullhd',
+                  output_path=None,
+                  text_settings=None,
+                  locale='en'):
+    try:
         # Определяем разрешение и масштаб
         if resolution == "4k":
-        width, height = 3840, 2160
-        scale_factor = 2.0
-        indicator_size = 1000  # Увеличенный размер для 4K
+            width, height = 3840, 2160
+            scale_factor = 2.0
+            indicator_size = 1000  # Увеличенный размер для 4K
         else:  # fullhd
-        width, height = 1920, 1080
-        scale_factor = 1.0
-        indicator_size = 500  # Стандартный размер для Full HD
+            width, height = 1920, 1080
+            scale_factor = 1.0
+            indicator_size = 500  # Стандартный размер для Full HD
 
         # Создаем синий фон и прозрачный оверлей
         background = Image.new('RGBA', (width, height), (0, 0, 255, 255))
@@ -161,22 +161,22 @@ def create_rounded_box(width, height, radius):
 
         # Only create and paste speed indicator if bottom elements are enabled
         if show_bottom_elements:
-        loc = _LOCALIZATION.get(locale, _LOCALIZATION['en'])
-        speed_indicator = create_speed_indicator(
-            values['speed'],
-            size=indicator_size,
-            speed_offset=(0, speed_y_offset),
-            unit_offset=(0, unit_y_offset),
-            speed_size=speed_size,
-            unit_size=unit_size,
-            indicator_scale=indicator_scale,
-            resolution=resolution,
-            locale=locale)
+            loc = _LOCALIZATION.get(locale, _LOCALIZATION['en'])
+            speed_indicator = create_speed_indicator(
+                values['speed'],
+                size=indicator_size,
+                speed_offset=(0, speed_y_offset),
+                unit_offset=(0, unit_y_offset),
+                speed_size=speed_size,
+                unit_size=unit_size,
+                indicator_scale=indicator_scale,
+                resolution=resolution,
+                locale=locale)
 
-        indicator_x = int((width - indicator_size) * indicator_x_percent / 100)
-        indicator_y = int((height - indicator_size) * indicator_y_percent / 100)
-        background.paste(speed_indicator, (indicator_x, indicator_y),
-                          speed_indicator)
+            indicator_x = int((width - indicator_size) * indicator_x_percent / 100)
+            indicator_y = int((height - indicator_size) * indicator_y_percent / 100)
+            background.paste(speed_indicator, (indicator_x, indicator_y),
+                              speed_indicator)
 
         font_size = int(text_settings.get('font_size', 26) * scale_factor)
         top_padding = int(text_settings.get('top_padding', 14) * scale_factor)
@@ -186,11 +186,11 @@ def create_rounded_box(width, height, radius):
         border_radius = int(text_settings.get('border_radius', 13) * scale_factor)
 
         try:
-        regular_font = _get_font("fonts/sf-ui-display-regular.otf", font_size)
-        bold_font = _get_font("fonts/sf-ui-display-bold.otf", font_size)
+            regular_font = _get_font("fonts/sf-ui-display-regular.otf", font_size)
+            bold_font = _get_font("fonts/sf-ui-display-bold.otf", font_size)
         except Exception as e:
-        logging.error(f"Error loading font: {e}")
-        raise
+            logging.error(f"Error loading font: {e}")
+            raise
 
         # Filter params based on visibility settings
         loc = _LOCALIZATION.get(locale, _LOCALIZATION['en'])
@@ -198,330 +198,274 @@ def create_rounded_box(width, height, radius):
 
         # Add each parameter only if its visibility is enabled
         if show_speed:
-        params.append((loc['speed'], f"{values['speed']}", loc['units']['speed']))
+            params.append((loc['speed'], f"{values['speed']}", loc['units']['speed']))
         if show_max_speed:
-        params.append((loc['max_speed'], f"{values['max_speed']}", loc['units']['speed']))
+            params.append((loc['max_speed'], f"{values['max_speed']}", loc['units']['speed']))
         if show_gps and 'gps' in values:
-        params.append((loc['gps'], f"{values['gps']}", loc['units']['speed']))
+            params.append((loc['gps'], f"{values['gps']}", loc['units']['speed']))
         if show_voltage:
-        params.append((loc['voltage'], f"{values['voltage']}", loc['units']['voltage']))
+            params.append((loc['voltage'], f"{values['voltage']}", loc['units']['voltage']))
         if show_temp:
-        params.append((loc['temp'], f"{values['temperature']}", loc['units']['temp']))
+            params.append((loc['temp'], f"{values['temperature']}", loc['units']['temp']))
         if show_battery and 'battery' in values:
-        params.append((loc['battery'], f"{values['battery']}", loc['units']['battery']))
+            params.append((loc['battery'], f"{values['battery']}", loc['units']['battery']))
         if show_mileage:
-        params.append((loc['mileage'], f"{values['mileage']}", loc['units']['mileage']))
+            params.append((loc['mileage'], f"{values['mileage']}", loc['units']['mileage']))
         if show_pwm:
-        params.append((loc['pwm'], f"{values['pwm']}", loc['units']['pwm']))
+            params.append((loc['pwm'], f"{values['pwm']}", loc['units']['pwm']))
         if show_power:
-        params.append((loc['power'], f"{values['power']}", loc['units']['power']))
+            params.append((loc['power'], f"{values['power']}", loc['units']['power']))
 
         if params:  # Only proceed if there are visible elements
-        element_widths = []
-        text_widths = []
-        text_heights = []
-        total_width = 0
+            element_widths = []
+            text_widths = []
+            text_heights = []
+            total_width = 0
 
-        for label, value, unit in params:
-            label_bbox = draw.textbbox((0, 0), f"{label}: ", font=regular_font)
-            value_bbox = draw.textbbox((0, 0), value, font=bold_font)
-            unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
+            for label, value, unit in params:
+                label_bbox = draw.textbbox((0, 0), f"{label}: ", font=regular_font)
+                value_bbox = draw.textbbox((0, 0), value, font=bold_font)
+                unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
 
-            text_width = (label_bbox[2] - label_bbox[0]) + (value_bbox[2] - value_bbox[0]) + (
-                        unit_bbox[2] - unit_bbox[0])
-            text_height = max(label_bbox[3] - label_bbox[1],
-                              value_bbox[3] - value_bbox[1],
-                              unit_bbox[3] - unit_bbox[1])
+                text_width = (label_bbox[2] - label_bbox[0]) + (value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])
+                text_height = max(label_bbox[3] - label_bbox[1],
+                                  value_bbox[3] - value_bbox[1],
+                                  unit_bbox[3] - unit_bbox[1])
 
-            element_width = text_width + (2 * top_padding)
-            element_widths.append(element_width)
-            text_widths.append(text_width)
-            text_heights.append(text_height)
-            total_width += element_width
+                element_width = text_width + (2 * top_padding)
+                element_widths.append(element_width)
+                text_widths.append(text_width)
+                text_heights.append(text_height)
+                total_width += element_width
 
-        total_width += spacing * (len(params) - 1)
-        start_x = (width - total_width) // 2
-        y_position = int((height * vertical_position) / 100)
+            total_width += spacing * (len(params) - 1)
+            start_x = (width - total_width) // 2
+            y_position = int((height * vertical_position) / 100)
 
-        max_text_height = max(text_heights)
-        box_vertical_center = y_position + (box_height // 2)
+            max_text_height = max(text_heights)
+            box_vertical_center = y_position + (box_height // 2)
+            text_baseline_y = box_vertical_center - (max_text_height // 2)
 
-        x_position = start_x
-        for i, ((label, value, unit), element_width, text_width) in enumerate(
-                zip(params, element_widths, text_widths)):
-            # Определяем цвет плашки и текста в зависимости от значения PWM и Battery
-            box_color = (0, 0, 0, 255)  # Стандартный черный цвет
-            text_color = (255, 255, 255, 255)  # Стандартный белый цвет
+            x_position = start_x
+            for i, ((label, value, unit), element_width, text_width) in enumerate(zip(params, element_widths, text_widths)):
+                # Определяем цвет плашки и текста в зависимости от значения PWM и Battery
+                box_color = (0, 0, 0, 255)  # Стандартный черный цвет
+                text_color = (255, 255, 255, 255)  # Стандартный белый цвет
 
-            # Применяем масштабирование к размерам
-            scaled_element_width = int(element_width * scale_factor)
-            scaled_box_height = int(box_height * scale_factor)
-            scaled_border_radius = int(border_radius * scale_factor)
+                if label == loc['pwm']:
+                    pwm_value = int(value)
+                    if 80 <= pwm_value <= 90:
+                        box_color = (255, 255, 0, 255)  # Желтый цвет для PWM 80-90
+                        text_color = (0, 0, 0, 255)  # Черный текст
+                    elif pwm_value > 90:
+                        box_color = (255, 0, 0, 255)  # Красный цвет для PWM > 90
+                        text_color = (0, 0, 0, 255)  # Черный текст
+                elif label == loc['battery']:
+                    battery_value = int(value)
+                    if 10 <= battery_value <= 30:
+                        box_color = (255, 255, 0, 255)  # Желтый цвет для Battery 10-30
+                        text_color = (0, 0, 0, 255)  # Черный текст
+                    elif battery_value < 10:
+                        box_color = (255, 0, 0, 255)  # Красный цвет для Battery < 10
+                        text_color = (0, 0, 0, 255)  # Черный текст
 
-            # Создаем и масштабируем плашку
-            box = create_rounded_box(scaled_element_width, scaled_box_height, scaled_border_radius)
+                box = create_rounded_box(element_width, box_height, border_radius)
+                # Изменяем цвет плашки если нужно
+                if box_color != (0, 0, 0, 255):
+                    colored_box = Image.new('RGBA', box.size, box_color)
+                    colored_box.putalpha(box.split()[3])  # Используем альфа-канал от оригинальной плашки
+                    box = colored_box
 
-            # Изменяем цвет плашки если нужно
-            if box_color != (0, 0, 0, 255):
-                colored_box = Image.new('RGBA', box.size, box_color)
-                colored_box.putalpha(box.split()[3])  # Используем альфа-канал от оригинальной плашки
-                box = colored_box
+                overlay.paste(box, (x_position, y_position), box)
 
-            # Верхний край увеличенной плашки совпадает с верхним краем остальных плашек
-            vertical_offset = scaled_box_height - box_height  # Теперь растём только вниз
-            overlay.paste(box, (x_position, y_position), box)
+                text_x = x_position + ((element_width - text_width) // 2)
+                baseline_offset = int(max_text_height * 0.2)
+                text_y = text_baseline_y - baseline_offset
 
-            # Масштабируем размер шрифта
-            scaled_font_size = int(font_size * scale_factor)
-            scaled_regular_font = _get_font("fonts/sf-ui-display-regular.otf", scaled_font_size)
-            scaled_bold_font = _get_font("fonts/sf-ui-display-bold.otf", scaled_font_size)
+                label_bbox = draw.textbbox((0, 0), f"{label}: ", font=regular_font)
+                label_width = label_bbox[2] - label_bbox[0]
+                draw.text((text_x, text_y),
+                         f"{label}: ",
+                         fill=text_color,
+                         font=regular_font)
 
-            # Измеряем характеристики шрифта для точного центрирования
-            label_text = f"{label}: "
-            value_text = value
-            unit_text = f" {unit}"
+                value_bbox = draw.textbbox((0, 0), value, font=bold_font)
+                value_width = value_bbox[2] - value_bbox[0]
+                draw.text((text_x + label_width, text_y),
+                         value,
+                         fill=text_color,
+                         font=bold_font)
 
-            label_bbox = draw.textbbox((0, 0), label_text, font=scaled_regular_font)
-            value_bbox = draw.textbbox((0, 0), value_text, font=scaled_bold_font)
-            unit_bbox = draw.textbbox((0, 0), unit_text, font=scaled_regular_font)
+                draw.text((text_x + label_width + value_width, text_y),
+                         f" {unit}",
+                         fill=text_color,
+                         font=regular_font)
 
-            label_width = label_bbox[2] - label_bbox[0]
-            value_width = value_bbox[2] - value_bbox[0]
-            unit_width = unit_bbox[2] - unit_bbox[0]
-
-            # Общая ширина текста
-            text_width = label_width + value_width + unit_width
-
-            # Вычисляем центр по вертикали плашки
-            box_center = y_position + (scaled_box_height // 2)
-
-            # Центрируем текст по вертикали
-            text_height = max(label_bbox[3] - label_bbox[1], value_bbox[3] - value_bbox[1], unit_bbox[3] - unit_bbox[1])
-            text_y = box_center - (text_height // 2)
-
-            # Центрируем по горизонтали
-            text_x = x_position + ((scaled_element_width - text_width) // 2)
-
-            # Рисуем элементы: label, value и unit
-            draw.text((text_x, text_y), label_text, fill=text_color, font=scaled_regular_font)
-            draw.text((text_x + label_width, text_y), value_text, fill=text_color, font=scaled_bold_font)
-            draw.text((text_x + label_width + value_width, text_y), unit_text, fill=text_color, font=scaled_regular_font)
-
-            # Обновляем позицию для следующей плашки с учетом масштабирования
-            x_position += scaled_element_width + spacing
+                x_position += element_width + spacing
 
         result = Image.alpha_composite(background, overlay)
 
         if output_path:
-        result.convert('RGB').save(output_path,
-                                    format='PNG',
-                                    quality=95,
-                                    optimize=True)
-        logging.debug(f"Saved frame to {output_path}")
+            result.convert('RGB').save(output_path,
+                                        format='PNG',
+                                        quality=95,
+                                        optimize=True)
+            logging.debug(f"Saved frame to {output_path}")
 
         return result
 
-        except Exception as e:
+    except Exception as e:
         logging.error(f"Error in create_frame: {e}")
         raise
 
 
-def create_frame(values,
-     resolution='fullhd',
-     output_path=None,
-     text_settings=None,
-     locale='en'):
-try:
-# Определяем разрешение и масштаб
-if resolution == "4k":
-width, height = 3840, 2160
-scale_factor = 2.0
-indicator_size = 1000  # Увеличенный размер для 4K
-else:  # fullhd
-width, height = 1920, 1080
-scale_factor = 1.0
-indicator_size = 500  # Стандартный размер для Full HD
+def generate_frames(csv_file,
+                    folder_number,
+                    resolution='fullhd',
+                    fps=29.97,
+                    text_settings=None,
+                    progress_callback=None,
+                    interpolate_values=True,
+                    locale='en'):
+    try:
+        frames_dir = f'frames/project_{folder_number}'
+        if os.path.exists(frames_dir):
+            shutil.rmtree(frames_dir)
+        os.makedirs(frames_dir, exist_ok=True)
 
-# Создаем синий фон и прозрачный оверлей
-background = Image.new('RGBA', (width, height), (0, 0, 255, 255))
-overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
-draw = ImageDraw.Draw(overlay)
+        from utils.csv_processor import process_csv_file
+        csv_type, processed_data = process_csv_file(csv_file, folder_number)
+        df = pd.DataFrame(processed_data)
 
-text_settings = text_settings or {}
+        # Sort dataframe by timestamp to ensure proper interpolation
+        df = df.sort_values('timestamp')
 
-# Получаем настройки видимости с дефолтными значениями
-show_speed = text_settings.get('show_speed', True)
-show_max_speed = text_settings.get('show_max_speed', True)
-show_gps = text_settings.get('show_gps', False)
-show_voltage = text_settings.get('show_voltage', True)
-show_temp = text_settings.get('show_temp', True)
-show_battery = text_settings.get('show_battery', False)
-show_mileage = text_settings.get('show_mileage', True)
-show_pwm = text_settings.get('show_pwm', True)
-show_power = text_settings.get('show_power', True)
-show_bottom_elements = text_settings.get('show_bottom_elements', True)
+        # Calculate frame timestamps
+        T_min = df['timestamp'].min()
+        T_max = df['timestamp'].max()
+        frame_count = int((T_max - T_min) * fps)
+        logging.info(
+            f"Generating {frame_count} frames at {fps} fps with interpolation {'enabled' if interpolate_values else 'disabled'}"
+        )
+        frame_timestamps = np.linspace(T_min, T_max, frame_count)
 
-# Получаем настройки позиционирования индикатора и текста
-indicator_x_percent = float(text_settings.get('indicator_x', 50))
-indicator_y_percent = float(text_settings.get('indicator_y', 80))
-speed_y_offset = int(text_settings.get('speed_y', 0))
-unit_y_offset = int(text_settings.get('unit_y', 0))
-speed_size = float(text_settings.get('speed_size', 100))
-unit_size = float(text_settings.get('unit_size', 100))
-indicator_scale = float(text_settings.get('indicator_scale', 100))
+        completed_frames = 0
+        lock = threading.Lock()
 
-# Создаем индикатор скорости, если требуется
-if show_bottom_elements:
-loc = _LOCALIZATION.get(locale, _LOCALIZATION['en'])
-speed_indicator = create_speed_indicator(
-    values['speed'],
-    size=indicator_size,
-    speed_offset=(0, speed_y_offset),
-    unit_offset=(0, unit_y_offset),
-    speed_size=speed_size,
-    unit_size=unit_size,
-    indicator_scale=indicator_scale,
-    resolution=resolution,
-    locale=locale)
+        def process_frame(i, timestamp):
+            nonlocal completed_frames
+            # Use interpolated values for frame generation if enabled
+            values = find_nearest_values(df,
+                                         timestamp,
+                                         interpolate=interpolate_values)
+            output_path = f'{frames_dir}/frame_{i:06d}.png'
+            create_frame(values,
+                         resolution,
+                         output_path,
+                         text_settings,
+                         locale=locale)
 
-indicator_x = int((width - indicator_size) * indicator_x_percent / 100)
-indicator_y = int((height - indicator_size) * indicator_y_percent / 100)
-background.paste(speed_indicator, (indicator_x, indicator_y),
-                  speed_indicator)
+            with lock:
+                completed_frames += 1
+                if progress_callback and (completed_frames % 10 == 0
+                                          or completed_frames == frame_count):
+                    progress_callback(completed_frames, frame_count, 'frames')
 
-font_size = int(text_settings.get('font_size', 26) * scale_factor)
-top_padding = int(text_settings.get('top_padding', 14) * scale_factor)
-box_height = int(text_settings.get('bottom_padding', 47) * scale_factor)
-spacing = int(text_settings.get('spacing', 10) * scale_factor)
-vertical_position = int(text_settings.get('vertical_position', 1))
-border_radius = int(text_settings.get('border_radius', 13) * scale_factor)
+        max_workers = os.cpu_count() or 4
+        with concurrent.futures.ThreadPoolExecutor(
+                max_workers=max_workers) as executor:
+            futures = [
+                executor.submit(process_frame, i, ts)
+                for i, ts in enumerate(frame_timestamps)
+            ]
+            concurrent.futures.wait(futures)
 
-try:
-regular_font = _get_font("fonts/sf-ui-display-regular.otf", font_size)
-bold_font = _get_font("fonts/sf-ui-display-bold.otf", font_size)
-except Exception as e:
-logging.error(f"Error loading font: {e}")
-raise
+        logging.info(f"Successfully generated {frame_count} frames")
+        return frame_count, (T_max - T_min)
 
-# Фильтруем параметры на основе видимости
-loc = _LOCALIZATION.get(locale, _LOCALIZATION['en'])
-params = []
+    except Exception as e:
+        logging.error(f"Error in generate_frames: {e}")
+        raise
 
-if show_speed:
-params.append((loc['speed'], f"{values['speed']}", loc['units']['speed']))
-if show_max_speed:
-params.append((loc['max_speed'], f"{values['max_speed']}", loc['units']['speed']))
-if show_gps and 'gps' in values:
-params.append((loc['gps'], f"{values['gps']}", loc['units']['speed']))
-if show_voltage:
-params.append((loc['voltage'], f"{values['voltage']}", loc['units']['voltage']))
-if show_temp:
-params.append((loc['temp'], f"{values['temperature']}", loc['units']['temp']))
-if show_battery and 'battery' in values:
-params.append((loc['battery'], f"{values['battery']}", loc['units']['battery']))
-if show_mileage:
-params.append((loc['mileage'], f"{values['mileage']}", loc['units']['mileage']))
-if show_pwm:
-params.append((loc['pwm'], f"{values['pwm']}", loc['units']['pwm']))
-if show_power:
-params.append((loc['power'], f"{values['power']}", loc['units']['power']))
 
-if params:  # Если есть видимые элементы
-element_widths = []
-text_widths = []
-text_heights = []
-total_width = 0
+def find_nearest_values(df, timestamp, interpolate=True):
+    """Find nearest or interpolated values for the given timestamp"""
+    # If timestamp is before the first data point, return zeros
+    if timestamp < df['timestamp'].iloc[0]:
+        return {
+            key: 0
+            for key in [
+                'speed', 'max_speed', 'gps', 'voltage', 'temperature',
+                'current', 'battery', 'mileage', 'pwm', 'power'
+            ]
+        }
 
-for label, value, unit in params:
-    label_bbox = draw.textbbox((0, 0), f"{label}: ", font=regular_font)
-    value_bbox = draw.textbbox((0, 0), value, font=bold_font)
-    unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
+    # Find the indices of the surrounding data points
+    after_mask = df['timestamp'] >= timestamp
+    before_mask = df['timestamp'] <= timestamp
 
-    text_width = (label_bbox[2] - label_bbox[0]) + (value_bbox[2] - value_bbox[0]) + (
-                unit_bbox[2] - unit_bbox[0])
-    text_height = max(label_bbox[3] - label_bbox[1],
-                      value_bbox[3] - value_bbox[1],
-                      unit_bbox[3] - unit_bbox[1])
+    if not after_mask.any() or not before_mask.any():
+        # If timestamp is outside the range, use the last available values
+        last_idx = df.index[-1]
+        return {
+            'speed': int(df.loc[last_idx, 'speed']),
+            'gps': int(df.loc[last_idx, 'gps']),
+            'voltage': int(df.loc[last_idx, 'voltage']),
+            'temperature': int(df.loc[last_idx, 'temperature']),
+            'current': int(df.loc[last_idx, 'current']),
+            'battery': int(df.loc[last_idx, 'battery']),
+            'mileage': int(df.loc[last_idx, 'mileage']),
+            'pwm': int(df.loc[last_idx, 'pwm']),
+            'power': int(df.loc[last_idx, 'power']),
+            'max_speed': int(df.loc[:before_mask, 'speed'].max())
+        }
 
-    element_width = text_width + (2 * top_padding)
-    element_widths.append(element_width)
-    text_widths.append(text_width)
-    text_heights.append(text_height)
-    total_width += element_width
+    # Get indices of surrounding points
+    after_idx = df[after_mask].index[0]
+    before_idx = df[before_mask].index[-1]
 
-total_width += spacing * (len(params) - 1)
-start_x = (width - total_width) // 2
-y_position = int((height * vertical_position) / 100)
+    # If exact match found or interpolation is disabled, return nearest values
+    if before_idx == after_idx or not interpolate:
+        use_idx = before_idx
+        if not interpolate and timestamp - df.loc[
+                before_idx, 'timestamp'] > df.loc[after_idx,
+                                                  'timestamp'] - timestamp:
+            use_idx = after_idx
 
-max_text_height = max(text_heights)
-box_vertical_center = y_position + (box_height // 2)
+        result = {
+            'speed': int(df.loc[use_idx, 'speed']),
+            'gps': int(df.loc[use_idx, 'gps']),
+            'voltage': int(df.loc[use_idx, 'voltage']),
+            'temperature': int(df.loc[use_idx, 'temperature']),
+            'current': int(df.loc[use_idx, 'current']),
+            'battery': int(df.loc[use_idx, 'battery']),
+            'mileage': int(df.loc[use_idx, 'mileage']),
+            'pwm': int(df.loc[use_idx, 'pwm']),
+            'power': int(df.loc[use_idx, 'power'])
+        }
+        result['max_speed'] = int(df.loc[:use_idx, 'speed'].max())
+        return result
 
-x_position = start_x
-for i, ((label, value, unit), element_width, text_width) in enumerate(
-        zip(params, element_widths, text_widths)):
-    # Применяем цветовые правила для плашки
-    box_color = (0, 0, 0, 255)  # Черный
-    text_color = (255, 255, 255, 255)  # Белый
+    # Calculate interpolation factor
+    t0 = df.loc[before_idx, 'timestamp']
+    t1 = df.loc[after_idx, 'timestamp']
+    factor = (timestamp - t0) / (t1 - t0)
 
-    # Применяем масштабирование
-    scaled_element_width = int(element_width * scale_factor)
-    scaled_box_height = int(box_height * scale_factor)
-    scaled_border_radius = int(border_radius * scale_factor)
+    # Interpolate all numeric values
+    result = {}
+    for key in [
+            'speed', 'gps', 'voltage', 'temperature', 'current', 'battery',
+            'mileage', 'pwm', 'power'
+    ]:
+        v0 = float(df.loc[before_idx, key])
+        v1 = float(df.loc[after_idx, key])
+        interpolated_value = v0 + factor * (v1 - v0)
+        result[key] = int(round(interpolated_value))
 
-    # Создаем плашку с округлыми углами
-    box = create_rounded_box(scaled_element_width, scaled_box_height, scaled_border_radius)
+    # Calculate max speed up to current point
+    result['max_speed'] = int(df.loc[:before_idx, 'speed'].max())
 
-    # Рисуем плашку
-    overlay.paste(box, (x_position, y_position), box)
-
-    # Масштабируем шрифт
-    scaled_font_size = int(font_size * scale_factor)
-    scaled_regular_font = _get_font("fonts/sf-ui-display-regular.otf", scaled_font_size)
-    scaled_bold_font = _get_font("fonts/sf-ui-display-bold.otf", scaled_font_size)
-
-    # Вычисляем координаты для текста
-    label_text = f"{label}: "
-    value_text = value
-    unit_text = f" {unit}"
-
-    label_bbox = draw.textbbox((0, 0), label_text, font=scaled_regular_font)
-    value_bbox = draw.textbbox((0, 0), value_text, font=scaled_bold_font)
-    unit_bbox = draw.textbbox((0, 0), unit_text, font=scaled_regular_font)
-
-    label_width = label_bbox[2] - label_bbox[0]
-    value_width = value_bbox[2] - value_bbox[0]
-    unit_width = unit_bbox[2] - unit_bbox[0]
-
-    # Общая ширина текста
-    text_width = label_width + value_width + unit_width
-
-    # Центрируем текст по вертикали
-    text_height = max(label_bbox[3] - label_bbox[1], value_bbox[3] - value_bbox[1], unit_bbox[3] - unit_bbox[1])
-    box_center = y_position + (scaled_box_height // 2)
-    text_y = box_center - (text_height // 2)
-
-    # Центрируем текст по горизонтали
-    text_x = x_position + ((scaled_element_width - text_width) // 2)
-
-    # Рисуем текст
-    draw.text((text_x, text_y), label_text, fill=text_color, font=scaled_regular_font)
-    draw.text((text_x + label_width, text_y), value_text, fill=text_color, font=scaled_bold_font)
-    draw.text((text_x + label_width + value_width, text_y), unit_text, fill=text_color, font=scaled_regular_font)
-
-    # Обновляем позицию для следующей плашки
-    x_position += scaled_element_width + spacing
-
-result = Image.alpha_composite(background, overlay)
-
-if output_path:
-result.convert('RGB').save(output_path, format='PNG', quality=95, optimize=True)
-logging.debug(f"Saved frame to {output_path}")
-
-return result
-
-except Exception as e:
-logging.error(f"Error in create_frame: {e}")
-raise
+    return result
 
 
 def get_column_name(csv_type, base_name):
