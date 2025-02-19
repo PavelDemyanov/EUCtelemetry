@@ -1,3 +1,4 @@
+
 import smtplib
 import logging
 import os
@@ -45,32 +46,38 @@ def send_email(to_email: str, subject: str, html_content: str) -> bool:
         smtp_login = str(settings["SMTP_LOGIN"])
         smtp_password = str(settings["SMTP_PASSWORD"])
 
-        # Create secure SSL/TLS connection
-        server = smtplib.SMTP_SSL(smtp_server, smtp_port)
-        logging.debug("SMTP SSL connection established")
+        try:
+            # Create secure SSL/TLS connection
+            server = smtplib.SMTP_SSL(smtp_server, smtp_port)
+            logging.debug("SMTP SSL connection established")
+        except Exception as e:
+            logging.error(f"Failed to establish SSL connection: {str(e)}")
+            return False
 
-        # Login
-        server.login(smtp_login, smtp_password)
-        logging.debug("SMTP login successful")
+        try:
+            # Login
+            server.login(smtp_login, smtp_password)
+            logging.debug("SMTP login successful")
+        except smtplib.SMTPAuthenticationError as e:
+            logging.error(f"SMTP Authentication failed: {str(e)}")
+            return False
 
-        # Send email
-        server.send_message(msg)
-        logging.debug("Email sent successfully")
+        try:
+            # Send email
+            server.send_message(msg)
+            logging.info(f"Email sent successfully to {to_email}")
+        except Exception as e:
+            logging.error(f"Failed to send email: {str(e)}")
+            return False
+        finally:
+            # Properly close the connection
+            server.quit()
 
-        # Properly close the connection
-        server.quit()
-        logging.info(f"Email sent successfully to {to_email}")
         return True
 
     except ValueError as ve:
         logging.error(f"SMTP Configuration Error: {str(ve)}")
         return False
-    except smtplib.SMTPAuthenticationError:
-        logging.error("SMTP Authentication failed. Please check your login credentials.")
-        return False
-    except smtplib.SMTPException as e:
-        logging.error(f"SMTP Error: {str(e)}")
-        return False
     except Exception as e:
-        logging.error(f"Failed to send email to {to_email}: {str(e)}")
+        logging.error(f"Unexpected error sending email to {to_email}: {str(e)}")
         return False
