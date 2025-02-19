@@ -125,3 +125,12 @@ class Project(db.Model):
             next_number += 1
 
         return next_number
+
+class EmailCampaign(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    subject = db.Column(db.String(200), nullable=False)
+    html_content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    recipients_count = db.Column(db.Integer, default=0)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    sender = db.relationship('User', backref='campaigns')

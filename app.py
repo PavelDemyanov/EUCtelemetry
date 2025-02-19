@@ -27,6 +27,8 @@ from utils.email_sender import send_email
 from forms import (LoginForm, RegistrationForm, ProfileForm, 
                   ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm, DeleteAccountForm)
 from models import User, Project
+from forms import EmailCampaignForm # Add this line
+
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -1193,3 +1195,56 @@ stats_thread.start()
 # Start cleanup thread when app starts
 cleanup_thread = threading.Thread(target=cleanup_expired_projects, daemon=True)
 cleanup_thread.start()
+
+# Add these routes after the existing admin routes
+@app.route('/admin/email-campaigns', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def email_campaigns():
+    form = EmailCampaignForm()
+    if form.validate_on_submit():
+        try:
+            # Get all confirmed users
+            confirmed_users = User.query.filter_by(is_email_confirmed=True).all()
+
+            # Create campaign record
+            campaign = EmailCampaign(
+                subject=form.subject.data,
+                html_content=form.html_content.data,
+                sender_id=current_user.id,
+                recipients_count=len(confirmed_users)
+            )
+            db.session.add(campaign)
+
+            # Send emails to all confirmed users
+            for user in confirmed_users:
+                if send_email(user.email, campaign.subject, campaign.html_content):
+                    logging.info(f"Email sent to {user.email}")
+                else:
+                    logging.error(f"Failed to send email to {user.email}")
+
+            db.session.commit()
+            flash(_('Campaign sent successfully'))
+            return redirect(url_for('email_campaigns'))
+
+        except Exception as e:
+            db.session.rollback()
+            logging.error(f"Error sending campaign: {str(e)}")
+            flash(_('Error sending campaign'))
+            return redirect(url_for('email_campaigns'))
+
+    # Get campaign history
+    campaigns = EmailCampaign.query.order_by(EmailCampaign.created_at.desc()).all()
+    return render_template('admin/email_campaigns.html', form=form, campaigns=campaigns)
+
+@app.route('/admin/campaign/<int:campaign_id>')
+@login_required
+@admin_required
+def view_campaign(campaign_id):
+    campaign = EmailCampaign.query.get_or_404(campaign_id)
+    return jsonify({
+        'subject': campaign.subject,
+        'html_content': campaign.html_content,
+        'created_at': campaign.created_at.strftime('%Y-%m-%d %H:%M'),
+        'recipients_count': campaign.recipients_count
+    })

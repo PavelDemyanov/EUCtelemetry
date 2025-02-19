@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h2>{{ _('Email Campaigns') }}</h2>
+    
+    <!-- Campaign Form -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h3>{{ _('New Campaign') }}</h3>
+            <form method="POST" id="campaignForm">
+                {{ form.csrf_token }}
+                <div class="mb-3">
+                    {{ form.subject.label(class="form-label") }}
+                    {{ form.subject(class="form-control") }}
+                    {% if form.subject.errors %}
+                        {% for error in form.subject.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+                <div class="mb-3">
+                    {{ form.html_content.label(class="form-label") }}
+                    {{ form.html_content(class="form-control", id="editor") }}
+                    {% if form.html_content.errors %}
+                        {% for error in form.html_content.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+                {{ form.submit(class="btn btn-primary") }}
+            </form>
+        </div>
+    </div>
+
+    <!-- Campaign History -->
+    <div class="card">
+        <div class="card-body">
+            <h3>{{ _('Campaign History') }}</h3>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>{{ _('Date') }}</th>
+                            <th>{{ _('Subject') }}</th>
+                            <th>{{ _('Recipients') }}</th>
+                            <th>{{ _('Actions') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for campaign in campaigns %}
+                        <tr>
+                            <td>{{ campaign.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>{{ campaign.subject }}</td>
+                            <td>{{ campaign.recipients_count }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-info view-campaign" 
+                                        data-id="{{ campaign.id }}"
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#viewCampaignModal">
+                                    {{ _('View') }}
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Campaign Modal -->
+<div class="modal fade" id="viewCampaignModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ _('Campaign Details') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="campaignContent"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+<script>
+    tinymce.init({
+        selector: '#editor',
+        plugins: 'lists link image table code help wordcount',
+        toolbar: 'undo redo | formatselect | bold italic | alignleft aligncenter alignright | bullist numlist outdent indent | link image | removeformat | help',
+        height: 400,
+        menubar: true,
+        block_formats: 'Paragraph=p; Header 1=h1; Header 2=h2; Header 3=h3',
+    });
+
+    // View campaign content
+    document.querySelectorAll('.view-campaign').forEach(button => {
+        button.addEventListener('click', async () => {
+            const campaignId = button.dataset.id;
+            const response = await fetch(`/admin/campaign/${campaignId}`);
+            const data = await response.json();
+            document.getElementById('campaignContent').innerHTML = data.html_content;
+        });
+    });
+</script>
+{% endblock %}
+{% endblock %}

@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField
+from wtforms import StringField, PasswordField, SubmitField, TextAreaField
 from wtforms.validators import DataRequired, Email, Length, EqualTo
 from flask_babel import lazy_gettext as _l
 
@@ -50,3 +50,11 @@ class ResetPasswordForm(FlaskForm):
         EqualTo('password', message=_l('Passwords must match'))
     ])
     submit = SubmitField(_l('Reset Password'))
+
+class EmailCampaignForm(FlaskForm):
+    subject = StringField(_l('Subject'), validators=[
+        DataRequired(), 
+        Length(max=200, message=_l('Subject must be less than 200 characters'))
+    ])
+    html_content = TextAreaField(_l('Message Content'), validators=[DataRequired()])
+    submit = SubmitField(_l('Send Campaign'))

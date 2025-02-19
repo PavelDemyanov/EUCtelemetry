@@ -4,6 +4,13 @@
 <div class="container py-4">
     <h1 class="mb-4">Admin Dashboard</h1>
 
+    <!-- Admin Actions -->
+    <div class="mb-4">
+        <a href="{{ url_for('email_campaigns') }}" class="btn btn-primary">
+            <i class="fas fa-envelope"></i> Email Campaigns
+        </a>
+    </div>
+
     <!-- System Monitoring -->
     <div class="card mb-4">
         <div class="card-header">
@@ -862,7 +869,7 @@ function cleanupStorage() {
             alertDiv.setAttribute('role', 'alert');
             alertDiv.innerHTML = `
                 <strong>Success!</strong> Storage cleanup completed. ${data.deleted_count} files were deleted.
-                <button type="button" class="btn-close" data-bs-dismissalert" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             `;
             document.body.appendChild(alertDiv);
 
@@ -871,7 +878,7 @@ function cleanupStorage() {
             }, 5000);
         } else {
             alert(data.error || 'Failed to cleanup storage');
-                }
+        }
     })
     .catch(error => {
         console.error('Error:', error);
