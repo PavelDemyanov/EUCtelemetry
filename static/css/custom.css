@@ -56,3 +56,22 @@
     margin-right: auto !important;
     display: block !important;
 }
+
+/* Align videos in columns */
+.row.align-items-start {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.row.align-items-start .col-md-6 {
+    display: flex;
+    flex-direction: column;
+}
+
+.row.align-items-start .col-md-6 ol {
+    flex: 1;
+}
+
+.row.align-items-start .col-md-6 video {
+    margin-top: auto;
+}
