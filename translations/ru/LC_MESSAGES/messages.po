@@ -301,8 +301,8 @@ msgstr "Перейдите в раздел \"Мои проекты\" для за
 msgid "Overlaying on Your Trip Video from iPhone, insta360, GoPro, and Other Cameras"
 msgstr "Наложение на видео вашей поездки с iPhone, insta360, GoPro и других камер"
 
-msgid "You can use any video editor that supports chroma key removal, such as Davinci Resolve"
-msgstr "Вы можете использовать любой видеоредактор, поддерживающий удаление хромакея, например Davinci Resolve"
+msgid "You can use any video editor that supports chroma key removal, such as <a href=\"https://www.blackmagicdesign.com/products/davinciresolve\" target=\"_blank\">Davinci Resolve</a>"
+msgstr "Вы можете использовать любой видеоредактор, поддерживающий удаление хромакея, например <a href=\"https://www.blackmagicdesign.com/products/davinciresolve\" target=\"_blank\">Davinci Resolve</a>"
 
 msgid "Open your camera video in Davinci Resolve"
 msgstr "Откройте видео с вашей камеры в Davinci Resolve"
