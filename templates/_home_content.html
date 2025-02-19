@@ -4,29 +4,37 @@
         <div class="col-md-8 offset-md-2">
             <h2 class="mb-4">{{ _('How to Export Telemetry Data') }}</h2>
 
-            <h3 class="mb-3">{{ _('From DarknessBot:') }}</h3>
-            <ol class="mb-4">
-                <li>{{ _('Open DarknessBot and go to the "Trips" section') }}</li>
-                <li>{{ _('Select the desired "Trip"') }}</li>
-                <li>{{ _('Click the export button') }}</li>
-                <li>{{ _('Save the CSV file of the trip to a convenient location') }}</li>
-            </ol>
-            <video class="img-fluid rounded shadow mb-4" autoplay loop muted playsinline>
-                <source src="{{ url_for('static', filename='mp4/darkman01.mp4') }}" type="video/mp4">
-                {{ _('Your browser does not support the video tag.') }}
-            </video>
+            <div class="row">
+                <!-- DarknessBot Column -->
+                <div class="col-md-6 mb-4">
+                    <h3 class="mb-3">{{ _('From DarknessBot:') }}</h3>
+                    <ol class="mb-4">
+                        <li>{{ _('Open DarknessBot and go to the "Trips" section') }}</li>
+                        <li>{{ _('Select the desired "Trip"') }}</li>
+                        <li>{{ _('Click the export button') }}</li>
+                        <li>{{ _('Save the CSV file of the trip to a convenient location') }}</li>
+                    </ol>
+                    <video class="img-fluid rounded shadow mb-4" autoplay loop muted playsinline>
+                        <source src="{{ url_for('static', filename='mp4/darkman01.mp4') }}" type="video/mp4">
+                        {{ _('Your browser does not support the video tag.') }}
+                    </video>
+                </div>
 
-            <h3 class="mb-3">{{ _('From WheelLog:') }}</h3>
-            <ol class="mb-4">
-                <li>{{ _('Open WheelLog and go to the section') }}</li>
-                <li>{{ _('Additional steps') }}</li>
-                <li>{{ _('Additional steps') }}</li>
-                <li>{{ _('Additional steps') }}</li>
-            </ol>
-            <video class="img-fluid rounded shadow mb-4" autoplay loop muted playsinline>
-                <source src="{{ url_for('static', filename='mp4/wheelman01.mp4') }}" type="video/mp4">
-                {{ _('Your browser does not support the video tag.') }}
-            </video>
+                <!-- WheelLog Column -->
+                <div class="col-md-6 mb-4">
+                    <h3 class="mb-3">{{ _('From WheelLog:') }}</h3>
+                    <ol class="mb-4">
+                        <li>{{ _('Open WheelLog and go to the section') }}</li>
+                        <li>{{ _('Additional steps') }}</li>
+                        <li>{{ _('Additional steps') }}</li>
+                        <li>{{ _('Additional steps') }}</li>
+                    </ol>
+                    <video class="img-fluid rounded shadow mb-4" autoplay loop muted playsinline>
+                        <source src="{{ url_for('static', filename='mp4/wheelman01.mp4') }}" type="video/mp4">
+                        {{ _('Your browser does not support the video tag.') }}
+                    </video>
+                </div>
+            </div>
         </div>
     </div>
 </section>
