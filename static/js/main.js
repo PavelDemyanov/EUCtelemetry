@@ -1,15 +1,12 @@
 function stopProject(projectId) {
-    if (confirm(gettext('Are you sure you want to stop this project?'))) {
+    if (confirm(gettext('Are you sure you want to stop and delete this project?'))) {
         fetch(`/stop/${projectId}`, {
             method: 'POST',
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Wait a bit before reloading to allow backend cleanup
-                setTimeout(() => {
-                    location.reload();
-                }, 2000);
+                location.reload();
             } else {
                 alert(gettext('Error stopping project: ') + data.error);
             }
@@ -47,8 +44,8 @@ function updateProjectStatuses() {
         const projectId = statusBadge.dataset.projectId;
         const currentStatus = statusBadge.dataset.projectStatus;
 
-        // Only check status for processing, pending, or stopping projects
-        if (currentStatus === 'processing' || currentStatus === 'pending' || currentStatus === 'stopping') {
+        // Only check status for processing projects
+        if (currentStatus === 'processing' || currentStatus === 'pending') {
             fetch(`/project_status/${projectId}`)
                 .then(response => response.json())
                 .then(data => {
@@ -56,9 +53,7 @@ function updateProjectStatuses() {
                         // Update the badge class and text based on new status
                         statusBadge.className = 'badge text-bg-' + 
                             (data.status === 'completed' ? 'success' : 
-                             data.status === 'processing' ? 'warning' :
-                             data.status === 'stopping' ? 'info' :
-                             data.status === 'stopped' ? 'secondary' :
+                             data.status === 'processing' ? 'warning' : 
                              data.status === 'error' ? 'danger' : 'secondary');
 
                         // Use translated status
@@ -70,9 +65,9 @@ function updateProjectStatuses() {
                             statusBadge.title = data.error_message;
                         }
 
-                        // Refresh the page if status changed to completed or stopped
-                        if (data.status === 'completed' || data.status === 'stopped') {
-                            setTimeout(() => location.reload(), 2000);
+                        // Refresh the page if status changed to completed to show new download buttons
+                        if (data.status === 'completed') {
+                            setTimeout(() => location.reload(), 1000);
                         }
                     }
 
