@@ -296,9 +296,9 @@ def create_frame(values,
                 scaled_regular_font = _get_font("fonts/sf-ui-display-regular.otf", scaled_font_size)
                 scaled_bold_font = _get_font("fonts/sf-ui-display-bold.otf", scaled_font_size)
 
-                # Измеряем высоту заглавной буквы для определения центра текста
-                H_bbox = draw.textbbox((0, 0), "H", font=scaled_regular_font)
-                cap_height = H_bbox[3] - H_bbox[1]
+                # Измеряем характеристики шрифта для точного центрирования
+                H_bbox = draw.textbbox((0, 0), "HXjgp", font=scaled_regular_font)
+                text_total_height = H_bbox[3] - H_bbox[1]
 
                 # Вычисляем все размеры заранее
                 label_text = f"{label}: "
@@ -317,7 +317,8 @@ def create_frame(values,
 
                 # Центрируем текст по вертикали относительно центра плашки
                 box_center = y_position + (scaled_box_height // 2)
-                text_y = box_center - (cap_height // 2)
+                baseline_offset = (text_total_height // 3)  # Компенсация для базовой линии
+                text_y = box_center - (text_total_height // 2) + baseline_offset
 
                 # Рисуем элементы
                 draw.text((text_x, text_y),
