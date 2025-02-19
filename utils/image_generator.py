@@ -116,10 +116,10 @@ def create_rounded_box(width, height, radius):
 
 
 def create_frame(values,
-                 resolution='fullhd',
-                 output_path=None,
-                 text_settings=None,
-                 locale='en'):
+                  resolution='fullhd',
+                  output_path=None,
+                  text_settings=None,
+                  locale='en'):
     try:
         # Определяем разрешение и масштаб
         if resolution == "4k":
@@ -150,10 +150,6 @@ def create_frame(values,
         show_power = text_settings.get('show_power', True)
         show_bottom_elements = text_settings.get('show_bottom_elements', True)
 
-        logging.info(f"Visibility settings in create_frame:")
-        logging.info(f"GPS visibility: show_gps={show_gps}")
-        logging.info(f"Raw text_settings: {text_settings}")
-
         # Получаем настройки позиционирования индикатора и текста
         indicator_x_percent = float(text_settings.get('indicator_x', 50))
         indicator_y_percent = float(text_settings.get('indicator_y', 80))
@@ -177,25 +173,20 @@ def create_frame(values,
                 resolution=resolution,
                 locale=locale)
 
-            indicator_x = int(
-                (width - indicator_size) * indicator_x_percent / 100)
-            indicator_y = int(
-                (height - indicator_size) * indicator_y_percent / 100)
+            indicator_x = int((width - indicator_size) * indicator_x_percent / 100)
+            indicator_y = int((height - indicator_size) * indicator_y_percent / 100)
             background.paste(speed_indicator, (indicator_x, indicator_y),
-                             speed_indicator)
+                          speed_indicator)
 
         font_size = int(text_settings.get('font_size', 26) * scale_factor)
         top_padding = int(text_settings.get('top_padding', 14) * scale_factor)
-        box_height = int(
-            text_settings.get('bottom_padding', 47) * scale_factor)
+        box_height = int(text_settings.get('bottom_padding', 47) * scale_factor)
         spacing = int(text_settings.get('spacing', 10) * scale_factor)
         vertical_position = int(text_settings.get('vertical_position', 1))
-        border_radius = int(
-            text_settings.get('border_radius', 13) * scale_factor)
+        border_radius = int(text_settings.get('border_radius', 13) * scale_factor)
 
         try:
-            regular_font = _get_font("fonts/sf-ui-display-regular.otf",
-                                     font_size)
+            regular_font = _get_font("fonts/sf-ui-display-regular.otf", font_size)
             bold_font = _get_font("fonts/sf-ui-display-bold.otf", font_size)
         except Exception as e:
             logging.error(f"Error loading font: {e}")
@@ -207,39 +198,23 @@ def create_frame(values,
 
         # Add each parameter only if its visibility is enabled
         if show_speed:
-            params.append(
-                (loc['speed'], f"{values['speed']}", loc['units']['speed']))
+            params.append((loc['speed'], f"{values['speed']}", loc['units']['speed']))
         if show_max_speed:
-            params.append((loc['max_speed'], f"{values['max_speed']}",
-                           loc['units']['speed']))
-        if show_gps and 'gps' in values:  # Simplified GPS visibility check
-            logging.info("Adding GPS to params due to show_gps=True")
-            params.append(
-                (loc['gps'], f"{values['gps']}", loc['units']['speed']))
-
+            params.append((loc['max_speed'], f"{values['max_speed']}", loc['units']['speed']))
+        if show_gps and 'gps' in values:
+            params.append((loc['gps'], f"{values['gps']}", loc['units']['speed']))
         if show_voltage:
-            params.append((loc['voltage'], f"{values['voltage']}",
-                           loc['units']['voltage']))
+            params.append((loc['voltage'], f"{values['voltage']}", loc['units']['voltage']))
         if show_temp:
-            params.append((loc['temp'], f"{values['temperature']}",
-                           loc['units']['temp']))
-        if show_battery and 'battery' in values:  # Simplified battery visibility check
-            logging.info("Adding battery to params due to show_battery=True")
-            params.append((loc['battery'], f"{values['battery']}",
-                           loc['units']['battery']))
-
+            params.append((loc['temp'], f"{values['temperature']}", loc['units']['temp']))
+        if show_battery and 'battery' in values:
+            params.append((loc['battery'], f"{values['battery']}", loc['units']['battery']))
         if show_mileage:
-            params.append((loc['mileage'], f"{values['mileage']}",
-                           loc['units']['mileage']))
+            params.append((loc['mileage'], f"{values['mileage']}", loc['units']['mileage']))
         if show_pwm:
-            params.append(
-                (loc['pwm'], f"{values['pwm']}", loc['units']['pwm']))
+            params.append((loc['pwm'], f"{values['pwm']}", loc['units']['pwm']))
         if show_power:
-            params.append(
-                (loc['power'], f"{values['power']}", loc['units']['power']))
-
-        logging.info(f"Final params list contains {len(params)} items")
-        logging.info(f"Params labels: {[p[0] for p in params]}")
+            params.append((loc['power'], f"{values['power']}", loc['units']['power']))
 
         if params:  # Only proceed if there are visible elements
             element_widths = []
@@ -248,20 +223,14 @@ def create_frame(values,
             total_width = 0
 
             for label, value, unit in params:
-                label_bbox = draw.textbbox((0, 0),
-                                           f"{label}: ",
-                                           font=regular_font)
+                label_bbox = draw.textbbox((0, 0), f"{label}: ", font=regular_font)
                 value_bbox = draw.textbbox((0, 0), value, font=bold_font)
-                unit_bbox = draw.textbbox((0, 0),
-                                          f" {unit}",
-                                          font=regular_font)
+                unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
 
-                text_width = (label_bbox[2] - label_bbox[0]) + (
-                    value_bbox[2] - value_bbox[0]) + (unit_bbox[2] -
-                                                      unit_bbox[0])
+                text_width = (label_bbox[2] - label_bbox[0]) + (value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])
                 text_height = max(label_bbox[3] - label_bbox[1],
-                                  value_bbox[3] - value_bbox[1],
-                                  unit_bbox[3] - unit_bbox[1])
+                              value_bbox[3] - value_bbox[1],
+                              unit_bbox[3] - unit_bbox[1])
 
                 element_width = text_width + (2 * top_padding)
                 element_widths.append(element_width)
@@ -269,57 +238,70 @@ def create_frame(values,
                 text_heights.append(text_height)
                 total_width += element_width
 
-            if params:  # Only proceed if there are visible elements
-                total_width += spacing * (len(params) - 1)
-                start_x = (width - total_width) // 2
-                y_position = int((height * vertical_position) / 100)
+            total_width += spacing * (len(params) - 1)
+            start_x = (width - total_width) // 2
+            y_position = int((height * vertical_position) / 100)
 
-                max_text_height = max(text_heights)
-                box_vertical_center = y_position + (box_height // 2)
-                text_baseline_y = box_vertical_center - (max_text_height // 2)
+            max_text_height = max(text_heights)
+            box_vertical_center = y_position + (box_height // 2)
+            text_baseline_y = box_vertical_center - (max_text_height // 2)
 
-                x_position = start_x
-                for i, ((label, value, unit), element_width,
-                        text_width) in enumerate(
-                    zip(params, element_widths, text_widths)):
-                    box = create_rounded_box(element_width, box_height,
-                                             border_radius)
-                    overlay.paste(box, (x_position, y_position), box)
+            x_position = start_x
+            for i, ((label, value, unit), element_width, text_width) in enumerate(zip(params, element_widths, text_widths)):
+                # Определяем цвет плашки и текста в зависимости от значения PWM
+                box_color = (0, 0, 0, 255)  # Стандартный черный цвет
+                text_color = (255, 255, 255, 255)  # Стандартный белый цвет
 
-                    text_x = x_position + ((element_width - text_width) // 2)
-                    baseline_offset = int(max_text_height * 0.2)
-                    text_y = text_baseline_y - baseline_offset
+                if label == loc['pwm']:
+                    pwm_value = int(value)
+                    if 80 <= pwm_value <= 90:
+                        box_color = (255, 255, 0, 255)  # Желтый цвет для PWM 80-90
+                        text_color = (0, 0, 0, 255)  # Черный текст
+                    elif pwm_value > 90:
+                        box_color = (255, 0, 0, 255)  # Красный цвет для PWM > 90
+                        text_color = (0, 0, 0, 255)  # Черный текст
 
-                    label_bbox = draw.textbbox((0, 0),
-                                               f"{label}: ",
-                                               font=regular_font)
-                    label_width = label_bbox[2] - label_bbox[0]
-                    draw.text((text_x, text_y),
-                              f"{label}: ",
-                              fill=(255, 255, 255, 255),
-                              font=regular_font)
+                box = create_rounded_box(element_width, box_height, border_radius)
+                # Изменяем цвет плашки если нужно
+                if box_color != (0, 0, 0, 255):
+                    colored_box = Image.new('RGBA', box.size, box_color)
+                    colored_box.putalpha(box.split()[3])  # Используем альфа-канал от оригинальной плашки
+                    box = colored_box
 
-                    value_bbox = draw.textbbox((0, 0), value, font=bold_font)
-                    value_width = value_bbox[2] - value_bbox[0]
-                    draw.text((text_x + label_width, text_y),
-                              value,
-                              fill=(255, 255, 255, 255),
-                              font=bold_font)
+                overlay.paste(box, (x_position, y_position), box)
 
-                    draw.text((text_x + label_width + value_width, text_y),
-                              f" {unit}",
-                              fill=(255, 255, 255, 255),
-                              font=regular_font)
+                text_x = x_position + ((element_width - text_width) // 2)
+                baseline_offset = int(max_text_height * 0.2)
+                text_y = text_baseline_y - baseline_offset
 
-                    x_position += element_width + spacing
+                label_bbox = draw.textbbox((0, 0), f"{label}: ", font=regular_font)
+                label_width = label_bbox[2] - label_bbox[0]
+                draw.text((text_x, text_y),
+                         f"{label}: ",
+                         fill=text_color,
+                         font=regular_font)
+
+                value_bbox = draw.textbbox((0, 0), value, font=bold_font)
+                value_width = value_bbox[2] - value_bbox[0]
+                draw.text((text_x + label_width, text_y),
+                         value,
+                         fill=text_color,
+                         font=bold_font)
+
+                draw.text((text_x + label_width + value_width, text_y),
+                         f" {unit}",
+                         fill=text_color,
+                         font=regular_font)
+
+                x_position += element_width + spacing
 
         result = Image.alpha_composite(background, overlay)
 
         if output_path:
             result.convert('RGB').save(output_path,
-                                       format='PNG',
-                                       quality=95,
-                                       optimize=True)
+                                    format='PNG',
+                                    quality=95,
+                                    optimize=True)
             logging.debug(f"Saved frame to {output_path}")
 
         return result
