@@ -26,7 +26,7 @@ from utils.env_setup import setup_env_variables
 from utils.email_sender import send_email
 from forms import (LoginForm, RegistrationForm, ProfileForm, 
                   ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm, DeleteAccountForm)
-from models import User, Project, EmailCampaign  # Updated this line to include EmailCampaign
+from models import User, Project, EmailCampaign
 from forms import EmailCampaignForm
 
 
@@ -794,37 +794,12 @@ def delete_project(project_id):
 
     try:
         # Delete associated files if they exist
-        if project.csv_file:
-            csv_path = os.path.join(app.config['UPLOAD_FOLDER'], project.csv_file)
-            if os.path.exists(csv_path):
-                os.remove(csv_path)
-
-        # Delete preview file if exists
-        preview_path = os.path.join('previews', f'{project_id}_preview.png')
-        if os.path.exists(preview_path):
-            os.remove(preview_path)
-
-        if project.video_file:
-            video_path = os.path.join('videos', project.video_file)
-            if os.path.exists(video_path):
-                os.remove(video_path)
-
-        # Delete frames directory if it exists
-        frames_dir = f'frames/project_{project.folder_number}'
-        if os.path.exists(frames_dir):
-            shutil.rmtree(frames_dir)
-
-        # Delete processed CSV file if exists
-        if project.csv_file:
-            processed_csv = os.path.join('processed_data', f'project_{project.folder_number}_{project.csv_file}')
-            if os.path.exists(processed_csv):
-                os.remove(processed_csv)
-
-        # Delete project from database
-        db.session.delete(project)
-        db.session.commit()
-
-        return jsonify({'success': True})
+        if cleanup_project_files(project):
+            # Delete project from database
+            db.session.delete(project)
+            db.session.commit()
+            return jsonify({'success': True})
+        return jsonify({'error': 'Failed to clean up project files'}), 500
     except Exception as e:
         logging.error(f"Error deleting project: {str(e)}")
         return jsonify({'error': str(e)}), 500
@@ -1185,6 +1160,72 @@ def set_language(lang):
 
     return redirect(next_url)
 
+@app.route('/admin/email-campaigns', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def email_campaigns():
+    form = EmailCampaignForm()
+    if form.validate_on_submit():
+        try:
+            # Get all confirmed users
+            confirmed_users = User.query.filter_by(is_email_confirmed=True).all()
+            if not confirmed_users:
+                flash(_('No confirmed users found to send campaign to.'), 'warning')
+                return redirect(url_for('email_campaigns'))
+
+            # Create campaign record
+            campaign = EmailCampaign(
+                subject=form.subject.data,
+                html_content=form.html_content.data,
+                recipients_count=len(confirmed_users),
+                sender_id=current_user.id
+            )
+            db.session.add(campaign)
+
+            # Send emails to all confirmed users
+            success_count = 0
+            for user in confirmed_users:
+                if send_email(
+                    to_email=user.email,
+                    subject=form.subject.data,
+                    html_content=form.html_content.data
+                ):
+                    success_count += 1
+                    logging.info(f"Campaign email sent to {user.email}")
+                else:
+                    logging.error(f"Failed to send campaign email to {user.email}")
+
+            campaign.recipients_count = success_count
+            db.session.commit()
+
+            if success_count > 0:
+                flash(_('Campaign sent successfully to %(count)d recipients!', count=success_count), 'success')
+            else:
+                flash(_('Failed to send campaign to any recipients.'), 'error')
+
+            return redirect(url_for('email_campaigns'))
+
+        except Exception as e:
+            db.session.rollback()
+            logging.error(f"Error sending campaign: {str(e)}")
+            flash(_('Error sending campaign. Please try again.'), 'error')
+
+    # Get campaign history
+    campaigns = EmailCampaign.query.order_by(EmailCampaign.created_at.desc()).all()
+    return render_template('admin/email_campaigns.html', form=form, campaigns=campaigns)
+
+@app.route('/admin/campaign/<int:campaign_id>')
+@login_required
+@admin_required
+def get_campaign(campaign_id):
+    campaign = EmailCampaign.query.get_or_404(campaign_id)
+    return jsonify({
+        'subject': campaign.subject,
+        'html_content': campaign.html_content,
+        'created_at': campaign.created_at.strftime('%Y-%m-%d %H:%M'),
+        'recipients_count': campaign.recipients_count
+    })
+
 with app.app_context():
     db.create_all()
 
@@ -1195,56 +1236,3 @@ stats_thread.start()
 # Start cleanup thread when app starts
 cleanup_thread = threading.Thread(target=cleanup_expired_projects, daemon=True)
 cleanup_thread.start()
-
-# Add these routes after the existing admin routes
-@app.route('/admin/email-campaigns', methods=['GET', 'POST'])
-@login_required
-@admin_required
-def email_campaigns():
-    form = EmailCampaignForm()
-    if form.validate_on_submit():
-        try:
-            # Get all confirmed users
-            confirmed_users = User.query.filter_by(is_email_confirmed=True).all()
-
-            # Create campaign record
-            campaign = EmailCampaign(
-                subject=form.subject.data,
-                html_content=form.html_content.data,
-                sender_id=current_user.id,
-                recipients_count=len(confirmed_users)
-            )
-            db.session.add(campaign)
-
-            # Send emails to all confirmed users
-            for user in confirmed_users:
-                if send_email(user.email, campaign.subject, campaign.html_content):
-                    logging.info(f"Email sent to {user.email}")
-                else:
-                    logging.error(f"Failed to send email to {user.email}")
-
-            db.session.commit()
-            flash(_('Campaign sent successfully'))
-            return redirect(url_for('email_campaigns'))
-
-        except Exception as e:
-            db.session.rollback()
-            logging.error(f"Error sending campaign: {str(e)}")
-            flash(_('Error sending campaign'))
-            return redirect(url_for('email_campaigns'))
-
-    # Get campaign history
-    campaigns = EmailCampaign.query.order_by(EmailCampaign.created_at.desc()).all()
-    return render_template('admin/email_campaigns.html', form=form, campaigns=campaigns)
-
-@app.route('/admin/campaign/<int:campaign_id>')
-@login_required
-@admin_required
-def view_campaign(campaign_id):
-    campaign = EmailCampaign.query.get_or_404(campaign_id)
-    return jsonify({
-        'subject': campaign.subject,
-        'html_content': campaign.html_content,
-        'created_at': campaign.created_at.strftime('%Y-%m-%d %H:%M'),
-        'recipients_count': campaign.recipients_count
-    })
