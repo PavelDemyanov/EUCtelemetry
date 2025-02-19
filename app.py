@@ -26,8 +26,8 @@ from utils.env_setup import setup_env_variables
 from utils.email_sender import send_email
 from forms import (LoginForm, RegistrationForm, ProfileForm, 
                   ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm, DeleteAccountForm)
-from models import User, Project
-from forms import EmailCampaignForm # Add this line
+from models import User, Project, EmailCampaign  # Updated this line to include EmailCampaign
+from forms import EmailCampaignForm
 
 
 # Configure logging
