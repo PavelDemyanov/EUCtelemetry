@@ -286,9 +286,9 @@ def create_frame(values,
                     colored_box.putalpha(box.split()[3])  # Используем альфа-канал от оригинальной плашки
                     box = colored_box
 
-                # Вычисляем новые позиции для центрирования увеличенной плашки
-                vertical_offset = (scaled_box_height - box_height) // 2
-                overlay.paste(box, (x_position, y_position - vertical_offset), box)
+                # Верхний край увеличенной плашки совпадает с верхним краем остальных плашек
+                vertical_offset = scaled_box_height - box_height  # Теперь растём только вниз
+                overlay.paste(box, (x_position, y_position), box)
 
                 # Масштабируем размер шрифта
                 scaled_font_size = int(font_size * scale_factor)
@@ -297,7 +297,7 @@ def create_frame(values,
 
                 # Перерасчитываем позиции текста с учетом нового масштаба
                 text_x = x_position + ((scaled_element_width - text_width * scale_factor) // 2)
-                text_y = text_baseline_y - vertical_offset
+                text_y = text_baseline_y + (scaled_box_height - box_height) //2  # Центрируем текст по вертикали в увеличенной плашке
 
                 label_bbox = draw.textbbox((0, 0), f"{label}: ", font=scaled_regular_font)
                 label_width = label_bbox[2] - label_bbox[0]
