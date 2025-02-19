@@ -796,7 +796,7 @@ def list_projects():
     projects = Project.query.filter_by(user_id=current_user.id)\
         .order_by(Project.created_at.desc())\
         .paginate(page=page, per_page=10, error_out=False)
-    returnrender_template('projects.html', projects=projects)
+    return render_template('projects.html', projects=projects)
 
 @app.route('/download/<int:project_id>/<type>')
 @login_required
