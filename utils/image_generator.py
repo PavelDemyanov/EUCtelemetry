@@ -251,15 +251,18 @@ def create_frame(values,
                 # Определяем цвет плашки и текста в зависимости от значения PWM и Battery
                 box_color = (0, 0, 0, 255)  # Стандартный черный цвет
                 text_color = (255, 255, 255, 255)  # Стандартный белый цвет
+                scale_factor = 1.0  # Базовый масштаб
 
                 if label == loc['pwm']:
                     pwm_value = int(value)
                     if 80 <= pwm_value <= 90:
                         box_color = (255, 255, 0, 255)  # Желтый цвет для PWM 80-90
                         text_color = (0, 0, 0, 255)  # Черный текст
+                        scale_factor = 1.2  # Увеличение на 20%
                     elif pwm_value > 90:
                         box_color = (255, 0, 0, 255)  # Красный цвет для PWM > 90
                         text_color = (0, 0, 0, 255)  # Черный текст
+                        scale_factor = 1.4  # Увеличение на 40%
                 elif label == loc['battery']:
                     battery_value = int(value)
                     if 10 <= battery_value <= 30:
@@ -269,39 +272,54 @@ def create_frame(values,
                         box_color = (255, 0, 0, 255)  # Красный цвет для Battery < 10
                         text_color = (0, 0, 0, 255)  # Черный текст
 
-                box = create_rounded_box(element_width, box_height, border_radius)
+                # Применяем масштабирование к размерам
+                scaled_element_width = int(element_width * scale_factor)
+                scaled_box_height = int(box_height * scale_factor)
+                scaled_border_radius = int(border_radius * scale_factor)
+
+                # Создаем и масштабируем плашку
+                box = create_rounded_box(scaled_element_width, scaled_box_height, scaled_border_radius)
+
                 # Изменяем цвет плашки если нужно
                 if box_color != (0, 0, 0, 255):
                     colored_box = Image.new('RGBA', box.size, box_color)
                     colored_box.putalpha(box.split()[3])  # Используем альфа-канал от оригинальной плашки
                     box = colored_box
 
-                overlay.paste(box, (x_position, y_position), box)
+                # Вычисляем новые позиции для центрирования увеличенной плашки
+                vertical_offset = (scaled_box_height - box_height) // 2
+                overlay.paste(box, (x_position, y_position - vertical_offset), box)
 
-                text_x = x_position + ((element_width - text_width) // 2)
-                baseline_offset = int(max_text_height * 0.2)
-                text_y = text_baseline_y - baseline_offset
+                # Масштабируем размер шрифта
+                scaled_font_size = int(font_size * scale_factor)
+                scaled_regular_font = _get_font("fonts/sf-ui-display-regular.otf", scaled_font_size)
+                scaled_bold_font = _get_font("fonts/sf-ui-display-bold.otf", scaled_font_size)
 
-                label_bbox = draw.textbbox((0, 0), f"{label}: ", font=regular_font)
+                # Перерасчитываем позиции текста с учетом нового масштаба
+                text_x = x_position + ((scaled_element_width - text_width * scale_factor) // 2)
+                text_y = text_baseline_y - vertical_offset
+
+                label_bbox = draw.textbbox((0, 0), f"{label}: ", font=scaled_regular_font)
                 label_width = label_bbox[2] - label_bbox[0]
                 draw.text((text_x, text_y),
                          f"{label}: ",
                          fill=text_color,
-                         font=regular_font)
+                         font=scaled_regular_font)
 
-                value_bbox = draw.textbbox((0, 0), value, font=bold_font)
+                value_bbox = draw.textbbox((0, 0), value, font=scaled_bold_font)
                 value_width = value_bbox[2] - value_bbox[0]
                 draw.text((text_x + label_width, text_y),
                          value,
                          fill=text_color,
-                         font=bold_font)
+                         font=scaled_bold_font)
 
                 draw.text((text_x + label_width + value_width, text_y),
                          f" {unit}",
                          fill=text_color,
-                         font=regular_font)
+                         font=scaled_regular_font)
 
-                x_position += element_width + spacing
+                # Обновляем позицию для следующей плашки с учетом масштабирования
+                x_position += scaled_element_width + spacing
 
         result = Image.alpha_composite(background, overlay)
 
