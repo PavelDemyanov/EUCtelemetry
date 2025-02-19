@@ -89,7 +89,6 @@
         </div>
     </div>
 </div>
-
 {% endblock %}
 
 {% block scripts %}
@@ -115,6 +114,10 @@
     document.getElementById('campaignForm').addEventListener('submit', function(e) {
         e.preventDefault();
 
+        // Disable submit button to prevent double submission
+        const submitButton = this.querySelector('input[type="submit"]');
+        submitButton.disabled = true;
+
         // Make sure TinyMCE updates the textarea before form submission
         tinymce.triggerSave();
 
@@ -134,24 +137,28 @@
                 alert.classList.remove('d-none');
                 alert.classList.add('show');
 
-                // Reset form
+                // Reset form and editor
                 document.getElementById('campaignForm').reset();
                 editor.setContent('');
 
-                // Hide alert after 5 seconds (increased from 3)
+                // Hide alert after 5 seconds
                 setTimeout(() => {
                     alert.classList.remove('show');
                     alert.classList.add('d-none');
-                    // After hiding alert, refresh the page
+                    // After hiding alert, refresh the page to show updated campaign list
                     window.location.reload();
                 }, 5000);
             } else {
-                alert(data.error || 'An error occurred while sending the campaign');
+                alert(data.error || '{{ _('An error occurred while sending the campaign') }}');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('An error occurred while sending the campaign');
+            alert('{{ _('An error occurred while sending the campaign') }}');
+        })
+        .finally(() => {
+            // Re-enable submit button
+            submitButton.disabled = false;
         });
     });
 
