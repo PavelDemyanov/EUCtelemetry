@@ -78,4 +78,17 @@
         width: 100%;
         margin-bottom: 1rem;
     }
+
+    /* Reorder elements on mobile */
+    .instruction-block:last-child {
+        order: 3;
+    }
+
+    .video-block:first-child {
+        order: 2;
+    }
+
+    .video-block:last-child {
+        order: 4;
+    }
 }
