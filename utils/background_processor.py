@@ -170,22 +170,44 @@ def cleanup_project_files(project):
         # Wait for processing thread to complete
         if project.id in processing_threads:
             logging.info(f"Waiting for processing thread to complete for project {project.id}")
-            processing_threads[project.id].join(timeout=10)
+            thread = processing_threads[project.id]
+            # Даём потоку время на корректное завершение
+            thread.join(timeout=15)  # Увеличиваем timeout до 15 секунд
+
+            # Если поток всё ещё работает, пробуем более агрессивно
+            if thread.is_alive():
+                logging.warning(f"Thread for project {project.id} is still alive after timeout")
+                # Дополнительное ожидание
+                time.sleep(5)
 
         # Wait additional time to ensure all file operations are complete
-        time.sleep(3)
+        time.sleep(5)  # Увеличиваем время ожидания
 
         frames_dir = f'frames/project_{project.folder_number}'
         if os.path.exists(frames_dir):
             for attempt in range(max_retries):
                 try:
+                    logging.info(f"Attempting to clean up frames directory (attempt {attempt + 1})")
+
                     # Force close any open file handles in the directory
                     os.system(f"lsof +D {frames_dir} | grep -v COMMAND | awk '{{print $2}}' | xargs -r kill -9")
 
-                    time.sleep(retry_delay)  # Wait before attempting to remove
+                    # Синхронизируем все буферы файловой системы
+                    os.sync()
+
+                    # Подождём перед попыткой удаления
+                    time.sleep(retry_delay * (attempt + 1))  # Увеличиваем задержку с каждой попыткой
+
+                    # Попытка удаления директории
                     shutil.rmtree(frames_dir, ignore_errors=True)
-                    logging.info(f"Successfully cleaned up frames directory: {frames_dir} on attempt {attempt + 1}")
-                    break
+
+                    # Проверяем, действительно ли директория удалена
+                    if not os.path.exists(frames_dir):
+                        logging.info(f"Successfully cleaned up frames directory: {frames_dir} on attempt {attempt + 1}")
+                        break
+                    else:
+                        logging.warning(f"Directory still exists after cleanup attempt {attempt + 1}")
+
                 except Exception as e:
                     logging.error(f"Error cleaning up frames directory on attempt {attempt + 1}: {e}")
                     if attempt == max_retries - 1:
@@ -193,3 +215,4 @@ def cleanup_project_files(project):
 
     except Exception as e:
         logging.error(f"Error in cleanup_project_files: {e}")
+        raise
