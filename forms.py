@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, TextAreaField
+from wtforms import StringField, PasswordField, SubmitField, TextAreaField, BooleanField
 from wtforms.validators import DataRequired, Email, Length, EqualTo
 from flask_babel import lazy_gettext as _l
 
@@ -18,6 +18,7 @@ class RegistrationForm(FlaskForm):
 
 class ProfileForm(FlaskForm):
     name = StringField(_l('Name'), validators=[DataRequired(), Length(min=2, max=64)])
+    subscribed_to_emails = BooleanField(_l('Receive email notifications'))
     submit = SubmitField(_l('Save Changes'))
 
 class ChangePasswordForm(FlaskForm):

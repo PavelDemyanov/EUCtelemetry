@@ -500,6 +500,7 @@ def profile():
 
     if profile_form.validate_on_submit():
         current_user.name = profile_form.name.data
+        current_user.subscribed_to_emails = profile_form.subscribed_to_emails.data
         # Save the selected locale
         locale = request.form.get('locale')
         if locale in ['en', 'ru']:
@@ -1186,6 +1187,93 @@ def set_language(lang):
 
     return redirect(next_url)
 
+# Add new route for unsubscribe
+@app.route('/unsubscribe/<token>')
+def unsubscribe(token):
+    user = User.query.filter_by(email_confirmation_token=token).first()
+    if not user:
+        flash(_('Invalid unsubscribe link.'))
+        return redirect(url_for('index'))
+
+    user.subscribed_to_emails = False
+    user.email_confirmation_token = None  # Clear the token
+    db.session.commit()
+
+    flash(_('You have been successfully unsubscribed from email notifications.'))
+    if current_user.is_authenticated:
+        return redirect(url_for('profile'))
+    return redirect(url_for('index'))
+
+@app.route('/admin/email_campaign', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def email_campaign():
+    form = EmailCampaignForm()
+    if form.validate_on_submit():
+        try:
+            # Get all subscribed users
+            subscribed_users = User.query.filter_by(subscribed_to_emails=True).all()
+            if not subscribed_users:
+                flash(_('No subscribed users found.'))
+                return redirect(url_for('email_campaign'))
+
+            # Create campaign record
+            campaign = EmailCampaign(
+                subject=form.subject.data,
+                html_content=form.html_content.data,
+                sender_id=current_user.id,
+                recipients_count=len(subscribed_users)
+            )
+            db.session.add(campaign)
+            db.session.commit()
+
+            # Send emails to all subscribed users
+            for user in subscribed_users:
+                # Generate unsubscribe token for this user
+                unsubscribe_token = user.generate_unsubscribe_token()
+                user.email_confirmation_token = unsubscribe_token
+                db.session.commit()
+
+                # Add unsubscribe link to email content
+                unsubscribe_url = url_for('unsubscribe', token=unsubscribe_token, _external=True)
+
+                # Get user's preferred language
+                user_locale = user.locale or 'en'
+
+                # Add localized unsubscribe text
+                if user_locale == 'ru':
+                    footer = f"""
+                    <hr>
+                    <p style="font-size: 12px; color: #666;">
+                        Чтобы отписаться от рассылки, <a href="{unsubscribe_url}">нажмите здесь</a>.
+                    </p>
+                    """
+                else:
+                    footer = f"""
+                    <hr>
+                    <p style="font-size: 12px; color: #666;">
+                        To unsubscribe from these emails, <a href="{unsubscribe_url}">click here</a>.
+                    </p>
+                    """
+
+                # Combine content with footer
+                full_content = form.html_content.data + footer
+
+                # Send email
+                if not send_email(user.email, form.subject.data, full_content):
+                    flash(_('Error sending email to %(email)s', email=user.email))
+
+            flash(_('Campaign sent successfully to %(count)d users.', count=len(subscribed_users)))
+            return jsonify({'success': True, 'message': _('Campaign sent successfully.')})
+
+        except Exception as e:
+            db.session.rollback()
+            logging.error(f"Error sending campaign: {str(e)}")
+            return jsonify({'success': False, 'error': str(e)})
+
+    campaigns = EmailCampaign.query.order_by(EmailCampaign.created_at.desc()).all()
+    return render_template('admin/email_campaigns.html', form=form, campaigns=campaigns)
+
 with app.app_context():
     db.create_all()
 
@@ -1196,66 +1284,3 @@ stats_thread.start()
 # Start cleanup thread when app starts
 cleanup_thread = threading.Thread(target=cleanup_expired_projects, daemon=True)
 cleanup_thread.start()
-
-# Add these routes after the existing admin routes
-@app.route('/admin/email-campaigns', methods=['GET', 'POST'])
-@login_required
-@admin_required
-def email_campaigns():
-    form = EmailCampaignForm()
-
-    if request.method == 'POST':
-        if form.validate_on_submit():
-            try:
-                # Get all confirmed users
-                confirmed_users = User.query.filter_by(is_email_confirmed=True).all()
-                if not confirmed_users:
-                    return jsonify({'error': _('No confirmed users found')}), 400
-
-                # Create campaign record
-                campaign = EmailCampaign(
-                    subject=form.subject.data,
-                    html_content=form.html_content.data,
-                    sender_id=current_user.id,
-                    recipients_count=len(confirmed_users)
-                )
-                db.session.add(campaign)
-
-                # Send emails to all confirmed users
-                success_count = 0
-                for user in confirmed_users:
-                    if send_email(user.email, campaign.subject, campaign.html_content):
-                        success_count += 1
-
-                if success_count > 0:
-                    db.session.commit()
-                    return jsonify({
-                        'success': True,
-                        'message': _('Campaign sent successfully to %(count)d recipients', count=success_count)
-                    })
-                else:
-                    db.session.rollback()
-                    return jsonify({'error': _('Failed to send emails')}), 500
-
-            except Exception as e:
-                db.session.rollback()
-                logging.error(f"Error sending campaign: {str(e)}")
-                return jsonify({'error': str(e)}), 500
-
-        return jsonify({'error': _('Invalid form data')}), 400
-
-    # GET request - display the form and campaign history
-    campaigns = EmailCampaign.query.order_by(EmailCampaign.created_at.desc()).all()
-    return render_template('admin/email_campaigns.html', form=form, campaigns=campaigns)
-
-@app.route('/admin/campaign/<int:campaign_id>')
-@login_required
-@admin_required
-def get_campaign(campaign_id):
-    campaign = EmailCampaign.query.get_or_404(campaign_id)
-    return jsonify({
-        'subject': campaign.subject,
-        'html_content': campaign.html_content,
-        'created_at': campaign.created_at.strftime('%Y-%m-%d %H:%M'),
-        'recipients_count': campaign.recipients_count
-    })

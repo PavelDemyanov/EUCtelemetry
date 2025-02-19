@@ -17,7 +17,8 @@ class User(UserMixin, db.Model):
     password_reset_token = db.Column(db.String(100), unique=True)
     password_reset_sent_at = db.Column(db.DateTime)
     is_admin = db.Column(db.Boolean, default=False)
-    locale = db.Column(db.String(2), default='en')  # New field for language preference
+    locale = db.Column(db.String(2), default='en')
+    subscribed_to_emails = db.Column(db.Boolean, default=True)  # New field
     projects = db.relationship('Project', backref='user', lazy=True)
 
     def set_password(self, password):
@@ -40,6 +41,10 @@ class User(UserMixin, db.Model):
         if not self.password_reset_sent_at:
             return False
         return self.password_reset_sent_at > datetime.utcnow() - timedelta(hours=24)
+
+    def generate_unsubscribe_token(self):
+        """Generate a secure token for email unsubscribe link"""
+        return secrets.token_urlsafe(32)
 
 class Project(db.Model):
     id = db.Column(db.Integer, primary_key=True)

@@ -30,6 +30,13 @@
                         </select>
                     </div>
                     <div class="mb-3">
+                        <div class="form-check">
+                            {{ profile_form.subscribed_to_emails(class="form-check-input") }}
+                            {{ profile_form.subscribed_to_emails.label(class="form-check-label") }}
+                        </div>
+                        <small class="text-muted">{{ _('You can unsubscribe from email notifications at any time') }}</small>
+                    </div>
+                    <div class="mb-3">
                         {{ profile_form.submit(class="btn btn-primary") }}
                     </div>
                 </form>
