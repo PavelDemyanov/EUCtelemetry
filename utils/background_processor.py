@@ -7,7 +7,12 @@ from utils.image_generator import generate_frames
 from utils.video_creator import create_video
 from utils.hardware_detection import get_hardware_info
 import os
+import signal
+import psutil
 from datetime import datetime
+
+# Dictionary to store running process information
+running_processes = {}
 
 def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', text_settings=None, interpolate_values=True, locale='en'):
     """Process project in background thread"""
@@ -73,8 +78,12 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     except Exception as e:
                         logging.error(f"Error updating progress: {e}")
 
-                # Log visibility settings before frame generation
-                logging.info(f"Visibility settings before frame generation: {project_text_settings}")
+                # Store the process information
+                current_process = psutil.Process()
+                running_processes[project_id] = {
+                    'pid': current_process.pid,
+                    'stage': 'frames'
+                }
 
                 # Generate frames with progress tracking, interpolation setting and locale
                 frame_count, duration = generate_frames(
@@ -87,6 +96,9 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     interpolate_values,
                     locale
                 )
+
+                # Update stage to video creation
+                running_processes[project_id]['stage'] = 'video'
 
                 # Convert numpy values to Python native types
                 project.frame_count = int(frame_count)
@@ -109,6 +121,10 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                 project.processing_completed_at = datetime.now()
                 db.session.commit()
 
+                # Remove process from running processes
+                if project_id in running_processes:
+                    del running_processes[project_id]
+
             except Exception as e:
                 logging.error(f"Error processing project {project_id}: {str(e)}")
                 try:
@@ -121,8 +137,53 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                             db.session.commit()
                 except Exception as db_error:
                     logging.error(f"Error updating project status: {str(db_error)}")
+                finally:
+                    # Remove process from running processes in case of error
+                    if project_id in running_processes:
+                        del running_processes[project_id]
 
     # Start background thread
     thread = threading.Thread(target=_process)
     thread.daemon = True
     thread.start()
+
+def stop_project_processing(project_id):
+    """Stop the processing of a project"""
+    if project_id not in running_processes:
+        logging.warning(f"No running process found for project {project_id}")
+        return False
+
+    try:
+        process_info = running_processes[project_id]
+        process = psutil.Process(process_info['pid'])
+
+        # Kill the process and all its children
+        for child in process.children(recursive=True):
+            try:
+                child.kill()
+            except psutil.NoSuchProcess:
+                pass
+
+        process.kill()
+
+        # Update project status in database
+        from app import app
+        with app.app_context():
+            from models import Project
+            project = Project.query.get(project_id)
+            if project:
+                project.status = 'stopped'
+                project.error_message = 'Processing stopped by user'
+                project.processing_completed_at = datetime.now()
+                db.session.commit()
+
+        # Remove from running processes
+        del running_processes[project_id]
+        return True
+
+    except psutil.NoSuchProcess:
+        logging.error(f"Process {process_info['pid']} for project {project_id} no longer exists")
+        return False
+    except Exception as e:
+        logging.error(f"Error stopping project {project_id}: {str(e)}")
+        return False

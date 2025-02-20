@@ -1,5 +1,5 @@
 function stopProject(projectId) {
-    if (confirm(gettext('Are you sure you want to stop and delete this project?'))) {
+    if (confirm(gettext('Are you sure you want to stop this project processing?'))) {
         fetch(`/stop/${projectId}`, {
             method: 'POST',
         })
@@ -54,14 +54,15 @@ function updateProjectStatuses() {
                         statusBadge.className = 'badge text-bg-' + 
                             (data.status === 'completed' ? 'success' : 
                              data.status === 'processing' ? 'warning' : 
-                             data.status === 'error' ? 'danger' : 'secondary');
+                             data.status === 'error' ? 'danger' : 
+                             data.status === 'stopped' ? 'secondary' : 'secondary');
 
                         // Use translated status
                         statusBadge.textContent = data.status.charAt(0).toUpperCase() + data.status.slice(1);
                         statusBadge.dataset.projectStatus = data.status;
 
                         // If project completed or errored, add/update error message tooltip
-                        if (data.status === 'error' && data.error_message) {
+                        if ((data.status === 'error' || data.status === 'stopped') && data.error_message) {
                             statusBadge.title = data.error_message;
                         }
 

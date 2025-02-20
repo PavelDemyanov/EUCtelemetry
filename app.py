@@ -21,7 +21,7 @@ from extensions import db
 from utils.csv_processor import process_csv_file
 from utils.image_generator import generate_frames, create_preview_frame
 from utils.video_creator import create_video
-from utils.background_processor import process_project
+from utils.background_processor import process_project, stop_project_processing
 from utils.env_setup import setup_env_variables
 from utils.email_sender import send_email
 from forms import (LoginForm, RegistrationForm, ProfileForm, 
@@ -783,7 +783,7 @@ def download_file(project_id, type):
         processed_csv = os.path.join('processed_data', f'project_{project.folder_number}_{project.csv_file}')
         if os.path.exists(processed_csv):
             return send_file(processed_csv, as_attachment=True, 
-                           download_name=f'processed_{project.csv_file}')
+                           downloadname=f'processed_{project.csv_file}')
 
     return jsonify({'error': 'File not found'}), 404
 
@@ -896,6 +896,7 @@ def generate_preview(project_id):
         logging.error(f"Error generating preview: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+# Add this new route after the existing project routes
 @app.route('/stop/<int:project_id>', methods=['POST'])
 @login_required
 def stop_project(project_id):
@@ -903,52 +904,14 @@ def stop_project(project_id):
     if project.user_id != current_user.id:
         return jsonify({'error': 'Unauthorized'}), 403
 
-    try:
-        if project.status == 'processing':
-            # Force status to error to stop processing
-            project.status = 'error'
-            project.error_message = 'Process stopped by user'
-            project.processing_completed_at = datetime.now()
-            db.session.commit()
+    if project.status not in ['processing', 'pending']:
+        return jsonify({'error': 'Project is not being processed'}), 400
 
-            # Delete associated files
-            if project.csv_file:
-                csv_path = os.path.join(app.config['UPLOAD_FOLDER'], project.csv_file)
-                if os.path.exists(csv_path):
-                    os.remove(csv_path)
-
-            # Delete preview file if exists
-            preview_path = os.path.join('previews', f'{project_id}_preview.png')
-            if os.path.exists(preview_path):
-                os.remove(preview_path)
-
-            if project.video_file:
-                video_path = os.path.join('videos', project.video_file)
-                if os.path.exists(video_path):
-                    os.remove(video_path)
-
-            # Delete frames directory if it exists
-            frames_dir = f'frames/project_{project.folder_number}'
-            if os.path.exists(frames_dir):
-                shutil.rmtree(frames_dir)
-
-            # Delete processed CSV file if exists
-            if project.csv_file:
-                processed_csv = os.path.join('processed_data', f'project_{project.folder_number}_{project.csv_file}')
-                if os.path.exists(processed_csv):
-                    os.remove(processed_csv)
-
-            # Delete project from database
-            db.session.delete(project)
-            db.session.commit()
-
-            return jsonify({'success': True})
-        else:
-            return jsonify({'error': 'Project is not in processing state'}), 400
-
-    except Exception as e:
-        logging.error(f"Error stopping project: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+    from utils.background_processor import stop_project_processing
+    if stop_project_processing(project_id):
+        return jsonify({'success': True})
+    else:
+        return jsonify({'error': 'Failed to stop project processing'}), 500
 
 @app.route('/change_password', methods=['POST'])
 @login_required
