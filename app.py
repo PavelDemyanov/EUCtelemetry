@@ -900,18 +900,24 @@ def generate_preview(project_id):
 @app.route('/stop/<int:project_id>', methods=['POST'])
 @login_required
 def stop_project(project_id):
-    project = Project.query.get_or_404(project_id)
-    if project.user_id != current_user.id:
-        return jsonify({'error': 'Unauthorized'}), 403
+    """Stop project processing"""
+    try:
+        project = Project.query.get_or_404(project_id)
+        if project.user_id != current_user.id:
+            return jsonify({'error': 'Unauthorized'}), 403
 
-    if project.status not in ['processing', 'pending']:
-        return jsonify({'error': 'Project is not being processed'}), 400
+        if project.status not in ['processing', 'pending']:
+            return jsonify({'error': 'Project is not being processed'}), 400
 
-    from utils.background_processor import stop_project_processing
-    if stop_project_processing(project_id):
-        return jsonify({'success': True})
-    else:
+        from utils.background_processor import stop_project_processing
+        if stop_project_processing(project_id):
+            return jsonify({'success': True})
+
         return jsonify({'error': 'Failed to stop project processing'}), 500
+
+    except Exception as e:
+        logging.error(f"Error in stop_project route: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/change_password', methods=['POST'])
 @login_required
