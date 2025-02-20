@@ -64,7 +64,7 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     try:
                         with app.app_context():
                             project = Project.query.get(project_id)
-                            if project:
+                            if project and project.status != 'stopped':
                                 if stage == 'frames':
                                     # Frame generation progress (0-50%)
                                     progress = (current_frame / total_frames) * 50
@@ -173,26 +173,17 @@ def stop_project_processing(project_id):
             children = process.children(recursive=True)
             for child in children:
                 try:
-                    child.terminate()
-                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    os.kill(child.pid, signal.SIGKILL)
+                except (ProcessLookupError, psutil.NoSuchProcess):
                     pass
 
-            # Give children time to terminate
-            psutil.wait_procs(children, timeout=3)
+            # Kill the main process
+            os.kill(process.pid, signal.SIGKILL)
 
-            # Terminate the main process
-            process.terminate()
-            process.wait(timeout=3)
-
-        except psutil.NoSuchProcess:
+        except (psutil.NoSuchProcess, ProcessLookupError):
             logging.warning(f"Process {process_info['pid']} for project {project_id} no longer exists")
-        except psutil.AccessDenied:
-            logging.warning(f"Access denied when trying to terminate process {process_info['pid']}")
         except Exception as e:
-            logging.error(f"Error terminating process: {str(e)}")
-
-        # Remove from running processes
-        del running_processes[project_id]
+            logging.error(f"Error killing process: {str(e)}")
 
         # Update project status in database
         def update_project_status():
@@ -211,6 +202,8 @@ def stop_project_processing(project_id):
         status_thread.daemon = True
         status_thread.start()
 
+        # Remove from running processes
+        del running_processes[project_id]
         return True
 
     except Exception as e:
