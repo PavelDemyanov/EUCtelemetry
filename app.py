@@ -10,25 +10,42 @@ from collections import defaultdict
 from functools import wraps
 
 import psutil
-from flask import Flask, render_template, request, jsonify, send_file, url_for, send_from_directory, flash, redirect, abort
+from dotenv import load_dotenv
+from flask import (Flask, render_template, request, jsonify, send_file, 
+                  url_for, send_from_directory, flash, redirect, abort)
 from flask_migrate import Migrate
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.utils import secure_filename
 from flask_babel import Babel, gettext as _, get_locale
-from dotenv import load_dotenv
+from extensions import db
+from utils.csv_processor import process_csv_file
+from utils.image_generator import generate_frames, create_preview_frame
+from utils.video_creator import create_video
+from utils.background_processor import process_project
+from utils.env_setup import setup_env_variables
+from utils.email_sender import send_email
+from forms import (LoginForm, RegistrationForm, ProfileForm, 
+                  ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm, DeleteAccountForm)
+from models import User, Project, EmailCampaign
+from forms import EmailCampaignForm
+
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-# Load environment variables
+# Load environment variables from .env file immediately
 logger.info("Loading environment variables from .env file...")
 load_dotenv()
 
-# Create Flask app
-app = Flask(__name__)
+# Debug log environment variables (without sensitive data)
+logger.debug("Environment variables loaded:")
+logger.debug(f"SMTP_SERVER: {os.environ.get('SMTP_SERVER')}")
+logger.debug(f"SMTP_PORT: {os.environ.get('SMTP_PORT')}")
+logger.debug(f"SMTP_LOGIN is set: {bool(os.environ.get('SMTP_LOGIN'))}")
+logger.debug(f"SMTP_PASSWORD is set: {bool(os.environ.get('SMTP_PASSWORD'))}")
 
-# Configure app
+app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', os.urandom(32))
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
@@ -40,7 +57,7 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 app.config['WTF_CSRF_ENABLED'] = True
 app.config['BABEL_DEFAULT_LOCALE'] = 'en'
 
-# Configure SMTP
+# Add Mail configuration
 logger.info("Configuring SMTP settings...")
 app.config['MAIL_SERVER'] = os.environ.get('SMTP_SERVER')
 app.config['MAIL_PORT'] = int(os.environ.get('SMTP_PORT', 465))
@@ -49,131 +66,12 @@ app.config['MAIL_PASSWORD'] = os.environ.get('SMTP_PASSWORD')
 app.config['MAIL_USE_TLS'] = False
 app.config['MAIL_USE_SSL'] = True
 
-# Initialize Flask-Login
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = 'login'
-login_manager.login_message = 'Please log in to access this page.'
-
-# Initialize Babel
-babel = Babel()
-babel.init_app(app)
-
-# Import models and initialize database
-from models import db, User, Project, EmailCampaign
-
-# Initialize database
-db.init_app(app)
-
-# Initialize Flask-Migrate
-migrate = Migrate(app, db)
-
-# Create database tables within app context
-with app.app_context():
-    db.create_all()
-
-# Make get_locale available in templates
-app.jinja_env.globals['get_locale'] = get_locale
-
-# Import forms after models
-from forms import (LoginForm, RegistrationForm, ProfileForm, 
-                  ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm, 
-                  DeleteAccountForm, EmailCampaignForm)
-
-# Import utility functions
-from utils.csv_processor import process_csv_file
-from utils.image_generator import generate_frames, create_preview_frame
-from utils.video_creator import create_video
-from utils.background_processor import process_project, stop_project_processing
-from utils.env_setup import setup_env_variables
-from utils.email_sender import send_email
-
-# Create required directories
-for directory in ['uploads', 'frames', 'videos', 'processed_data', 'previews']:
-    try:
-        os.makedirs(directory, exist_ok=True)
-        logging.info(f"Ensuring directory exists: {directory}")
-    except Exception as e:
-        logging.error(f"Error creating directory {directory}: {str(e)}")
-        raise
-
-@login_manager.user_loader
-def load_user(id):
-    return User.query.get(int(id))
-
-# Project name characters
-PROJECT_NAME_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
-
-def generate_project_name():
-    """Generate a random 5-character project name"""
-    return ''.join(random.choice(PROJECT_NAME_CHARS) for _ in range(5))
-
-def validate_project_name(name):
-    """Validate project name"""
-    if not name:
-        return False
-    # Allow alphanumeric characters, dashes, and underscores
-    # with length between 1 and 7 characters
-    return bool(re.match(r'^[\w\d-]{1,7}$', name))
-
-
-def cleanup_expired_projects():
-    """Check and remove expired projects"""
-    while True:
-        try:
-            with app.app_context():
-                # Find all expired projects
-                expired_projects = Project.query.filter(
-                    Project.expiry_date <= datetime.utcnow()
-                ).all()
-
-                for project in expired_projects:
-                    logging.info(f"Cleaning up expired project {project.id}")
-
-                    # Delete associated files -  Simplified file deletion
-                    if project.csv_file:
-                        csv_path = os.path.join('uploads', project.csv_file)
-                        if os.path.exists(csv_path):
-                            os.remove(csv_path)
-                            logging.info(f"Deleted CSV file: {csv_path}")
-                        processed_csv = os.path.join('processed_data', f'project_{project.folder_number}_{project.csv_file}')
-                        if os.path.exists(processed_csv):
-                            os.remove(processed_csv)
-                            logging.info(f"Deleted processed CSV file: {processed_csv}")
-
-                    preview_path = os.path.join('previews', f'{project.id}_preview.png')
-                    if os.path.exists(preview_path):
-                        os.remove(preview_path)
-                        logging.info(f"Deleted preview file: {preview_path}")
-
-                    if project.video_file:
-                        video_path = os.path.join('videos', project.video_file)
-                        if os.path.exists(video_path):
-                            os.remove(video_path)
-                            logging.info(f"Deleted video file: {video_path}")
-
-                    frames_dir = f'frames/project_{project.folder_number}'
-                    if os.path.exists(frames_dir):
-                        shutil.rmtree(frames_dir)
-                        logging.info(f"Deleted frames directory: {frames_dir}")
-
-
-                    # Delete project from database
-                    db.session.delete(project)
-                    logging.info(f"Deleted expired project {project.id} from database")
-
-                db.session.commit()
-
-        except Exception as e:
-            logging.error(f"Error in cleanup task: {str(e)}")
-
-        # Sleep for 1 hour before next cleanup
-        time.sleep(3600)
-
 # Initialize used_folders as an empty set
 used_folders = set()
 
-# Configure Babel with locale selector
+# Initialize Babel
+babel = Babel(app)
+
 def get_locale():
     # Try to get locale from query string
     locale = request.args.get('lang')
@@ -190,6 +88,106 @@ def get_locale():
     # Default to English if no locale is found
     return 'en'
 
+# Configure Babel with locale selector
+babel.init_app(app, locale_selector=get_locale)
+
+# Make get_locale available in templates
+app.jinja_env.globals['get_locale'] = get_locale
+
+# Project name characters
+PROJECT_NAME_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+
+def generate_project_name():
+    """Generate a random 5-character project name"""
+    return ''.join(random.choice(PROJECT_NAME_CHARS) for _ in range(5))
+
+def validate_project_name(name):
+    """Validate project name"""
+    if not name:
+        return False
+    # Allow alphanumeric characters, dashes, and underscores
+    # with length between 1 and 7 characters
+    return bool(re.match(r'^[\w\d-]{1,7}$', name))
+
+def cleanup_project_files(project):
+    """Delete all files associated with a project"""
+    try:
+        # Delete CSV file
+        if project.csv_file:
+            csv_path = os.path.join('uploads', project.csv_file)
+            if os.path.exists(csv_path):
+                os.remove(csv_path)
+                logging.info(f"Deleted CSV file: {csv_path}")
+
+        # Delete preview file
+        preview_path = os.path.join('previews', f'{project.id}_preview.png')
+        if os.path.exists(preview_path):
+            os.remove(preview_path)
+            logging.info(f"Deleted preview file: {preview_path}")
+
+        # Delete video file
+        if project.video_file:
+            video_path = os.path.join('videos', project.video_file)
+            if os.path.exists(video_path):
+                os.remove(video_path)
+                logging.info(f"Deleted video file: {video_path}")
+
+        # Delete frames directory
+        frames_dir = f'frames/project_{project.folder_number}'
+        if os.path.exists(frames_dir):
+            shutil.rmtree(frames_dir)
+            logging.info(f"Deleted frames directory: {frames_dir}")
+
+        # Delete processed CSV file
+        if project.csv_file:
+            processed_csv = os.path.join('processed_data', f'project_{project.folder_number}_{project.csv_file}')
+            if os.path.exists(processed_csv):
+                os.remove(processed_csv)
+                logging.info(f"Deleted processed CSV file: {processed_csv}")
+
+        return True
+    except Exception as e:
+        logging.error(f"Error cleaning up project files: {str(e)}")
+        return False
+
+def cleanup_expired_projects():
+    """Check and remove expired projects"""
+    while True:
+        try:
+            with app.app_context():
+                # Find all expired projects
+                expired_projects = Project.query.filter(
+                    Project.expiry_date <= datetime.utcnow()
+                ).all()
+
+                for project in expired_projects:
+                    logging.info(f"Cleaning up expired project {project.id}")
+
+                    # Delete associated files
+                    if cleanup_project_files(project):
+                        # Delete project from database
+                        db.session.delete(project)
+                        logging.info(f"Deleted expired project {project.id} from database")
+                    else:
+                        logging.error(f"Failed to clean up files for project {project.id}")
+
+                db.session.commit()
+
+        except Exception as e:
+            logging.error(f"Error in cleanup task: {str(e)}")
+
+        # Sleep for 1 hour before next cleanup
+        time.sleep(3600)
+
+# Initialize Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+login_manager.login_message = 'Please log in to access this page.'
+
+@login_manager.user_loader
+def load_user(id):
+    return User.query.get(int(id))
 
 # Add admin required decorator after the login_manager setup
 def admin_required(f):
@@ -369,6 +367,20 @@ def admin_lists():
 def inject_now():
     return {'now': datetime.utcnow()}
 
+# Create required directories with proper error handling
+for directory in ['uploads', 'frames', 'videos', 'processed_data', 'previews']:
+    try:
+        os.makedirs(directory, exist_ok=True)
+        logging.info(f"Ensuring directory exists: {directory}")
+    except Exception as e:
+        logging.error(f"Error creating directory {directory}: {str(e)}")
+        raise
+
+db.init_app(app)
+migrate = Migrate(app, db)
+
+
+# Authentication routes
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
@@ -511,12 +523,13 @@ def delete_account():
             # Delete all user's projects first
             projects = Project.query.filter_by(user_id=current_user.id).all()
             for project in projects:
-                # Delete project files - Simplified file deletion
+                # Delete project files
                 if project.csv_file:
                     csv_path = os.path.join(app.config['UPLOAD_FOLDER'], project.csv_file)
                     if os.path.exists(csv_path):
                         os.remove(csv_path)
 
+                # Delete preview file
                 preview_path = os.path.join('previews', f'{project.id}_preview.png')
                 if os.path.exists(preview_path):
                     os.remove(preview_path)
@@ -526,10 +539,12 @@ def delete_account():
                     if os.path.exists(video_path):
                         os.remove(video_path)
 
+                # Delete frames directory
                 frames_dir = f'frames/project_{project.folder_number}'
                 if os.path.exists(frames_dir):
                     shutil.rmtree(frames_dir)
 
+                # Delete processed CSV file
                 if project.csv_file:
                     processed_csv = os.path.join('processed_data', f'project_{project.folder_number}_{project.csv_file}')
                     if os.path.exists(processed_csv):
@@ -728,36 +743,6 @@ def generate_project_frames(project_id):
         logging.error(f"Error starting processing: {e}")
         return jsonify({'error': str(e)}), 500
 
-# Update cancel_project route
-@app.route('/cancel_project/<int:project_id>', methods=['POST'])
-@login_required
-def cancel_project(project_id):
-    try:
-        project = Project.query.get_or_404(project_id)
-        if project.user_id != current_user.id:
-            return jsonify({'error': 'Unauthorized'}), 403
-
-        # Only allow cancellation of processing projects
-        if project.status != 'processing':
-            return jsonify({'error': 'Project is not in processing state'}), 400
-
-        logging.info(f"Cancelling project {project_id}")
-
-        # Update project status to cancelled
-        project.status = 'cancelled'
-        project.processing_completed_at = datetime.now()
-        db.session.commit()
-
-        # Stop project processing
-        if stop_project_processing(project):
-            return jsonify({'success': True, 'message': 'Project cancelled successfully'})
-        else:
-            return jsonify({'error': 'Failed to stop project processing'}), 500
-
-    except Exception as e:
-        logging.error(f"Error cancelling project: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
 @app.route('/project_status/<int:project_id>')
 @login_required
 def project_status(project_id):
@@ -810,15 +795,13 @@ def delete_project(project_id):
         return jsonify({'error': 'Unauthorized'}), 403
 
     try:
-        # Delete associated files if they exist - Simplified file deletion
+        # Delete associated files if they exist
         if project.csv_file:
             csv_path = os.path.join(app.config['UPLOAD_FOLDER'], project.csv_file)
             if os.path.exists(csv_path):
                 os.remove(csv_path)
-            processed_csv = os.path.join('processed_data', f'project_{project.folder_number}_{project.csv_file}')
-            if os.path.exists(processed_csv):
-                os.remove(processed_csv)
 
+        # Delete preview file if exists
         preview_path = os.path.join('previews', f'{project_id}_preview.png')
         if os.path.exists(preview_path):
             os.remove(preview_path)
@@ -828,10 +811,16 @@ def delete_project(project_id):
             if os.path.exists(video_path):
                 os.remove(video_path)
 
+        # Delete frames directory if it exists
         frames_dir = f'frames/project_{project.folder_number}'
         if os.path.exists(frames_dir):
             shutil.rmtree(frames_dir)
 
+        # Delete processed CSV file if exists
+        if project.csv_file:
+            processed_csv = os.path.join('processed_data', f'project_{project.folder_number}_{project.csv_file}')
+            if os.path.exists(processed_csv):
+                os.remove(processed_csv)
 
         # Delete project from database
         db.session.delete(project)
@@ -922,15 +911,13 @@ def stop_project(project_id):
             project.processing_completed_at = datetime.now()
             db.session.commit()
 
-            # Delete associated files - Simplified file deletion
+            # Delete associated files
             if project.csv_file:
                 csv_path = os.path.join(app.config['UPLOAD_FOLDER'], project.csv_file)
                 if os.path.exists(csv_path):
                     os.remove(csv_path)
-                processed_csv = os.path.join('processed_data', f'project_{project.folder_number}_{project.csv_file}')
-                if os.path.exists(processed_csv):
-                    os.remove(processed_csv)
 
+            # Delete preview file if exists
             preview_path = os.path.join('previews', f'{project_id}_preview.png')
             if os.path.exists(preview_path):
                 os.remove(preview_path)
@@ -940,10 +927,16 @@ def stop_project(project_id):
                 if os.path.exists(video_path):
                     os.remove(video_path)
 
+            # Delete frames directory if it exists
             frames_dir = f'frames/project_{project.folder_number}'
             if os.path.exists(frames_dir):
                 shutil.rmtree(frames_dir)
 
+            # Delete processed CSV file if exists
+            if project.csv_file:
+                processed_csv = os.path.join('processed_data', f'project_{project.folder_number}_{project.csv_file}')
+                if os.path.exists(processed_csv):
+                    os.remove(processed_csv)
 
             # Delete project from database
             db.session.delete(project)
@@ -1061,28 +1054,8 @@ def delete_admin_user(user_id):
         # Delete all user's projects first
         projects = Project.query.filter_by(user_id=user.id).all()
         for project in projects:
-            #Simplified file deletion
-            if project.csv_file:
-                csv_path = os.path.join('uploads', project.csv_file)
-                if os.path.exists(csv_path):
-                    os.remove(csv_path)
-                processed_csv = os.path.join('processed_data', f'project_{project.folder_number}_{project.csv_file}')
-                if os.path.exists(processed_csv):
-                    os.remove(processed_csv)
-
-            preview_path = os.path.join('previews', f'{project.id}_preview.png')
-            if os.path.exists(preview_path):
-                os.remove(preview_path)
-
-            if project.video_file:
-                video_path = os.path.join('videos', project.video_file)
-                if os.path.exists(video_path):
-                    os.remove(video_path)
-
-            frames_dir = f'frames/project_{project.folder_number}'
-            if os.path.exists(frames_dir):
-                shutil.rmtree(frames_dir)
-
+            if not cleanup_project_files(project):
+                return jsonify({'error': f'Failed to clean up files for project {project.id}'}), 500
             db.session.delete(project)
 
         # Delete the user
@@ -1096,6 +1069,7 @@ def delete_admin_user(user_id):
         logging.error(f"Error deleting user: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+import os
 # Add this new endpoint after other admin routes
 @app.route('/admin/cleanup-storage', methods=['POST'])
 @login_required
@@ -1300,9 +1274,8 @@ def email_campaigns():
     campaigns = EmailCampaign.query.order_by(EmailCampaign.created_at.desc()).all()
     return render_template('admin/email_campaigns.html', form=form, campaigns=campaigns)
 
-@login_manager.user_loader
-def load_user(id):
-    return User.query.get(int(id))
+with app.app_context():
+    db.create_all()
 
 # Start collecting stats when the app starts
 stats_thread = threading.Thread(target=collect_system_stats, daemon=True)
