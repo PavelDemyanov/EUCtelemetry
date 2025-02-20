@@ -9,6 +9,7 @@ import threading
 from functools import lru_cache
 from utils.hardware_detection import is_apple_silicon
 from utils.image_processor import create_speed_indicator
+from concurrent.futures import ThreadPoolExecutor
 
 _metal_initialized = False
 _metal_context = None
@@ -333,9 +334,9 @@ def generate_frames(csv_file,
             shutil.rmtree(frames_dir)
         os.makedirs(frames_dir, exist_ok=True)
 
-        from utils.csv_processor import process_csv_file
-        csv_type, processed_data = process_csv_file(csv_file, folder_number)
-        df = pd.DataFrame(processed_data)
+        df = pd.DataFrame()
+        with open(csv_file, 'r') as f:
+            df = pd.read_csv(f)
 
         # Sort dataframe by timestamp to ensure proper interpolation
         df = df.sort_values('timestamp')
@@ -351,34 +352,80 @@ def generate_frames(csv_file,
 
         completed_frames = 0
         lock = threading.Lock()
+        stop_event = threading.Event()
 
-        def process_frame(i, timestamp):
+        def process_frame(args):
+            i, timestamp = args
             nonlocal completed_frames
-            # Use interpolated values for frame generation if enabled
-            values = find_nearest_values(df,
-                                         timestamp,
-                                         interpolate=interpolate_values)
-            output_path = f'{frames_dir}/frame_{i:06d}.png'
-            create_frame(values,
-                         resolution,
-                         output_path,
-                         text_settings,
-                         locale=locale)
 
-            with lock:
-                completed_frames += 1
-                if progress_callback and (completed_frames % 10 == 0
-                                          or completed_frames == frame_count):
-                    progress_callback(completed_frames, frame_count, 'frames')
+            # Check for stop signal
+            if stop_event.is_set():
+                raise InterruptedError("Frame generation stopped by user")
+
+            try:
+                # Use interpolated values for frame generation if enabled
+                values = find_nearest_values(df,
+                                              timestamp,
+                                              interpolate=interpolate_values)
+                output_path = f'{frames_dir}/frame_{i:06d}.png'
+                create_frame(values,
+                               resolution,
+                               output_path,
+                               text_settings,
+                               locale=locale)
+
+                with lock:
+                    completed_frames += 1
+                    if progress_callback and (completed_frames % 10 == 0
+                                               or completed_frames == frame_count):
+                        try:
+                            progress_callback(completed_frames, frame_count, 'frames')
+                        except InterruptedError:
+                            stop_event.set()
+                            raise
+
+            except InterruptedError:
+                stop_event.set()
+                raise
+            except Exception as e:
+                logging.error(f"Error processing frame {i}: {e}")
+                raise
 
         max_workers = os.cpu_count() or 4
-        with concurrent.futures.ThreadPoolExecutor(
-                max_workers=max_workers) as executor:
-            futures = [
-                executor.submit(process_frame, i, ts)
-                for i, ts in enumerate(frame_timestamps)
-            ]
-            concurrent.futures.wait(futures)
+        frame_args = list(enumerate(frame_timestamps))
+        chunk_size = 100  # Process frames in smaller chunks for better interrupt handling
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            try:
+                for i in range(0, len(frame_args), chunk_size):
+                    if stop_event.is_set():
+                        raise InterruptedError("Frame generation stopped by user")
+
+                    chunk = frame_args[i:i + chunk_size]
+                    futures = [executor.submit(process_frame, args) for args in chunk]
+
+                    for future in futures:
+                        try:
+                            future.result()  # This will raise any exceptions from the worker
+                        except InterruptedError:
+                            stop_event.set()
+                            executor.shutdown(wait=False)
+                            raise
+                        except Exception as e:
+                            logging.error(f"Error in frame generation: {e}")
+                            stop_event.set()
+                            executor.shutdown(wait=False)
+                            raise
+
+            except InterruptedError:
+                logging.info("Frame generation interrupted by user")
+                raise
+            except Exception as e:
+                logging.error(f"Error during frame generation: {e}")
+                raise
+            finally:
+                if stop_event.is_set():
+                    executor.shutdown(wait=False)
 
         logging.info(f"Successfully generated {frame_count} frames")
         return frame_count, (T_max - T_min)
