@@ -713,13 +713,14 @@ def generate_project_frames(project_id):
             # Add visibility settings with explicit defaults
             'show_speed': data.get('show_speed', True),
             'show_max_speed': data.get('show_max_speed', True),
-            'show_gps': data.get('show_gps', False),  # Explicitly include GPS visibility
             'show_voltage': data.get('show_voltage', True),
             'show_temp': data.get('show_temp', True),
             'show_battery': data.get('show_battery', True),
             'show_mileage': data.get('show_mileage', True),
             'show_pwm': data.get('show_pwm', True),
             'show_power': data.get('show_power', True),
+            'show_current': data.get('show_current', True),  # Add current visibility setting
+            'show_gps': data.get('show_gps', False),
             'show_bottom_elements': data.get('show_bottom_elements', True)
         }
 
@@ -874,6 +875,7 @@ def generate_preview(project_id):
             'show_mileage': data.get('show_mileage', True),
             'show_pwm': data.get('show_pwm', True),
             'show_power': data.get('show_power', True),
+            'show_current': data.get('show_current', True), # Add current visibility setting
             'show_bottom_elements': data.get('show_bottom_elements', True)
         }
 

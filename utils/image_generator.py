@@ -149,6 +149,7 @@ def create_frame(values,
         show_mileage = text_settings.get('show_mileage', True)
         show_pwm = text_settings.get('show_pwm', True)
         show_power = text_settings.get('show_power', True)
+        show_current = text_settings.get('show_current', True)  # Add current visibility setting
         show_bottom_elements = text_settings.get('show_bottom_elements', True)
 
         # Получаем настройки позиционирования индикатора и текста
@@ -216,6 +217,8 @@ def create_frame(values,
             params.append((loc['pwm'], f"{values['pwm']}", loc['units']['pwm']))
         if show_power:
             params.append((loc['power'], f"{values['power']}", loc['units']['power']))
+        if show_current:  # Add current display
+            params.append((loc['current'], f"{values['current']}", loc['units']['current']))
 
         if params:  # Only proceed if there are visible elements
             element_widths = []
@@ -249,7 +252,6 @@ def create_frame(values,
 
             x_position = start_x
             for i, ((label, value, unit), element_width, text_width) in enumerate(zip(params, element_widths, text_widths)):
-                # Определяем цвет плашки и текста в зависимости от значения PWM и Battery
                 box_color = (0, 0, 0, 255)  # Стандартный черный цвет
                 text_color = (255, 255, 255, 255)  # Стандартный белый цвет
 
@@ -271,10 +273,9 @@ def create_frame(values,
                         text_color = (0, 0, 0, 255)  # Черный текст
 
                 box = create_rounded_box(element_width, box_height, border_radius)
-                # Изменяем цвет плашки если нужно
                 if box_color != (0, 0, 0, 255):
                     colored_box = Image.new('RGBA', box.size, box_color)
-                    colored_box.putalpha(box.split()[3])  # Используем альфа-канал от оригинальной плашки
+                    colored_box.putalpha(box.split()[3])
                     box = colored_box
 
                 overlay.paste(box, (x_position, y_position), box)
@@ -286,21 +287,21 @@ def create_frame(values,
                 label_bbox = draw.textbbox((0, 0), f"{label}: ", font=regular_font)
                 label_width = label_bbox[2] - label_bbox[0]
                 draw.text((text_x, text_y),
-                         f"{label}: ",
-                         fill=text_color,
-                         font=regular_font)
+                          f"{label}: ",
+                          fill=text_color,
+                          font=regular_font)
 
                 value_bbox = draw.textbbox((0, 0), value, font=bold_font)
                 value_width = value_bbox[2] - value_bbox[0]
                 draw.text((text_x + label_width, text_y),
-                         value,
-                         fill=text_color,
-                         font=bold_font)
+                          value,
+                          fill=text_color,
+                          font=bold_font)
 
                 draw.text((text_x + label_width + value_width, text_y),
-                         f" {unit}",
-                         fill=text_color,
-                         font=regular_font)
+                          f" {unit}",
+                          fill=text_color,
+                          font=regular_font)
 
                 x_position += element_width + spacing
 

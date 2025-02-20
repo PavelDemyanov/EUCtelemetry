@@ -105,6 +105,7 @@ function updatePreview(projectId) {
         show_mileage: document.getElementById('showMileage').checked,
         show_pwm: document.getElementById('showPWM').checked,
         show_power: document.getElementById('showPower').checked,
+        show_current: document.getElementById('showCurrent').checked,
         show_gps: document.getElementById('showGPS').checked,
         show_bottom_elements: document.getElementById('showBottomElements').checked
     };
@@ -242,6 +243,7 @@ allSettings.forEach(setting => {
                     show_mileage: document.getElementById('showMileage').checked,
                     show_pwm: document.getElementById('showPWM').checked,
                     show_power: document.getElementById('showPower').checked,
+                    show_current: document.getElementById('showCurrent').checked,
                     show_gps: document.getElementById('showGPS').checked,
                     show_bottom_elements: document.getElementById('showBottomElements').checked
                 };
@@ -271,7 +273,7 @@ allSettings.forEach(setting => {
 const visibilitySettings = [
     'showSpeed', 'showMaxSpeed', 'showVoltage', 'showTemp', 
     'showBattery', 'showMileage', 'showPWM', 'showPower', 
-    'showGPS', 'showBottomElements'
+    'showCurrent', 'showGPS', 'showBottomElements'
 ];
 
 visibilitySettings.forEach(setting => {
@@ -330,6 +332,7 @@ document.getElementById('startProcessButton').addEventListener('click', function
         show_mileage: document.getElementById('showMileage').checked,
         show_pwm: document.getElementById('showPWM').checked,
         show_power: document.getElementById('showPower').checked,
+        show_current: document.getElementById('showCurrent').checked,
         show_gps: document.getElementById('showGPS').checked,
         show_bottom_elements: document.getElementById('showBottomElements').checked
     };
