@@ -334,9 +334,10 @@ def generate_frames(csv_file,
             shutil.rmtree(frames_dir)
         os.makedirs(frames_dir, exist_ok=True)
 
-        df = pd.DataFrame()
-        with open(csv_file, 'r') as f:
-            df = pd.read_csv(f)
+        # Process CSV file using the processor
+        from utils.csv_processor import process_csv_file
+        csv_type, processed_data = process_csv_file(csv_file, folder_number)
+        df = pd.DataFrame(processed_data)
 
         # Sort dataframe by timestamp to ensure proper interpolation
         df = df.sort_values('timestamp')
