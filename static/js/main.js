@@ -57,8 +57,8 @@ function updateProjectStatuses() {
                              data.status === 'error' ? 'danger' : 
                              data.status === 'stopped' ? 'secondary' : 'secondary');
 
-                        // Use translated status
-                        statusBadge.textContent = data.status.charAt(0).toUpperCase() + data.status.slice(1);
+                        // Use translated status with first letter capitalized
+                        statusBadge.textContent = gettext(data.status.charAt(0).toUpperCase() + data.status.slice(1));
                         statusBadge.dataset.projectStatus = data.status;
 
                         // If project completed or errored, add/update error message tooltip
@@ -74,7 +74,7 @@ function updateProjectStatuses() {
 
                     // Update progress if processing
                     if (data.status === 'processing' && data.progress !== undefined) {
-                        statusBadge.textContent = `${data.status.charAt(0).toUpperCase() + data.status.slice(1)} (${Math.round(data.progress)}%)`;
+                        statusBadge.textContent = `${gettext(data.status.charAt(0).toUpperCase() + data.status.slice(1))} (${Math.round(data.progress)}%)`;
                     }
                 })
                 .catch(error => console.error('Error updating status:', error));
