@@ -24,14 +24,19 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
     project_text_settings = text_settings if text_settings is not None else {}
 
     def _process():
+        folder_number = None
         try:
             logging.info(f"Starting processing for project {project_id}")
 
+            # Initial setup with project information
             with app.app_context():
-                project = Project.query.get(project_id)
+                project = db.session.get(Project, project_id)
                 if not project:
                     logging.error(f"Project {project_id} not found")
                     return
+
+                folder_number = project.folder_number
+                csv_file = os.path.join('uploads', project.csv_file)
 
                 hardware_info = get_hardware_info()
                 logging.info(f"Hardware configuration: {hardware_info}")
@@ -50,35 +55,28 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                 'stage': 'frames'
             }
 
-            def progress_callback(current_frame, total_frames, stage='frames'):
+            def update_progress(current, total, stage='frames'):
                 if stop_flags.get(project_id, False):
                     raise InterruptedError("Processing was stopped by user")
 
                 try:
                     with app.app_context():
-                        # Get a fresh instance of the project
                         project = db.session.get(Project, project_id)
-                        if project.status == 'stopped':
+                        if project and project.status == 'stopped':
                             raise InterruptedError("Processing was stopped by user")
-                        progress = (current_frame / total_frames) * (50 if stage == 'frames' else 100)
-                        project.progress = progress
-                        db.session.commit()
-                        logging.info(f"Progress: {progress:.1f}% for stage: {stage}")
+                        if project:
+                            progress = (current / total) * (50 if stage == 'frames' else 100)
+                            project.progress = progress
+                            db.session.commit()
+                            logging.info(f"Progress: {progress:.1f}% for stage: {stage}")
                 except Exception as e:
                     logging.error(f"Error updating progress: {e}")
                     raise
 
-            if stop_flags.get(project_id, False):
-                raise InterruptedError("Processing was stopped by user")
-
-            csv_file = None
-            with app.app_context():
-                project = db.session.get(Project, project_id)
-                csv_file = os.path.join('uploads', project.csv_file)
-
-            logging.info(f"Processing CSV file for project {project_id}")
+            # Process CSV
             try:
-                _, _ = process_csv_file(csv_file, project.folder_number)
+                logging.info(f"Processing CSV file {csv_file}")
+                _, _ = process_csv_file(csv_file, folder_number)
             except Exception as e:
                 logging.error(f"Error processing CSV: {e}")
                 raise
@@ -86,20 +84,28 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
             if stop_flags.get(project_id, False):
                 raise InterruptedError("Processing was stopped by user")
 
+            # Generate frames
             try:
                 logging.info(f"Generating frames for project {project_id}")
                 frame_count, duration = generate_frames(
                     csv_file,
-                    project.folder_number,
+                    folder_number,
                     resolution,
                     fps,
                     project_text_settings,
-                    progress_callback,
+                    update_progress,
                     interpolate_values,
                     locale
                 )
-            except InterruptedError:
-                raise
+
+                with app.app_context():
+                    project = db.session.get(Project, project_id)
+                    if project.status == 'stopped':
+                        raise InterruptedError("Processing was stopped by user")
+                    project.frame_count = int(frame_count)
+                    project.video_duration = float(duration)
+                    db.session.commit()
+
             except Exception as e:
                 logging.error(f"Error generating frames: {e}")
                 raise
@@ -107,26 +113,18 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
             if stop_flags.get(project_id, False):
                 raise InterruptedError("Processing was stopped by user")
 
-            with app.app_context():
-                project = db.session.get(Project, project_id)
-                if project.status == 'stopped':
-                    raise InterruptedError("Processing was stopped by user")
-                project.frame_count = int(frame_count)
-                project.video_duration = float(duration)
-                db.session.commit()
-
+            # Create video
             try:
                 logging.info(f"Creating video for project {project_id}")
                 video_path = create_video(
-                    project.folder_number,
+                    folder_number,
                     fps,
                     codec,
                     resolution,
-                    progress_callback
+                    update_progress
                 )
 
                 with app.app_context():
-                    # Get a fresh project instance
                     project = db.session.get(Project, project_id)
                     if project.status == 'stopped':
                         raise InterruptedError("Processing was stopped by user")
@@ -137,37 +135,29 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     db.session.commit()
                     logging.info(f"Project {project_id} completed successfully")
 
-            except InterruptedError:
-                raise
             except Exception as e:
                 logging.error(f"Error creating video: {e}")
                 raise
 
         except InterruptedError as e:
             logging.info(f"Project {project_id} was interrupted: {str(e)}")
-            try:
-                with app.app_context():
-                    project = db.session.get(Project, project_id)
-                    if project:
-                        project.status = 'stopped'
-                        project.error_message = str(e)
-                        project.processing_completed_at = datetime.now()
-                        db.session.commit()
-            except Exception as db_error:
-                logging.error(f"Error updating project status after interruption: {str(db_error)}")
+            with app.app_context():
+                project = db.session.get(Project, project_id)
+                if project:
+                    project.status = 'stopped'
+                    project.error_message = str(e)
+                    project.processing_completed_at = datetime.now()
+                    db.session.commit()
 
         except Exception as e:
             logging.error(f"Error processing project {project_id}: {str(e)}")
-            try:
-                with app.app_context():
-                    project = db.session.get(Project, project_id)
-                    if project:
-                        project.status = 'error'
-                        project.error_message = str(e)
-                        project.processing_completed_at = datetime.now()
-                        db.session.commit()
-            except Exception as db_error:
-                logging.error(f"Error updating project status: {str(db_error)}")
+            with app.app_context():
+                project = db.session.get(Project, project_id)
+                if project:
+                    project.status = 'error'
+                    project.error_message = str(e)
+                    project.processing_completed_at = datetime.now()
+                    db.session.commit()
 
         finally:
             if project_id in running_processes:
@@ -224,7 +214,7 @@ def stop_project_processing(project_id):
             except (psutil.NoSuchProcess, ProcessLookupError):
                 logging.warning(f"Process for project {project_id} no longer exists")
             except psutil.TimeoutExpired:
-                logging.warning(f"Timeout waiting for process {pid} to terminate")
+                logging.warning(f"Timeout waiting for process to terminate")
                 try:
                     os.kill(pid, signal.SIGKILL)
                 except:
