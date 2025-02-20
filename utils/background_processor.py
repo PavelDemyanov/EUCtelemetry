@@ -80,10 +80,11 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
 
                 # Store the process information
                 current_process = psutil.Process()
-                running_processes[project_id] = {
+                process_info = {
                     'pid': current_process.pid,
                     'stage': 'frames'
                 }
+                running_processes[project_id] = process_info
 
                 # Generate frames with progress tracking, interpolation setting and locale
                 frame_count, duration = generate_frames(
@@ -97,8 +98,13 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     locale
                 )
 
+                # Check if process was stopped
+                if project_id not in running_processes:
+                    logging.info(f"Project {project_id} was stopped during frame generation")
+                    return
+
                 # Update stage to video creation
-                running_processes[project_id]['stage'] = 'video'
+                process_info['stage'] = 'video'
 
                 # Convert numpy values to Python native types
                 project.frame_count = int(frame_count)
@@ -113,6 +119,11 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     resolution,
                     progress_callback
                 )
+
+                # Check if process was stopped
+                if project_id not in running_processes:
+                    logging.info(f"Project {project_id} was stopped during video creation")
+                    return
 
                 # Update project with video info and completion time
                 project.video_file = os.path.basename(video_path)
@@ -155,35 +166,53 @@ def stop_project_processing(project_id):
 
     try:
         process_info = running_processes[project_id]
-        process = psutil.Process(process_info['pid'])
+        try:
+            process = psutil.Process(process_info['pid'])
 
-        # Kill the process and all its children
-        for child in process.children(recursive=True):
-            try:
-                child.kill()
-            except psutil.NoSuchProcess:
-                pass
+            # Try to terminate child processes first
+            children = process.children(recursive=True)
+            for child in children:
+                try:
+                    child.terminate()
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    pass
 
-        process.kill()
+            # Give children time to terminate
+            psutil.wait_procs(children, timeout=3)
 
-        # Update project status in database
-        from app import app
-        with app.app_context():
-            from models import Project
-            project = Project.query.get(project_id)
-            if project:
-                project.status = 'stopped'
-                project.error_message = 'Processing stopped by user'
-                project.processing_completed_at = datetime.now()
-                db.session.commit()
+            # Terminate the main process
+            process.terminate()
+            process.wait(timeout=3)
+
+        except psutil.NoSuchProcess:
+            logging.warning(f"Process {process_info['pid']} for project {project_id} no longer exists")
+        except psutil.AccessDenied:
+            logging.warning(f"Access denied when trying to terminate process {process_info['pid']}")
+        except Exception as e:
+            logging.error(f"Error terminating process: {str(e)}")
 
         # Remove from running processes
         del running_processes[project_id]
+
+        # Update project status in database
+        def update_project_status():
+            from app import app
+            with app.app_context():
+                from models import Project
+                project = Project.query.get(project_id)
+                if project:
+                    project.status = 'stopped'
+                    project.error_message = 'Processing stopped by user'
+                    project.processing_completed_at = datetime.now()
+                    db.session.commit()
+
+        # Start a new thread to update project status
+        status_thread = threading.Thread(target=update_project_status)
+        status_thread.daemon = True
+        status_thread.start()
+
         return True
 
-    except psutil.NoSuchProcess:
-        logging.error(f"Process {process_info['pid']} for project {project_id} no longer exists")
-        return False
     except Exception as e:
         logging.error(f"Error stopping project {project_id}: {str(e)}")
         return False
