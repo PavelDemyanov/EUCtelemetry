@@ -65,6 +65,7 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                             logging.info(f"Progress: {progress:.1f}% for stage: {stage}")
                     except Exception as e:
                         logging.error(f"Error updating progress: {e}")
+                        raise
 
                 if stop_flags.get(project_id, False):
                     raise InterruptedError("Processing was stopped by user")
@@ -120,9 +121,11 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     )
 
                     with app.app_context():
+                        # Refresh project from database
                         project = Project.query.get(project_id)
                         if project.status == 'stopped':
                             raise InterruptedError("Processing was stopped by user")
+
                         project.video_file = os.path.basename(video_path)
                         project.status = 'completed'
                         project.progress = 100
