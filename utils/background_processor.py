@@ -44,20 +44,13 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                 project.progress = 0  # Initialize progress
                 db.session.commit()
 
-                # Get unique folder number if not already assigned
-                if project.folder_number is None:
-                    project.folder_number = Project.get_next_folder_number()
-                db.session.commit()
-
-                # Create and clean project directory using unique folder number
-                frames_dir = f'frames/project_{project.folder_number}'
-                if os.path.exists(frames_dir):
-                    shutil.rmtree(frames_dir)
-                os.makedirs(frames_dir, exist_ok=True)
-
-                # Process CSV file using existing project csv_type and interpolation flag
-                csv_file = os.path.join('uploads', project.csv_file)
-                _, _ = process_csv_file(csv_file, project.folder_number, project.csv_type, interpolate_values)
+                # Store the process information
+                current_process = psutil.Process()
+                process_info = {
+                    'pid': current_process.pid,
+                    'stage': 'frames'
+                }
+                running_processes[project_id] = process_info
 
                 def progress_callback(current_frame, total_frames, stage='frames'):
                     """Update progress in database"""
@@ -78,33 +71,35 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     except Exception as e:
                         logging.error(f"Error updating progress: {e}")
 
-                # Store the process information
-                current_process = psutil.Process()
-                process_info = {
-                    'pid': current_process.pid,
-                    'stage': 'frames'
-                }
-                running_processes[project_id] = process_info
+                # Check if project was stopped before frame generation
+                if project_id not in running_processes:
+                    logging.info(f"Project {project_id} was stopped before frame generation")
+                    return
 
-                # Generate frames with progress tracking, interpolation setting and locale
+                # Process CSV file using existing project csv_type and interpolation flag
+                csv_file = os.path.join('uploads', project.csv_file)
+                _, _ = process_csv_file(csv_file, project.folder_number, project.csv_type, interpolate_values)
+
+                # Generate frames with progress tracking
                 frame_count, duration = generate_frames(
                     csv_file,
                     project.folder_number,
                     resolution,
                     fps,
-                    project_text_settings,  # Pass the complete text_settings dictionary
+                    project_text_settings,
                     progress_callback,
                     interpolate_values,
                     locale
                 )
 
-                # Check if process was stopped
+                # Check if project was stopped during frame generation
                 if project_id not in running_processes:
                     logging.info(f"Project {project_id} was stopped during frame generation")
                     return
 
                 # Update stage to video creation
                 process_info['stage'] = 'video'
+                running_processes[project_id] = process_info
 
                 # Convert numpy values to Python native types
                 project.frame_count = int(frame_count)
@@ -120,15 +115,10 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     progress_callback
                 )
 
-                # Check if process was stopped
-                if project_id not in running_processes:
-                    logging.info(f"Project {project_id} was stopped during video creation")
-                    return
-
                 # Update project with video info and completion time
                 project.video_file = os.path.basename(video_path)
                 project.status = 'completed'
-                project.progress = 100  # Ensure progress is 100% when completed
+                project.progress = 100
                 project.processing_completed_at = datetime.now()
                 db.session.commit()
 
@@ -165,6 +155,18 @@ def stop_project_processing(project_id):
         return False
 
     try:
+        # First update project status in database
+        from app import app
+        with app.app_context():
+            from models import Project
+            project = Project.query.get(project_id)
+            if project:
+                project.status = 'stopped'
+                project.error_message = 'Processing stopped by user'
+                project.processing_completed_at = datetime.now()
+                db.session.commit()
+
+        # Then try to terminate the process
         process_info = running_processes[project_id]
         try:
             process = psutil.Process(process_info['pid'])
@@ -173,39 +175,29 @@ def stop_project_processing(project_id):
             children = process.children(recursive=True)
             for child in children:
                 try:
-                    os.kill(child.pid, signal.SIGKILL)
+                    os.kill(child.pid, signal.SIGTERM)
                 except (ProcessLookupError, psutil.NoSuchProcess):
                     pass
 
-            # Kill the main process
-            os.kill(process.pid, signal.SIGKILL)
+            # Give children time to terminate
+            psutil.wait_procs(children, timeout=3)
+
+            # Terminate the main process
+            os.kill(process.pid, signal.SIGTERM)
 
         except (psutil.NoSuchProcess, ProcessLookupError):
             logging.warning(f"Process {process_info['pid']} for project {project_id} no longer exists")
         except Exception as e:
             logging.error(f"Error killing process: {str(e)}")
 
-        # Update project status in database
-        def update_project_status():
-            from app import app
-            with app.app_context():
-                from models import Project
-                project = Project.query.get(project_id)
-                if project:
-                    project.status = 'stopped'
-                    project.error_message = 'Processing stopped by user'
-                    project.processing_completed_at = datetime.now()
-                    db.session.commit()
+        # Finally remove from running processes
+        if project_id in running_processes:
+            del running_processes[project_id]
 
-        # Start a new thread to update project status
-        status_thread = threading.Thread(target=update_project_status)
-        status_thread.daemon = True
-        status_thread.start()
-
-        # Remove from running processes
-        del running_processes[project_id]
         return True
 
     except Exception as e:
         logging.error(f"Error stopping project {project_id}: {str(e)}")
+        if project_id in running_processes:
+            del running_processes[project_id]
         return False
