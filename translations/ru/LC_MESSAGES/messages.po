@@ -39,14 +39,32 @@ msgstr "Нажмите \"поделиться\" что бы сохранить C
 msgid "pending"
 msgstr "в ожидании"
 
+msgid "Pending"
+msgstr "В ожидании"
+
 msgid "processing"
 msgstr "обработка"
+
+msgid "Processing"
+msgstr "Обработка"
 
 msgid "completed"
 msgstr "завершено"
 
+msgid "Completed"
+msgstr "Завершено"
+
 msgid "error"
 msgstr "ошибка"
+
+msgid "Error"
+msgstr "Ошибка"
+
+msgid "stopped"
+msgstr "остановлено"
+
+msgid "Stopped"
+msgstr "Остановлено"
 
 # Telemetry elements translations
 msgid "Telemetry Elements Visibility"
