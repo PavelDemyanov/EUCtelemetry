@@ -65,10 +65,14 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                         if project and project.status == 'stopped':
                             raise InterruptedError("Processing was stopped by user")
                         if project:
-                            progress = (current / total) * (50 if stage == 'frames' else 100)
-                            project.progress = progress
+                            # Для стадии frames прогресс идёт от 0 до 50%
+                            # Для video прогресс идёт от 50 до 100%
+                            base_progress = 0 if stage == 'frames' else 50
+                            stage_progress = (current / total) * 50  # 50% для каждой стадии
+                            total_progress = base_progress + stage_progress
+                            project.progress = total_progress
                             db.session.commit()
-                            logging.info(f"Progress: {progress:.1f}% for stage: {stage}")
+                            logging.info(f"Progress: {total_progress:.1f}% for stage: {stage}")
                 except Exception as e:
                     logging.error(f"Error updating progress: {e}")
                     raise
