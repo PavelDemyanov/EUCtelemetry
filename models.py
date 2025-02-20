@@ -1,8 +1,15 @@
-from extensions import db
-from datetime import datetime, timedelta
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime, timedelta
 import secrets
+import os
+from sqlalchemy.orm import DeclarativeBase
+from flask_sqlalchemy import SQLAlchemy
+
+class Base(DeclarativeBase):
+    pass
+
+db = SQLAlchemy(model_class=Base)
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -18,7 +25,7 @@ class User(UserMixin, db.Model):
     password_reset_sent_at = db.Column(db.DateTime)
     is_admin = db.Column(db.Boolean, default=False)
     locale = db.Column(db.String(2), default='en')
-    subscribed_to_emails = db.Column(db.Boolean, default=True)  # New field
+    subscribed_to_emails = db.Column(db.Boolean, default=True)
     projects = db.relationship('Project', backref='user', lazy=True)
 
     def set_password(self, password):
@@ -109,7 +116,6 @@ class Project(db.Model):
     @classmethod
     def get_next_folder_number(cls):
         """Find the next available folder number"""
-        import os
         # Get all existing folder numbers from the frames directory
         existing_folders = set()
         if os.path.exists('frames'):

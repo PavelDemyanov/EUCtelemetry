@@ -21,7 +21,7 @@ from dotenv import load_dotenv
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-# Load environment variables from .env file immediately
+# Load environment variables
 logger.info("Loading environment variables from .env file...")
 load_dotenv()
 
@@ -49,10 +49,6 @@ app.config['MAIL_PASSWORD'] = os.environ.get('SMTP_PASSWORD')
 app.config['MAIL_USE_TLS'] = False
 app.config['MAIL_USE_SSL'] = True
 
-# Initialize extensions after app creation
-from extensions import db
-db.init_app(app)
-
 # Initialize Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -61,31 +57,36 @@ login_manager.login_message = 'Please log in to access this page.'
 
 # Initialize Babel
 babel = Babel()
-babel.init_app(app, locale_selector=get_locale)
+babel.init_app(app)
+
+# Import models and initialize database
+from models import db, User, Project, EmailCampaign
+
+# Initialize database
+db.init_app(app)
 
 # Initialize Flask-Migrate
 migrate = Migrate(app, db)
 
-# Import models after db initialization to avoid circular imports
-from models import User, Project, EmailCampaign
-
-# Initialize database tables
+# Create database tables within app context
 with app.app_context():
     db.create_all()
 
 # Make get_locale available in templates
 app.jinja_env.globals['get_locale'] = get_locale
 
-# Rest of your imports
+# Import forms after models
+from forms import (LoginForm, RegistrationForm, ProfileForm, 
+                  ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm, 
+                  DeleteAccountForm, EmailCampaignForm)
+
+# Import utility functions
 from utils.csv_processor import process_csv_file
 from utils.image_generator import generate_frames, create_preview_frame
 from utils.video_creator import create_video
 from utils.background_processor import process_project, stop_project_processing
 from utils.env_setup import setup_env_variables
 from utils.email_sender import send_email
-from forms import (LoginForm, RegistrationForm, ProfileForm, 
-                  ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm, 
-                  DeleteAccountForm, EmailCampaignForm)
 
 # Create required directories
 for directory in ['uploads', 'frames', 'videos', 'processed_data', 'previews']:
@@ -95,6 +96,10 @@ for directory in ['uploads', 'frames', 'videos', 'processed_data', 'previews']:
     except Exception as e:
         logging.error(f"Error creating directory {directory}: {str(e)}")
         raise
+
+@login_manager.user_loader
+def load_user(id):
+    return User.query.get(int(id))
 
 # Project name characters
 PROJECT_NAME_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
