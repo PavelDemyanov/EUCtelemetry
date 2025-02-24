@@ -60,28 +60,8 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
 
 // Function to update preview with current settings
 function updatePreview(projectId) {
-    const previewSection = document.getElementById('previewSection');
-    const progressDiv = document.getElementById('progress');
-    const progressBar = progressDiv.querySelector('.progress-bar');
-    const progressTitle = document.getElementById('progressTitle');
-
-    // Check resolution and adjust offsets if needed
-    const resolution = document.querySelector('input[name="resolution"]:checked').value;
-    if (resolution === '4k') {
-        document.getElementById('speedY').value = -50;
-        document.getElementById('speedYValue').textContent = '-50';
-        document.getElementById('unitY').value = 65;
-        document.getElementById('unitYValue').textContent = '65';
-    } else {
-        document.getElementById('speedY').value = -28;
-        document.getElementById('speedYValue').textContent = '-28';
-        document.getElementById('unitY').value = 36;
-        document.getElementById('unitYValue').textContent = '36';
-    }
-
-    // Get current values with updated settings
     const settings = {
-        resolution: resolution,
+        resolution: document.querySelector('input[name="resolution"]:checked').value,
         vertical_position: document.getElementById('verticalPosition').value,
         top_padding: document.getElementById('topPadding').value,
         bottom_padding: document.getElementById('bottomPadding').value,
@@ -116,8 +96,6 @@ function updatePreview(projectId) {
         pwm_bar_radius: parseInt(document.getElementById('pwmBarRadius').value)
     };
 
-    console.log('Sending preview settings:', settings);
-
     fetch(`/preview/${projectId}`, {
         method: 'POST',
         headers: {
@@ -128,43 +106,12 @@ function updatePreview(projectId) {
     .then(response => response.json())
     .then(data => {
         if (data.error) throw new Error(data.error);
-
-        // Show preview
-        progressDiv.classList.add('d-none');
-        previewSection.classList.remove('d-none');
         document.getElementById('previewImage').src = data.preview_url + '?t=' + new Date().getTime();
-
-        // Re-enable form
-        document.querySelectorAll('input, button').forEach(el => el.disabled = false);
-
-        // Store project ID for the start processing button
-        document.getElementById('startProcessButton').dataset.projectId = projectId;
     })
     .catch(error => {
-        console.error('Error:', error);
-        progressTitle.textContent = gettext('Error: ') + error.message;
-        progressBar.classList.add('bg-danger');
-        // Re-enable form
-        document.querySelectorAll('input, button').forEach(el => el.disabled = false);
+        console.error('Error updating preview:', error);
     });
 }
-
-// Add real-time validation for project name input
-document.getElementById('projectName').addEventListener('input', function() {
-    const value = this.value.trim();
-
-    if (value === '') {
-        // Empty value is valid (will generate automatic name)
-        this.classList.remove('is-invalid');
-        return;
-    }
-
-    if (value.length > 7 || !/^[\p{L}\d]+$/u.test(value)) {
-        this.classList.add('is-invalid');
-    } else {
-        this.classList.remove('is-invalid');
-    }
-});
 
 // Add event listeners for text display settings
 const textSettings = ['verticalPosition', 'topPadding', 'bottomPadding', 'spacing', 'fontSize', 'borderRadius'];
@@ -174,111 +121,33 @@ const pwmBarSettings = ['pwmBarTopMargin', 'pwmBarBottomMargin', 'pwmBarWidth', 
 // Combine all settings
 const allSettings = [...textSettings, ...speedIndicatorSettings, ...pwmBarSettings];
 
-// Add event listener for resolution change
-document.querySelectorAll('input[name="resolution"]').forEach(radio => {
-    radio.addEventListener('change', function() {
-        const projectId = document.getElementById('startProcessButton').dataset.projectId;
-        if (projectId) {
-            // Adjust slider values based on resolution
-            if (this.value === '4k') {
-                // Set specific values for 4K
-                document.getElementById('speedY').value = -50;
-                document.getElementById('speedYValue').textContent = '-50';
-                document.getElementById('unitY').value = 65;
-                document.getElementById('unitYValue').textContent = '65';
-            } else {
-                // Reset to default values for Full HD
-                document.getElementById('speedY').value = -28;
-                document.getElementById('speedYValue').textContent = '-28';
-                document.getElementById('unitY').value = 36;
-                document.getElementById('unitYValue').textContent = '36';
-            }
-            // Update preview with new settings
-            updatePreview(projectId);
-        }
-    });
-});
-
 allSettings.forEach(setting => {
     const input = document.getElementById(setting);
     const valueDisplay = document.getElementById(setting + 'Value');
-    if (!input || !valueDisplay) return; // Skip if elements don't exist
+
+    if (!input || !valueDisplay) return;
 
     input.addEventListener('input', function() {
-        // Update value display without adding unit if it's already in the display text
-        const currentText = valueDisplay.textContent;
-        const value = this.value;
-
-        // Check if the current text already contains a unit
-        if (currentText.includes('%') || currentText.includes('px')) {
-            valueDisplay.textContent = value;
-        } else {
-            // Add unit only if it's not already present
-            valueDisplay.textContent = value + (
-                this.id === 'speedSize' || this.id === 'unitSize' || this.id.includes('indicator') ? '%' : 'px'
-            );
-        }
+        // Update value display
+        valueDisplay.textContent = this.value;
 
         // Debounce the preview update
         clearTimeout(this.timeout);
         this.timeout = setTimeout(() => {
             const projectId = document.getElementById('startProcessButton').dataset.projectId;
             if (projectId) {
-                // Get current values for all settings including visibility
-                const settings = {
-                    resolution: document.querySelector('input[name="resolution"]:checked').value,
-                    vertical_position: document.getElementById('verticalPosition').value,
-                    top_padding: document.getElementById('topPadding').value,
-                    bottom_padding: document.getElementById('bottomPadding').value,
-                    spacing: document.getElementById('spacing').value,
-                    font_size: document.getElementById('fontSize').value,
-                    border_radius: document.getElementById('borderRadius').value,
-                    // Speed indicator settings
-                    indicator_x: document.getElementById('indicatorX').value,
-                    indicator_y: document.getElementById('indicatorY').value,
-                    speed_y: document.getElementById('speedY').value,
-                    unit_y: document.getElementById('unitY').value,
-                    speed_size: document.getElementById('speedSize').value,
-                    unit_size: document.getElementById('unitSize').value,
-                    indicator_scale: document.getElementById('indicatorScale').value,
-                    // Add visibility settings
-                    show_speed: document.getElementById('showSpeed').checked,
-                    show_max_speed: document.getElementById('showMaxSpeed').checked,
-                    show_voltage: document.getElementById('showVoltage').checked,
-                    show_temp: document.getElementById('showTemp').checked,
-                    show_battery: document.getElementById('showBattery').checked,
-                    show_mileage: document.getElementById('showMileage').checked,
-                    show_pwm: document.getElementById('showPWM').checked,
-                    show_power: document.getElementById('showPower').checked,
-                    show_current: document.getElementById('showCurrent').checked,
-                    show_gps: document.getElementById('showGPS').checked,
-                    show_bottom_elements: document.getElementById('showBottomElements').checked,
-                    show_pwm_bar: document.getElementById('showPWMBar').checked,
-                    pwm_bar_top_margin: parseInt(document.getElementById('pwmBarTopMargin').value),
-                    pwm_bar_bottom_margin: parseInt(document.getElementById('pwmBarBottomMargin').value),
-                    pwm_bar_width: parseInt(document.getElementById('pwmBarWidth').value),
-                    pwm_bar_radius: parseInt(document.getElementById('pwmBarRadius').value)
-                };
-
-                // Update preview with all current settings
-                fetch(`/preview/${projectId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(settings)
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) throw new Error(data.error);
-                    document.getElementById('previewImage').src = data.preview_url + '?t=' + new Date().getTime();
-                })
-                .catch(error => {
-                    console.error('Error updating preview:', error);
-                });
+                updatePreview(projectId);
             }
         }, 300);
     });
+});
+
+// Add event listeners for PWM bar settings
+document.getElementById('showPWMBar').addEventListener('change', function() {
+    const projectId = document.getElementById('startProcessButton').dataset.projectId;
+    if (projectId) {
+        updatePreview(projectId);
+    }
 });
 
 // Add event listeners for visibility checkboxes
@@ -440,5 +309,47 @@ document.getElementById('startProcessButton').addEventListener('click', function
         progressBar.classList.add('bg-danger');
         videoProcessingInfo.textContent = gettext('An error occurred while starting the video processing.');
         this.disabled = false;
+    });
+});
+
+// Add real-time validation for project name input
+document.getElementById('projectName').addEventListener('input', function() {
+    const value = this.value.trim();
+
+    if (value === '') {
+        // Empty value is valid (will generate automatic name)
+        this.classList.remove('is-invalid');
+        return;
+    }
+
+    if (value.length > 7 || !/^[\p{L}\d]+$/u.test(value)) {
+        this.classList.add('is-invalid');
+    } else {
+        this.classList.remove('is-invalid');
+    }
+});
+
+// Add event listeners for resolution change
+document.querySelectorAll('input[name="resolution"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        const projectId = document.getElementById('startProcessButton').dataset.projectId;
+        if (projectId) {
+            // Adjust slider values based on resolution
+            if (this.value === '4k') {
+                // Set specific values for 4K
+                document.getElementById('speedY').value = -50;
+                document.getElementById('speedYValue').textContent = '-50';
+                document.getElementById('unitY').value = 65;
+                document.getElementById('unitYValue').textContent = '65';
+            } else {
+                // Reset to default values for Full HD
+                document.getElementById('speedY').value = -28;
+                document.getElementById('speedYValue').textContent = '-28';
+                document.getElementById('unitY').value = 36;
+                document.getElementById('unitYValue').textContent = '36';
+            }
+            // Update preview with new settings
+            updatePreview(projectId);
+        }
     });
 });
