@@ -99,8 +99,8 @@ allSettings.forEach(setting => {
 
 // Add event listeners for visibility checkboxes
 const visibilitySettings = [
-    'showSpeed', 'showMaxSpeed', 'showVoltage', 'showTemp', 
-    'showBattery', 'showMileage', 'showPWM', 'showPower', 
+    'showSpeed', 'showMaxSpeed', 'showVoltage', 'showTemp',
+    'showBattery', 'showMileage', 'showPWM', 'showPower',
     'showCurrent', 'showGPS', 'showBottomElements', 'showPWMBar'
 ];
 
@@ -120,12 +120,20 @@ visibilitySettings.forEach(setting => {
     }
 });
 
-// Update settings object in updatePreview function
+// Function to update preview with current settings
 function updatePreview(projectId) {
     const previewSection = document.getElementById('previewSection');
     const progressDiv = document.getElementById('progress');
     const progressBar = progressDiv.querySelector('.progress-bar');
     const progressTitle = document.getElementById('progressTitle');
+
+    // Show progress bar
+    progressDiv.classList.remove('d-none');
+    progressBar.style.width = '0%';
+    progressBar.classList.remove('bg-danger');
+
+    // Disable form while updating
+    document.querySelectorAll('input, button').forEach(el => el.disabled = true);
 
     // Get current values with updated settings
     const settings = {
@@ -143,7 +151,6 @@ function updatePreview(projectId) {
         speed_size: parseFloat(document.getElementById('speedSize').value),
         unit_size: parseFloat(document.getElementById('unitSize').value),
         indicator_scale: parseFloat(document.getElementById('indicatorScale').value),
-        // Add visibility settings
         show_speed: document.getElementById('showSpeed').checked,
         show_max_speed: document.getElementById('showMaxSpeed').checked,
         show_voltage: document.getElementById('showVoltage').checked,
@@ -157,11 +164,11 @@ function updatePreview(projectId) {
         show_bottom_elements: document.getElementById('showBottomElements').checked,
         // Add PWM bar settings
         show_pwm_bar: document.getElementById('showPWMBar').checked,
+        pwm_bar_width: parseInt(document.getElementById('pwmBarWidth').value),
         pwm_bar_top_margin: parseInt(document.getElementById('pwmBarTopMargin').value),
         pwm_bar_bottom_margin: parseInt(document.getElementById('pwmBarBottomMargin').value),
-        pwm_bar_width: parseInt(document.getElementById('pwmBarWidth').value),
         pwm_bar_radius: parseInt(document.getElementById('pwmBarRadius').value),
-        pwm_bar_x: parseInt(document.getElementById('pwmBarX').value)
+        pwm_bar_x: parseInt(document.getElementById('pwmBarX').value)  // Make sure this is included
     };
 
     // Debug logging for preview update
@@ -172,7 +179,7 @@ function updatePreview(projectId) {
             pwm_bar_top_margin: settings.pwm_bar_top_margin,
             pwm_bar_bottom_margin: settings.pwm_bar_bottom_margin,
             pwm_bar_radius: settings.pwm_bar_radius,
-            pwm_bar_x: settings.pwm_bar_x
+            pwm_bar_x: settings.pwm_bar_x  // Log the right margin value
         }
     });
 
@@ -186,7 +193,6 @@ function updatePreview(projectId) {
     .then(response => response.json())
     .then(data => {
         if (data.error) throw new Error(data.error);
-
         progressDiv.classList.add('d-none');
         previewSection.classList.remove('d-none');
         document.getElementById('previewImage').src = data.preview_url + '?t=' + new Date().getTime();
@@ -262,7 +268,8 @@ document.getElementById('startProcessButton').addEventListener('click', function
         pwm_bar_top_margin: parseInt(document.getElementById('pwmBarTopMargin').value),
         pwm_bar_bottom_margin: parseInt(document.getElementById('pwmBarBottomMargin').value),
         pwm_bar_width: parseInt(document.getElementById('pwmBarWidth').value),
-        pwm_bar_radius: parseInt(document.getElementById('pwmBarRadius').value)
+        pwm_bar_radius: parseInt(document.getElementById('pwmBarRadius').value),
+        pwm_bar_x: parseInt(document.getElementById('pwmBarX').value)
     };
 
     // Set initial background processing message
@@ -292,8 +299,8 @@ document.getElementById('startProcessButton').addEventListener('click', function
                     switch(statusData.status) {
                         case 'processing':
                             const progress = statusData.progress || 0;
-                            progressTitle.textContent = progress <= 50 ? 
-                                gettext('Creating frames...') : 
+                            progressTitle.textContent = progress <= 50 ?
+                                gettext('Creating frames...') :
                                 gettext('Encoding video...');
                             progressBar.style.width = `${progress}%`;
                             progressBar.textContent = `${progress.toFixed(1)}%`;
