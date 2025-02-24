@@ -139,6 +139,7 @@ const pwmBarSettings = ['pwmBarTopMargin', 'pwmBarBottomMargin', 'pwmBarWidth', 
 // Combine all settings
 const allSettings = [...textSettings, ...speedIndicatorSettings, ...pwmBarSettings];
 
+// Add input event listeners for all slider settings
 allSettings.forEach(setting => {
     const input = document.getElementById(setting);
     const valueDisplay = document.getElementById(setting + 'Value');
@@ -149,18 +150,15 @@ allSettings.forEach(setting => {
         // Update value display
         valueDisplay.textContent = this.value;
 
-        // Debounce the preview update
-        clearTimeout(this.timeout);
-        this.timeout = setTimeout(() => {
-            const projectId = document.getElementById('startProcessButton').dataset.projectId;
-            if (projectId) {
-                updatePreview(projectId);
-            }
-        }, 300);
+        // Update preview immediately when value changes
+        const projectId = document.getElementById('startProcessButton').dataset.projectId;
+        if (projectId) {
+            updatePreview(projectId);
+        }
     });
 });
 
-// Add event listeners for PWM bar settings
+// Add event listeners for PWM bar visibility checkbox
 document.getElementById('showPWMBar').addEventListener('change', function() {
     const projectId = document.getElementById('startProcessButton').dataset.projectId;
     if (projectId) {
