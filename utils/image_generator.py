@@ -144,10 +144,11 @@ def create_frame(values,
             logging.debug(f"Top margin: {text_settings.get('pwm_bar_top_margin')}")
             logging.debug(f"Bottom margin: {text_settings.get('pwm_bar_bottom_margin')}")
             logging.debug(f"Radius: {text_settings.get('pwm_bar_radius')}")
-            logging.debug(f"Horizontal position: {text_settings.get('pwm_bar_x', 30)}")
+            logging.debug(f"Horizontal position: {text_settings.get('pwm_bar_x', 95)}")
 
             bar_width = int(text_settings.get('pwm_bar_width', 20) * scale_factor)  # Ширина полосы
-            bar_x = width - int(text_settings.get('pwm_bar_x', 30) * scale_factor)  # X-координата полосы теперь зависит от настройки
+            # Calculate position as percentage of screen width from the left
+            bar_x = int((width * float(text_settings.get('pwm_bar_x', 95)) / 100) - bar_width)
             bar_top_margin = int(text_settings.get('pwm_bar_top_margin', 40) * scale_factor)  # Отступ сверху
             bar_bottom_margin = int(text_settings.get('pwm_bar_bottom_margin', 30) * scale_factor)  # Отступ снизу
             bar_radius = int(text_settings.get('pwm_bar_radius', 10) * scale_factor)  # Радиус скругления

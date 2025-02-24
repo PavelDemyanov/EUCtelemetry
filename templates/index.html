@@ -269,7 +269,6 @@
                         </div>
                     </div>
 
-                    <!-- Add new PWM Bar Settings section after Speed Indicator Settings -->
                     <div class="card mb-3">
                         <div class="card-header" role="button" data-bs-toggle="collapse" data-bs-target="#pwmBarSettings" aria-expanded="false" aria-controls="pwmBarSettings">
                             <h5 class="mb-0 d-flex justify-content-between align-items-center">
@@ -321,14 +320,13 @@
                                         </div>
                                     </div>
                                 </div>
-                                <!-- Add new slider for PWM Bar horizontal position -->
                                 <div class="row">
                                     <div class="col-md-6">
                                         <div class="mb-3">
                                             <label for="pwmBarX" class="form-label">{{ _('Horizontal Position') }}</label>
                                             <input type="range" class="form-range" id="pwmBarX" name="pwm_bar_x" 
-                                                   min="30" max="200" value="30" step="1">
-                                            <div class="text-muted small">{{ _('Current:') }} <span id="pwmBarXValue">30</span>{{ _('px') }}</div>
+                                                   min="0" max="100" value="95" step="1">
+                                            <div class="text-muted small">{{ _('Current:') }} <span id="pwmBarXValue">95</span>%</div>
                                         </div>
                                     </div>
                                 </div>
@@ -336,7 +334,6 @@
                         </div>
                     </div>
 
-                    <!-- New Telemetry Elements Visibility Settings -->
                     <div class="card mb-3">
                         <div class="card-header" role="button" data-bs-toggle="collapse" data-bs-target="#telemetryElementsSettings" aria-expanded="false" aria-controls="telemetryElementsSettings">
                             <h5 class="mb-0 d-flex justify-content-between align-items-center">
