@@ -107,7 +107,13 @@ function updatePreview(projectId) {
         show_power: document.getElementById('showPower').checked,
         show_current: document.getElementById('showCurrent').checked,
         show_gps: document.getElementById('showGPS').checked,
-        show_bottom_elements: document.getElementById('showBottomElements').checked
+        show_bottom_elements: document.getElementById('showBottomElements').checked,
+        // Add PWM bar settings
+        show_pwm_bar: document.getElementById('showPWMBar').checked,
+        pwm_bar_top_margin: parseInt(document.getElementById('pwmBarTopMargin').value),
+        pwm_bar_bottom_margin: parseInt(document.getElementById('pwmBarBottomMargin').value),
+        pwm_bar_width: parseInt(document.getElementById('pwmBarWidth').value),
+        pwm_bar_radius: parseInt(document.getElementById('pwmBarRadius').value)
     };
 
     console.log('Sending preview settings:', settings);
@@ -163,9 +169,10 @@ document.getElementById('projectName').addEventListener('input', function() {
 // Add event listeners for text display settings
 const textSettings = ['verticalPosition', 'topPadding', 'bottomPadding', 'spacing', 'fontSize', 'borderRadius'];
 const speedIndicatorSettings = ['indicatorScale', 'indicatorX', 'indicatorY', 'speedSize', 'speedY', 'unitSize', 'unitY'];
+const pwmBarSettings = ['pwmBarTopMargin', 'pwmBarBottomMargin', 'pwmBarWidth', 'pwmBarRadius'];
 
 // Combine all settings
-const allSettings = [...textSettings, ...speedIndicatorSettings];
+const allSettings = [...textSettings, ...speedIndicatorSettings, ...pwmBarSettings];
 
 // Add event listener for resolution change
 document.querySelectorAll('input[name="resolution"]').forEach(radio => {
@@ -245,7 +252,12 @@ allSettings.forEach(setting => {
                     show_power: document.getElementById('showPower').checked,
                     show_current: document.getElementById('showCurrent').checked,
                     show_gps: document.getElementById('showGPS').checked,
-                    show_bottom_elements: document.getElementById('showBottomElements').checked
+                    show_bottom_elements: document.getElementById('showBottomElements').checked,
+                    show_pwm_bar: document.getElementById('showPWMBar').checked,
+                    pwm_bar_top_margin: parseInt(document.getElementById('pwmBarTopMargin').value),
+                    pwm_bar_bottom_margin: parseInt(document.getElementById('pwmBarBottomMargin').value),
+                    pwm_bar_width: parseInt(document.getElementById('pwmBarWidth').value),
+                    pwm_bar_radius: parseInt(document.getElementById('pwmBarRadius').value)
                 };
 
                 // Update preview with all current settings
@@ -273,7 +285,7 @@ allSettings.forEach(setting => {
 const visibilitySettings = [
     'showSpeed', 'showMaxSpeed', 'showVoltage', 'showTemp', 
     'showBattery', 'showMileage', 'showPWM', 'showPower', 
-    'showCurrent', 'showGPS', 'showBottomElements'
+    'showCurrent', 'showGPS', 'showBottomElements', 'showPWMBar'
 ];
 
 visibilitySettings.forEach(setting => {
@@ -334,7 +346,12 @@ document.getElementById('startProcessButton').addEventListener('click', function
         show_power: document.getElementById('showPower').checked,
         show_current: document.getElementById('showCurrent').checked,
         show_gps: document.getElementById('showGPS').checked,
-        show_bottom_elements: document.getElementById('showBottomElements').checked
+        show_bottom_elements: document.getElementById('showBottomElements').checked,
+        show_pwm_bar: document.getElementById('showPWMBar').checked,
+        pwm_bar_top_margin: parseInt(document.getElementById('pwmBarTopMargin').value),
+        pwm_bar_bottom_margin: parseInt(document.getElementById('pwmBarBottomMargin').value),
+        pwm_bar_width: parseInt(document.getElementById('pwmBarWidth').value),
+        pwm_bar_radius: parseInt(document.getElementById('pwmBarRadius').value)
     };
 
     // Start processing

@@ -269,6 +269,62 @@
                         </div>
                     </div>
 
+                    <!-- Add new PWM Bar Settings section after Speed Indicator Settings -->
+                    <div class="card mb-3">
+                        <div class="card-header" role="button" data-bs-toggle="collapse" data-bs-target="#pwmBarSettings" aria-expanded="false" aria-controls="pwmBarSettings">
+                            <h5 class="mb-0 d-flex justify-content-between align-items-center">
+                                {{ _('PWM Bar Settings') }}
+                                <i class="fas fa-chevron-down"></i>
+                            </h5>
+                        </div>
+                        <div id="pwmBarSettings" class="collapse">
+                            <div class="card-body">
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="showPWMBar" checked>
+                                    <label class="form-check-label" for="showPWMBar">
+                                        {{ _('Show PWM Bar') }}
+                                    </label>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="pwmBarTopMargin" class="form-label">{{ _('Top Margin') }}</label>
+                                            <input type="range" class="form-range" id="pwmBarTopMargin" name="pwm_bar_top_margin" 
+                                                   min="0" max="100" value="40" step="1">
+                                            <div class="text-muted small">{{ _('Current:') }} <span id="pwmBarTopMarginValue">40</span>{{ _('px') }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="pwmBarBottomMargin" class="form-label">{{ _('Bottom Margin') }}</label>
+                                            <input type="range" class="form-range" id="pwmBarBottomMargin" name="pwm_bar_bottom_margin" 
+                                                   min="0" max="100" value="30" step="1">
+                                            <div class="text-muted small">{{ _('Current:') }} <span id="pwmBarBottomMarginValue">30</span>{{ _('px') }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="pwmBarWidth" class="form-label">{{ _('Bar Width') }}</label>
+                                            <input type="range" class="form-range" id="pwmBarWidth" name="pwm_bar_width" 
+                                                   min="5" max="50" value="20" step="1">
+                                            <div class="text-muted small">{{ _('Current:') }} <span id="pwmBarWidthValue">20</span>{{ _('px') }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="pwmBarRadius" class="form-label">{{ _('Corner Radius') }}</label>
+                                            <input type="range" class="form-range" id="pwmBarRadius" name="pwm_bar_radius" 
+                                                   min="0" max="25" value="10" step="1">
+                                            <div class="text-muted small">{{ _('Current:') }} <span id="pwmBarRadiusValue">10</span>{{ _('px') }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- New Telemetry Elements Visibility Settings -->
                     <div class="card mb-3">
                         <div class="card-header" role="button" data-bs-toggle="collapse" data-bs-target="#telemetryElementsSettings" aria-expanded="false" aria-controls="telemetryElementsSettings">
