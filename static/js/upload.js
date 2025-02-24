@@ -121,9 +121,6 @@ function updatePreview(projectId) {
 
         // Re-enable form
         document.querySelectorAll('input, button').forEach(el => el.disabled = false);
-
-        // Store project ID for the start processing button
-        document.getElementById('startProcessButton').dataset.projectId = projectId;
     })
     .catch(error => {
         console.error('Error:', error);
