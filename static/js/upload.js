@@ -70,19 +70,19 @@ function updatePreview(projectId) {
     // Get current values with updated settings
     const settings = {
         resolution: document.querySelector('input[name="resolution"]:checked').value,
-        vertical_position: document.getElementById('verticalPosition').value,
-        top_padding: document.getElementById('topPadding').value,
-        bottom_padding: document.getElementById('bottomPadding').value,
-        spacing: document.getElementById('spacing').value,
-        font_size: document.getElementById('fontSize').value,
-        border_radius: document.getElementById('borderRadius').value,
-        indicator_x: document.getElementById('indicatorX').value,
-        indicator_y: document.getElementById('indicatorY').value,
-        speed_y: document.getElementById('speedY').value,
-        unit_y: document.getElementById('unitY').value,
-        speed_size: document.getElementById('speedSize').value,
-        unit_size: document.getElementById('unitSize').value,
-        indicator_scale: document.getElementById('indicatorScale').value,
+        vertical_position: parseInt(document.getElementById('verticalPosition').value),
+        top_padding: parseInt(document.getElementById('topPadding').value),
+        bottom_padding: parseInt(document.getElementById('bottomPadding').value),
+        spacing: parseInt(document.getElementById('spacing').value),
+        font_size: parseInt(document.getElementById('fontSize').value),
+        border_radius: parseInt(document.getElementById('borderRadius').value),
+        indicator_x: parseFloat(document.getElementById('indicatorX').value),
+        indicator_y: parseFloat(document.getElementById('indicatorY').value),
+        speed_y: parseInt(document.getElementById('speedY').value),
+        unit_y: parseInt(document.getElementById('unitY').value),
+        speed_size: parseFloat(document.getElementById('speedSize').value),
+        unit_size: parseFloat(document.getElementById('unitSize').value),
+        indicator_scale: parseFloat(document.getElementById('indicatorScale').value),
         // Add visibility settings
         show_speed: document.getElementById('showSpeed').checked,
         show_max_speed: document.getElementById('showMaxSpeed').checked,
@@ -102,6 +102,15 @@ function updatePreview(projectId) {
         pwm_bar_width: parseInt(document.getElementById('pwmBarWidth').value),
         pwm_bar_radius: parseInt(document.getElementById('pwmBarRadius').value)
     };
+
+    // Add debug logging
+    console.log('PWM Bar settings:', {
+        show_pwm_bar: settings.show_pwm_bar,
+        pwm_bar_top_margin: settings.pwm_bar_top_margin,
+        pwm_bar_bottom_margin: settings.pwm_bar_bottom_margin,
+        pwm_bar_width: settings.pwm_bar_width,
+        pwm_bar_radius: settings.pwm_bar_radius
+    });
 
     fetch(`/preview/${projectId}`, {
         method: 'POST',
@@ -143,7 +152,10 @@ allSettings.forEach(setting => {
     const input = document.getElementById(setting);
     const valueDisplay = document.getElementById(setting + 'Value');
 
-    if (!input || !valueDisplay) return;
+    if (!input || !valueDisplay) {
+        console.error(`Missing element for setting: ${setting}`);
+        return;
+    }
 
     input.addEventListener('input', function() {
         // Update value display
