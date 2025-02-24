@@ -103,7 +103,16 @@ function updatePreview(projectId) {
         pwm_bar_radius: parseInt(document.getElementById('pwmBarRadius').value)
     };
 
-    console.log('Preview settings:', settings);
+    // Debug logging for preview update
+    console.log('Updating preview with settings:', {
+        pwm_bar_settings: {
+            show_pwm_bar: settings.show_pwm_bar,
+            pwm_bar_width: settings.pwm_bar_width,
+            pwm_bar_top_margin: settings.pwm_bar_top_margin,
+            pwm_bar_bottom_margin: settings.pwm_bar_bottom_margin,
+            pwm_bar_radius: settings.pwm_bar_radius
+        }
+    });
 
     fetch(`/preview/${projectId}`, {
         method: 'POST',
@@ -119,7 +128,6 @@ function updatePreview(projectId) {
         progressDiv.classList.add('d-none');
         previewSection.classList.remove('d-none');
         document.getElementById('previewImage').src = data.preview_url + '?t=' + new Date().getTime();
-
         // Re-enable form
         document.querySelectorAll('input, button').forEach(el => el.disabled = false);
     })
@@ -132,7 +140,7 @@ function updatePreview(projectId) {
     });
 }
 
-// Add event listeners for text display settings
+// Add input event listeners for all slider settings
 const textSettings = ['verticalPosition', 'topPadding', 'bottomPadding', 'spacing', 'fontSize', 'borderRadius'];
 const speedIndicatorSettings = ['indicatorScale', 'indicatorX', 'indicatorY', 'speedSize', 'speedY', 'unitSize', 'unitY'];
 const pwmBarSettings = ['pwmBarTopMargin', 'pwmBarBottomMargin', 'pwmBarWidth', 'pwmBarRadius'];
@@ -140,7 +148,6 @@ const pwmBarSettings = ['pwmBarTopMargin', 'pwmBarBottomMargin', 'pwmBarWidth', 
 // Combine all settings
 const allSettings = [...textSettings, ...speedIndicatorSettings, ...pwmBarSettings];
 
-// Add input event listeners for all slider settings
 allSettings.forEach(setting => {
     const input = document.getElementById(setting);
     const valueDisplay = document.getElementById(setting + 'Value');
@@ -150,18 +157,25 @@ allSettings.forEach(setting => {
         return;
     }
 
-    input.addEventListener('input', function() {
-        // Update value display
-        valueDisplay.textContent = this.value;
+    // Add both 'input' and 'change' event listeners to ensure we catch all updates
+    ['input', 'change'].forEach(eventType => {
+        input.addEventListener(eventType, function() {
+            // Update value display
+            valueDisplay.textContent = this.value;
 
-        // Update preview immediately when value changes
-        const projectId = document.getElementById('startProcessButton').dataset.projectId;
-        if (projectId) {
-            updatePreview(projectId);
-        }
+            // Debug logging for PWM Bar settings
+            if (pwmBarSettings.includes(setting)) {
+                console.log(`PWM Bar setting changed - ${setting}:`, this.value);
+            }
+
+            // Update preview immediately
+            const projectId = document.getElementById('startProcessButton').dataset.projectId;
+            if (projectId) {
+                updatePreview(projectId);
+            }
+        });
     });
 });
-
 
 // Add event listeners for visibility checkboxes
 const visibilitySettings = [
@@ -174,6 +188,10 @@ visibilitySettings.forEach(setting => {
     const checkbox = document.getElementById(setting);
     if (checkbox) {
         checkbox.addEventListener('change', function() {
+            // Debug logging for PWM Bar visibility
+            if (setting === 'showPWMBar') {
+                console.log('PWM Bar visibility changed:', this.checked);
+            }
             const projectId = document.getElementById('startProcessButton').dataset.projectId;
             if (projectId) {
                 updatePreview(projectId);
