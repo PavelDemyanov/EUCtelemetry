@@ -76,15 +76,14 @@ function updatePreview(projectId) {
         spacing: document.getElementById('spacing').value,
         font_size: document.getElementById('fontSize').value,
         border_radius: document.getElementById('borderRadius').value,
-        // Speed indicator settings
-        indicator_scale: document.getElementById('indicatorScale').value,
         indicator_x: document.getElementById('indicatorX').value,
         indicator_y: document.getElementById('indicatorY').value,
         speed_y: document.getElementById('speedY').value,
         unit_y: document.getElementById('unitY').value,
         speed_size: document.getElementById('speedSize').value,
         unit_size: document.getElementById('unitSize').value,
-        // Visibility settings
+        indicator_scale: document.getElementById('indicatorScale').value,
+        // Add visibility settings
         show_speed: document.getElementById('showSpeed').checked,
         show_max_speed: document.getElementById('showMaxSpeed').checked,
         show_voltage: document.getElementById('showVoltage').checked,
@@ -96,7 +95,7 @@ function updatePreview(projectId) {
         show_current: document.getElementById('showCurrent').checked,
         show_gps: document.getElementById('showGPS').checked,
         show_bottom_elements: document.getElementById('showBottomElements').checked,
-        // Add PWM bar settings
+        // PWM bar settings
         show_pwm_bar: document.getElementById('showPWMBar').checked,
         pwm_bar_top_margin: parseInt(document.getElementById('pwmBarTopMargin').value),
         pwm_bar_bottom_margin: parseInt(document.getElementById('pwmBarBottomMargin').value),
