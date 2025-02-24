@@ -103,14 +103,7 @@ function updatePreview(projectId) {
         pwm_bar_radius: parseInt(document.getElementById('pwmBarRadius').value)
     };
 
-    // Add debug logging
-    console.log('PWM Bar settings:', {
-        show_pwm_bar: settings.show_pwm_bar,
-        pwm_bar_top_margin: settings.pwm_bar_top_margin,
-        pwm_bar_bottom_margin: settings.pwm_bar_bottom_margin,
-        pwm_bar_width: settings.pwm_bar_width,
-        pwm_bar_radius: settings.pwm_bar_radius
-    });
+    console.log('Preview settings:', settings);
 
     fetch(`/preview/${projectId}`, {
         method: 'POST',
@@ -169,13 +162,6 @@ allSettings.forEach(setting => {
     });
 });
 
-// Add event listener for PWM bar visibility checkbox
-document.getElementById('showPWMBar').addEventListener('change', function() {
-    const projectId = document.getElementById('startProcessButton').dataset.projectId;
-    if (projectId) {
-        updatePreview(projectId);
-    }
-});
 
 // Add event listeners for visibility checkboxes
 const visibilitySettings = [
