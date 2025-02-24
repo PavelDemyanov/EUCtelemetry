@@ -144,15 +144,16 @@ def create_frame(values,
             logging.debug(f"Top margin: {text_settings.get('pwm_bar_top_margin')}")
             logging.debug(f"Bottom margin: {text_settings.get('pwm_bar_bottom_margin')}")
             logging.debug(f"Radius: {text_settings.get('pwm_bar_radius')}")
-            logging.debug(f"Horizontal position: {text_settings.get('pwm_bar_x', 95)}")
+            logging.debug(f"Right margin: {text_settings.get('pwm_bar_x', 30)}")
 
             bar_width = int(text_settings.get('pwm_bar_width', 20) * scale_factor)  # Ширина полосы
-            # Calculate position as percentage of screen width from the left
-            bar_x = int((width * float(text_settings.get('pwm_bar_x', 95)) / 100) - bar_width)
+            right_margin = int(text_settings.get('pwm_bar_x', 30) * scale_factor)  # Отступ справа
             bar_top_margin = int(text_settings.get('pwm_bar_top_margin', 40) * scale_factor)  # Отступ сверху
             bar_bottom_margin = int(text_settings.get('pwm_bar_bottom_margin', 30) * scale_factor)  # Отступ снизу
             bar_radius = int(text_settings.get('pwm_bar_radius', 10) * scale_factor)  # Радиус скругления
 
+            # Calculate bar position from right edge
+            bar_x = width - right_margin - bar_width  # X-координата полосы
             bar_y_top = bar_top_margin  # Верхняя Y-координата
             bar_y_bottom = height - bar_bottom_margin  # Нижняя Y-координата
             bar_height = bar_y_bottom - bar_y_top  # Полная высота полосы
