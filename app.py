@@ -710,6 +710,12 @@ def generate_project_frames(project_id):
             'speed_size': float(data.get('speed_size', 100)),
             'unit_size': float(data.get('unit_size', 100)),
             'indicator_scale': float(data.get('indicator_scale', 100)),
+            # Add new PWM bar settings
+            'show_pwm_bar': data.get('show_pwm_bar', True),
+            'pwm_bar_width': int(data.get('pwm_bar_width', 20)),
+            'pwm_bar_top_margin': int(data.get('pwm_bar_top_margin', 40)),
+            'pwm_bar_bottom_margin': int(data.get('pwm_bar_bottom_margin', 30)),
+            'pwm_bar_radius': int(data.get('pwm_bar_radius', 10)),
             # Add visibility settings with explicit defaults
             'show_speed': data.get('show_speed', True),
             'show_max_speed': data.get('show_max_speed', True),
@@ -719,7 +725,7 @@ def generate_project_frames(project_id):
             'show_mileage': data.get('show_mileage', True),
             'show_pwm': data.get('show_pwm', True),
             'show_power': data.get('show_power', True),
-            'show_current': data.get('show_current', True),  # Add current visibility setting
+            'show_current': data.get('show_current', True),
             'show_gps': data.get('show_gps', False),
             'show_bottom_elements': data.get('show_bottom_elements', True)
         }
