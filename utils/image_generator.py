@@ -139,6 +139,12 @@ def create_frame(values,
 
         # Рисуем вертикальную шкалу PWM
         if text_settings and text_settings.get('show_pwm_bar', True):  # Новый параметр для отображения/скрытия полосы
+            logging.debug("PWM Bar settings being applied:")
+            logging.debug(f"Width: {text_settings.get('pwm_bar_width')}")
+            logging.debug(f"Top margin: {text_settings.get('pwm_bar_top_margin')}")
+            logging.debug(f"Bottom margin: {text_settings.get('pwm_bar_bottom_margin')}")
+            logging.debug(f"Radius: {text_settings.get('pwm_bar_radius')}")
+
             bar_width = int(text_settings.get('pwm_bar_width', 20) * scale_factor)  # Ширина полосы
             bar_right_margin = int(30 * scale_factor)  # Отступ справа
             bar_top_margin = int(text_settings.get('pwm_bar_top_margin', 40) * scale_factor)  # Отступ сверху
