@@ -161,7 +161,7 @@ function updatePreview(projectId) {
         pwm_bar_bottom_margin: parseInt(document.getElementById('pwmBarBottomMargin').value),
         pwm_bar_width: parseInt(document.getElementById('pwmBarWidth').value),
         pwm_bar_radius: parseInt(document.getElementById('pwmBarRadius').value),
-        pwm_bar_x: parseInt(document.getElementById('pwmBarX').value) // Add horizontal position
+        pwm_bar_x: parseInt(document.getElementById('pwmBarX').value)
     };
 
     // Debug logging for preview update
@@ -172,7 +172,7 @@ function updatePreview(projectId) {
             pwm_bar_top_margin: settings.pwm_bar_top_margin,
             pwm_bar_bottom_margin: settings.pwm_bar_bottom_margin,
             pwm_bar_radius: settings.pwm_bar_radius,
-            pwm_bar_x: settings.pwm_bar_x // Log horizontal position
+            pwm_bar_x: settings.pwm_bar_x
         }
     });
 
@@ -186,7 +186,7 @@ function updatePreview(projectId) {
     .then(response => response.json())
     .then(data => {
         if (data.error) throw new Error(data.error);
-        // Show preview
+
         progressDiv.classList.add('d-none');
         previewSection.classList.remove('d-none');
         document.getElementById('previewImage').src = data.preview_url + '?t=' + new Date().getTime();
