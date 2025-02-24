@@ -60,90 +60,10 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
     });
 });
 
-// Function to update preview with current settings
-function updatePreview(projectId) {
-    const previewSection = document.getElementById('previewSection');
-    const progressDiv = document.getElementById('progress');
-    const progressBar = progressDiv.querySelector('.progress-bar');
-    const progressTitle = document.getElementById('progressTitle');
-
-    // Get current values with updated settings
-    const settings = {
-        resolution: document.querySelector('input[name="resolution"]:checked').value,
-        vertical_position: parseInt(document.getElementById('verticalPosition').value),
-        top_padding: parseInt(document.getElementById('topPadding').value),
-        bottom_padding: parseInt(document.getElementById('bottomPadding').value),
-        spacing: parseInt(document.getElementById('spacing').value),
-        font_size: parseInt(document.getElementById('fontSize').value),
-        border_radius: parseInt(document.getElementById('borderRadius').value),
-        indicator_x: parseFloat(document.getElementById('indicatorX').value),
-        indicator_y: parseFloat(document.getElementById('indicatorY').value),
-        speed_y: parseInt(document.getElementById('speedY').value),
-        unit_y: parseInt(document.getElementById('unitY').value),
-        speed_size: parseFloat(document.getElementById('speedSize').value),
-        unit_size: parseFloat(document.getElementById('unitSize').value),
-        indicator_scale: parseFloat(document.getElementById('indicatorScale').value),
-        // Add visibility settings
-        show_speed: document.getElementById('showSpeed').checked,
-        show_max_speed: document.getElementById('showMaxSpeed').checked,
-        show_voltage: document.getElementById('showVoltage').checked,
-        show_temp: document.getElementById('showTemp').checked,
-        show_battery: document.getElementById('showBattery').checked,
-        show_mileage: document.getElementById('showMileage').checked,
-        show_pwm: document.getElementById('showPWM').checked,
-        show_power: document.getElementById('showPower').checked,
-        show_current: document.getElementById('showCurrent').checked,
-        show_gps: document.getElementById('showGPS').checked,
-        show_bottom_elements: document.getElementById('showBottomElements').checked,
-        // PWM bar settings
-        show_pwm_bar: document.getElementById('showPWMBar').checked,
-        pwm_bar_top_margin: parseInt(document.getElementById('pwmBarTopMargin').value),
-        pwm_bar_bottom_margin: parseInt(document.getElementById('pwmBarBottomMargin').value),
-        pwm_bar_width: parseInt(document.getElementById('pwmBarWidth').value),
-        pwm_bar_radius: parseInt(document.getElementById('pwmBarRadius').value)
-    };
-
-    // Debug logging for preview update
-    console.log('Updating preview with settings:', {
-        pwm_bar_settings: {
-            show_pwm_bar: settings.show_pwm_bar,
-            pwm_bar_width: settings.pwm_bar_width,
-            pwm_bar_top_margin: settings.pwm_bar_top_margin,
-            pwm_bar_bottom_margin: settings.pwm_bar_bottom_margin,
-            pwm_bar_radius: settings.pwm_bar_radius
-        }
-    });
-
-    fetch(`/preview/${projectId}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(settings)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) throw new Error(data.error);
-        // Show preview
-        progressDiv.classList.add('d-none');
-        previewSection.classList.remove('d-none');
-        document.getElementById('previewImage').src = data.preview_url + '?t=' + new Date().getTime();
-        // Re-enable form
-        document.querySelectorAll('input, button').forEach(el => el.disabled = false);
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        progressTitle.textContent = gettext('Error: ') + error.message;
-        progressBar.classList.add('bg-danger');
-        // Re-enable form
-        document.querySelectorAll('input, button').forEach(el => el.disabled = false);
-    });
-}
-
-// Add input event listeners for all slider settings
+// Add PWM bar horizontal position to the settings arrays
 const textSettings = ['verticalPosition', 'topPadding', 'bottomPadding', 'spacing', 'fontSize', 'borderRadius'];
 const speedIndicatorSettings = ['indicatorScale', 'indicatorX', 'indicatorY', 'speedSize', 'speedY', 'unitSize', 'unitY'];
-const pwmBarSettings = ['pwmBarTopMargin', 'pwmBarBottomMargin', 'pwmBarWidth', 'pwmBarRadius'];
+const pwmBarSettings = ['pwmBarTopMargin', 'pwmBarBottomMargin', 'pwmBarWidth', 'pwmBarRadius', 'pwmBarX'];
 
 // Combine all settings
 const allSettings = [...textSettings, ...speedIndicatorSettings, ...pwmBarSettings];
@@ -199,6 +119,88 @@ visibilitySettings.forEach(setting => {
         });
     }
 });
+
+// Update settings object in updatePreview function
+function updatePreview(projectId) {
+    const previewSection = document.getElementById('previewSection');
+    const progressDiv = document.getElementById('progress');
+    const progressBar = progressDiv.querySelector('.progress-bar');
+    const progressTitle = document.getElementById('progressTitle');
+
+    // Get current values with updated settings
+    const settings = {
+        resolution: document.querySelector('input[name="resolution"]:checked').value,
+        vertical_position: parseInt(document.getElementById('verticalPosition').value),
+        top_padding: parseInt(document.getElementById('topPadding').value),
+        bottom_padding: parseInt(document.getElementById('bottomPadding').value),
+        spacing: parseInt(document.getElementById('spacing').value),
+        font_size: parseInt(document.getElementById('fontSize').value),
+        border_radius: parseInt(document.getElementById('borderRadius').value),
+        indicator_x: parseFloat(document.getElementById('indicatorX').value),
+        indicator_y: parseFloat(document.getElementById('indicatorY').value),
+        speed_y: parseInt(document.getElementById('speedY').value),
+        unit_y: parseInt(document.getElementById('unitY').value),
+        speed_size: parseFloat(document.getElementById('speedSize').value),
+        unit_size: parseFloat(document.getElementById('unitSize').value),
+        indicator_scale: parseFloat(document.getElementById('indicatorScale').value),
+        // Add visibility settings
+        show_speed: document.getElementById('showSpeed').checked,
+        show_max_speed: document.getElementById('showMaxSpeed').checked,
+        show_voltage: document.getElementById('showVoltage').checked,
+        show_temp: document.getElementById('showTemp').checked,
+        show_battery: document.getElementById('showBattery').checked,
+        show_mileage: document.getElementById('showMileage').checked,
+        show_pwm: document.getElementById('showPWM').checked,
+        show_power: document.getElementById('showPower').checked,
+        show_current: document.getElementById('showCurrent').checked,
+        show_gps: document.getElementById('showGPS').checked,
+        show_bottom_elements: document.getElementById('showBottomElements').checked,
+        // PWM bar settings
+        show_pwm_bar: document.getElementById('showPWMBar').checked,
+        pwm_bar_top_margin: parseInt(document.getElementById('pwmBarTopMargin').value),
+        pwm_bar_bottom_margin: parseInt(document.getElementById('pwmBarBottomMargin').value),
+        pwm_bar_width: parseInt(document.getElementById('pwmBarWidth').value),
+        pwm_bar_radius: parseInt(document.getElementById('pwmBarRadius').value),
+        pwm_bar_x: parseInt(document.getElementById('pwmBarX').value) // Add horizontal position
+    };
+
+    // Debug logging for preview update
+    console.log('Updating preview with settings:', {
+        pwm_bar_settings: {
+            show_pwm_bar: settings.show_pwm_bar,
+            pwm_bar_width: settings.pwm_bar_width,
+            pwm_bar_top_margin: settings.pwm_bar_top_margin,
+            pwm_bar_bottom_margin: settings.pwm_bar_bottom_margin,
+            pwm_bar_radius: settings.pwm_bar_radius,
+            pwm_bar_x: settings.pwm_bar_x // Log horizontal position
+        }
+    });
+
+    fetch(`/preview/${projectId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(settings)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) throw new Error(data.error);
+        // Show preview
+        progressDiv.classList.add('d-none');
+        previewSection.classList.remove('d-none');
+        document.getElementById('previewImage').src = data.preview_url + '?t=' + new Date().getTime();
+        // Re-enable form
+        document.querySelectorAll('input, button').forEach(el => el.disabled = false);
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        progressTitle.textContent = gettext('Error: ') + error.message;
+        progressBar.classList.add('bg-danger');
+        // Re-enable form
+        document.querySelectorAll('input, button').forEach(el => el.disabled = false);
+    });
+}
 
 // Add event listeners for resolution change
 document.querySelectorAll('input[name="resolution"]').forEach(radio => {

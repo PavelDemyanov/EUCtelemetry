@@ -144,22 +144,17 @@ def create_frame(values,
             logging.debug(f"Top margin: {text_settings.get('pwm_bar_top_margin')}")
             logging.debug(f"Bottom margin: {text_settings.get('pwm_bar_bottom_margin')}")
             logging.debug(f"Radius: {text_settings.get('pwm_bar_radius')}")
+            logging.debug(f"Horizontal position: {text_settings.get('pwm_bar_x', 30)}")
 
             bar_width = int(text_settings.get('pwm_bar_width', 20) * scale_factor)  # Ширина полосы
-            bar_right_margin = int(30 * scale_factor)  # Отступ справа
+            bar_x = width - int(text_settings.get('pwm_bar_x', 30) * scale_factor)  # X-координата полосы теперь зависит от настройки
             bar_top_margin = int(text_settings.get('pwm_bar_top_margin', 40) * scale_factor)  # Отступ сверху
             bar_bottom_margin = int(text_settings.get('pwm_bar_bottom_margin', 30) * scale_factor)  # Отступ снизу
             bar_radius = int(text_settings.get('pwm_bar_radius', 10) * scale_factor)  # Радиус скругления
 
-            bar_x = width - bar_right_margin - bar_width  # X-координата полосы
             bar_y_top = bar_top_margin  # Верхняя Y-координата
             bar_y_bottom = height - bar_bottom_margin  # Нижняя Y-координата
             bar_height = bar_y_bottom - bar_y_top  # Полная высота полосы
-
-            # Рисуем фоновую (пустую) полосу с закругленными углами
-            draw.rounded_rectangle([(bar_x, bar_y_top), (bar_x + bar_width, bar_y_bottom)],
-                                    radius=bar_radius,
-                                    fill=(128, 128, 128, 128))  # Полупрозрачный серый
 
             # Вычисляем заполнение на основе PWM
             pwm_value = float(values['pwm'])
@@ -184,8 +179,8 @@ def create_frame(values,
             # Рисуем заполненную часть полосы с закругленными углами
             if fill_height > 0:
                 draw.rounded_rectangle([(bar_x, fill_y), (bar_x + bar_width, bar_y_bottom)],
-                                        radius=bar_radius,
-                                        fill=fill_color)
+                                      radius=bar_radius,
+                                      fill=fill_color)
 
         text_settings = text_settings or {}
 
