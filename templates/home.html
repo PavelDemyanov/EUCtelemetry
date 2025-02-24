@@ -14,7 +14,7 @@
                     {{ _('EUCTelemetry') }}
                 </h2>
                 <p class="lead">
-                    {{ _('The program is designed to extract telemetry data (speed, PWM, GPS speed, power, current, voltage, battery charge, trip mileage, temperature) from popular programs like DarknessBot and WheelLog and overlay them on a blue background (chroma key) for further integration of telemetry data onto your video recorded during a trip or from cameras such as insta360, GoPro, iPhone, or any other camera.') }}
+                    {{ _('The program is designed to extract telemetry data (speed, PWM, GPS speed, power, current, voltage, battery charge, trip mileage, temperature) from popular programs like') }} <strong>DarknessBot</strong> {{ _('and') }} <strong>WheelLog</strong> {{ _('and overlay them on a blue background (chroma key) for further integration of telemetry data onto your video recorded during a trip or from cameras such as') }} <strong>insta360</strong>, <strong>GoPro</strong>, <strong>iPhone</strong>, {{ _('or any other camera.') }}
                 </p>
                 <video class="img-fluid rounded shadow" autoplay loop muted playsinline>
                     <source src="{{ url_for('static', filename='mp4/screenvid.mp4') }}" type="video/mp4">
