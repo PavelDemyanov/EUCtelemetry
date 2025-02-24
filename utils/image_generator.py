@@ -137,6 +137,46 @@ def create_frame(values,
         overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
         draw = ImageDraw.Draw(overlay)
 
+        # Рисуем вертикальную шкалу PWM
+        bar_width = int(20 * scale_factor)  # Ширина полосы
+        bar_right_margin = int(30 * scale_factor)  # Отступ справа
+        bar_top_margin = int(40 * scale_factor)  # Отступ сверху
+        bar_bottom_margin = int(30 * scale_factor)  # Отступ снизу
+
+        bar_x = width - bar_right_margin - bar_width  # X-координата полосы
+        bar_y_top = bar_top_margin  # Верхняя Y-координата
+        bar_y_bottom = height - bar_bottom_margin  # Нижняя Y-координата
+        bar_height = bar_y_bottom - bar_y_top  # Полная высота полосы
+
+        # Рисуем фоновую (пустую) полосу
+        draw.rectangle([(bar_x, bar_y_top), (bar_x + bar_width, bar_y_bottom)],
+                      fill=(128, 128, 128, 128))  # Полупрозрачный серый
+
+        # Вычисляем заполнение на основе PWM
+        pwm_value = float(values['pwm'])
+        fill_height = int(bar_height * (pwm_value / 100.0))
+        fill_y = bar_y_bottom - fill_height
+
+        # Определяем цвет заполнения
+        if pwm_value <= 80:
+            fill_color = (0, 255, 0, 255)  # Зеленый
+        elif pwm_value <= 90:
+            # Плавный переход от зеленого к желтому
+            transition = (pwm_value - 80) / 10  # 0 to 1
+            red = int(255 * transition)
+            green = 255
+            fill_color = (red, green, 0, 255)
+        else:
+            # Плавный переход от желтого к красному
+            transition = (pwm_value - 90) / 10  # 0 to 1
+            green = int(255 * (1 - transition))
+            fill_color = (255, green, 0, 255)
+
+        # Рисуем заполненную часть полосы
+        if fill_height > 0:
+            draw.rectangle([(bar_x, fill_y), (bar_x + bar_width, bar_y_bottom)],
+                         fill=fill_color)
+
         text_settings = text_settings or {}
 
         # Get visibility settings with defaults
@@ -149,7 +189,7 @@ def create_frame(values,
         show_mileage = text_settings.get('show_mileage', True)
         show_pwm = text_settings.get('show_pwm', True)
         show_power = text_settings.get('show_power', True)
-        show_current = text_settings.get('show_current', True)  # Add current visibility setting
+        show_current = text_settings.get('show_current', True)
         show_bottom_elements = text_settings.get('show_bottom_elements', True)
 
         # Получаем настройки позиционирования индикатора и текста
