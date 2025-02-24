@@ -133,9 +133,9 @@ function updatePreview(projectId) {
     progressBar.style.width = '0%';
     progressBar.classList.remove('bg-danger');
 
-    // Debug log for PWM Bar X value
+    // Debug log for PWM Bar X value before sending
     const pwmBarXValue = parseInt(document.getElementById('pwmBarX').value);
-    console.log('PWM Bar X value:', pwmBarXValue);
+    console.log('PWM Bar X value before sending:', pwmBarXValue);
 
     const settings = {
         resolution: document.querySelector('input[name="resolution"]:checked').value,
@@ -172,7 +172,7 @@ function updatePreview(projectId) {
     };
 
     // Debug logging for all PWM bar settings
-    console.log('PWM Bar settings:', {
+    console.log('PWM Bar settings being sent:', {
         show_pwm_bar: settings.show_pwm_bar,
         pwm_bar_width: settings.pwm_bar_width,
         pwm_bar_top_margin: settings.pwm_bar_top_margin,
@@ -180,6 +180,10 @@ function updatePreview(projectId) {
         pwm_bar_radius: settings.pwm_bar_radius,
         pwm_bar_x: settings.pwm_bar_x
     });
+
+    // Log the entire settings object being sent
+    console.log('Complete settings object:', settings);
+
 
     fetch(`/preview/${projectId}`, {
         method: 'POST',
@@ -231,6 +235,10 @@ document.getElementById('startProcessButton').addEventListener('click', function
     progressBar.classList.remove('bg-danger');
     this.disabled = true;
 
+    // Debug log for PWM Bar X value before sending
+    const pwmBarXValue = parseInt(document.getElementById('pwmBarX').value);
+    console.log('PWM Bar X value before sending:', pwmBarXValue);
+
     const settings = {
         resolution: document.querySelector('input[name="resolution"]:checked').value,
         fps: document.querySelector('input[name="fps"]:checked').value,
@@ -267,8 +275,21 @@ document.getElementById('startProcessButton').addEventListener('click', function
         pwm_bar_bottom_margin: parseInt(document.getElementById('pwmBarBottomMargin').value),
         pwm_bar_width: parseInt(document.getElementById('pwmBarWidth').value),
         pwm_bar_radius: parseInt(document.getElementById('pwmBarRadius').value),
-        pwm_bar_x: parseInt(document.getElementById('pwmBarX').value)
+        pwm_bar_x: pwmBarXValue
     };
+
+    // Debug logging for all PWM bar settings
+    console.log('PWM Bar settings being sent:', {
+        show_pwm_bar: settings.show_pwm_bar,
+        pwm_bar_width: settings.pwm_bar_width,
+        pwm_bar_top_margin: settings.pwm_bar_top_margin,
+        pwm_bar_bottom_margin: settings.pwm_bar_bottom_margin,
+        pwm_bar_radius: settings.pwm_bar_radius,
+        pwm_bar_x: settings.pwm_bar_x
+    });
+
+    // Log the entire settings object being sent
+    console.log('Complete settings object:', settings);
 
     // Set initial background processing message
     videoProcessingInfo.textContent = gettext("You can close your browser and come back later - the video processing will continue in the background.");
