@@ -80,6 +80,7 @@ allSettings.forEach(setting => {
     // Add both 'input' and 'change' event listeners to ensure we catch all updates
     ['input', 'change'].forEach(eventType => {
         input.addEventListener(eventType, function() {
+            console.log(`Setting ${setting} changed to:`, this.value); // Debug logging
             // Update value display
             valueDisplay.textContent = this.value;
 
@@ -132,10 +133,10 @@ function updatePreview(projectId) {
     progressBar.style.width = '0%';
     progressBar.classList.remove('bg-danger');
 
-    // Disable form while updating
-    document.querySelectorAll('input, button').forEach(el => el.disabled = true);
+    // Debug log for PWM Bar X value
+    const pwmBarXValue = parseInt(document.getElementById('pwmBarX').value);
+    console.log('PWM Bar X value:', pwmBarXValue);
 
-    // Get current values with updated settings
     const settings = {
         resolution: document.querySelector('input[name="resolution"]:checked').value,
         vertical_position: parseInt(document.getElementById('verticalPosition').value),
@@ -162,25 +163,22 @@ function updatePreview(projectId) {
         show_current: document.getElementById('showCurrent').checked,
         show_gps: document.getElementById('showGPS').checked,
         show_bottom_elements: document.getElementById('showBottomElements').checked,
-        // Add PWM bar settings
         show_pwm_bar: document.getElementById('showPWMBar').checked,
         pwm_bar_width: parseInt(document.getElementById('pwmBarWidth').value),
         pwm_bar_top_margin: parseInt(document.getElementById('pwmBarTopMargin').value),
         pwm_bar_bottom_margin: parseInt(document.getElementById('pwmBarBottomMargin').value),
         pwm_bar_radius: parseInt(document.getElementById('pwmBarRadius').value),
-        pwm_bar_x: parseInt(document.getElementById('pwmBarX').value)  // Make sure this is included
+        pwm_bar_x: pwmBarXValue
     };
 
-    // Debug logging for preview update
-    console.log('Updating preview with settings:', {
-        pwm_bar_settings: {
-            show_pwm_bar: settings.show_pwm_bar,
-            pwm_bar_width: settings.pwm_bar_width,
-            pwm_bar_top_margin: settings.pwm_bar_top_margin,
-            pwm_bar_bottom_margin: settings.pwm_bar_bottom_margin,
-            pwm_bar_radius: settings.pwm_bar_radius,
-            pwm_bar_x: settings.pwm_bar_x  // Log the right margin value
-        }
+    // Debug logging for all PWM bar settings
+    console.log('PWM Bar settings:', {
+        show_pwm_bar: settings.show_pwm_bar,
+        pwm_bar_width: settings.pwm_bar_width,
+        pwm_bar_top_margin: settings.pwm_bar_top_margin,
+        pwm_bar_bottom_margin: settings.pwm_bar_bottom_margin,
+        pwm_bar_radius: settings.pwm_bar_radius,
+        pwm_bar_x: settings.pwm_bar_x
     });
 
     fetch(`/preview/${projectId}`, {
