@@ -157,7 +157,7 @@ allSettings.forEach(setting => {
     });
 });
 
-// Add event listeners for PWM bar visibility checkbox
+// Add event listener for PWM bar visibility checkbox
 document.getElementById('showPWMBar').addEventListener('change', function() {
     const projectId = document.getElementById('startProcessButton').dataset.projectId;
     if (projectId) {
