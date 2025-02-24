@@ -22,12 +22,13 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
     const progressBar = progressDiv.querySelector('.progress-bar');
     const progressTitle = document.getElementById('progressTitle');
     const videoProcessingInfo = document.getElementById('videoProcessingInfo');
-    let projectId;
 
     // Show progress for upload, but not the video processing info
     progressDiv.classList.remove('d-none');
-    videoProcessingInfo.classList.add('d-none');  // Ensure video processing info is hidden
+    videoProcessingInfo.classList.add('d-none');
     progressTitle.textContent = gettext('Uploading CSV...');
+    progressBar.style.width = '0%';
+    progressBar.classList.remove('bg-danger');
 
     // Disable form
     this.querySelectorAll('input, button').forEach(el => el.disabled = true);
@@ -46,7 +47,8 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
     .then(data => {
         if (data.error) throw new Error(data.error);
 
-        projectId = data.project_id;
+        const projectId = data.project_id;
+        document.getElementById('startProcessButton').dataset.projectId = projectId;
         updatePreview(projectId);
     })
     .catch(error => {
@@ -60,6 +62,12 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
 
 // Function to update preview with current settings
 function updatePreview(projectId) {
+    const previewSection = document.getElementById('previewSection');
+    const progressDiv = document.getElementById('progress');
+    const progressBar = progressDiv.querySelector('.progress-bar');
+    const progressTitle = document.getElementById('progressTitle');
+
+    // Get current values with updated settings
     const settings = {
         resolution: document.querySelector('input[name="resolution"]:checked').value,
         vertical_position: document.getElementById('verticalPosition').value,
@@ -106,10 +114,23 @@ function updatePreview(projectId) {
     .then(response => response.json())
     .then(data => {
         if (data.error) throw new Error(data.error);
+        // Show preview
+        progressDiv.classList.add('d-none');
+        previewSection.classList.remove('d-none');
         document.getElementById('previewImage').src = data.preview_url + '?t=' + new Date().getTime();
+
+        // Re-enable form
+        document.querySelectorAll('input, button').forEach(el => el.disabled = false);
+
+        // Store project ID for the start processing button
+        document.getElementById('startProcessButton').dataset.projectId = projectId;
     })
     .catch(error => {
-        console.error('Error updating preview:', error);
+        console.error('Error:', error);
+        progressTitle.textContent = gettext('Error: ') + error.message;
+        progressBar.classList.add('bg-danger');
+        // Re-enable form
+        document.querySelectorAll('input, button').forEach(el => el.disabled = false);
     });
 }
 
@@ -169,6 +190,28 @@ visibilitySettings.forEach(setting => {
     }
 });
 
+// Add event listeners for resolution change
+document.querySelectorAll('input[name="resolution"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        const projectId = document.getElementById('startProcessButton').dataset.projectId;
+        if (projectId) {
+            // Adjust slider values based on resolution
+            if (this.value === '4k') {
+                document.getElementById('speedY').value = -50;
+                document.getElementById('speedYValue').textContent = '-50';
+                document.getElementById('unitY').value = 65;
+                document.getElementById('unitYValue').textContent = '65';
+            } else {
+                document.getElementById('speedY').value = -28;
+                document.getElementById('speedYValue').textContent = '-28';
+                document.getElementById('unitY').value = 36;
+                document.getElementById('unitYValue').textContent = '36';
+            }
+            updatePreview(projectId);
+        }
+    });
+});
+
 // Handle start processing button click
 document.getElementById('startProcessButton').addEventListener('click', function() {
     const projectId = this.dataset.projectId;
@@ -180,12 +223,10 @@ document.getElementById('startProcessButton').addEventListener('click', function
     // Show progress bar and processing info
     progressDiv.classList.remove('d-none');
     videoProcessingInfo.classList.remove('d-none');
+    progressBar.style.width = '0%';
+    progressBar.classList.remove('bg-danger');
     this.disabled = true;
 
-    // Set initial background processing message
-    videoProcessingInfo.textContent = gettext("You can close your browser and come back later - the video processing will continue in the background.");
-
-    // Get all current settings
     const settings = {
         resolution: document.querySelector('input[name="resolution"]:checked').value,
         fps: document.querySelector('input[name="fps"]:checked').value,
@@ -216,12 +257,16 @@ document.getElementById('startProcessButton').addEventListener('click', function
         show_current: document.getElementById('showCurrent').checked,
         show_gps: document.getElementById('showGPS').checked,
         show_bottom_elements: document.getElementById('showBottomElements').checked,
+        // Add PWM bar settings
         show_pwm_bar: document.getElementById('showPWMBar').checked,
         pwm_bar_top_margin: parseInt(document.getElementById('pwmBarTopMargin').value),
         pwm_bar_bottom_margin: parseInt(document.getElementById('pwmBarBottomMargin').value),
         pwm_bar_width: parseInt(document.getElementById('pwmBarWidth').value),
         pwm_bar_radius: parseInt(document.getElementById('pwmBarRadius').value)
     };
+
+    // Set initial background processing message
+    videoProcessingInfo.textContent = gettext("You can close your browser and come back later - the video processing will continue in the background.");
 
     // Start processing
     fetch(`/generate_frames/${projectId}`, {
@@ -240,7 +285,6 @@ document.getElementById('startProcessButton').addEventListener('click', function
             fetch(`/project_status/${projectId}`)
                 .then(response => response.json())
                 .then(statusData => {
-                    // Ensure we have a valid status
                     if (!statusData.status) {
                         throw new Error(gettext('No status received from server'));
                     }
@@ -253,9 +297,6 @@ document.getElementById('startProcessButton').addEventListener('click', function
                                 gettext('Encoding video...');
                             progressBar.style.width = `${progress}%`;
                             progressBar.textContent = `${progress.toFixed(1)}%`;
-                            // Show processing stage below the main message
-                            videoProcessingInfo.textContent = gettext('You can close your browser and come back later - the video processing will continue in the background.') + ' ' +
-                                gettext('Alternatively, you can go to the Projects section to monitor the progress there.');
                             setTimeout(checkStatus, progress <= 50 ? 200 : 1000);
                             break;
 
@@ -271,7 +312,6 @@ document.getElementById('startProcessButton').addEventListener('click', function
 
                         case 'pending':
                             progressTitle.textContent = gettext('Waiting to start...');
-                            videoProcessingInfo.textContent = gettext('You can close your browser and come back later - the video processing will continue in the background.');
                             setTimeout(checkStatus, 500);
                             break;
 
@@ -317,7 +357,6 @@ document.getElementById('projectName').addEventListener('input', function() {
     const value = this.value.trim();
 
     if (value === '') {
-        // Empty value is valid (will generate automatic name)
         this.classList.remove('is-invalid');
         return;
     }
@@ -327,29 +366,4 @@ document.getElementById('projectName').addEventListener('input', function() {
     } else {
         this.classList.remove('is-invalid');
     }
-});
-
-// Add event listeners for resolution change
-document.querySelectorAll('input[name="resolution"]').forEach(radio => {
-    radio.addEventListener('change', function() {
-        const projectId = document.getElementById('startProcessButton').dataset.projectId;
-        if (projectId) {
-            // Adjust slider values based on resolution
-            if (this.value === '4k') {
-                // Set specific values for 4K
-                document.getElementById('speedY').value = -50;
-                document.getElementById('speedYValue').textContent = '-50';
-                document.getElementById('unitY').value = 65;
-                document.getElementById('unitYValue').textContent = '65';
-            } else {
-                // Reset to default values for Full HD
-                document.getElementById('speedY').value = -28;
-                document.getElementById('speedYValue').textContent = '-28';
-                document.getElementById('unitY').value = 36;
-                document.getElementById('unitYValue').textContent = '36';
-            }
-            // Update preview with new settings
-            updatePreview(projectId);
-        }
-    });
 });
