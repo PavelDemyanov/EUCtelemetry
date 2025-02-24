@@ -614,6 +614,15 @@ def create_preview_frame(csv_file,
             project = Project.query.get(project_id)
             if not project:
                 raise ValueError(f"Project {project_id} not found")
+
+            # Add debug logging for PWM bar settings
+            if text_settings:
+                logging.debug(f"Preview PWM bar settings: show_pwm_bar={text_settings.get('show_pwm_bar')}, "
+                              f"width={text_settings.get('pwm_bar_width')}, "
+                              f"top_margin={text_settings.get('pwm_bar_top_margin')}, "
+                              f"bottom_margin={text_settings.get('pwm_bar_bottom_margin')}, "
+                              f"radius={text_settings.get('pwm_bar_radius')}")
+
             csv_type, processed_data = process_csv_file(
                 csv_file, project.folder_number)
             df = pd.DataFrame(processed_data)
