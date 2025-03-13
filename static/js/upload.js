@@ -141,7 +141,7 @@ function updatePreview(projectId) {
         pwm_bar_top_margin: parseInt(document.getElementById('pwmBarTopMargin').value),
         pwm_bar_bottom_margin: parseInt(document.getElementById('pwmBarBottomMargin').value),
         pwm_bar_radius: parseInt(document.getElementById('pwmBarRadius').value),
-        pwm_bar_x: pwmBarXValue
+        pwm_bar_x: pwmBarXValue  // Explicitly use the parsed value
     };
 
     // Log PWM bar settings before sending

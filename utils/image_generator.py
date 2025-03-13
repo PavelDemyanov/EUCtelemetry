@@ -150,7 +150,7 @@ def create_frame(values,
             bar_top_margin = int(text_settings.get('pwm_bar_top_margin', 40) * scale_factor)  # Отступ сверху
             bar_bottom_margin = int(text_settings.get('pwm_bar_bottom_margin', 30) * scale_factor)  # Отступ снизу
             bar_radius = int(text_settings.get('pwm_bar_radius', 10) * scale_factor)  # Радиус скругления
-            right_margin = int(text_settings.get('pwm_bar_x', 30) * scale_factor)  # Отступ справа
+            right_margin = int(text_settings.get('pwm_bar_x', 30))  # Убираем масштабирование для right_margin
 
             # Log detailed calculations
             logging.debug(f"Scale factor: {scale_factor}")
