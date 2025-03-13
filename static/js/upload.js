@@ -77,24 +77,20 @@ allSettings.forEach(setting => {
         return;
     }
 
-    // Add both 'input' and 'change' event listeners to ensure we catch all updates
-    ['input', 'change'].forEach(eventType => {
-        input.addEventListener(eventType, function() {
-            console.log(`Setting ${setting} changed to:`, this.value); // Debug logging
-            // Update value display
-            valueDisplay.textContent = this.value;
+    input.addEventListener('input', function() {
+        console.log(`${setting} changed to:`, this.value); // Debug logging
+        valueDisplay.textContent = this.value;
 
-            // Debug logging for PWM Bar settings
-            if (pwmBarSettings.includes(setting)) {
-                console.log(`PWM Bar setting changed - ${setting}:`, this.value);
-            }
+        // Debug logging for PWM Bar settings
+        if (setting === 'pwmBarX') {
+            console.log('PWM Bar X position changed:', this.value);
+        }
 
-            // Update preview immediately
-            const projectId = document.getElementById('startProcessButton').dataset.projectId;
-            if (projectId) {
-                updatePreview(projectId);
-            }
-        });
+        // Update preview immediately
+        const projectId = document.getElementById('startProcessButton').dataset.projectId;
+        if (projectId) {
+            updatePreview(projectId);
+        }
     });
 });
 
@@ -133,9 +129,9 @@ function updatePreview(projectId) {
     progressBar.style.width = '0%';
     progressBar.classList.remove('bg-danger');
 
-    // Debug log for PWM Bar X value before sending
+    // Get PWM Bar X value
     const pwmBarXValue = parseInt(document.getElementById('pwmBarX').value);
-    console.log('PWM Bar X value before sending:', pwmBarXValue);
+    console.log('PWM Bar X value being sent:', pwmBarXValue);
 
     const settings = {
         resolution: document.querySelector('input[name="resolution"]:checked').value,
@@ -171,19 +167,8 @@ function updatePreview(projectId) {
         pwm_bar_x: pwmBarXValue
     };
 
-    // Debug logging for all PWM bar settings
-    console.log('PWM Bar settings being sent:', {
-        show_pwm_bar: settings.show_pwm_bar,
-        pwm_bar_width: settings.pwm_bar_width,
-        pwm_bar_top_margin: settings.pwm_bar_top_margin,
-        pwm_bar_bottom_margin: settings.pwm_bar_bottom_margin,
-        pwm_bar_radius: settings.pwm_bar_radius,
-        pwm_bar_x: settings.pwm_bar_x
-    });
-
-    // Log the entire settings object being sent
-    console.log('Complete settings object:', settings);
-
+    // Log complete settings for debugging
+    console.log('Full settings being sent to server:', settings);
 
     fetch(`/preview/${projectId}`, {
         method: 'POST',
@@ -198,15 +183,11 @@ function updatePreview(projectId) {
         progressDiv.classList.add('d-none');
         previewSection.classList.remove('d-none');
         document.getElementById('previewImage').src = data.preview_url + '?t=' + new Date().getTime();
-        // Re-enable form
-        document.querySelectorAll('input, button').forEach(el => el.disabled = false);
     })
     .catch(error => {
         console.error('Error:', error);
         progressTitle.textContent = gettext('Error: ') + error.message;
         progressBar.classList.add('bg-danger');
-        // Re-enable form
-        document.querySelectorAll('input, button').forEach(el => el.disabled = false);
     });
 }
 
