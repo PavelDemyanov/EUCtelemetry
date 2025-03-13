@@ -5,6 +5,7 @@ import re
 import shutil
 import threading
 import time
+import json
 from datetime import datetime, timedelta
 from collections import defaultdict
 from functools import wraps
@@ -26,7 +27,7 @@ from utils.env_setup import setup_env_variables
 from utils.email_sender import send_email
 from forms import (LoginForm, RegistrationForm, ProfileForm, 
                   ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm, DeleteAccountForm, NewsForm, EmailCampaignForm)
-from models import User, Project, EmailCampaign, News
+from models import User, Project, EmailCampaign, News, Preset
 import markdown
 from sqlalchemy import desc
 
@@ -792,7 +793,7 @@ def download_file(project_id, type):
         return jsonify({'error': 'Unauthorized'}), 403
 
     if type == 'video' and project.video_file:
-        return send_file(f'videos/{project.video_file}')
+        returnsend_file(f'videos/{project.video_file}')
     elif type == 'frames':
         # TODO: Implement frame download as ZIP
         pass
@@ -1326,4 +1327,68 @@ def generate_preview(project_id):
 
     except Exception as e:
         logging.error(f"Error generating preview: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+# Add these routes near other route definitions
+
+@app.route('/save_preset', methods=['POST'])
+@login_required
+def save_preset():
+    data = request.get_json() or {}
+    name = data.get('name', '').strip()
+    settings = data.get('settings', {})
+
+    if not name:
+        return jsonify({'error': _('Preset name is required.')}), 400
+
+    try:
+        preset = Preset.create_from_form_data(name, settings, current_user.id)
+        db.session.add(preset)
+        db.session.commit()
+        return jsonify({'success': True, 'id': preset.id})
+    except Exception as e:
+        logging.error(f"Error saving preset: {str(e)}")
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/get_presets')
+@login_required
+def get_presets():
+    try:
+        presets = Preset.query.filter_by(user_id=current_user.id).all()
+        presets_list = [{'id': p.id, 'name': p.name} for p in presets]
+        return jsonify({'presets': presets_list})
+    except Exception as e:
+        logging.error(f"Error getting presets: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/get_preset/<int:preset_id>')
+@login_required
+def get_preset(preset_id):
+    preset = Preset.query.get_or_404(preset_id)
+    if preset.user_id != current_user.id:
+        return jsonify({'error': _('Unauthorized')}), 403
+    try:
+        return jsonify({
+            'settings': preset.get_settings(),
+            'name': preset.name,
+            'id': preset.id
+        })
+    except Exception as e:
+        logging.error(f"Error getting preset {preset_id}: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/delete_preset/<int:preset_id>', methods=['DELETE'])
+@login_required
+def delete_preset(preset_id):
+    preset = Preset.query.get_or_404(preset_id)
+    if preset.user_id != current_user.id:
+        return jsonify({'error': _('Unauthorized')}), 403
+    try:
+        db.session.delete(preset)
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        logging.error(f"Error deleting preset {preset_id}: {str(e)}")
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500

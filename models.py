@@ -4,6 +4,7 @@ from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 import secrets
 import markdown
+import json
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -19,8 +20,9 @@ class User(UserMixin, db.Model):
     password_reset_sent_at = db.Column(db.DateTime)
     is_admin = db.Column(db.Boolean, default=False)
     locale = db.Column(db.String(2), default='en')
-    subscribed_to_emails = db.Column(db.Boolean, default=True)  # New field
+    subscribed_to_emails = db.Column(db.Boolean, default=True)
     projects = db.relationship('Project', backref='user', lazy=True)
+    presets = db.relationship('Preset', backref='user', lazy=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -151,3 +153,29 @@ class News(db.Model):
     def html_content(self):
         """Convert markdown content to HTML"""
         return markdown.markdown(self.content, extensions=['fenced_code', 'tables'])
+
+class Preset(db.Model):
+    """Model for storing user presets for project settings"""
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    settings = db.Column(db.Text, nullable=False)  # JSON string of settings
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+    def get_settings(self):
+        """Get settings as a dictionary"""
+        return json.loads(self.settings)
+
+    def set_settings(self, settings_dict):
+        """Set settings from a dictionary"""
+        self.settings = json.dumps(settings_dict)
+
+    @staticmethod
+    def create_from_form_data(name, settings_dict, user_id):
+        """Create a new preset from form data"""
+        preset = Preset(
+            name=name,
+            user_id=user_id
+        )
+        preset.set_settings(settings_dict)
+        return preset

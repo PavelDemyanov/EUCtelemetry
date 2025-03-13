@@ -425,3 +425,265 @@ document.getElementById('startProcessButton').addEventListener('click', function
         this.disabled = false;
     });
 });
+
+// Add preset management functionality
+document.addEventListener('DOMContentLoaded', function() {
+    loadPresets();  // Load presets when page loads
+
+    // Reset to defaults button
+    document.getElementById('resetDefaultsButton').addEventListener('click', function() {
+        // Reset resolution
+        document.querySelector('input[name="resolution"][value="fullhd"]').checked = true;
+        // Reset FPS
+        document.querySelector('input[name="fps"][value="14.985"]').checked = true;
+        // Reset codec
+        document.querySelector('input[name="codec"][value="h264"]').checked = true;
+        // Reset interpolation
+        document.getElementById('interpolateValues').checked = true;
+
+        // Reset all sliders to their default values
+        const defaultValues = {
+            'verticalPosition': 1,
+            'borderRadius': 13,
+            'topPadding': 14,
+            'bottomPadding': 45,
+            'spacing': 10,
+            'fontSize': 23,
+            'indicatorScale': 50,
+            'indicatorX': 50,
+            'indicatorY': 126,
+            'speedSize': 75,
+            'speedY': -28,
+            'unitSize': 40,
+            'unitY': 36
+        };
+
+        Object.entries(defaultValues).forEach(([id, value]) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.value = value;
+                const valueDisplay = document.getElementById(id + 'Value');
+                if (valueDisplay) {
+                    // Add unit if needed
+                    const unit = id.includes('Size') || id.includes('indicator') ? '%' : 'px';
+                    valueDisplay.textContent = value + (id === 'verticalPosition' ? '%' : unit);
+                }
+            }
+        });
+
+        // Reset visibility checkboxes
+        const visibilityDefaults = {
+            'showSpeed': false,
+            'showMaxSpeed': true,
+            'showVoltage': true,
+            'showTemp': true,
+            'showBattery': true,
+            'showMileage': true,
+            'showPWM': true,
+            'showPower': true,
+            'showCurrent': true,
+            'showGPS': true,
+            'showBottomElements': true
+        };
+
+        Object.entries(visibilityDefaults).forEach(([id, value]) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.checked = value;
+            }
+        });
+
+        // Update preview if project is loaded
+        const projectId = document.getElementById('startProcessButton').dataset.projectId;
+        if (projectId) {
+            updatePreview(projectId);
+        }
+    });
+
+    // Save preset button
+    document.getElementById('confirmSavePreset').addEventListener('click', function() {
+        const presetName = document.getElementById('presetName').value.trim();
+        if (!presetName) {
+            alert(gettext('Please enter a preset name'));
+            return;
+        }
+
+        const settings = {
+            resolution: document.querySelector('input[name="resolution"]:checked').value,
+            fps: document.querySelector('input[name="fps"]:checked').value,
+            codec: document.querySelector('input[name="codec"]:checked').value,
+            interpolate_values: document.getElementById('interpolateValues').checked,
+            vertical_position: document.getElementById('verticalPosition').value,
+            top_padding: document.getElementById('topPadding').value,
+            bottom_padding: document.getElementById('bottomPadding').value,
+            spacing: document.getElementById('spacing').value,
+            font_size: document.getElementById('fontSize').value,
+            border_radius: document.getElementById('borderRadius').value,
+            indicator_scale: document.getElementById('indicatorScale').value,
+            indicator_x: document.getElementById('indicatorX').value,
+            indicator_y: document.getElementById('indicatorY').value,
+            speed_y: document.getElementById('speedY').value,
+            unit_y: document.getElementById('unitY').value,
+            speed_size: document.getElementById('speedSize').value,
+            unit_size: document.getElementById('unitSize').value,
+            show_speed: document.getElementById('showSpeed').checked,
+            show_max_speed: document.getElementById('showMaxSpeed').checked,
+            show_voltage: document.getElementById('showVoltage').checked,
+            show_temp: document.getElementById('showTemp').checked,
+            show_battery: document.getElementById('showBattery').checked,
+            show_mileage: document.getElementById('showMileage').checked,
+            show_pwm: document.getElementById('showPWM').checked,
+            show_power: document.getElementById('showPower').checked,
+            show_current: document.getElementById('showCurrent').checked,
+            show_gps: document.getElementById('showGPS').checked,
+            show_bottom_elements: document.getElementById('showBottomElements').checked
+        };
+
+        fetch('/save_preset', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: presetName,
+                settings: settings
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) throw new Error(data.error);
+            // Close modal
+            bootstrap.Modal.getInstance(document.getElementById('savePresetModal')).hide();
+            // Clear input
+            document.getElementById('presetName').value = '';
+            // Reload presets
+            loadPresets();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert(gettext('Error saving preset: ') + error.message);
+        });
+    });
+
+    // Load preset selection
+    document.getElementById('presetSelect').addEventListener('change', function() {
+        const presetId = this.value;
+        document.getElementById('deletePresetButton').disabled = !presetId;
+
+        if (!presetId) return;
+
+        fetch(`/get_preset/${presetId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) throw new Error(data.error);
+
+                const settings = data.settings;
+
+                // Apply settings
+                document.querySelector(`input[name="resolution"][value="${settings.resolution}"]`).checked = true;
+                document.querySelector(`input[name="fps"][value="${settings.fps}"]`).checked = true;
+                document.querySelector(`input[name="codec"][value="${settings.codec}"]`).checked = true;
+                document.getElementById('interpolateValues').checked = settings.interpolate_values;
+
+                // Apply slider values
+                const sliderSettings = {
+                    'verticalPosition': settings.vertical_position,
+                    'topPadding': settings.top_padding,
+                    'bottomPadding': settings.bottom_padding,
+                    'spacing': settings.spacing,
+                    'fontSize': settings.font_size,
+                    'borderRadius': settings.border_radius,
+                    'indicatorScale': settings.indicator_scale,
+                    'indicatorX': settings.indicator_x,
+                    'indicatorY': settings.indicator_y,
+                    'speedY': settings.speed_y,
+                    'unitY': settings.unit_y,
+                    'speedSize': settings.speed_size,
+                    'unitSize': settings.unit_size
+                };
+
+                Object.entries(sliderSettings).forEach(([id, value]) => {
+                    const element = document.getElementById(id);
+                    if (element) {
+                        element.value = value;
+                        const valueDisplay = document.getElementById(id + 'Value');
+                        if (valueDisplay) {
+                            const unit = id.includes('Size') || id.includes('indicator') ? '%' : 'px';
+                            valueDisplay.textContent = value + (id === 'verticalPosition' ? '%' : unit);
+                        }
+                    }
+                });
+
+                // Apply visibility settings
+                document.getElementById('showSpeed').checked = settings.show_speed;
+                document.getElementById('showMaxSpeed').checked = settings.show_max_speed;
+                document.getElementById('showVoltage').checked = settings.show_voltage;
+                document.getElementById('showTemp').checked = settings.show_temp;
+                document.getElementById('showBattery').checked = settings.show_battery;
+                document.getElementById('showMileage').checked = settings.show_mileage;
+                document.getElementById('showPWM').checked = settings.show_pwm;
+                document.getElementById('showPower').checked = settings.show_power;
+                document.getElementById('showCurrent').checked = settings.show_current;
+                document.getElementById('showGPS').checked = settings.show_gps;
+                document.getElementById('showBottomElements').checked = settings.show_bottom_elements;
+
+                // Update preview if project is loaded
+                const projectId = document.getElementById('startProcessButton').dataset.projectId;
+                if (projectId) {
+                    updatePreview(projectId);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert(gettext('Error loading preset: ') + error.message);
+            });
+    });
+
+    // Delete preset button
+    document.getElementById('deletePresetButton').addEventListener('click', function() {
+        const presetSelect = document.getElementById('presetSelect');
+        const presetId = presetSelect.value;
+        if (!presetId) return;
+
+        if (!confirm(gettext('Are you sure you want to delete this preset?'))) return;
+
+        fetch(`/delete_preset/${presetId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) throw new Error(data.error);
+            loadPresets();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert(gettext('Error deleting preset: ') + error.message);
+        });
+    });
+});
+
+// Function to load presets into select
+function loadPresets() {
+    fetch('/get_presets')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) throw new Error(data.error);
+
+            const presetSelect = document.getElementById('presetSelect');
+            presetSelect.innerHTML = `<option value="">${gettext('Select a Preset')}</option>`;
+
+            data.presets.forEach(preset => {
+                const option = document.createElement('option');
+                option.value = preset.id;
+                option.textContent = preset.name;
+                presetSelect.appendChild(option);
+            });
+
+            // Disable delete button when no preset is selected
+            document.getElementById('deletePresetButton').disabled = true;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert(gettext('Error loading presets: ') + error.message);
+        });
+}

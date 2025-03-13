@@ -125,6 +125,39 @@
                         <img id="previewImage" class="img-fluid" alt="{{ _('Preview frame') }}">
                     </div>
 
+                    <!-- Add preset controls -->
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h5 class="mb-0">{{ _('Preset Controls') }}</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <button type="button" class="btn btn-secondary mb-2 w-100" id="resetDefaultsButton">
+                                        {{ _('Reset to Defaults') }}
+                                    </button>
+                                </div>
+                                <div class="col-md-6">
+                                    <button type="button" class="btn btn-primary mb-2 w-100" id="savePresetButton" data-bs-toggle="modal" data-bs-target="#savePresetModal">
+                                        {{ _('Save as Preset') }}
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-md-6">
+                                    <select class="form-select mb-2" id="presetSelect">
+                                        <option value="">{{ _('Select a Preset') }}</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <button type="button" class="btn btn-danger mb-2 w-100" id="deletePresetButton" disabled>
+                                        {{ _('Delete Preset') }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="card mb-3">
                         <div class="card-header" role="button" data-bs-toggle="collapse" data-bs-target="#textDisplaySettings" aria-expanded="false" aria-controls="textDisplaySettings">
                             <h5 class="mb-0 d-flex justify-content-between align-items-center">
@@ -383,6 +416,29 @@
         </div>
     </div>
 </div>
+
+<!-- Add Save Preset Modal -->
+<div class="modal fade" id="savePresetModal" tabindex="-1" aria-labelledby="savePresetModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="savePresetModalLabel">{{ _('Save Preset') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="presetName" class="form-label">{{ _('Preset Name') }}</label>
+                    <input type="text" class="form-control" id="presetName" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
+                <button type="button" class="btn btn-primary" id="confirmSavePreset">{{ _('Save') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
