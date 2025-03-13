@@ -23,17 +23,16 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
     const progressTitle = document.getElementById('progressTitle');
     const videoProcessingInfo = document.getElementById('videoProcessingInfo');
 
-    // Show progress for upload, but not the video processing info
+    // Show progress for upload
     progressDiv.classList.remove('d-none');
     videoProcessingInfo.classList.add('d-none');
     progressTitle.textContent = gettext('Uploading CSV...');
     progressBar.style.width = '0%';
     progressBar.classList.remove('bg-danger');
 
-    // Disable form
+    // Disable form during upload
     this.querySelectorAll('input, button').forEach(el => el.disabled = true);
 
-    // Upload CSV and get preview
     fetch('/upload', {
         method: 'POST',
         body: formData
@@ -60,14 +59,13 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
     });
 });
 
-// Add PWM bar horizontal position to the settings arrays
+// Combine all settings arrays
 const textSettings = ['verticalPosition', 'topPadding', 'bottomPadding', 'spacing', 'fontSize', 'borderRadius'];
 const speedIndicatorSettings = ['indicatorScale', 'indicatorX', 'indicatorY', 'speedSize', 'speedY', 'unitSize', 'unitY'];
 const pwmBarSettings = ['pwmBarTopMargin', 'pwmBarBottomMargin', 'pwmBarWidth', 'pwmBarRadius', 'pwmBarX'];
-
-// Combine all settings
 const allSettings = [...textSettings, ...speedIndicatorSettings, ...pwmBarSettings];
 
+// Add event listeners for all setting inputs
 allSettings.forEach(setting => {
     const input = document.getElementById(setting);
     const valueDisplay = document.getElementById(setting + 'Value');
@@ -78,20 +76,40 @@ allSettings.forEach(setting => {
     }
 
     input.addEventListener('input', function() {
-        console.log(`${setting} changed to:`, this.value); // Debug logging
+        console.log(`${setting} changed to:`, this.value);
         valueDisplay.textContent = this.value;
 
-        // Debug logging for PWM Bar settings
         if (setting === 'pwmBarX') {
             console.log('PWM Bar X position changed:', this.value);
         }
 
-        // Update preview immediately
         const projectId = document.getElementById('startProcessButton').dataset.projectId;
         if (projectId) {
             updatePreview(projectId);
         }
     });
+});
+
+// Add event listeners for visibility checkboxes
+const visibilitySettings = [
+    'showSpeed', 'showMaxSpeed', 'showVoltage', 'showTemp',
+    'showBattery', 'showMileage', 'showPWM', 'showPower',
+    'showCurrent', 'showGPS', 'showBottomElements', 'showPWMBar'
+];
+
+visibilitySettings.forEach(setting => {
+    const checkbox = document.getElementById(setting);
+    if (checkbox) {
+        checkbox.addEventListener('change', function() {
+            if (setting === 'showPWMBar') {
+                console.log('PWM Bar visibility changed:', this.checked);
+            }
+            const projectId = document.getElementById('startProcessButton').dataset.projectId;
+            if (projectId) {
+                updatePreview(projectId);
+            }
+        });
+    }
 });
 
 // Function to update preview with current settings
@@ -106,7 +124,7 @@ function updatePreview(projectId) {
     progressBar.style.width = '0%';
     progressBar.classList.remove('bg-danger');
 
-    // Get PWM Bar X value
+    // Get PWM Bar X value with debug logging
     const pwmBarXValue = parseInt(document.getElementById('pwmBarX').value);
     console.log('PWM Bar X value being sent:', pwmBarXValue);
 
@@ -141,10 +159,10 @@ function updatePreview(projectId) {
         pwm_bar_top_margin: parseInt(document.getElementById('pwmBarTopMargin').value),
         pwm_bar_bottom_margin: parseInt(document.getElementById('pwmBarBottomMargin').value),
         pwm_bar_radius: parseInt(document.getElementById('pwmBarRadius').value),
-        pwm_bar_x: pwmBarXValue  // Explicitly use the parsed value
+        pwm_bar_x: pwmBarXValue
     };
 
-    // Log PWM bar settings before sending
+    // Log PWM bar settings
     console.log('PWM Bar settings being sent:', {
         show_pwm_bar: settings.show_pwm_bar,
         pwm_bar_width: settings.pwm_bar_width,
@@ -175,29 +193,6 @@ function updatePreview(projectId) {
     });
 }
 
-// Add event listeners for visibility checkboxes
-const visibilitySettings = [
-    'showSpeed', 'showMaxSpeed', 'showVoltage', 'showTemp',
-    'showBattery', 'showMileage', 'showPWM', 'showPower',
-    'showCurrent', 'showGPS', 'showBottomElements', 'showPWMBar'
-];
-
-visibilitySettings.forEach(setting => {
-    const checkbox = document.getElementById(setting);
-    if (checkbox) {
-        checkbox.addEventListener('change', function() {
-            // Debug logging for PWM Bar visibility
-            if (setting === 'showPWMBar') {
-                console.log('PWM Bar visibility changed:', this.checked);
-            }
-            const projectId = document.getElementById('startProcessButton').dataset.projectId;
-            if (projectId) {
-                updatePreview(projectId);
-            }
-        });
-    }
-});
-
 // Add event listeners for resolution change
 document.querySelectorAll('input[name="resolution"]').forEach(radio => {
     radio.addEventListener('change', function() {
@@ -223,29 +218,25 @@ document.getElementById('startProcessButton').addEventListener('click', function
     progressBar.classList.remove('bg-danger');
     this.disabled = true;
 
-    // Debug log for PWM Bar X value before sending
-    const pwmBarXValue = parseInt(document.getElementById('pwmBarX').value);
-    console.log('PWM Bar X value before sending:', pwmBarXValue);
 
     const settings = {
         resolution: document.querySelector('input[name="resolution"]:checked').value,
         fps: document.querySelector('input[name="fps"]:checked').value,
         codec: document.querySelector('input[name="codec"]:checked').value,
         interpolate_values: document.getElementById('interpolateValues').checked,
-        vertical_position: document.getElementById('verticalPosition').value,
-        top_padding: document.getElementById('topPadding').value,
-        bottom_padding: document.getElementById('bottomPadding').value,
-        spacing: document.getElementById('spacing').value,
-        font_size: document.getElementById('fontSize').value,
-        border_radius: document.getElementById('borderRadius').value,
-        indicator_x: document.getElementById('indicatorX').value,
-        indicator_y: document.getElementById('indicatorY').value,
-        speed_y: document.getElementById('speedY').value,
-        unit_y: document.getElementById('unitY').value,
-        speed_size: document.getElementById('speedSize').value,
-        unit_size: document.getElementById('unitSize').value,
-        indicator_scale: document.getElementById('indicatorScale').value,
-        // Add visibility settings
+        vertical_position: parseInt(document.getElementById('verticalPosition').value),
+        top_padding: parseInt(document.getElementById('topPadding').value),
+        bottom_padding: parseInt(document.getElementById('bottomPadding').value),
+        spacing: parseInt(document.getElementById('spacing').value),
+        font_size: parseInt(document.getElementById('fontSize').value),
+        border_radius: parseInt(document.getElementById('borderRadius').value),
+        indicator_x: parseFloat(document.getElementById('indicatorX').value),
+        indicator_y: parseFloat(document.getElementById('indicatorY').value),
+        speed_y: parseInt(document.getElementById('speedY').value),
+        unit_y: parseInt(document.getElementById('unitY').value),
+        speed_size: parseFloat(document.getElementById('speedSize').value),
+        unit_size: parseFloat(document.getElementById('unitSize').value),
+        indicator_scale: parseFloat(document.getElementById('indicatorScale').value),
         show_speed: document.getElementById('showSpeed').checked,
         show_max_speed: document.getElementById('showMaxSpeed').checked,
         show_voltage: document.getElementById('showVoltage').checked,
@@ -257,32 +248,16 @@ document.getElementById('startProcessButton').addEventListener('click', function
         show_current: document.getElementById('showCurrent').checked,
         show_gps: document.getElementById('showGPS').checked,
         show_bottom_elements: document.getElementById('showBottomElements').checked,
-        // Add PWM bar settings
         show_pwm_bar: document.getElementById('showPWMBar').checked,
         pwm_bar_top_margin: parseInt(document.getElementById('pwmBarTopMargin').value),
         pwm_bar_bottom_margin: parseInt(document.getElementById('pwmBarBottomMargin').value),
         pwm_bar_width: parseInt(document.getElementById('pwmBarWidth').value),
         pwm_bar_radius: parseInt(document.getElementById('pwmBarRadius').value),
-        pwm_bar_x: pwmBarXValue
+        pwm_bar_x: parseInt(document.getElementById('pwmBarX').value)
     };
 
-    // Debug logging for all PWM bar settings
-    console.log('PWM Bar settings being sent:', {
-        show_pwm_bar: settings.show_pwm_bar,
-        pwm_bar_width: settings.pwm_bar_width,
-        pwm_bar_top_margin: settings.pwm_bar_top_margin,
-        pwm_bar_bottom_margin: settings.pwm_bar_bottom_margin,
-        pwm_bar_radius: settings.pwm_bar_radius,
-        pwm_bar_x: settings.pwm_bar_x
-    });
-
-    // Log the entire settings object being sent
-    console.log('Complete settings object:', settings);
-
-    // Set initial background processing message
     videoProcessingInfo.textContent = gettext("You can close your browser and come back later - the video processing will continue in the background.");
 
-    // Start processing
     fetch(`/generate_frames/${projectId}`, {
         method: 'POST',
         headers: {
@@ -294,7 +269,6 @@ document.getElementById('startProcessButton').addEventListener('click', function
     .then(data => {
         if (data.error) throw new Error(data.error);
 
-        // Start polling for status
         const checkStatus = () => {
             fetch(`/project_status/${projectId}`)
                 .then(response => response.json())
@@ -354,7 +328,6 @@ document.getElementById('startProcessButton').addEventListener('click', function
                 });
         };
 
-        // Start checking status
         checkStatus();
     })
     .catch(error => {
