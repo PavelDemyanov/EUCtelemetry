@@ -657,3 +657,61 @@ msgstr "Ошибка при удалении проекта: "
 
 msgid "Error deleting project"
 msgstr "Ошибка при удалении проекта"
+
+# News related translations
+msgid "News"
+msgstr "Новости"
+
+msgid "Create News"
+msgstr "Создать новость"
+
+msgid "Edit News"
+msgstr "Редактировать новость"
+
+msgid "Title"
+msgstr "Заголовок"
+
+msgid "Content"
+msgstr "Содержание"
+
+msgid "Save News"
+msgstr "Сохранить новость"
+
+msgid "Edit"
+msgstr "Редактировать"
+
+msgid "Delete"
+msgstr "Удалить"
+
+msgid "Are you sure you want to delete this news?"
+msgstr "Вы уверены, что хотите удалить эту новость?"
+
+msgid "Posted by %(author)s on %(date)s"
+msgstr "Опубликовано %(author)s %(date)s"
+
+msgid "Previous"
+msgstr "Предыдущая"
+
+msgid "Next"
+msgstr "Следующая"
+
+msgid "Page %(current)s of %(total)s"
+msgstr "Страница %(current)s из %(total)s"
+
+msgid "News created successfully"
+msgstr "Новость успешно создана"
+
+msgid "News updated successfully"
+msgstr "Новость успешно обновлена"
+
+msgid "News deleted successfully"
+msgstr "Новость успешно удалена"
+
+msgid "You can use Markdown syntax"
+msgstr "Вы можете использовать синтаксис Markdown"
+
+msgid "Cancel"
+msgstr "Отмена"
+
+msgid "Title must be between 1 and 200 characters"
+msgstr "Заголовок должен быть от 1 до 200 символов"

@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 import secrets
+import markdown
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -138,3 +139,15 @@ class EmailCampaign(db.Model):
     recipients_count = db.Column(db.Integer, default=0)
     sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     sender = db.relationship('User', backref='campaigns')
+
+class News(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    author_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    author = db.relationship('User', backref='news_posts')
+
+    def html_content(self):
+        """Convert markdown content to HTML"""
+        return markdown.markdown(self.content, extensions=['fenced_code', 'tables'])

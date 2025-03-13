@@ -25,9 +25,11 @@ from utils.background_processor import process_project, stop_project_processing
 from utils.env_setup import setup_env_variables
 from utils.email_sender import send_email
 from forms import (LoginForm, RegistrationForm, ProfileForm, 
-                  ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm, DeleteAccountForm)
-from models import User, Project, EmailCampaign
+                  ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm, DeleteAccountForm, NewsForm)
+from models import User, Project, EmailCampaign, News
 from forms import EmailCampaignForm
+import markdown
+from sqlalchemy import desc
 
 
 # Configure logging
@@ -782,7 +784,7 @@ def download_file(project_id, type):
         pass
     elif type == 'processed_csv':
         processed_csv = os.path.join('processed_data', f'project_{project.folder_number}_{project.csv_file}')
-        if os.path.exists(processed_csv):
+        if os.path.path.exists(processed_csv):
             return send_file(processed_csv, as_attachment=True, 
                            downloadname=f'processed_{project.csv_file}')
 
@@ -1255,3 +1257,60 @@ stats_thread.start()
 # Start cleanup thread when app starts
 cleanup_thread = threading.Thread(target=cleanup_expired_projects, daemon=True)
 cleanup_thread.start()
+
+# Add to imports at the top
+from forms import NewsForm
+from models import News
+import markdown
+from sqlalchemy import desc
+
+# Add these routes after existing routes
+
+@app.route('/news')
+def news_list():
+    page = request.args.get('page', 1, type=int)
+    news = News.query.order_by(desc(News.created_at)).paginate(
+        page=page, per_page=10, error_out=False
+    )
+    return render_template('news/list.html', news=news)
+
+@app.route('/news/create', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def news_create():
+    form = NewsForm()
+    if form.validate_on_submit():
+        news = News(
+            title=form.title.data,
+            content=form.content.data,
+            author_id=current_user.id
+        )
+        db.session.add(news)
+        db.session.commit()
+        flash(_('News created successfully'))
+        return redirect(url_for('news_list'))
+    return render_template('news/edit.html', form=form, is_create=True)
+
+@app.route('/news/<int:id>/edit', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def news_edit(id):
+    news = News.query.get_or_404(id)
+    form = NewsForm(obj=news)
+    if form.validate_on_submit():
+        news.title = form.title.data
+        news.content = form.content.data
+        db.session.commit()
+        flash(_('News updated successfully'))
+        return redirect(url_for('news_list'))
+    return render_template('news/edit.html', form=form, news=news, is_create=False)
+
+@app.route('/news/<int:id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def news_delete(id):
+    news = News.query.get_or_404(id)
+    db.session.delete(news)
+    db.session.commit()
+    flash(_('News deleted successfully'))
+    return redirect(url_for('news_list'))

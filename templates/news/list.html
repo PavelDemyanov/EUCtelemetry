@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-8">{{ _('News') }}</h1>
+
+    {% if current_user.is_authenticated and current_user.is_admin %}
+    <div class="mb-8">
+        <a href="{{ url_for('news_create') }}" 
+           class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+            {{ _('Create News') }}
+        </a>
+    </div>
+    {% endif %}
+
+    <div class="space-y-8">
+        {% for item in news.items %}
+        <article class="bg-white shadow-lg rounded-lg p-6">
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="text-2xl font-bold">{{ item.title }}</h2>
+                {% if current_user.is_authenticated and current_user.is_admin %}
+                <div class="flex space-x-2">
+                    <a href="{{ url_for('news_edit', id=item.id) }}"
+                       class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-3 rounded">
+                        {{ _('Edit') }}
+                    </a>
+                    <form action="{{ url_for('news_delete', id=item.id) }}" method="POST" class="inline"
+                          onsubmit="return confirm('{{ _('Are you sure you want to delete this news?') }}')">
+                        <button type="submit" 
+                                class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded">
+                            {{ _('Delete') }}
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+            <div class="prose max-w-none mb-4">
+                {{ item.html_content()|safe }}
+            </div>
+            <div class="text-sm text-gray-500">
+                {{ _('Posted by %(author)s on %(date)s', 
+                     author=item.author.name,
+                     date=item.created_at.strftime('%Y-%m-%d %H:%M')) }}
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+
+    {% if news.pages > 1 %}
+    <div class="flex justify-center space-x-2 mt-8">
+        {% if news.has_prev %}
+        <a href="{{ url_for('news_list', page=news.prev_num) }}"
+           class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded">
+            {{ _('Previous') }}
+        </a>
+        {% endif %}
+        
+        <span class="py-2 px-4">
+            {{ _('Page %(current)s of %(total)s', current=news.page, total=news.pages) }}
+        </span>
+
+        {% if news.has_next %}
+        <a href="{{ url_for('news_list', page=news.next_num) }}"
+           class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded">
+            {{ _('Next') }}
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

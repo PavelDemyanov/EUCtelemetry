@@ -59,3 +59,11 @@ class EmailCampaignForm(FlaskForm):
     ])
     html_content = TextAreaField(_l('Message Content'), validators=[DataRequired()])
     submit = SubmitField(_l('Send Campaign'))
+
+class NewsForm(FlaskForm):
+    title = StringField(_l('Title'), validators=[
+        DataRequired(), 
+        Length(min=1, max=200, message=_l('Title must be between 1 and 200 characters'))
+    ])
+    content = TextAreaField(_l('Content'), validators=[DataRequired()])
+    submit = SubmitField(_l('Save News'))
