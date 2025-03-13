@@ -11,7 +11,7 @@ from functools import wraps
 
 import psutil
 from dotenv import load_dotenv
-from flask import (Flask, render_template, request, jsonify, send_file,
+from flask import (Flask, render_template, request, jsonify, send_file, 
                   url_for, send_from_directory, flash, redirect, abort)
 from flask_migrate import Migrate
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
@@ -24,7 +24,7 @@ from utils.video_creator import create_video
 from utils.background_processor import process_project, stop_project_processing
 from utils.env_setup import setup_env_variables
 from utils.email_sender import send_email
-from forms import (LoginForm, RegistrationForm, ProfileForm,
+from forms import (LoginForm, RegistrationForm, ProfileForm, 
                   ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm, DeleteAccountForm)
 from models import User, Project, EmailCampaign
 from forms import EmailCampaignForm
@@ -273,7 +273,7 @@ def admin_dashboard():
         .order_by(User.created_at.desc())\
         .paginate(page=user_page, per_page=20, error_out=False)
 
-    return render_template('admin/dashboard.html',
+    return render_template('admin/dashboard.html', 
                          projects=projects,
                          users=users,
                          today=today,
@@ -509,8 +509,8 @@ def profile():
         flash(_('Profile updated successfully'))
         return redirect(url_for('profile'))
 
-    return render_template('profile.html',
-                         profile_form=profile_form,
+    return render_template('profile.html', 
+                         profile_form=profile_form, 
                          password_form=password_form,
                          delete_form=delete_form)
 
@@ -616,7 +616,7 @@ def upload_file():
                     return jsonify({'error': 'Invalid file encoding. Please ensure your CSV file is properly encoded.'}), 400
 
             # Check for DarknessBot format
-            darkness_bot_columns = {'Date', 'Speed', 'GPS Speed', 'Voltage', 'Temperature',
+            darkness_bot_columns = {'Date', 'Speed', 'GPS Speed', 'Voltage', 'Temperature', 
                                       'Current', 'Battery level', 'Total mileage', 'PWM', 'Power'}
             # Check for WheelLog format
             wheellog_columns = {'date', 'speed', 'gps_speed', 'voltage', 'system_temp',
@@ -710,12 +710,6 @@ def generate_project_frames(project_id):
             'speed_size': float(data.get('speed_size', 100)),
             'unit_size': float(data.get('unit_size', 100)),
             'indicator_scale': float(data.get('indicator_scale', 100)),
-            # Add new PWM bar settings
-            'show_pwm_bar': data.get('show_pwm_bar', True),
-            'pwm_bar_width': int(data.get('pwm_bar_width', 20)),
-            'pwm_bar_top_margin': int(data.get('pwm_bar_top_margin', 40)),
-            'pwm_bar_bottom_margin': int(data.get('pwm_bar_bottom_margin', 30)),
-            'pwm_bar_radius': int(data.get('pwm_bar_radius', 10)),
             # Add visibility settings with explicit defaults
             'show_speed': data.get('show_speed', True),
             'show_max_speed': data.get('show_max_speed', True),
@@ -725,7 +719,7 @@ def generate_project_frames(project_id):
             'show_mileage': data.get('show_mileage', True),
             'show_pwm': data.get('show_pwm', True),
             'show_power': data.get('show_power', True),
-            'show_current': data.get('show_current', True),
+            'show_current': data.get('show_current', True),  # Add current visibility setting
             'show_gps': data.get('show_gps', False),
             'show_bottom_elements': data.get('show_bottom_elements', True)
         }
@@ -789,7 +783,7 @@ def download_file(project_id, type):
     elif type == 'processed_csv':
         processed_csv = os.path.join('processed_data', f'project_{project.folder_number}_{project.csv_file}')
         if os.path.exists(processed_csv):
-            return send_file(processed_csv, as_attachment=True,
+            return send_file(processed_csv, as_attachment=True, 
                            downloadname=f'processed_{project.csv_file}')
 
     return jsonify({'error': 'File not found'}), 404
@@ -863,6 +857,7 @@ def generate_preview(project_id):
             'spacing': int(data.get('spacing', 20)),
             'font_size': int(data.get('font_size', 26)),
             'border_radius': int(data.get('border_radius', 13)),
+            # Speed indicator settings
             'indicator_x': float(data.get('indicator_x', 50)),
             'indicator_y': float(data.get('indicator_y', 80)),
             'speed_y': int(data.get('speed_y', 0)),
@@ -870,42 +865,34 @@ def generate_preview(project_id):
             'speed_size': float(data.get('speed_size', 100)),
             'unit_size': float(data.get('unit_size', 100)),
             'indicator_scale': float(data.get('indicator_scale', 100)),
+            # Visibility settings - default to True unless explicitly set to False
             'show_speed': data.get('show_speed', True),
             'show_max_speed': data.get('show_max_speed', True),
             'show_voltage': data.get('show_voltage', True),
             'show_temp': data.get('show_temp', True),
             'show_battery': data.get('show_battery', True),
+            'show_gps': data.get('show_gps', True),  # Добавляем параметр GPS
             'show_mileage': data.get('show_mileage', True),
             'show_pwm': data.get('show_pwm', True),
             'show_power': data.get('show_power', True),
-            'show_current': data.get('show_current', True),
-            'show_gps': data.get('show_gps', False),
-            'show_bottom_elements': data.get('show_bottom_elements', True),
-            # Add PWM bar settings
-            'show_pwm_bar': data.get('show_pwm_bar', True),
-            'pwm_bar_width': int(data.get('pwm_bar_width', 20)),
-            'pwm_bar_top_margin': int(data.get('pwm_bar_top_margin', 40)),
-            'pwm_bar_bottom_margin': int(data.get('pwm_bar_bottom_margin', 30)),
-            'pwm_bar_radius': int(data.get('pwm_bar_radius', 10))
+            'show_current': data.get('show_current', True), # Add current visibility setting
+            'show_bottom_elements': data.get('show_bottom_elements', True)
         }
 
         logging.info(f"Generating preview with settings: {text_settings}")
 
-        preview_url = create_preview_frame(
-            os.path.join('uploads', project.csv_file),
+        # Get user's preferred locale
+        user_locale = 'ru' if current_user.is_authenticated and hasattr(current_user, 'locale') and current_user.locale == 'ru' else 'en'
+
+        preview_path = create_preview_frame(
+            os.path.join(app.config['UPLOAD_FOLDER'], project.csv_file),
             project.id,
             resolution,
             text_settings,
-            locale=current_user.locale if current_user.is_authenticated and hasattr(current_user, 'locale') else 'en'
+            locale=user_locale
         )
 
-        if not preview_url:
-            raise ValueError("Failed to create preview")
-
-        return jsonify({
-            'success': True,
-            'preview_url': url_for('serve_preview', filename=os.path.basename(preview_url))
-        })
+        return jsonify({'success': True, 'preview_url': url_for('serve_preview', filename=f'{project.id}_preview.png')})
 
     except Exception as e:
         logging.error(f"Error generating preview: {str(e)}")

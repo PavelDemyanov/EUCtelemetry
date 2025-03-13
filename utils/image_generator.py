@@ -137,61 +137,6 @@ def create_frame(values,
         overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
         draw = ImageDraw.Draw(overlay)
 
-        # Рисуем вертикальную шкалу PWM
-        if text_settings and text_settings.get('show_pwm_bar', True):
-            logging.debug("PWM Bar settings being applied:")
-            logging.debug(f"Width: {text_settings.get('pwm_bar_width')}")
-            logging.debug(f"Top margin: {text_settings.get('pwm_bar_top_margin')}")
-            logging.debug(f"Bottom margin: {text_settings.get('pwm_bar_bottom_margin')}")
-            logging.debug(f"Radius: {text_settings.get('pwm_bar_radius')}")
-            logging.debug(f"Right margin value from settings: {text_settings.get('pwm_bar_x')}")
-
-            bar_width = int(text_settings.get('pwm_bar_width', 20) * scale_factor)  # Ширина полосы
-            bar_top_margin = int(text_settings.get('pwm_bar_top_margin', 40) * scale_factor)  # Отступ сверху
-            bar_bottom_margin = int(text_settings.get('pwm_bar_bottom_margin', 30) * scale_factor)  # Отступ снизу
-            bar_radius = int(text_settings.get('pwm_bar_radius', 10) * scale_factor)  # Радиус скругления
-            right_margin = int(text_settings.get('pwm_bar_x', 30) * scale_factor)  # Отступ справа, масштабируем как другие параметры
-
-            # Log detailed calculations
-            logging.debug(f"Scale factor: {scale_factor}")
-            logging.debug(f"Calculated bar width: {bar_width}")
-            logging.debug(f"Calculated right margin: {right_margin}")
-            logging.debug(f"Screen width: {width}")
-
-            # Calculate bar position from right edge
-            bar_x = width - right_margin - bar_width  # X-координата полосы
-            logging.debug(f"Final bar_x position: {bar_x}")
-
-            bar_y_top = bar_top_margin  # Верхняя Y-координата
-            bar_y_bottom = height - bar_bottom_margin  # Нижняя Y-координата
-            bar_height = bar_y_bottom - bar_y_top  # Полная высота полосы
-
-            # Вычисляем заполнение на основе PWM
-            pwm_value = float(values['pwm'])
-            fill_height = int(bar_height * (pwm_value / 100.0))
-            fill_y = bar_y_bottom - fill_height
-
-            # Определяем цвет заполнения
-            if pwm_value <= 80:
-                fill_color = (0, 255, 0, 255)  # Зеленый
-            elif pwm_value <= 90:
-                # Плавный переход от зеленого к желтому
-                transition = (pwm_value - 80) / 10  # 0 to 1
-                red = int(255 * transition)
-                green = 255
-                fill_color = (red, green, 0, 255)
-            else:
-                # Плавный переход от желтого к красному
-                transition = (pwm_value - 90) / 10  # 0 to 1
-                green = int(255 * (1 - transition))
-                fill_color = (255, green, 0, 255)
-
-            # Рисуем заполненную часть полосы с закругленными углами
-            if fill_height > 0:
-                draw.rounded_rectangle([(bar_x, fill_y), (bar_x + bar_width, bar_y_bottom)],
-                                      radius=bar_radius,
-                                      fill=fill_color)
-
         text_settings = text_settings or {}
 
         # Get visibility settings with defaults
@@ -204,7 +149,7 @@ def create_frame(values,
         show_mileage = text_settings.get('show_mileage', True)
         show_pwm = text_settings.get('show_pwm', True)
         show_power = text_settings.get('show_power', True)
-        show_current = text_settings.get('show_current', True)
+        show_current = text_settings.get('show_current', True)  # Add current visibility setting
         show_bottom_elements = text_settings.get('show_bottom_elements', True)
 
         # Получаем настройки позиционирования индикатора и текста
@@ -286,8 +231,7 @@ def create_frame(values,
                 value_bbox = draw.textbbox((0, 0), value, font=bold_font)
                 unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
 
-                text_width = (label_bbox[2] - label_bbox[0]) + (value_bbox[2] - value_bbox[0]) + (
-                            unit_bbox[2] - unit_bbox[0])
+                text_width = (label_bbox[2] - label_bbox[0]) + (value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])
                 text_height = max(label_bbox[3] - label_bbox[1],
                                   value_bbox[3] - value_bbox[1],
                                   unit_bbox[3] - unit_bbox[1])
@@ -307,8 +251,7 @@ def create_frame(values,
             text_baseline_y = box_vertical_center - (max_text_height // 2)
 
             x_position = start_x
-            for i, ((label, value, unit), element_width, text_width) in enumerate(
-                    zip(params, element_widths, text_widths)):
+            for i, ((label, value, unit), element_width, text_width) in enumerate(zip(params, element_widths, text_widths)):
                 box_color = (0, 0, 0, 255)  # Стандартный черный цвет
                 text_color = (255, 255, 255, 255)  # Стандартный белый цвет
 
@@ -625,15 +568,6 @@ def create_preview_frame(csv_file,
             project = Project.query.get(project_id)
             if not project:
                 raise ValueError(f"Project {project_id} not found")
-
-            # Add debug logging for PWM bar settings
-            if text_settings:
-                logging.debug(f"Preview PWM bar settings: show_pwm_bar={text_settings.get('show_pwm_bar')}, "
-                              f"width={text_settings.get('pwm_bar_width')}, "
-                              f"top_margin={text_settings.get('pwm_bar_top_margin')}, "
-                              f"bottom_margin={text_settings.get('pwm_bar_bottom_margin')}, "
-                              f"radius={text_settings.get('pwm_bar_radius')}")
-
             csv_type, processed_data = process_csv_file(
                 csv_file, project.folder_number)
             df = pd.DataFrame(processed_data)

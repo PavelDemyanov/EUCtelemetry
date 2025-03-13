@@ -22,17 +22,17 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
     const progressBar = progressDiv.querySelector('.progress-bar');
     const progressTitle = document.getElementById('progressTitle');
     const videoProcessingInfo = document.getElementById('videoProcessingInfo');
+    let projectId;
 
-    // Show progress for upload
+    // Show progress for upload, but not the video processing info
     progressDiv.classList.remove('d-none');
-    videoProcessingInfo.classList.add('d-none');
+    videoProcessingInfo.classList.add('d-none');  // Ensure video processing info is hidden
     progressTitle.textContent = gettext('Uploading CSV...');
-    progressBar.style.width = '0%';
-    progressBar.classList.remove('bg-danger');
 
-    // Disable form during upload
+    // Disable form
     this.querySelectorAll('input, button').forEach(el => el.disabled = true);
 
+    // Upload CSV and get preview
     fetch('/upload', {
         method: 'POST',
         body: formData
@@ -46,8 +46,7 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
     .then(data => {
         if (data.error) throw new Error(data.error);
 
-        const projectId = data.project_id;
-        document.getElementById('startProcessButton').dataset.projectId = projectId;
+        projectId = data.project_id;
         updatePreview(projectId);
     })
     .catch(error => {
@@ -59,59 +58,6 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
     });
 });
 
-// Combine all settings arrays
-const textSettings = ['verticalPosition', 'topPadding', 'bottomPadding', 'spacing', 'fontSize', 'borderRadius'];
-const speedIndicatorSettings = ['indicatorScale', 'indicatorX', 'indicatorY', 'speedSize', 'speedY', 'unitSize', 'unitY'];
-const pwmBarSettings = ['pwmBarTopMargin', 'pwmBarBottomMargin', 'pwmBarWidth', 'pwmBarRadius', 'pwmBarX'];
-const allSettings = [...textSettings, ...speedIndicatorSettings, ...pwmBarSettings];
-
-// Add event listeners for all setting inputs
-allSettings.forEach(setting => {
-    const input = document.getElementById(setting);
-    const valueDisplay = document.getElementById(setting + 'Value');
-
-    if (!input || !valueDisplay) {
-        console.error(`Missing element for setting: ${setting}`);
-        return;
-    }
-
-    input.addEventListener('input', function() {
-        console.log(`${setting} changed to:`, this.value);
-        valueDisplay.textContent = this.value;
-
-        if (setting === 'pwmBarX') {
-            console.log('PWM Bar X position changed:', this.value);
-        }
-
-        const projectId = document.getElementById('startProcessButton').dataset.projectId;
-        if (projectId) {
-            updatePreview(projectId);
-        }
-    });
-});
-
-// Add event listeners for visibility checkboxes
-const visibilitySettings = [
-    'showSpeed', 'showMaxSpeed', 'showVoltage', 'showTemp',
-    'showBattery', 'showMileage', 'showPWM', 'showPower',
-    'showCurrent', 'showGPS', 'showBottomElements', 'showPWMBar'
-];
-
-visibilitySettings.forEach(setting => {
-    const checkbox = document.getElementById(setting);
-    if (checkbox) {
-        checkbox.addEventListener('change', function() {
-            if (setting === 'showPWMBar') {
-                console.log('PWM Bar visibility changed:', this.checked);
-            }
-            const projectId = document.getElementById('startProcessButton').dataset.projectId;
-            if (projectId) {
-                updatePreview(projectId);
-            }
-        });
-    }
-});
-
 // Function to update preview with current settings
 function updatePreview(projectId) {
     const previewSection = document.getElementById('previewSection');
@@ -119,30 +65,38 @@ function updatePreview(projectId) {
     const progressBar = progressDiv.querySelector('.progress-bar');
     const progressTitle = document.getElementById('progressTitle');
 
-    // Show progress bar
-    progressDiv.classList.remove('d-none');
-    progressBar.style.width = '0%';
-    progressBar.classList.remove('bg-danger');
+    // Check resolution and adjust offsets if needed
+    const resolution = document.querySelector('input[name="resolution"]:checked').value;
+    if (resolution === '4k') {
+        document.getElementById('speedY').value = -50;
+        document.getElementById('speedYValue').textContent = '-50';
+        document.getElementById('unitY').value = 65;
+        document.getElementById('unitYValue').textContent = '65';
+    } else {
+        document.getElementById('speedY').value = -28;
+        document.getElementById('speedYValue').textContent = '-28';
+        document.getElementById('unitY').value = 36;
+        document.getElementById('unitYValue').textContent = '36';
+    }
 
-    // Get PWM Bar X value with debug logging
-    const pwmBarXValue = parseInt(document.getElementById('pwmBarX').value);
-    console.log('PWM Bar X value being sent:', pwmBarXValue);
-
+    // Get current values with updated settings
     const settings = {
-        resolution: document.querySelector('input[name="resolution"]:checked').value,
-        vertical_position: parseInt(document.getElementById('verticalPosition').value),
-        top_padding: parseInt(document.getElementById('topPadding').value),
-        bottom_padding: parseInt(document.getElementById('bottomPadding').value),
-        spacing: parseInt(document.getElementById('spacing').value),
-        font_size: parseInt(document.getElementById('fontSize').value),
-        border_radius: parseInt(document.getElementById('borderRadius').value),
-        indicator_x: parseFloat(document.getElementById('indicatorX').value),
-        indicator_y: parseFloat(document.getElementById('indicatorY').value),
-        speed_y: parseInt(document.getElementById('speedY').value),
-        unit_y: parseInt(document.getElementById('unitY').value),
-        speed_size: parseFloat(document.getElementById('speedSize').value),
-        unit_size: parseFloat(document.getElementById('unitSize').value),
-        indicator_scale: parseFloat(document.getElementById('indicatorScale').value),
+        resolution: resolution,
+        vertical_position: document.getElementById('verticalPosition').value,
+        top_padding: document.getElementById('topPadding').value,
+        bottom_padding: document.getElementById('bottomPadding').value,
+        spacing: document.getElementById('spacing').value,
+        font_size: document.getElementById('fontSize').value,
+        border_radius: document.getElementById('borderRadius').value,
+        // Speed indicator settings
+        indicator_scale: document.getElementById('indicatorScale').value,
+        indicator_x: document.getElementById('indicatorX').value,
+        indicator_y: document.getElementById('indicatorY').value,
+        speed_y: document.getElementById('speedY').value,
+        unit_y: document.getElementById('unitY').value,
+        speed_size: document.getElementById('speedSize').value,
+        unit_size: document.getElementById('unitSize').value,
+        // Visibility settings
         show_speed: document.getElementById('showSpeed').checked,
         show_max_speed: document.getElementById('showMaxSpeed').checked,
         show_voltage: document.getElementById('showVoltage').checked,
@@ -153,24 +107,10 @@ function updatePreview(projectId) {
         show_power: document.getElementById('showPower').checked,
         show_current: document.getElementById('showCurrent').checked,
         show_gps: document.getElementById('showGPS').checked,
-        show_bottom_elements: document.getElementById('showBottomElements').checked,
-        show_pwm_bar: document.getElementById('showPWMBar').checked,
-        pwm_bar_width: parseInt(document.getElementById('pwmBarWidth').value),
-        pwm_bar_top_margin: parseInt(document.getElementById('pwmBarTopMargin').value),
-        pwm_bar_bottom_margin: parseInt(document.getElementById('pwmBarBottomMargin').value),
-        pwm_bar_radius: parseInt(document.getElementById('pwmBarRadius').value),
-        pwm_bar_x: pwmBarXValue
+        show_bottom_elements: document.getElementById('showBottomElements').checked
     };
 
-    // Log PWM bar settings
-    console.log('PWM Bar settings being sent:', {
-        show_pwm_bar: settings.show_pwm_bar,
-        pwm_bar_width: settings.pwm_bar_width,
-        pwm_bar_top_margin: settings.pwm_bar_top_margin,
-        pwm_bar_bottom_margin: settings.pwm_bar_bottom_margin,
-        pwm_bar_radius: settings.pwm_bar_radius,
-        pwm_bar_x: settings.pwm_bar_x
-    });
+    console.log('Sending preview settings:', settings);
 
     fetch(`/preview/${projectId}`, {
         method: 'POST',
@@ -182,25 +122,170 @@ function updatePreview(projectId) {
     .then(response => response.json())
     .then(data => {
         if (data.error) throw new Error(data.error);
+
+        // Show preview
         progressDiv.classList.add('d-none');
         previewSection.classList.remove('d-none');
         document.getElementById('previewImage').src = data.preview_url + '?t=' + new Date().getTime();
+
+        // Re-enable form
+        document.querySelectorAll('input, button').forEach(el => el.disabled = false);
+
+        // Store project ID for the start processing button
+        document.getElementById('startProcessButton').dataset.projectId = projectId;
     })
     .catch(error => {
         console.error('Error:', error);
         progressTitle.textContent = gettext('Error: ') + error.message;
         progressBar.classList.add('bg-danger');
+        // Re-enable form
+        document.querySelectorAll('input, button').forEach(el => el.disabled = false);
     });
 }
 
-// Add event listeners for resolution change
+// Add real-time validation for project name input
+document.getElementById('projectName').addEventListener('input', function() {
+    const value = this.value.trim();
+
+    if (value === '') {
+        // Empty value is valid (will generate automatic name)
+        this.classList.remove('is-invalid');
+        return;
+    }
+
+    if (value.length > 7 || !/^[\p{L}\d]+$/u.test(value)) {
+        this.classList.add('is-invalid');
+    } else {
+        this.classList.remove('is-invalid');
+    }
+});
+
+// Add event listeners for text display settings
+const textSettings = ['verticalPosition', 'topPadding', 'bottomPadding', 'spacing', 'fontSize', 'borderRadius'];
+const speedIndicatorSettings = ['indicatorScale', 'indicatorX', 'indicatorY', 'speedSize', 'speedY', 'unitSize', 'unitY'];
+
+// Combine all settings
+const allSettings = [...textSettings, ...speedIndicatorSettings];
+
+// Add event listener for resolution change
 document.querySelectorAll('input[name="resolution"]').forEach(radio => {
     radio.addEventListener('change', function() {
         const projectId = document.getElementById('startProcessButton').dataset.projectId;
         if (projectId) {
+            // Adjust slider values based on resolution
+            if (this.value === '4k') {
+                // Set specific values for 4K
+                document.getElementById('speedY').value = -50;
+                document.getElementById('speedYValue').textContent = '-50';
+                document.getElementById('unitY').value = 65;
+                document.getElementById('unitYValue').textContent = '65';
+            } else {
+                // Reset to default values for Full HD
+                document.getElementById('speedY').value = -28;
+                document.getElementById('speedYValue').textContent = '-28';
+                document.getElementById('unitY').value = 36;
+                document.getElementById('unitYValue').textContent = '36';
+            }
+            // Update preview with new settings
             updatePreview(projectId);
         }
     });
+});
+
+allSettings.forEach(setting => {
+    const input = document.getElementById(setting);
+    const valueDisplay = document.getElementById(setting + 'Value');
+    if (!input || !valueDisplay) return; // Skip if elements don't exist
+
+    input.addEventListener('input', function() {
+        // Update value display without adding unit if it's already in the display text
+        const currentText = valueDisplay.textContent;
+        const value = this.value;
+
+        // Check if the current text already contains a unit
+        if (currentText.includes('%') || currentText.includes('px')) {
+            valueDisplay.textContent = value;
+        } else {
+            // Add unit only if it's not already present
+            valueDisplay.textContent = value + (
+                this.id === 'speedSize' || this.id === 'unitSize' || this.id.includes('indicator') ? '%' : 'px'
+            );
+        }
+
+        // Debounce the preview update
+        clearTimeout(this.timeout);
+        this.timeout = setTimeout(() => {
+            const projectId = document.getElementById('startProcessButton').dataset.projectId;
+            if (projectId) {
+                // Get current values for all settings including visibility
+                const settings = {
+                    resolution: document.querySelector('input[name="resolution"]:checked').value,
+                    vertical_position: document.getElementById('verticalPosition').value,
+                    top_padding: document.getElementById('topPadding').value,
+                    bottom_padding: document.getElementById('bottomPadding').value,
+                    spacing: document.getElementById('spacing').value,
+                    font_size: document.getElementById('fontSize').value,
+                    border_radius: document.getElementById('borderRadius').value,
+                    // Speed indicator settings
+                    indicator_x: document.getElementById('indicatorX').value,
+                    indicator_y: document.getElementById('indicatorY').value,
+                    speed_y: document.getElementById('speedY').value,
+                    unit_y: document.getElementById('unitY').value,
+                    speed_size: document.getElementById('speedSize').value,
+                    unit_size: document.getElementById('unitSize').value,
+                    indicator_scale: document.getElementById('indicatorScale').value,
+                    // Add visibility settings
+                    show_speed: document.getElementById('showSpeed').checked,
+                    show_max_speed: document.getElementById('showMaxSpeed').checked,
+                    show_voltage: document.getElementById('showVoltage').checked,
+                    show_temp: document.getElementById('showTemp').checked,
+                    show_battery: document.getElementById('showBattery').checked,
+                    show_mileage: document.getElementById('showMileage').checked,
+                    show_pwm: document.getElementById('showPWM').checked,
+                    show_power: document.getElementById('showPower').checked,
+                    show_current: document.getElementById('showCurrent').checked,
+                    show_gps: document.getElementById('showGPS').checked,
+                    show_bottom_elements: document.getElementById('showBottomElements').checked
+                };
+
+                // Update preview with all current settings
+                fetch(`/preview/${projectId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(settings)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) throw new Error(data.error);
+                    document.getElementById('previewImage').src = data.preview_url + '?t=' + new Date().getTime();
+                })
+                .catch(error => {
+                    console.error('Error updating preview:', error);
+                });
+            }
+        }, 300);
+    });
+});
+
+// Add event listeners for visibility checkboxes
+const visibilitySettings = [
+    'showSpeed', 'showMaxSpeed', 'showVoltage', 'showTemp', 
+    'showBattery', 'showMileage', 'showPWM', 'showPower', 
+    'showCurrent', 'showGPS', 'showBottomElements'
+];
+
+visibilitySettings.forEach(setting => {
+    const checkbox = document.getElementById(setting);
+    if (checkbox) {
+        checkbox.addEventListener('change', function() {
+            const projectId = document.getElementById('startProcessButton').dataset.projectId;
+            if (projectId) {
+                updatePreview(projectId);
+            }
+        });
+    }
 });
 
 // Handle start processing button click
@@ -214,29 +299,31 @@ document.getElementById('startProcessButton').addEventListener('click', function
     // Show progress bar and processing info
     progressDiv.classList.remove('d-none');
     videoProcessingInfo.classList.remove('d-none');
-    progressBar.style.width = '0%';
-    progressBar.classList.remove('bg-danger');
     this.disabled = true;
 
+    // Set initial background processing message
+    videoProcessingInfo.textContent = gettext("You can close your browser and come back later - the video processing will continue in the background.");
 
+    // Get all current settings
     const settings = {
         resolution: document.querySelector('input[name="resolution"]:checked').value,
         fps: document.querySelector('input[name="fps"]:checked').value,
         codec: document.querySelector('input[name="codec"]:checked').value,
         interpolate_values: document.getElementById('interpolateValues').checked,
-        vertical_position: parseInt(document.getElementById('verticalPosition').value),
-        top_padding: parseInt(document.getElementById('topPadding').value),
-        bottom_padding: parseInt(document.getElementById('bottomPadding').value),
-        spacing: parseInt(document.getElementById('spacing').value),
-        font_size: parseInt(document.getElementById('fontSize').value),
-        border_radius: parseInt(document.getElementById('borderRadius').value),
-        indicator_x: parseFloat(document.getElementById('indicatorX').value),
-        indicator_y: parseFloat(document.getElementById('indicatorY').value),
-        speed_y: parseInt(document.getElementById('speedY').value),
-        unit_y: parseInt(document.getElementById('unitY').value),
-        speed_size: parseFloat(document.getElementById('speedSize').value),
-        unit_size: parseFloat(document.getElementById('unitSize').value),
-        indicator_scale: parseFloat(document.getElementById('indicatorScale').value),
+        vertical_position: document.getElementById('verticalPosition').value,
+        top_padding: document.getElementById('topPadding').value,
+        bottom_padding: document.getElementById('bottomPadding').value,
+        spacing: document.getElementById('spacing').value,
+        font_size: document.getElementById('fontSize').value,
+        border_radius: document.getElementById('borderRadius').value,
+        indicator_x: document.getElementById('indicatorX').value,
+        indicator_y: document.getElementById('indicatorY').value,
+        speed_y: document.getElementById('speedY').value,
+        unit_y: document.getElementById('unitY').value,
+        speed_size: document.getElementById('speedSize').value,
+        unit_size: document.getElementById('unitSize').value,
+        indicator_scale: document.getElementById('indicatorScale').value,
+        // Add visibility settings
         show_speed: document.getElementById('showSpeed').checked,
         show_max_speed: document.getElementById('showMaxSpeed').checked,
         show_voltage: document.getElementById('showVoltage').checked,
@@ -247,17 +334,10 @@ document.getElementById('startProcessButton').addEventListener('click', function
         show_power: document.getElementById('showPower').checked,
         show_current: document.getElementById('showCurrent').checked,
         show_gps: document.getElementById('showGPS').checked,
-        show_bottom_elements: document.getElementById('showBottomElements').checked,
-        show_pwm_bar: document.getElementById('showPWMBar').checked,
-        pwm_bar_top_margin: parseInt(document.getElementById('pwmBarTopMargin').value),
-        pwm_bar_bottom_margin: parseInt(document.getElementById('pwmBarBottomMargin').value),
-        pwm_bar_width: parseInt(document.getElementById('pwmBarWidth').value),
-        pwm_bar_radius: parseInt(document.getElementById('pwmBarRadius').value),
-        pwm_bar_x: parseInt(document.getElementById('pwmBarX').value)
+        show_bottom_elements: document.getElementById('showBottomElements').checked
     };
 
-    videoProcessingInfo.textContent = gettext("You can close your browser and come back later - the video processing will continue in the background.");
-
+    // Start processing
     fetch(`/generate_frames/${projectId}`, {
         method: 'POST',
         headers: {
@@ -269,10 +349,12 @@ document.getElementById('startProcessButton').addEventListener('click', function
     .then(data => {
         if (data.error) throw new Error(data.error);
 
+        // Start polling for status
         const checkStatus = () => {
             fetch(`/project_status/${projectId}`)
                 .then(response => response.json())
                 .then(statusData => {
+                    // Ensure we have a valid status
                     if (!statusData.status) {
                         throw new Error(gettext('No status received from server'));
                     }
@@ -280,11 +362,14 @@ document.getElementById('startProcessButton').addEventListener('click', function
                     switch(statusData.status) {
                         case 'processing':
                             const progress = statusData.progress || 0;
-                            progressTitle.textContent = progress <= 50 ?
-                                gettext('Creating frames...') :
+                            progressTitle.textContent = progress <= 50 ? 
+                                gettext('Creating frames...') : 
                                 gettext('Encoding video...');
                             progressBar.style.width = `${progress}%`;
                             progressBar.textContent = `${progress.toFixed(1)}%`;
+                            // Show processing stage below the main message
+                            videoProcessingInfo.textContent = gettext('You can close your browser and come back later - the video processing will continue in the background.') + ' ' +
+                                gettext('Alternatively, you can go to the Projects section to monitor the progress there.');
                             setTimeout(checkStatus, progress <= 50 ? 200 : 1000);
                             break;
 
@@ -300,6 +385,7 @@ document.getElementById('startProcessButton').addEventListener('click', function
 
                         case 'pending':
                             progressTitle.textContent = gettext('Waiting to start...');
+                            videoProcessingInfo.textContent = gettext('You can close your browser and come back later - the video processing will continue in the background.');
                             setTimeout(checkStatus, 500);
                             break;
 
@@ -328,6 +414,7 @@ document.getElementById('startProcessButton').addEventListener('click', function
                 });
         };
 
+        // Start checking status
         checkStatus();
     })
     .catch(error => {
@@ -337,20 +424,4 @@ document.getElementById('startProcessButton').addEventListener('click', function
         videoProcessingInfo.textContent = gettext('An error occurred while starting the video processing.');
         this.disabled = false;
     });
-});
-
-// Add real-time validation for project name input
-document.getElementById('projectName').addEventListener('input', function() {
-    const value = this.value.trim();
-
-    if (value === '') {
-        this.classList.remove('is-invalid');
-        return;
-    }
-
-    if (value.length > 7 || !/^[\p{L}\d]+$/u.test(value)) {
-        this.classList.add('is-invalid');
-    } else {
-        this.classList.remove('is-invalid');
-    }
 });
