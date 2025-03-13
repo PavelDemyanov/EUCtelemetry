@@ -147,6 +147,9 @@ def create_frame(values,
             logging.debug(f"Right margin value from settings: {text_settings.get('pwm_bar_x')}")
 
             bar_width = int(text_settings.get('pwm_bar_width', 20) * scale_factor)  # Ширина полосы
+            bar_top_margin = int(text_settings.get('pwm_bar_top_margin', 40) * scale_factor)  # Отступ сверху
+            bar_bottom_margin = int(text_settings.get('pwm_bar_bottom_margin', 30) * scale_factor)  # Отступ снизу
+            bar_radius = int(text_settings.get('pwm_bar_radius', 10) * scale_factor)  # Радиус скругления
             right_margin = int(text_settings.get('pwm_bar_x', 30) * scale_factor)  # Отступ справа
 
             # Log detailed calculations
@@ -158,10 +161,6 @@ def create_frame(values,
             # Calculate bar position from right edge
             bar_x = width - right_margin - bar_width  # X-координата полосы
             logging.debug(f"Final bar_x position: {bar_x}")
-
-            bar_top_margin = int(text_settings.get('pwm_bar_top_margin', 40) * scale_factor)  # Отступ сверху
-            bar_bottom_margin = int(text_settings.get('pwm_bar_bottom_margin', 30) * scale_factor)  # Отступ снизу
-            bar_radius = int(text_settings.get('pwm_bar_radius', 10) * scale_factor)  # Радиус скругления
 
             bar_y_top = bar_top_margin  # Верхняя Y-координата
             bar_y_bottom = height - bar_bottom_margin  # Нижняя Y-координата

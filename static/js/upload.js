@@ -94,29 +94,6 @@ allSettings.forEach(setting => {
     });
 });
 
-// Add event listeners for visibility checkboxes
-const visibilitySettings = [
-    'showSpeed', 'showMaxSpeed', 'showVoltage', 'showTemp',
-    'showBattery', 'showMileage', 'showPWM', 'showPower',
-    'showCurrent', 'showGPS', 'showBottomElements', 'showPWMBar'
-];
-
-visibilitySettings.forEach(setting => {
-    const checkbox = document.getElementById(setting);
-    if (checkbox) {
-        checkbox.addEventListener('change', function() {
-            // Debug logging for PWM Bar visibility
-            if (setting === 'showPWMBar') {
-                console.log('PWM Bar visibility changed:', this.checked);
-            }
-            const projectId = document.getElementById('startProcessButton').dataset.projectId;
-            if (projectId) {
-                updatePreview(projectId);
-            }
-        });
-    }
-});
-
 // Function to update preview with current settings
 function updatePreview(projectId) {
     const previewSection = document.getElementById('previewSection');
@@ -167,8 +144,15 @@ function updatePreview(projectId) {
         pwm_bar_x: pwmBarXValue
     };
 
-    // Log complete settings for debugging
-    console.log('Full settings being sent to server:', settings);
+    // Log PWM bar settings before sending
+    console.log('PWM Bar settings being sent:', {
+        show_pwm_bar: settings.show_pwm_bar,
+        pwm_bar_width: settings.pwm_bar_width,
+        pwm_bar_top_margin: settings.pwm_bar_top_margin,
+        pwm_bar_bottom_margin: settings.pwm_bar_bottom_margin,
+        pwm_bar_radius: settings.pwm_bar_radius,
+        pwm_bar_x: settings.pwm_bar_x
+    });
 
     fetch(`/preview/${projectId}`, {
         method: 'POST',
@@ -190,6 +174,29 @@ function updatePreview(projectId) {
         progressBar.classList.add('bg-danger');
     });
 }
+
+// Add event listeners for visibility checkboxes
+const visibilitySettings = [
+    'showSpeed', 'showMaxSpeed', 'showVoltage', 'showTemp',
+    'showBattery', 'showMileage', 'showPWM', 'showPower',
+    'showCurrent', 'showGPS', 'showBottomElements', 'showPWMBar'
+];
+
+visibilitySettings.forEach(setting => {
+    const checkbox = document.getElementById(setting);
+    if (checkbox) {
+        checkbox.addEventListener('change', function() {
+            // Debug logging for PWM Bar visibility
+            if (setting === 'showPWMBar') {
+                console.log('PWM Bar visibility changed:', this.checked);
+            }
+            const projectId = document.getElementById('startProcessButton').dataset.projectId;
+            if (projectId) {
+                updatePreview(projectId);
+            }
+        });
+    }
+});
 
 // Add event listeners for resolution change
 document.querySelectorAll('input[name="resolution"]').forEach(radio => {
