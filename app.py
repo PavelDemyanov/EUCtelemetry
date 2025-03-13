@@ -31,23 +31,21 @@ from forms import EmailCampaignForm
 import markdown
 from sqlalchemy import desc
 
-
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
 
-# Load environment variables from .env file immediately
-logger.info("Loading environment variables from .env file...")
-load_dotenv()
-
-# Debug log environment variables (without sensitive data)
-logger.debug("Environment variables loaded:")
-logger.debug(f"SMTP_SERVER: {os.environ.get('SMTP_SERVER')}")
-logger.debug(f"SMTP_PORT: {os.environ.get('SMTP_PORT')}")
-logger.debug(f"SMTP_LOGIN is set: {bool(os.environ.get('SMTP_LOGIN'))}")
-logger.debug(f"SMTP_PASSWORD is set: {bool(os.environ.get('SMTP_PASSWORD'))}")
+# Add markdown filter to the Jinja environment
+def markdown_filter(text):
+    if text:
+        return markdown.markdown(text, extensions=['fenced_code', 'tables'])
+    return ''
 
 app = Flask(__name__)
+app.jinja_env.filters['markdown'] = markdown_filter
+
+# Load environment variables from .env file
+load_dotenv()
+
 app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', os.urandom(32))
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
@@ -60,7 +58,6 @@ app.config['WTF_CSRF_ENABLED'] = True
 app.config['BABEL_DEFAULT_LOCALE'] = 'en'
 
 # Add Mail configuration
-logger.info("Configuring SMTP settings...")
 app.config['MAIL_SERVER'] = os.environ.get('SMTP_SERVER')
 app.config['MAIL_PORT'] = int(os.environ.get('SMTP_PORT', 465))
 app.config['MAIL_USERNAME'] = os.environ.get('SMTP_LOGIN')
@@ -784,7 +781,7 @@ def download_file(project_id, type):
         pass
     elif type == 'processed_csv':
         processed_csv = os.path.join('processed_data', f'project_{project.folder_number}_{project.csv_file}')
-        if os.path.path.exists(processed_csv):
+        if os.path.exists(processed_csv):
             return send_file(processed_csv, as_attachment=True, 
                            downloadname=f'processed_{project.csv_file}')
 
@@ -834,73 +831,6 @@ def delete_project(project_id):
         logging.error(f"Error deleting project: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/previews/<path:filename>')
-def serve_preview(filename):
-    return send_from_directory('previews', filename)
-
-@app.route('/preview/<int:project_id>', methods=['POST'])
-@login_required
-def generate_preview(project_id):
-    project = Project.query.get_or_404(project_id)
-    if project.user_id != current_user.id:
-        return jsonify({'error': 'Unauthorized'}), 403
-
-    try:
-        # Get text display settings from request
-        data = request.get_json() if request.is_json else {}
-        resolution = data.get('resolution', 'fullhd')
-
-        # Get all visibility settings with explicit defaults of True
-        # This ensures elements stay visible unless explicitly hidden
-        text_settings = {
-            'vertical_position': int(data.get('vertical_position', 50)),
-            'top_padding': int(data.get('top_padding', 10)),
-            'bottom_padding': int(data.get('bottom_padding', 30)),
-            'spacing': int(data.get('spacing', 20)),
-            'font_size': int(data.get('font_size', 26)),
-            'border_radius': int(data.get('border_radius', 13)),
-            # Speed indicator settings
-            'indicator_x': float(data.get('indicator_x', 50)),
-            'indicator_y': float(data.get('indicator_y', 80)),
-            'speed_y': int(data.get('speed_y', 0)),
-            'unit_y': int(data.get('unit_y', 0)),
-            'speed_size': float(data.get('speed_size', 100)),
-            'unit_size': float(data.get('unit_size', 100)),
-            'indicator_scale': float(data.get('indicator_scale', 100)),
-            # Visibility settings - default to True unless explicitly set to False
-            'show_speed': data.get('show_speed', True),
-            'show_max_speed': data.get('show_max_speed', True),
-            'show_voltage': data.get('show_voltage', True),
-            'show_temp': data.get('show_temp', True),
-            'show_battery': data.get('show_battery', True),
-            'show_gps': data.get('show_gps', True),  # Добавляем параметр GPS
-            'show_mileage': data.get('show_mileage', True),
-            'show_pwm': data.get('show_pwm', True),
-            'show_power': data.get('show_power', True),
-            'show_current': data.get('show_current', True), # Add current visibility setting
-            'show_bottom_elements': data.get('show_bottom_elements', True)
-        }
-
-        logging.info(f"Generating preview with settings: {text_settings}")
-
-        # Get user's preferred locale
-        user_locale = 'ru' if current_user.is_authenticated and hasattr(current_user, 'locale') and current_user.locale == 'ru' else 'en'
-
-        preview_path = create_preview_frame(
-            os.path.join(app.config['UPLOAD_FOLDER'], project.csv_file),
-            project.id,
-            resolution,
-            text_settings,
-            locale=user_locale
-        )
-
-        return jsonify({'success': True, 'preview_url': url_for('serve_preview', filename=f'{project.id}_preview.png')})
-
-    except Exception as e:
-        logging.error(f"Error generating preview: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
-# Add this new route after the existing project routes
 @app.route('/stop/<int:project_id>', methods=['POST'])
 @login_required
 def stop_project(project_id):
