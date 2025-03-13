@@ -121,41 +121,47 @@
 
                 <div id="previewSection" class="mt-4 d-none">
                     <h4>{{ _('Preview') }}</h4>
-                    <div class="preview-image-container mb-3">
-                        <img id="previewImage" class="img-fluid" alt="{{ _('Preview frame') }}">
+
+                    <!-- Preset Controls - moved above preview and made collapsible -->
+                    <div class="card mb-3">
+                        <div class="card-header" role="button" data-bs-toggle="collapse" data-bs-target="#presetControls" aria-expanded="true" aria-controls="presetControls">
+                            <h5 class="mb-0 d-flex justify-content-between align-items-center">
+                                {{ _('Preset Controls') }}
+                                <i class="fas fa-chevron-down"></i>
+                            </h5>
+                        </div>
+                        <div id="presetControls" class="collapse show">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <button type="button" class="btn btn-secondary mb-2 w-100" id="resetDefaultsButton">
+                                            {{ _('Reset to Defaults') }}
+                                        </button>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <button type="button" class="btn btn-primary mb-2 w-100" id="savePresetButton" data-bs-toggle="modal" data-bs-target="#savePresetModal">
+                                            {{ _('Save as Preset') }}
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-md-6">
+                                        <select class="form-select mb-2" id="presetSelect">
+                                            <option value="">{{ _('Select a Preset') }}</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <button type="button" class="btn btn-danger mb-2 w-100" id="deletePresetButton" disabled>
+                                            {{ _('Delete Preset') }}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- Add preset controls -->
-                    <div class="card mb-3">
-                        <div class="card-header">
-                            <h5 class="mb-0">{{ _('Preset Controls') }}</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <button type="button" class="btn btn-secondary mb-2 w-100" id="resetDefaultsButton">
-                                        {{ _('Reset to Defaults') }}
-                                    </button>
-                                </div>
-                                <div class="col-md-6">
-                                    <button type="button" class="btn btn-primary mb-2 w-100" id="savePresetButton" data-bs-toggle="modal" data-bs-target="#savePresetModal">
-                                        {{ _('Save as Preset') }}
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="row mt-2">
-                                <div class="col-md-6">
-                                    <select class="form-select mb-2" id="presetSelect">
-                                        <option value="">{{ _('Select a Preset') }}</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <button type="button" class="btn btn-danger mb-2 w-100" id="deletePresetButton" disabled>
-                                        {{ _('Delete Preset') }}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="preview-image-container mb-3">
+                        <img id="previewImage" class="img-fluid" alt="{{ _('Preview frame') }}">
                     </div>
 
                     <div class="card mb-3">
