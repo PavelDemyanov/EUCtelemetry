@@ -432,6 +432,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Reset to defaults button
     document.getElementById('resetDefaultsButton').addEventListener('click', function() {
+        // Reset preset selection dropdown
+        const presetSelect = document.getElementById('presetSelect');
+        presetSelect.value = '';
+        document.getElementById('deletePresetButton').disabled = true;
+
         // Reset resolution
         document.querySelector('input[name="resolution"][value="fullhd"]').checked = true;
         // Reset FPS
