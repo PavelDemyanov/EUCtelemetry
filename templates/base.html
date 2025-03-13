@@ -65,6 +65,9 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('home') }}">{{ _('Home') }}</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('news_list') }}">{{ _('News') }}</a>
+                    </li>
                     {% if current_user.is_authenticated %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('index') }}">{{ _('Create Project') }}</a>
@@ -164,6 +167,7 @@
                             <h5>{{ _('Quick Links') }}</h5>
                             <ul class="list-unstyled">
                                 <li><a href="{{ url_for('home') }}" class="text-decoration-none text-light">{{ _('Home') }}</a></li>
+                                <li><a href="{{ url_for('news_list') }}" class="text-decoration-none text-light">{{ _('News') }}</a></li>
                                 <li><a href="{{ url_for('about') }}" class="text-decoration-none text-light">{{ _('About') }}</a></li>
                                 {% if current_user.is_authenticated %}
                                 <li><a href="{{ url_for('list_projects') }}" class="text-decoration-none text-light">{{ _('My Projects') }}</a></li>
