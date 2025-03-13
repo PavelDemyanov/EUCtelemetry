@@ -19,6 +19,13 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.17.0\n"
 
+# News Section
+msgid "News"
+msgstr "Новости"
+
+msgid "Posted by %(author)s on %(date)s"
+msgstr "Опубликовано %(date)s пользователем %(author)s"
+
 # WheelLog Instructions
 msgid "For WheelLog:"
 msgstr "Из WheelLog:"
@@ -687,7 +694,7 @@ msgid "Are you sure you want to delete this news?"
 msgstr "Вы уверены, что хотите удалить эту новость?"
 
 msgid "Posted by %(author)s on %(date)s"
-msgstr "Опубликовано %(author)s %(date)s"
+msgstr "Опубликовано %(date)s пользователем %(author)s"
 
 msgid "Previous"
 msgstr "Предыдущая"
