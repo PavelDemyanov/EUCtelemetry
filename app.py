@@ -793,7 +793,7 @@ def download_file(project_id, type):
         return jsonify({'error': 'Unauthorized'}), 403
 
     if type == 'video' and project.video_file:
-        returnsend_file(f'videos/{project.video_file}')
+        return send_file(f'videos/{project.video_file}')
     elif type == 'frames':
         # TODO: Implement frame download as ZIP
         pass
