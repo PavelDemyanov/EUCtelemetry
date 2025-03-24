@@ -409,6 +409,42 @@ def generate_frames(csv_file,
                 logging.error(f"Error processing trim_end: {e}")
                 T_max = data_max_timestamp
         
+        # Проверим, сколько реальных данных у нас есть в выбранном диапазоне
+        data_in_range = df[(df['timestamp'] >= T_min) & (df['timestamp'] <= T_max)]
+        data_points_in_range = len(data_in_range)
+        
+        logging.info(f"Number of data points in selected range: {data_points_in_range}")
+        
+        if data_points_in_range < 2:
+            # Если в диапазоне меньше 2 точек данных, мы не можем сделать видео
+            logging.warning(f"Not enough data points in selected range ({data_points_in_range}). Using full data range.")
+            T_min = data_min_timestamp
+            T_max = data_max_timestamp
+            
+        # Убедимся, что мы используем только данные из выбранного диапазона для расчетов
+        # Применяем фильтр к df для получения данных, но сохраняем оригинальный датафрейм 
+        # для корректного расчета max_speed и других накопительных метрик
+        
+        # Получаем диапазон данных для интерполяции
+        # Берем немного больший диапазон, чтобы интерполяция работала правильно 
+        # на границах выбранного временного диапазона
+        time_buffer = 10  # 10 секунд буфера
+        data_for_interpolation = df[
+            (df['timestamp'] >= (T_min - time_buffer)) & 
+            (df['timestamp'] <= (T_max + time_buffer))
+        ].copy()
+        
+        logging.info(f"Filtered data for interpolation: {len(data_for_interpolation)} rows " +
+                    f"(from original {len(df)} rows)")
+        
+        # Если отфильтрованных данных слишком мало, используем весь датафрейм
+        if len(data_for_interpolation) < 2:
+            logging.warning("Too few data points after filtering, using entire data range")
+            data_for_interpolation = df
+        
+        # Используем отфильтрованные данные для интерполяции
+        df_interpolation = data_for_interpolation
+        
         # Calculate frame timestamps based on possibly trimmed range
         frame_count = int((T_max - T_min) * fps)
         logging.info(
@@ -504,8 +540,14 @@ def generate_frames(csv_file,
 
 def find_nearest_values(df, timestamp, interpolate=True):
     """Find nearest or interpolated values for the given timestamp"""
+    # Log для отладки
+    logging.debug(f"Finding values for timestamp {timestamp}")
+    logging.debug(f"Data range: {df['timestamp'].min()} to {df['timestamp'].max()}")
+    logging.debug(f"Data frame has {len(df)} rows")
+    
     # If timestamp is before the first data point, return zeros
     if timestamp < df['timestamp'].iloc[0]:
+        logging.debug(f"Timestamp {timestamp} is before first data point {df['timestamp'].iloc[0]}")
         return {
             key: 0
             for key in [
