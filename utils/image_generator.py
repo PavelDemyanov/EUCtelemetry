@@ -445,13 +445,24 @@ def generate_frames(csv_file,
         # Используем отфильтрованные данные для интерполяции
         df_interpolation = data_for_interpolation
         
-        # Calculate frame timestamps based on possibly trimmed range
-        frame_count = int((T_max - T_min) * fps)
+        # ВАЖНОЕ ИЗМЕНЕНИЕ: Создаем временные метки только для выбранного диапазона, 
+        # а не для всего файла CSV
+        data_min_ts = df_interpolation['timestamp'].min()
+        data_max_ts = df_interpolation['timestamp'].max()
+        
+        # Обновляем T_min и T_max, чтобы использовать только диапазон отфильтрованных данных
+        # Важно использовать значения из выбранного диапазона, а не весь файл
+        actual_T_min = max(T_min, data_min_ts)
+        actual_T_max = min(T_max, data_max_ts)
+        logging.info(f"Adjusted time range: {actual_T_min} to {actual_T_max}")
+        
+        # Calculate frame timestamps based on actually available data in the selected range
+        frame_count = int((actual_T_max - actual_T_min) * fps)
         logging.info(
             f"Generating {frame_count} frames at {fps} fps with interpolation {'enabled' if interpolate_values else 'disabled'}"
         )
-        logging.info(f"Time range: {T_min} to {T_max} (duration: {T_max - T_min:.2f} seconds)")
-        frame_timestamps = np.linspace(T_min, T_max, frame_count)
+        logging.info(f"Final time range: {actual_T_min} to {actual_T_max} (duration: {actual_T_max - actual_T_min:.2f} seconds)")
+        frame_timestamps = np.linspace(actual_T_min, actual_T_max, frame_count)
 
         completed_frames = 0
         lock = threading.Lock()
@@ -532,7 +543,9 @@ def generate_frames(csv_file,
                     executor.shutdown(wait=False)
 
         logging.info(f"Successfully generated {frame_count} frames")
-        return frame_count, (T_max - T_min)
+        # ВАЖНОЕ ИЗМЕНЕНИЕ: Возвращаем продолжительность на основе ФАКТИЧЕСКИ использованного диапазона времени,
+        # а не запрошенного пользователем
+        return frame_count, (actual_T_max - actual_T_min)
 
     except Exception as e:
         logging.error(f"Error in generate_frames: {e}")
