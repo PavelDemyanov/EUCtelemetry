@@ -357,17 +357,33 @@ def generate_frames(csv_file,
         # If trim_start is specified and valid, use it
         if trim_start is not None:
             try:
+                # Конвертируем временные метки из строки datetime в unix timestamp
                 trim_start_timestamp = trim_start.timestamp()
                 logging.info(f"Checking trim_start: {trim_start} (timestamp: {trim_start_timestamp})")
                 logging.info(f"Data range: {data_min_timestamp} to {data_max_timestamp}")
                 
-                if trim_start_timestamp >= data_min_timestamp and trim_start_timestamp < data_max_timestamp:
+                # Для решения проблемы с часовыми поясами, проверим, находятся ли временные метки
+                # в разумных пределах от диапазона данных (±24 часа)
+                hours_24_in_seconds = 24 * 60 * 60
+                
+                # Если разница больше суток, значит скорее всего проблема не в временных зонах
+                if abs(trim_start_timestamp - data_min_timestamp) > hours_24_in_seconds:
+                    logging.warning(f"Trim start {trim_start} is far outside of data range - possible timezone issue")
+                    logging.info("Using start of data range as trim_start")
+                    T_min = data_min_timestamp
+                elif trim_start_timestamp >= data_min_timestamp and trim_start_timestamp < data_max_timestamp:
+                    # Временная метка находится в диапазоне данных
                     T_min = trim_start_timestamp
                     logging.info(f"Using custom trim start: {trim_start}")
                 else:
+                    # Временная метка может быть за пределами из-за проблемы с часовым поясом
+                    # Для простоты используем начало данных
                     logging.warning(f"Trim start {trim_start} is outside of data range")
+                    logging.info("Using start of data range as trim_start")
+                    T_min = data_min_timestamp
             except Exception as e:
                 logging.error(f"Error processing trim_start: {e}")
+                T_min = data_min_timestamp
         
         # If trim_end is specified and valid, use it
         if trim_end is not None:
@@ -375,13 +391,23 @@ def generate_frames(csv_file,
                 trim_end_timestamp = trim_end.timestamp()
                 logging.info(f"Checking trim_end: {trim_end} (timestamp: {trim_end_timestamp})")
                 
-                if trim_end_timestamp > data_min_timestamp and trim_end_timestamp <= data_max_timestamp:
+                # Та же логика для trim_end
+                hours_24_in_seconds = 24 * 60 * 60
+                
+                if abs(trim_end_timestamp - data_max_timestamp) > hours_24_in_seconds:
+                    logging.warning(f"Trim end {trim_end} is far outside of data range - possible timezone issue")
+                    logging.info("Using end of data range as trim_end")
+                    T_max = data_max_timestamp
+                elif trim_end_timestamp > data_min_timestamp and trim_end_timestamp <= data_max_timestamp:
                     T_max = trim_end_timestamp
                     logging.info(f"Using custom trim end: {trim_end}")
                 else:
                     logging.warning(f"Trim end {trim_end} is outside of data range")
+                    logging.info("Using end of data range as trim_end")
+                    T_max = data_max_timestamp
             except Exception as e:
                 logging.error(f"Error processing trim_end: {e}")
+                T_max = data_max_timestamp
         
         # Calculate frame timestamps based on possibly trimmed range
         frame_count = int((T_max - T_min) * fps)
