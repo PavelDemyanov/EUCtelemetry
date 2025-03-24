@@ -42,6 +42,14 @@ def detect_csv_type(df):
     """Detect CSV type based on column names"""
     logging.info(f"Detecting CSV type. Available columns: {df.columns.tolist()}")
 
+    # Проверяем, является ли это уже обработанным файлом
+    standardized_cols = ['timestamp', 'speed', 'gps', 'voltage', 'temperature', 
+                      'current', 'battery', 'mileage', 'pwm', 'power']
+    
+    if all(col in df.columns for col in standardized_cols):
+        logging.info("Detected already processed CSV file with standardized columns")
+        return 'processed'  # Специальный тип для обработанных файлов
+        
     # Define required columns for each type
     darnkessbot_cols = ['Date', 'Temperature', 'GPS Speed', 'Total mileage', 'Battery level', 
                       'Speed', 'PWM', 'Current', 'Voltage', 'Power']
@@ -197,6 +205,11 @@ def trim_csv_data(file_path, folder_number, start_timestamp, end_timestamp):
         # Определяем тип CSV на основе имени колонок
         csv_type = detect_csv_type(df)
         
+        # Для обработанных файлов установим тип по умолчанию
+        if csv_type == 'processed':
+            csv_type = 'darnkessbot'  # Используем как значение по умолчанию
+            logging.info("Using 'darnkessbot' as default type for processed file")
+        
         # Filter data by timestamp range
         df = df[(df['timestamp'] >= start_timestamp) & (df['timestamp'] <= end_timestamp)]
         
@@ -245,6 +258,11 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
             logging.info(f"Loading existing processed CSV from {processed_csv_path}")
             df = pd.read_csv(processed_csv_path)
             csv_type = existing_csv_type or detect_csv_type(df)
+            
+            # Для обработанных файлов установим тип по умолчанию
+            if csv_type == 'processed':
+                csv_type = 'darnkessbot'  # Используем как значение по умолчанию
+                logging.info("Using 'darnkessbot' as default type for processed file")
 
             # Convert DataFrame to dictionary format
             processed_data = {
@@ -281,7 +299,27 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
             csv_type = detect_csv_type(df)
             logging.info(f"Detected CSV type: {csv_type}")
 
-        if csv_type == 'darnkessbot':
+        if csv_type == 'processed':
+            # Данные уже в нужном формате, просто преобразуем их
+            raw_data = {
+                'timestamp': df['timestamp'],
+                'speed': df['speed'],
+                'gps': df['gps'],
+                'voltage': df['voltage'],
+                'temperature': df['temperature'],
+                'current': df['current'],
+                'battery': df['battery'],
+                'mileage': df['mileage'],
+                'pwm': df['pwm'],
+                'power': df['power']
+            }
+            
+            # Для уже обработанных данных просто возвращаем их как есть
+            processed_data = raw_data
+            # Устанавливаем дефолтный тип CSV
+            csv_type = 'darnkessbot'
+            
+        elif csv_type == 'darnkessbot':
             # Parse timestamps and create a mask for valid timestamps
             df['timestamp'] = df['Date'].apply(parse_timestamp_darnkessbot)
             valid_timestamp_mask = df['timestamp'].notna()
