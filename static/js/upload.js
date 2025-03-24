@@ -239,6 +239,13 @@ let leftHandlePos = 0;
 let rightHandlePos = 100;
 
 // Time range handler setup
+// Global variables for time range handling
+let csvStartTime;
+let csvEndTime;
+let csvTotalDuration;
+let leftHandlePos = 0;  // Initial left handle position (in %)
+let rightHandlePos = 100;  // Initial right handle position (in %)
+
 function setupTimeRangeHandlers() {
     const leftHandle = document.getElementById('leftHandle');
     const rightHandle = document.getElementById('rightHandle');
@@ -250,12 +257,29 @@ function setupTimeRangeHandlers() {
     const trimStartInput = document.getElementById('trimStartInput');
     const trimEndInput = document.getElementById('trimEndInput');
     
+    console.log("Setting up time range handlers with:", {
+        csvStartTime, 
+        csvEndTime, 
+        leftHandlePos, 
+        rightHandlePos,
+        elements: {
+            leftHandle, rightHandle, timeRangeSelection, timeRangeBar,
+            startTimeLabel, endTimeLabel, durationLabel,
+            trimStartInput, trimEndInput
+        }
+    });
+    
     if (!leftHandle || !rightHandle || !timeRangeSelection || !timeRangeBar || 
         !startTimeLabel || !endTimeLabel || !durationLabel || 
-        !trimStartInput || !trimEndInput) return;
+        !trimStartInput || !trimEndInput) {
+        console.error("Some time range elements are missing");
+        return;
+    }
     
     // Function to update handles position and visual selection
     function updateHandles() {
+        console.log("Updating handles with positions:", leftHandlePos, rightHandlePos);
+        
         // Update selection position and width
         timeRangeSelection.style.left = leftHandlePos + '%';
         timeRangeSelection.style.width = (rightHandlePos - leftHandlePos) + '%';
@@ -266,6 +290,8 @@ function setupTimeRangeHandlers() {
         
         // Update timestamp labels and input fields if time data is available
         if (csvStartTime && csvEndTime) {
+            console.log("Using time data:", csvStartTime, csvEndTime);
+            
             const totalMs = new Date(csvEndTime) - new Date(csvStartTime);
             const leftMs = totalMs * (leftHandlePos / 100);
             const rightMs = totalMs * (rightHandlePos / 100);
@@ -275,6 +301,8 @@ function setupTimeRangeHandlers() {
             
             const formattedLeftDate = leftDate.toISOString().slice(0, 19).replace('T', ' ');
             const formattedRightDate = rightDate.toISOString().slice(0, 19).replace('T', ' ');
+            
+            console.log("Setting time labels to:", formattedLeftDate, formattedRightDate);
             
             startTimeLabel.textContent = formattedLeftDate;
             endTimeLabel.textContent = formattedRightDate;
@@ -289,6 +317,10 @@ function setupTimeRangeHandlers() {
             const minutes = Math.floor(durationSec / 60);
             const seconds = durationSec % 60;
             durationLabel.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            
+            console.log("Input fields set to:", trimStartInput.value, trimEndInput.value);
+        } else {
+            console.warn("Missing time data, can't update time labels");
         }
     }
     
