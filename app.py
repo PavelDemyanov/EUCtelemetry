@@ -796,6 +796,13 @@ def generate_project_frames(project_id):
             
         db.session.commit()
 
+        # Log more details about trim parameters for debugging
+        logging.info(f"Final trim parameters: trim_start={trim_start}, trim_end={trim_end}")
+        if trim_start:
+            logging.info(f"trim_start timestamp: {trim_start.timestamp()}")
+        if trim_end:
+            logging.info(f"trim_end timestamp: {trim_end.timestamp()}")
+            
         # Start background processing with text settings, interpolation flag, locale and trim settings
         process_project(project_id, resolution, fps, codec, text_settings, interpolate_values, 
                        locale=user_locale, trim_start=trim_start, trim_end=trim_end)
@@ -1048,6 +1055,93 @@ def delete_admin_user(user_id):
 
 import os
 # Add this new endpoint after other admin routes
+# Debug route to analyze CSV timestamp issues
+@app.route('/debug/csv_timestamp/<int:project_id>')
+@login_required
+def debug_csv_timestamp(project_id):
+    """Debug endpoint to analyze CSV file timestamps"""
+    project = Project.query.get_or_404(project_id)
+    if project.user_id != current_user.id and not current_user.is_admin:
+        return jsonify({'error': 'Unauthorized'}), 403
+        
+    try:
+        import pandas as pd
+        from utils.csv_processor import detect_csv_type, parse_timestamp_darnkessbot, parse_timestamp_wheellog
+        
+        csv_path = os.path.join('uploads', project.csv_file)
+        if not os.path.exists(csv_path):
+            return jsonify({'error': 'CSV file not found'}), 404
+            
+        # Read CSV file
+        df = pd.read_csv(csv_path)
+        csv_type = detect_csv_type(df)
+        
+        # Parse timestamps
+        if csv_type == 'darnkessbot':
+            df['unix_timestamp'] = df['Date'].apply(parse_timestamp_darnkessbot)
+        else:  # wheellog
+            df['unix_timestamp'] = df.apply(lambda x: parse_timestamp_wheellog(x['date'], x['time']), axis=1)
+            
+        # Filter valid timestamps
+        df = df[df['unix_timestamp'].notna()]
+        
+        if len(df) == 0:
+            return jsonify({'error': 'No valid timestamps found in CSV file'}), 400
+            
+        # Get timestamp ranges
+        min_ts = df['unix_timestamp'].min()
+        max_ts = df['unix_timestamp'].max()
+        min_date = datetime.fromtimestamp(min_ts)
+        max_date = datetime.fromtimestamp(max_ts)
+        
+        # Get first 5 and last 5 timestamps
+        first_timestamps = df['unix_timestamp'].head(5).tolist()
+        last_timestamps = df['unix_timestamp'].tail(5).tolist()
+        
+        first_dates = [datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S') for ts in first_timestamps]
+        last_dates = [datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S') for ts in last_timestamps]
+        
+        # Project trim settings
+        trim_start_ts = None
+        trim_end_ts = None
+        if project.trim_start:
+            trim_start_ts = project.trim_start.timestamp()
+        if project.trim_end:
+            trim_end_ts = project.trim_end.timestamp()
+        
+        # Return debug info
+        return jsonify({
+            'project_id': project_id,
+            'csv_file': project.csv_file,
+            'csv_type': csv_type,
+            'row_count': len(df),
+            'timestamp_range': {
+                'min_unix': min_ts,
+                'max_unix': max_ts,
+                'min_date': min_date.strftime('%Y-%m-%d %H:%M:%S'),
+                'max_date': max_date.strftime('%Y-%m-%d %H:%M:%S'),
+                'duration_seconds': max_ts - min_ts
+            },
+            'first_timestamps': {
+                'unix': first_timestamps,
+                'formatted': first_dates
+            },
+            'last_timestamps': {
+                'unix': last_timestamps,
+                'formatted': last_dates
+            },
+            'trim_settings': {
+                'trim_start': project.trim_start.strftime('%Y-%m-%d %H:%M:%S') if project.trim_start else None,
+                'trim_end': project.trim_end.strftime('%Y-%m-%d %H:%M:%S') if project.trim_end else None,
+                'trim_start_unix': trim_start_ts,
+                'trim_end_unix': trim_end_ts,
+                'total_duration': project.total_duration
+            }
+        })
+    except Exception as e:
+        logging.error(f"Error in debug_csv_timestamp: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/admin/cleanup-storage', methods=['POST'])
 @login_required
 @admin_required

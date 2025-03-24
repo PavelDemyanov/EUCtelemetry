@@ -188,6 +188,9 @@ def trim_csv_file(file_path, trim_start=None, trim_end=None, folder_number=None)
         csv_type = detect_csv_type(df)
         logging.info(f"Trim operation on CSV file {file_path} (type: {csv_type})")
         
+        # Log trim parameters for debugging
+        logging.info(f"Trim parameters - trim_start: {trim_start} (type: {type(trim_start)}), trim_end: {trim_end} (type: {type(trim_end)})")
+        
         # Create a filename for the trimmed version
         os.makedirs('processed_data', exist_ok=True)
         timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -205,11 +208,28 @@ def trim_csv_file(file_path, trim_start=None, trim_end=None, folder_number=None)
             df['unix_timestamp'] = df['Date'].apply(parse_timestamp_darnkessbot)
             valid_timestamp_mask = df['unix_timestamp'].notna()
             df = df[valid_timestamp_mask]
+            # Log timestamp range information for debugging
+            if not df.empty:
+                min_ts = df['unix_timestamp'].min()
+                max_ts = df['unix_timestamp'].max()
+                logging.info(f"CSV timestamp range: {datetime.fromtimestamp(min_ts)} to {datetime.fromtimestamp(max_ts)}")
+                logging.info(f"CSV timestamp range (unix): {min_ts} to {max_ts}")
+                logging.info(f"Original row count: {len(df)}")
         else:  # wheellog
             # Parse timestamps and create a mask for valid timestamps
             df['unix_timestamp'] = df.apply(lambda x: parse_timestamp_wheellog(x['date'], x['time']), axis=1)
             valid_timestamp_mask = df['unix_timestamp'].notna()
             df = df[valid_timestamp_mask]
+            # Log timestamp range information for debugging
+            if not df.empty:
+                min_ts = df['unix_timestamp'].min()
+                max_ts = df['unix_timestamp'].max()
+                logging.info(f"CSV timestamp range: {datetime.fromtimestamp(min_ts)} to {datetime.fromtimestamp(max_ts)}")
+                logging.info(f"CSV timestamp range (unix): {min_ts} to {max_ts}")
+                logging.info(f"Original row count: {len(df)}")
+        
+        # Save original row count for comparison
+        original_row_count = len(df)
         
         # Apply trimming
         filter_applied = False
@@ -218,7 +238,17 @@ def trim_csv_file(file_path, trim_start=None, trim_end=None, folder_number=None)
             try:
                 trim_start_timestamp = trim_start.timestamp()
                 logging.info(f"Trimming from {trim_start} (unix timestamp: {trim_start_timestamp})")
+                
+                # Get count before filtering
+                before_count = len(df)
+                
+                # Apply filter
                 df = df[df['unix_timestamp'] >= trim_start_timestamp]
+                
+                # Get count after filtering and log difference
+                after_count = len(df)
+                logging.info(f"Trim start filter removed {before_count - after_count} rows, {after_count} remaining")
+                
                 filter_applied = True
             except Exception as e:
                 logging.error(f"Error processing trim_start during trimming: {e}")
@@ -227,7 +257,17 @@ def trim_csv_file(file_path, trim_start=None, trim_end=None, folder_number=None)
             try:
                 trim_end_timestamp = trim_end.timestamp()
                 logging.info(f"Trimming to {trim_end} (unix timestamp: {trim_end_timestamp})")
+                
+                # Get count before filtering
+                before_count = len(df)
+                
+                # Apply filter
                 df = df[df['unix_timestamp'] <= trim_end_timestamp]
+                
+                # Get count after filtering and log difference
+                after_count = len(df)
+                logging.info(f"Trim end filter removed {before_count - after_count} rows, {after_count} remaining")
+                
                 filter_applied = True
             except Exception as e:
                 logging.error(f"Error processing trim_end during trimming: {e}")
@@ -236,14 +276,19 @@ def trim_csv_file(file_path, trim_start=None, trim_end=None, folder_number=None)
         if 'unix_timestamp' in df.columns:
             df = df.drop(columns=['unix_timestamp'])
         
+        # Log final results of trimming
+        final_row_count = len(df)
+        logging.info(f"Trimming summary: Original: {original_row_count} rows, Final: {final_row_count} rows, Removed: {original_row_count - final_row_count} rows")
+        
         # If filtering was actually applied and we have data
-        if filter_applied and len(df) > 0:
-            logging.info(f"Saving trimmed CSV with {len(df)} rows to {trimmed_file_path}")
+        if filter_applied and final_row_count > 0:
+            logging.info(f"Saving trimmed CSV with {final_row_count} rows to {trimmed_file_path}")
             df.to_csv(trimmed_file_path, index=False)
             return trimmed_file_path, csv_type
         else:
             # If trimming resulted in empty data or wasn't applied, use original file
-            logging.warning(f"Trimming resulted in no data or wasn't applied. Using original file.")
+            reason = "no rows left" if final_row_count == 0 else "filtering not applied"
+            logging.warning(f"Cannot use trimmed file ({reason}). Using original file.")
             shutil.copy(file_path, trimmed_file_path)
             return trimmed_file_path, csv_type
             
