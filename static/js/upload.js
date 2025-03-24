@@ -47,6 +47,7 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
         if (data.error) throw new Error(data.error);
 
         projectId = data.project_id;
+        console.log('Project ID after upload:', projectId); // Добавляем логирование
         updatePreview(projectId);
     })
     .catch(error => {
@@ -95,10 +96,20 @@ function updateTrimmerUI() {
 
 // Function to initialize CSV trimmer after upload
 function initCsvTrimmer(projectId) {
+    console.log('Initializing CSV trimmer for project ID:', projectId);
+    
     fetch(`/get_csv_timerange/${projectId}`)
-        .then(response => response.json())
+        .then(response => {
+            console.log('CSV timerange response status:', response.status);
+            return response.json();
+        })
         .then(data => {
-            if (data.error) throw new Error(data.error);
+            if (data.error) {
+                console.error('Error in get_csv_timerange response:', data.error);
+                throw new Error(data.error);
+            }
+            
+            console.log('CSV timerange data received:', data);
             
             // Store time range data
             csvTimeRange.min = data.min_timestamp;
