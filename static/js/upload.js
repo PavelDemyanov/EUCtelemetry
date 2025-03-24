@@ -232,17 +232,10 @@ const textSettings = ['verticalPosition', 'topPadding', 'bottomPadding', 'spacin
 const speedIndicatorSettings = ['indicatorScale', 'indicatorX', 'indicatorY', 'speedSize', 'speedY', 'unitSize', 'unitY'];
 
 // Global variables for time range selection
+// Global variables for time range handling
 let csvStartTime = null;
 let csvEndTime = null;
 let csvTotalDuration = 0;
-let leftHandlePos = 0;
-let rightHandlePos = 100;
-
-// Time range handler setup
-// Global variables for time range handling
-let csvStartTime;
-let csvEndTime;
-let csvTotalDuration;
 let leftHandlePos = 0;  // Initial left handle position (in %)
 let rightHandlePos = 100;  // Initial right handle position (in %)
 
@@ -520,10 +513,6 @@ document.getElementById('startProcessButton').addEventListener('click', function
 
     // Set initial background processing message
     videoProcessingInfo.textContent = gettext("You can close your browser and come back later - the video processing will continue in the background.");
-
-    // Get time range values if available
-    const trimStartInput = document.getElementById('trimStartInput');
-    const trimEndInput = document.getElementById('trimEndInput');
 
     // Get all current settings
     const settings = {
