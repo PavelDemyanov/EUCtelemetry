@@ -194,7 +194,8 @@ def trim_csv_data(file_path, folder_number, start_timestamp, end_timestamp):
         
         # Load existing processed data
         df = pd.read_csv(processed_csv_path)
-        csv_type = 'darnkessbot' if 'Date' in df.columns else 'wheellog'
+        # Определяем тип CSV на основе имени колонок
+        csv_type = detect_csv_type(df)
         
         # Filter data by timestamp range
         df = df[(df['timestamp'] >= start_timestamp) & (df['timestamp'] <= end_timestamp)]
@@ -243,7 +244,7 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
             # Load existing processed data
             logging.info(f"Loading existing processed CSV from {processed_csv_path}")
             df = pd.read_csv(processed_csv_path)
-            csv_type = existing_csv_type or ('darnkessbot' if 'Date' in df.columns else 'wheellog')
+            csv_type = existing_csv_type or detect_csv_type(df)
 
             # Convert DataFrame to dictionary format
             processed_data = {
