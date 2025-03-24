@@ -7,7 +7,6 @@ import shutil
 import concurrent.futures
 import threading
 from functools import lru_cache
-from datetime import datetime
 from utils.hardware_detection import is_apple_silicon
 from utils.image_processor import create_speed_indicator
 from concurrent.futures import ThreadPoolExecutor
@@ -329,10 +328,7 @@ def generate_frames(csv_file,
                     text_settings=None,
                     progress_callback=None,
                     interpolate_values=True,
-                    locale='en',
-                    trim_start=None,
-                    trim_end=None):
-    logging.info(f"generate_frames called with trim_start={trim_start}, trim_end={trim_end}")
+                    locale='en'):
     try:
         frames_dir = f'frames/project_{folder_number}'
         if os.path.exists(frames_dir):
@@ -346,129 +342,15 @@ def generate_frames(csv_file,
 
         # Sort dataframe by timestamp to ensure proper interpolation
         df = df.sort_values('timestamp')
-        
-        # Log the original data range for debugging
-        logging.info(f"Original data range: {datetime.fromtimestamp(df['timestamp'].min())} to {datetime.fromtimestamp(df['timestamp'].max())}")
-        logging.info(f"Original data range (timestamps): {df['timestamp'].min()} to {df['timestamp'].max()}")
-        logging.info(f"Original dataset size: {len(df)} rows")
 
-        # Get timestamp limits from data
-        data_min_timestamp = df['timestamp'].min()
-        data_max_timestamp = df['timestamp'].max()
-        
-        # Apply trim settings if provided
-        T_min = data_min_timestamp
-        T_max = data_max_timestamp
-        
-        # If trim_start is specified and valid, use it
-        if trim_start is not None:
-            try:
-                # Конвертируем временные метки из строки datetime в unix timestamp
-                trim_start_timestamp = trim_start.timestamp()
-                logging.info(f"Checking trim_start: {trim_start} (timestamp: {trim_start_timestamp})")
-                logging.info(f"Data range: {data_min_timestamp} to {data_max_timestamp}")
-                
-                # Для решения проблемы с часовыми поясами, проверим, находятся ли временные метки
-                # в разумных пределах от диапазона данных (±24 часа)
-                hours_24_in_seconds = 24 * 60 * 60
-                
-                # Если разница больше суток, значит скорее всего проблема не в временных зонах
-                if abs(trim_start_timestamp - data_min_timestamp) > hours_24_in_seconds:
-                    logging.warning(f"Trim start {trim_start} is far outside of data range - possible timezone issue")
-                    logging.info("Using start of data range as trim_start")
-                    T_min = data_min_timestamp
-                elif trim_start_timestamp >= data_min_timestamp and trim_start_timestamp < data_max_timestamp:
-                    # Временная метка находится в диапазоне данных
-                    T_min = trim_start_timestamp
-                    logging.info(f"Using custom trim start: {trim_start}")
-                else:
-                    # Временная метка может быть за пределами из-за проблемы с часовым поясом
-                    # Для простоты используем начало данных
-                    logging.warning(f"Trim start {trim_start} is outside of data range")
-                    logging.info("Using start of data range as trim_start")
-                    T_min = data_min_timestamp
-            except Exception as e:
-                logging.error(f"Error processing trim_start: {e}")
-                T_min = data_min_timestamp
-        
-        # If trim_end is specified and valid, use it
-        if trim_end is not None:
-            try:
-                trim_end_timestamp = trim_end.timestamp()
-                logging.info(f"Checking trim_end: {trim_end} (timestamp: {trim_end_timestamp})")
-                
-                # Та же логика для trim_end
-                hours_24_in_seconds = 24 * 60 * 60
-                
-                if abs(trim_end_timestamp - data_max_timestamp) > hours_24_in_seconds:
-                    logging.warning(f"Trim end {trim_end} is far outside of data range - possible timezone issue")
-                    logging.info("Using end of data range as trim_end")
-                    T_max = data_max_timestamp
-                elif trim_end_timestamp > data_min_timestamp and trim_end_timestamp <= data_max_timestamp:
-                    T_max = trim_end_timestamp
-                    logging.info(f"Using custom trim end: {trim_end}")
-                else:
-                    logging.warning(f"Trim end {trim_end} is outside of data range")
-                    logging.info("Using end of data range as trim_end")
-                    T_max = data_max_timestamp
-            except Exception as e:
-                logging.error(f"Error processing trim_end: {e}")
-                T_max = data_max_timestamp
-        
-        # Проверим, сколько реальных данных у нас есть в выбранном диапазоне
-        data_in_range = df[(df['timestamp'] >= T_min) & (df['timestamp'] <= T_max)]
-        data_points_in_range = len(data_in_range)
-        
-        logging.info(f"Number of data points in selected range: {data_points_in_range}")
-        
-        if data_points_in_range < 2:
-            # Если в диапазоне меньше 2 точек данных, мы не можем сделать видео
-            logging.warning(f"Not enough data points in selected range ({data_points_in_range}). Using full data range.")
-            T_min = data_min_timestamp
-            T_max = data_max_timestamp
-            
-        # Убедимся, что мы используем только данные из выбранного диапазона для расчетов
-        # Применяем фильтр к df для получения данных, но сохраняем оригинальный датафрейм 
-        # для корректного расчета max_speed и других накопительных метрик
-        
-        # Получаем диапазон данных для интерполяции
-        # Берем немного больший диапазон, чтобы интерполяция работала правильно 
-        # на границах выбранного временного диапазона
-        time_buffer = 10  # 10 секунд буфера
-        data_for_interpolation = df[
-            (df['timestamp'] >= (T_min - time_buffer)) & 
-            (df['timestamp'] <= (T_max + time_buffer))
-        ].copy()
-        
-        logging.info(f"Filtered data for interpolation: {len(data_for_interpolation)} rows " +
-                    f"(from original {len(df)} rows)")
-        
-        # Если отфильтрованных данных слишком мало, используем весь датафрейм
-        if len(data_for_interpolation) < 2:
-            logging.warning("Too few data points after filtering, using entire data range")
-            data_for_interpolation = df
-        
-        # Используем отфильтрованные данные для интерполяции
-        df_interpolation = data_for_interpolation
-        
-        # ВАЖНОЕ ИЗМЕНЕНИЕ: Создаем временные метки только для выбранного диапазона, 
-        # а не для всего файла CSV
-        data_min_ts = df_interpolation['timestamp'].min()
-        data_max_ts = df_interpolation['timestamp'].max()
-        
-        # Обновляем T_min и T_max, чтобы использовать только диапазон отфильтрованных данных
-        # Важно использовать значения из выбранного диапазона, а не весь файл
-        actual_T_min = max(T_min, data_min_ts)
-        actual_T_max = min(T_max, data_max_ts)
-        logging.info(f"Adjusted time range: {actual_T_min} to {actual_T_max}")
-        
-        # Calculate frame timestamps based on actually available data in the selected range
-        frame_count = int((actual_T_max - actual_T_min) * fps)
+        # Calculate frame timestamps
+        T_min = df['timestamp'].min()
+        T_max = df['timestamp'].max()
+        frame_count = int((T_max - T_min) * fps)
         logging.info(
             f"Generating {frame_count} frames at {fps} fps with interpolation {'enabled' if interpolate_values else 'disabled'}"
         )
-        logging.info(f"Final time range: {actual_T_min} to {actual_T_max} (duration: {actual_T_max - actual_T_min:.2f} seconds)")
-        frame_timestamps = np.linspace(actual_T_min, actual_T_max, frame_count)
+        frame_timestamps = np.linspace(T_min, T_max, frame_count)
 
         completed_frames = 0
         lock = threading.Lock()
@@ -484,8 +366,7 @@ def generate_frames(csv_file,
 
             try:
                 # Use interpolated values for frame generation if enabled
-                # Используем отфильтрованный датафрейм df_interpolation вместо полного df
-                values = find_nearest_values(df_interpolation,
+                values = find_nearest_values(df,
                                               timestamp,
                                               interpolate=interpolate_values)
                 output_path = f'{frames_dir}/frame_{i:06d}.png'
@@ -549,9 +430,7 @@ def generate_frames(csv_file,
                     executor.shutdown(wait=False)
 
         logging.info(f"Successfully generated {frame_count} frames")
-        # ВАЖНОЕ ИЗМЕНЕНИЕ: Возвращаем продолжительность на основе ФАКТИЧЕСКИ использованного диапазона времени,
-        # а не запрошенного пользователем
-        return frame_count, (actual_T_max - actual_T_min)
+        return frame_count, (T_max - T_min)
 
     except Exception as e:
         logging.error(f"Error in generate_frames: {e}")
@@ -560,14 +439,8 @@ def generate_frames(csv_file,
 
 def find_nearest_values(df, timestamp, interpolate=True):
     """Find nearest or interpolated values for the given timestamp"""
-    # Log для отладки
-    logging.debug(f"Finding values for timestamp {timestamp}")
-    logging.debug(f"Data range: {df['timestamp'].min()} to {df['timestamp'].max()}")
-    logging.debug(f"Data frame has {len(df)} rows")
-    
     # If timestamp is before the first data point, return zeros
     if timestamp < df['timestamp'].iloc[0]:
-        logging.debug(f"Timestamp {timestamp} is before first data point {df['timestamp'].iloc[0]}")
         return {
             key: 0
             for key in [
@@ -639,8 +512,6 @@ def find_nearest_values(df, timestamp, interpolate=True):
         result[key] = int(round(interpolated_value))
 
     # Calculate max speed up to current point
-    # Для max_speed используем данные только из текущего диапазона
-    # учитывая, что df уже содержит только отфильтрованные данные
     result['max_speed'] = int(df.loc[:before_idx, 'speed'].max())
 
     return result
