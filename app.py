@@ -852,9 +852,10 @@ def delete_project(project_id):
 @app.route('/get_csv_timerange/<int:project_id>', methods=['GET'])
 @login_required
 def get_csv_timerange(project_id):
-    """Get the minimum and maximum timestamps of the CSV file"""
+    """Get the minimum and maximum timestamps of the CSV file and speed data for visualization"""
     try:
         import pandas as pd
+        import numpy as np
         
         project = Project.query.get_or_404(project_id)
         if project.user_id != current_user.id:
@@ -878,13 +879,37 @@ def get_csv_timerange(project_id):
         # Count total rows
         total_rows = len(df)
         
+        # Get speed data for visualization (downsampled for performance)
+        max_points = 100  # Maximum number of points for the graph
+        
+        if len(df) > max_points:
+            # Downsample the data to avoid sending too many points
+            sample_indices = np.linspace(0, len(df) - 1, max_points, dtype=int)
+            sampled_df = df.iloc[sample_indices]
+        else:
+            sampled_df = df
+            
+        speed_data = []
+        for _, row in sampled_df.iterrows():
+            speed_data.append({
+                'timestamp': float(row['timestamp']),
+                'speed': float(row['speed'])
+            })
+        
+        # Get max speed for scaling
+        max_speed = float(df['speed'].max())
+        if max_speed == 0:  # Avoid division by zero
+            max_speed = 1
+            
         return jsonify({
             'success': True, 
             'min_timestamp': min_timestamp,
             'max_timestamp': max_timestamp,
             'min_date': min_date,
             'max_date': max_date,
-            'total_rows': total_rows
+            'total_rows': total_rows,
+            'speed_data': speed_data,
+            'max_speed': max_speed
         })
         
     except Exception as e:
@@ -962,18 +987,43 @@ def trim_csv(project_id):
         
         # Get updated time range
         import pandas as pd
+        import numpy as np
         processed_csv_path = os.path.join('processed_data', f'project_{project.folder_number}_{os.path.basename(project.csv_file)}')
         df = pd.read_csv(processed_csv_path)
         min_timestamp = float(df['timestamp'].min())
         max_timestamp = float(df['timestamp'].max())
         total_rows = len(df)
         
+        # Get speed data for visualization (downsampled for performance)
+        max_points = 100  # Maximum number of points for the graph
+        
+        if len(df) > max_points:
+            # Downsample the data to avoid sending too many points
+            sample_indices = np.linspace(0, len(df) - 1, max_points, dtype=int)
+            sampled_df = df.iloc[sample_indices]
+        else:
+            sampled_df = df
+            
+        speed_data = []
+        for _, row in sampled_df.iterrows():
+            speed_data.append({
+                'timestamp': float(row['timestamp']),
+                'speed': float(row['speed'])
+            })
+        
+        # Get max speed for scaling
+        max_speed = float(df['speed'].max())
+        if max_speed == 0:  # Avoid division by zero
+            max_speed = 1
+            
         return jsonify({
             'success': True, 
             'preview_url': url_for('serve_preview', filename=f'{project.id}_preview.png'),
             'min_timestamp': min_timestamp,
             'max_timestamp': max_timestamp,
-            'total_rows': total_rows
+            'total_rows': total_rows,
+            'speed_data': speed_data,
+            'max_speed': max_speed
         })
         
     except Exception as e:

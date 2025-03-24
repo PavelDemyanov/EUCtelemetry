@@ -65,13 +65,65 @@ let csvTimeRange = {
     max: 0,
     start: 0,
     end: 0,
-    totalRows: 0
+    totalRows: 0,
+    speedData: [], // Array of {timestamp, speed} objects
+    maxSpeed: 0
 };
 
 // Function to format timestamp as date string
 function formatTimestamp(timestamp) {
     const date = new Date(timestamp * 1000);
     return date.toLocaleString();
+}
+
+// Function to draw speed graph in the selected area
+function drawSpeedGraph() {
+    if (!csvTimeRange.speedData || csvTimeRange.speedData.length === 0) return;
+    
+    const canvas = document.getElementById('speedGraphCanvas');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const containerWidth = document.getElementById('trimRangeContainer').clientWidth;
+    
+    // Set canvas size to match container
+    canvas.width = containerWidth;
+    canvas.height = 20; // Same height as the timeline
+    
+    // Clear the canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Sort speed data by timestamp to ensure proper ordering
+    const sortedData = [...csvTimeRange.speedData].sort((a, b) => a.timestamp - b.timestamp);
+    
+    const totalTimeRange = csvTimeRange.max - csvTimeRange.min;
+    const maxSpeed = csvTimeRange.maxSpeed || 1; // Avoid division by zero
+    
+    // Draw the graph as a polygon (filled path)
+    ctx.beginPath();
+    
+    // Start at the bottom-left of the canvas
+    ctx.moveTo(0, canvas.height);
+    
+    // Draw each point
+    sortedData.forEach(point => {
+        // Calculate x position based on timestamp
+        const xPercent = (point.timestamp - csvTimeRange.min) / totalTimeRange;
+        const x = xPercent * canvas.width;
+        
+        // Calculate y position based on speed (inverted, as 0,0 is top-left in canvas)
+        const yPercent = point.speed / maxSpeed;
+        const y = canvas.height - (yPercent * canvas.height);
+        
+        ctx.lineTo(x, y);
+    });
+    
+    // Close the path at the bottom-right
+    ctx.lineTo(canvas.width, canvas.height);
+    
+    // Fill the graph
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; // Semi-transparent white
+    ctx.fill();
 }
 
 // Function to update trimmer UI based on current selection
@@ -92,6 +144,9 @@ function updateTrimmerUI() {
     // Update time displays
     document.getElementById('startTimeDisplay').textContent = formatTimestamp(csvTimeRange.start);
     document.getElementById('endTimeDisplay').textContent = formatTimestamp(csvTimeRange.end);
+    
+    // Draw speed graph
+    drawSpeedGraph();
 }
 
 // Function to initialize CSV trimmer after upload
@@ -117,6 +172,12 @@ function initCsvTrimmer(projectId) {
             csvTimeRange.start = data.min_timestamp;
             csvTimeRange.end = data.max_timestamp;
             csvTimeRange.totalRows = data.total_rows;
+            
+            // Store speed data for graph visualization
+            if (data.speed_data && Array.isArray(data.speed_data)) {
+                csvTimeRange.speedData = data.speed_data;
+                csvTimeRange.maxSpeed = data.max_speed || 0;
+            }
             
             // Update UI elements
             document.getElementById('totalRecordsInfo').textContent = data.total_rows.toLocaleString();
@@ -256,6 +317,12 @@ function setupTrimmerHandlers() {
             csvTimeRange.start = data.min_timestamp;
             csvTimeRange.end = data.max_timestamp;
             csvTimeRange.totalRows = data.total_rows;
+            
+            // Update speed data for graph
+            if (data.speed_data && Array.isArray(data.speed_data)) {
+                csvTimeRange.speedData = data.speed_data;
+                csvTimeRange.maxSpeed = data.max_speed || 0;
+            }
             
             // Update UI elements
             document.getElementById('totalRecordsInfo').textContent = data.total_rows.toLocaleString();
