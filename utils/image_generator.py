@@ -467,7 +467,8 @@ def generate_frames(csv_file,
 
             try:
                 # Use interpolated values for frame generation if enabled
-                values = find_nearest_values(df,
+                # Используем отфильтрованный датафрейм df_interpolation вместо полного df
+                values = find_nearest_values(df_interpolation,
                                               timestamp,
                                               interpolate=interpolate_values)
                 output_path = f'{frames_dir}/frame_{i:06d}.png'
@@ -619,6 +620,8 @@ def find_nearest_values(df, timestamp, interpolate=True):
         result[key] = int(round(interpolated_value))
 
     # Calculate max speed up to current point
+    # Для max_speed используем данные только из текущего диапазона
+    # учитывая, что df уже содержит только отфильтрованные данные
     result['max_speed'] = int(df.loc[:before_idx, 'speed'].max())
 
     return result
