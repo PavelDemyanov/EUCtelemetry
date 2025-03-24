@@ -295,10 +295,22 @@ document.getElementById('startProcessButton').addEventListener('click', function
     const progressBar = progressDiv.querySelector('.progress-bar');
     const progressTitle = document.getElementById('progressTitle');
     const videoProcessingInfo = document.getElementById('videoProcessingInfo');
+    const previewSection = document.getElementById('previewSection');
 
     // Show progress bar and processing info
     progressDiv.classList.remove('d-none');
     videoProcessingInfo.classList.remove('d-none');
+    
+    // Disable all elements in the preview section above the start process button
+    // Including all settings sliders, checkboxes, radio buttons and preset controls
+    previewSection.querySelectorAll('input, button, select').forEach(el => {
+        // Skip the start process button itself as it's already being disabled
+        if (el !== this) {
+            el.disabled = true;
+        }
+    });
+    
+    // Also disable the start process button
     this.disabled = true;
 
     // Set initial background processing message
@@ -394,6 +406,12 @@ document.getElementById('startProcessButton').addEventListener('click', function
                             progressTitle.textContent = gettext('Error: ') + errorMsg;
                             progressBar.classList.add('bg-danger');
                             videoProcessingInfo.textContent = gettext('An error occurred during video processing.');
+                            
+                            // Re-enable all controls in the preview section
+                            previewSection.querySelectorAll('input, button, select').forEach(el => {
+                                el.disabled = false;
+                            });
+                            
                             this.disabled = false;
                             break;
 
@@ -402,6 +420,12 @@ document.getElementById('startProcessButton').addEventListener('click', function
                             progressTitle.textContent = gettext('Error: Unexpected status');
                             progressBar.classList.add('bg-danger');
                             videoProcessingInfo.textContent = gettext('An unexpected error occurred.');
+                            
+                            // Re-enable all controls in the preview section
+                            previewSection.querySelectorAll('input, button, select').forEach(el => {
+                                el.disabled = false;
+                            });
+                            
                             this.disabled = false;
                     }
                 })
@@ -410,6 +434,12 @@ document.getElementById('startProcessButton').addEventListener('click', function
                     progressTitle.textContent = gettext('Error checking status: ') + error.message;
                     progressBar.classList.add('bg-danger');
                     videoProcessingInfo.textContent = gettext('An error occurred while checking the processing status.');
+                    
+                    // Re-enable all controls in the preview section
+                    previewSection.querySelectorAll('input, button, select').forEach(el => {
+                        el.disabled = false;
+                    });
+                    
                     this.disabled = false;
                 });
         };
