@@ -760,8 +760,34 @@ def generate_project_frames(project_id):
         # Get user's preferred locale
         user_locale = 'ru' if current_user.is_authenticated and hasattr(current_user, 'locale') and current_user.locale == 'ru' else 'en'
 
-        # Start background processing with text settings, interpolation flag and locale
-        process_project(project_id, resolution, fps, codec, text_settings, interpolate_values, locale=user_locale)
+        # Get trim start and end from project
+        trim_start = project.trim_start
+        trim_end = project.trim_end
+        
+        # If trim settings were provided in the request, update them
+        if 'trim_start' in data and data['trim_start']:
+            try:
+                trim_start = datetime.strptime(data['trim_start'], '%Y-%m-%d %H:%M:%S')
+                project.trim_start = trim_start
+            except ValueError:
+                pass
+                
+        if 'trim_end' in data and data['trim_end']:
+            try:
+                trim_end = datetime.strptime(data['trim_end'], '%Y-%m-%d %H:%M:%S')
+                project.trim_end = trim_end
+            except ValueError:
+                pass
+                
+        # Calculate total duration if both trim values are set
+        if trim_start and trim_end:
+            project.total_duration = int((trim_end - trim_start).total_seconds())
+            
+        db.session.commit()
+
+        # Start background processing with text settings, interpolation flag, locale and trim settings
+        process_project(project_id, resolution, fps, codec, text_settings, interpolate_values, 
+                       locale=user_locale, trim_start=trim_start, trim_end=trim_end)
 
         return jsonify({'success': True, 'message': 'Processing started'})
     except Exception as e:

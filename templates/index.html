@@ -121,6 +121,43 @@
 
                 <div id="previewSection" class="mt-4 d-none">
                     <h4>{{ _('Preview') }}</h4>
+                    
+                    <!-- Time Range Selector -->
+                    <div class="card mb-3">
+                        <div class="card-header" role="button" data-bs-toggle="collapse" data-bs-target="#timeRangeControls" aria-expanded="true" aria-controls="timeRangeControls">
+                            <h5 class="mb-0 d-flex justify-content-between align-items-center">
+                                <div>
+                                    {{ _('Time Range Selection') }} <span class="badge text-bg-info ms-2">BETA</span>
+                                </div>
+                                <i class="fas fa-chevron-down"></i>
+                            </h5>
+                        </div>
+                        <div id="timeRangeControls" class="collapse show">
+                            <div class="card-body">
+                                <div class="time-range-container">
+                                    <label>{{ _('Select time range to process:') }}</label>
+                                    <div class="time-range-bar">
+                                        <div class="time-range-selection" id="timeRangeSelection"></div>
+                                        <div class="time-range-handle left" id="leftHandle"></div>
+                                        <div class="time-range-handle right" id="rightHandle"></div>
+                                    </div>
+                                    <div class="time-range-label start" id="startTimeLabel"></div>
+                                    <div class="time-range-label duration" id="durationLabel"></div>
+                                    <div class="time-range-label end" id="endTimeLabel"></div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="trimStartInput" class="form-label">{{ _('Start Time') }}</label>
+                                        <input type="text" class="form-control" id="trimStartInput" placeholder="YYYY-MM-DD HH:MM:SS">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="trimEndInput" class="form-label">{{ _('End Time') }}</label>
+                                        <input type="text" class="form-control" id="trimEndInput" placeholder="YYYY-MM-DD HH:MM:SS">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                     <!-- Preset Controls - moved above preview and made collapsible -->
                     <div class="card mb-3">
