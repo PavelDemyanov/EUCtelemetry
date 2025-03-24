@@ -7,6 +7,7 @@ import shutil
 import concurrent.futures
 import threading
 from functools import lru_cache
+from datetime import datetime
 from utils.hardware_detection import is_apple_silicon
 from utils.image_processor import create_speed_indicator
 from concurrent.futures import ThreadPoolExecutor
@@ -345,6 +346,11 @@ def generate_frames(csv_file,
 
         # Sort dataframe by timestamp to ensure proper interpolation
         df = df.sort_values('timestamp')
+        
+        # Log the original data range for debugging
+        logging.info(f"Original data range: {datetime.fromtimestamp(df['timestamp'].min())} to {datetime.fromtimestamp(df['timestamp'].max())}")
+        logging.info(f"Original data range (timestamps): {df['timestamp'].min()} to {df['timestamp'].max()}")
+        logging.info(f"Original dataset size: {len(df)} rows")
 
         # Get timestamp limits from data
         data_min_timestamp = df['timestamp'].min()
