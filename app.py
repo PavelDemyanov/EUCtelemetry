@@ -800,13 +800,25 @@ def project_status(project_id):
     project = Project.query.get_or_404(project_id)
     if project.user_id != current_user.id:
         return jsonify({'error': 'Unauthorized'}), 403
+    
+    # Format timestamps for JS consumption
+    trim_start = None
+    trim_end = None
+    if project.trim_start:
+        trim_start = project.trim_start.strftime('%Y-%m-%d %H:%M:%S')
+    if project.trim_end:
+        trim_end = project.trim_end.strftime('%Y-%m-%d %H:%M:%S')
+        
     return jsonify({
         'status': project.status,
         'frame_count': project.frame_count,
         'video_file': project.video_file,
         'error_message': project.error_message,
-        'progress': project.progress,  # Add progress to the response
-        'processing_time': project.get_processing_time_str()
+        'progress': project.progress,
+        'processing_time': project.get_processing_time_str(),
+        'trim_start': trim_start,
+        'trim_end': trim_end,
+        'total_duration': project.total_duration
     })
 
 @app.route('/projects')

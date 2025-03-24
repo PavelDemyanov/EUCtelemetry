@@ -47,6 +47,25 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
         if (data.error) throw new Error(data.error);
 
         projectId = data.project_id;
+        
+        // Get CSV time range info
+        fetch(`/project_status/${projectId}`)
+            .then(response => response.json())
+            .then(projectData => {
+                if (projectData.trim_start && projectData.trim_end) {
+                    // Initialize time range variables
+                    csvStartTime = projectData.trim_start;
+                    csvEndTime = projectData.trim_end;
+                    csvTotalDuration = projectData.total_duration;
+                    
+                    // Setup time range handlers
+                    setupTimeRangeHandlers();
+                }
+            })
+            .catch(error => {
+                console.error('Error getting project time range:', error);
+            });
+            
         updatePreview(projectId);
     })
     .catch(error => {
@@ -163,6 +182,182 @@ document.getElementById('projectName').addEventListener('input', function() {
 // Add event listeners for text display settings
 const textSettings = ['verticalPosition', 'topPadding', 'bottomPadding', 'spacing', 'fontSize', 'borderRadius'];
 const speedIndicatorSettings = ['indicatorScale', 'indicatorX', 'indicatorY', 'speedSize', 'speedY', 'unitSize', 'unitY'];
+
+// Global variables for time range selection
+let csvStartTime = null;
+let csvEndTime = null;
+let csvTotalDuration = 0;
+let leftHandlePos = 0;
+let rightHandlePos = 100;
+
+// Time range handler setup
+function setupTimeRangeHandlers() {
+    const leftHandle = document.getElementById('leftHandle');
+    const rightHandle = document.getElementById('rightHandle');
+    const timeRangeSelection = document.getElementById('timeRangeSelection');
+    const timeRangeBar = document.querySelector('.time-range-bar');
+    const startTimeLabel = document.getElementById('startTimeLabel');
+    const endTimeLabel = document.getElementById('endTimeLabel');
+    const durationLabel = document.getElementById('durationLabel');
+    const trimStartInput = document.getElementById('trimStartInput');
+    const trimEndInput = document.getElementById('trimEndInput');
+    
+    if (!leftHandle || !rightHandle || !timeRangeSelection || !timeRangeBar || 
+        !startTimeLabel || !endTimeLabel || !durationLabel || 
+        !trimStartInput || !trimEndInput) return;
+    
+    // Function to update handles position and visual selection
+    function updateHandles() {
+        // Update selection position and width
+        timeRangeSelection.style.left = leftHandlePos + '%';
+        timeRangeSelection.style.width = (rightHandlePos - leftHandlePos) + '%';
+        
+        // Update handles position
+        leftHandle.style.left = leftHandlePos + '%';
+        rightHandle.style.left = rightHandlePos + '%';
+        
+        // Update timestamp labels and input fields if time data is available
+        if (csvStartTime && csvEndTime) {
+            const totalMs = new Date(csvEndTime) - new Date(csvStartTime);
+            const leftMs = totalMs * (leftHandlePos / 100);
+            const rightMs = totalMs * (rightHandlePos / 100);
+            
+            const leftDate = new Date(new Date(csvStartTime).getTime() + leftMs);
+            const rightDate = new Date(new Date(csvStartTime).getTime() + rightMs);
+            
+            const formattedLeftDate = leftDate.toISOString().slice(0, 19).replace('T', ' ');
+            const formattedRightDate = rightDate.toISOString().slice(0, 19).replace('T', ' ');
+            
+            startTimeLabel.textContent = formattedLeftDate;
+            endTimeLabel.textContent = formattedRightDate;
+            
+            // Update input fields
+            trimStartInput.value = formattedLeftDate;
+            trimEndInput.value = formattedRightDate;
+            
+            // Calculate and display duration
+            const durationMs = rightMs - leftMs;
+            const durationSec = Math.floor(durationMs / 1000);
+            const minutes = Math.floor(durationSec / 60);
+            const seconds = durationSec % 60;
+            durationLabel.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+    }
+    
+    // Initialize drag functionality for left handle
+    leftHandle.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        
+        const barWidth = timeRangeBar.offsetWidth;
+        const barLeft = timeRangeBar.getBoundingClientRect().left;
+        
+        function moveLeftHandle(moveEvent) {
+            // Calculate new position as percentage
+            let newPos = ((moveEvent.clientX - barLeft) / barWidth) * 100;
+            
+            // Constrain within limits (0% to right handle)
+            newPos = Math.max(0, Math.min(rightHandlePos - 5, newPos));
+            
+            // Update left handle position
+            leftHandlePos = newPos;
+            updateHandles();
+        }
+        
+        // Move event for dragging
+        document.addEventListener('mousemove', moveLeftHandle);
+        
+        // Mouse up to stop dragging
+        document.addEventListener('mouseup', function() {
+            document.removeEventListener('mousemove', moveLeftHandle);
+        }, { once: true });
+    });
+    
+    // Initialize drag functionality for right handle
+    rightHandle.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        
+        const barWidth = timeRangeBar.offsetWidth;
+        const barLeft = timeRangeBar.getBoundingClientRect().left;
+        
+        function moveRightHandle(moveEvent) {
+            // Calculate new position as percentage
+            let newPos = ((moveEvent.clientX - barLeft) / barWidth) * 100;
+            
+            // Constrain within limits (left handle to 100%)
+            newPos = Math.max(leftHandlePos + 5, Math.min(100, newPos));
+            
+            // Update right handle position
+            rightHandlePos = newPos;
+            updateHandles();
+        }
+        
+        // Move event for dragging
+        document.addEventListener('mousemove', moveRightHandle);
+        
+        // Mouse up to stop dragging
+        document.addEventListener('mouseup', function() {
+            document.removeEventListener('mousemove', moveRightHandle);
+        }, { once: true });
+    });
+    
+    // Listen for manual changes in input fields
+    trimStartInput.addEventListener('change', function() {
+        if (!csvStartTime || !csvEndTime) return;
+        
+        try {
+            const inputDate = new Date(this.value);
+            const startDate = new Date(csvStartTime);
+            const endDate = new Date(csvEndTime);
+            
+            // Check if the input date is valid and within range
+            if (inputDate >= startDate && inputDate < endDate) {
+                // Calculate the percentage position for this timestamp
+                const totalMs = endDate - startDate;
+                const positionMs = inputDate - startDate;
+                leftHandlePos = (positionMs / totalMs) * 100;
+                
+                // Update the handles and selection
+                updateHandles();
+            } else {
+                // Reset to current value if invalid
+                this.value = startTimeLabel.textContent;
+            }
+        } catch (e) {
+            // Reset to current value if parsing fails
+            this.value = startTimeLabel.textContent;
+        }
+    });
+    
+    trimEndInput.addEventListener('change', function() {
+        if (!csvStartTime || !csvEndTime) return;
+        
+        try {
+            const inputDate = new Date(this.value);
+            const startDate = new Date(csvStartTime);
+            const endDate = new Date(csvEndTime);
+            
+            // Check if the input date is valid and within range
+            if (inputDate > startDate && inputDate <= endDate) {
+                // Calculate the percentage position for this timestamp
+                const totalMs = endDate - startDate;
+                const positionMs = inputDate - startDate;
+                rightHandlePos = (positionMs / totalMs) * 100;
+                
+                // Update the handles and selection
+                updateHandles();
+            } else {
+                // Reset to current value if invalid
+                this.value = endTimeLabel.textContent;
+            }
+        } catch (e) {
+            // Reset to current value if parsing fails
+            this.value = endTimeLabel.textContent;
+        }
+    });
+    
+    // Initial update
+    updateHandles();
+}
 
 // Combine all settings
 const allSettings = [...textSettings, ...speedIndicatorSettings];
@@ -316,6 +511,10 @@ document.getElementById('startProcessButton').addEventListener('click', function
     // Set initial background processing message
     videoProcessingInfo.textContent = gettext("You can close your browser and come back later - the video processing will continue in the background.");
 
+    // Get time range values if available
+    const trimStartInput = document.getElementById('trimStartInput');
+    const trimEndInput = document.getElementById('trimEndInput');
+
     // Get all current settings
     const settings = {
         resolution: document.querySelector('input[name="resolution"]:checked').value,
@@ -348,6 +547,12 @@ document.getElementById('startProcessButton').addEventListener('click', function
         show_gps: document.getElementById('showGPS').checked,
         show_bottom_elements: document.getElementById('showBottomElements').checked
     };
+    
+    // Add time range parameters if the inputs exist and have values
+    if (trimStartInput && trimEndInput && trimStartInput.value && trimEndInput.value) {
+        settings.trim_start = trimStartInput.value;
+        settings.trim_end = trimEndInput.value;
+    }
 
     // Start processing
     fetch(`/generate_frames/${projectId}`, {
