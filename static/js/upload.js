@@ -205,11 +205,69 @@ function setupTrimmerHandlers() {
         currentHandle = null;
     };
     
-    // Add event listeners
+    // Add event listeners for mouse and touch
+    // Mouse events
     startHandle.addEventListener('mousedown', startDrag);
     endHandle.addEventListener('mousedown', startDrag);
     document.addEventListener('mousemove', drag);
     document.addEventListener('mouseup', endDrag);
+    
+    // Touch events for mobile
+    startHandle.addEventListener('touchstart', function(e) {
+        console.log('Touch start on handle:', this.id);
+        isDragging = true;
+        currentHandle = this;
+        e.preventDefault(); // Prevent scrolling when touching the handles
+    });
+    
+    endHandle.addEventListener('touchstart', function(e) {
+        console.log('Touch start on handle:', this.id);
+        isDragging = true;
+        currentHandle = this;
+        e.preventDefault(); // Prevent scrolling when touching the handles
+    });
+    
+    document.addEventListener('touchmove', function(e) {
+        if (!isDragging || !currentHandle) return;
+        
+        // Get updated container position and dimensions
+        const containerRect = container.getBoundingClientRect();
+        const containerWidth = containerRect.width;
+        
+        // Use the first touch point
+        const touch = e.touches[0];
+        
+        // Calculate position within container
+        let position = touch.clientX - containerRect.left;
+        position = Math.max(0, Math.min(containerWidth, position));
+        
+        console.log('Touch move at position:', position, 'container width:', containerWidth);
+        
+        // Calculate new timestamp
+        const timestamp = getTimestampFromPosition(position, containerWidth);
+        
+        if (currentHandle === startHandle) {
+            // Ensure start is not after end
+            if (timestamp < csvTimeRange.end) {
+                csvTimeRange.start = timestamp;
+                updateTrimmerUI();
+            }
+        } else if (currentHandle === endHandle) {
+            // Ensure end is not before start
+            if (timestamp > csvTimeRange.start) {
+                csvTimeRange.end = timestamp;
+                updateTrimmerUI();
+            }
+        }
+        
+        e.preventDefault(); // Prevent scrolling during drag
+    });
+    
+    document.addEventListener('touchend', function() {
+        console.log('Touch end');
+        isDragging = false;
+        currentHandle = null;
+    });
     
     // Add trim button handler
     document.getElementById('trimCsvButton').addEventListener('click', function() {
