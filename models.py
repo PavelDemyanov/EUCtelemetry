@@ -69,6 +69,10 @@ class Project(db.Model):
     processing_completed_at = db.Column(db.DateTime)  # When processing completed
     progress = db.Column(db.Float, default=0)  # Progress percentage from 0 to 100
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    # Fields for CSV time range trimming
+    trim_start = db.Column(db.DateTime)  # Trim start timestamp
+    trim_end = db.Column(db.DateTime)  # Trim end timestamp
+    total_duration = db.Column(db.Integer)  # Total duration in seconds
 
     def days_until_expiry(self):
         """DEPRECATED: Use time_until_expiry instead"""
