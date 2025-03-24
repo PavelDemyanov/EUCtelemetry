@@ -854,6 +854,8 @@ def delete_project(project_id):
 def get_csv_timerange(project_id):
     """Get the minimum and maximum timestamps of the CSV file"""
     try:
+        import pandas as pd
+        
         project = Project.query.get_or_404(project_id)
         if project.user_id != current_user.id:
             return jsonify({'error': 'Unauthorized'}), 403
@@ -959,6 +961,7 @@ def trim_csv(project_id):
         )
         
         # Get updated time range
+        import pandas as pd
         processed_csv_path = os.path.join('processed_data', f'project_{project.folder_number}_{os.path.basename(project.csv_file)}')
         df = pd.read_csv(processed_csv_path)
         min_timestamp = float(df['timestamp'].min())
