@@ -78,8 +78,17 @@ function formatTimestamp(timestamp) {
 function updateTrimmerUI() {
     // Calculate percentages for positioning
     const totalRange = csvTimeRange.max - csvTimeRange.min;
+    
+    // Prevent division by zero
+    if (totalRange === 0) {
+        console.warn('Total time range is zero, cannot update UI');
+        return;
+    }
+    
     const startPercent = ((csvTimeRange.start - csvTimeRange.min) / totalRange) * 100;
     const endPercent = ((csvTimeRange.end - csvTimeRange.min) / totalRange) * 100;
+    
+    console.log('Updating UI - start%:', startPercent, 'end%:', endPercent);
     
     // Update handle positions
     document.getElementById('startHandle').style.left = `${startPercent}%`;
@@ -139,20 +148,19 @@ function setupTrimmerHandlers() {
     const startHandle = document.getElementById('startHandle');
     const endHandle = document.getElementById('endHandle');
     const container = document.getElementById('trimRangeContainer');
-    const containerRect = container.getBoundingClientRect();
-    const containerWidth = containerRect.width;
     let isDragging = false;
     let currentHandle = null;
     
     // Function to calculate timestamp from a pixel position
-    function getTimestampFromPosition(position) {
+    function getTimestampFromPosition(position, width) {
         const totalRange = csvTimeRange.max - csvTimeRange.min;
-        const percent = Math.max(0, Math.min(100, (position / containerWidth) * 100)) / 100;
+        const percent = Math.max(0, Math.min(100, (position / width) * 100)) / 100;
         return csvTimeRange.min + (totalRange * percent);
     }
     
     // Start dragging
     const startDrag = function(e) {
+        console.log('Start dragging handle:', this.id);
         isDragging = true;
         currentHandle = this;
         e.preventDefault();
@@ -160,17 +168,20 @@ function setupTrimmerHandlers() {
     
     // Drag handling
     const drag = function(e) {
-        if (!isDragging) return;
+        if (!isDragging || !currentHandle) return;
         
-        // Get container's current position
+        // Get updated container position and dimensions
         const containerRect = container.getBoundingClientRect();
+        const containerWidth = containerRect.width;
         
         // Calculate position within container
         let position = e.clientX - containerRect.left;
         position = Math.max(0, Math.min(containerWidth, position));
         
+        console.log('Dragging at position:', position, 'container width:', containerWidth);
+        
         // Calculate new timestamp
-        const timestamp = getTimestampFromPosition(position);
+        const timestamp = getTimestampFromPosition(position, containerWidth);
         
         if (currentHandle === startHandle) {
             // Ensure start is not after end
@@ -189,6 +200,7 @@ function setupTrimmerHandlers() {
     
     // End dragging
     const endDrag = function() {
+        console.log('End dragging');
         isDragging = false;
         currentHandle = null;
     };
