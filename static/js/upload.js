@@ -505,6 +505,20 @@ document.getElementById('startProcessButton').addEventListener('click', function
         }
     });
     
+    // Disable time range elements specifically
+    const leftHandle = document.getElementById('leftHandle');
+    const rightHandle = document.getElementById('rightHandle');
+    const timeRangeSelection = document.getElementById('timeRangeSelection');
+    
+    if (leftHandle) leftHandle.style.pointerEvents = 'none';
+    if (rightHandle) rightHandle.style.pointerEvents = 'none';
+    if (timeRangeSelection) timeRangeSelection.style.pointerEvents = 'none';
+    
+    // Disable collapsible card headers to prevent opening/closing
+    previewSection.querySelectorAll('[data-bs-toggle="collapse"]').forEach(el => {
+        el.style.pointerEvents = 'none';
+    });
+    
     // Also disable the start process button
     this.disabled = true;
 
@@ -623,6 +637,20 @@ document.getElementById('startProcessButton').addEventListener('click', function
                                 el.disabled = false;
                             });
                             
+                            // Re-enable time range elements
+                            const leftHandle = document.getElementById('leftHandle');
+                            const rightHandle = document.getElementById('rightHandle');
+                            const timeRangeSelection = document.getElementById('timeRangeSelection');
+                            
+                            if (leftHandle) leftHandle.style.pointerEvents = 'auto';
+                            if (rightHandle) rightHandle.style.pointerEvents = 'auto';
+                            if (timeRangeSelection) timeRangeSelection.style.pointerEvents = 'auto';
+                            
+                            // Re-enable collapsible card headers
+                            previewSection.querySelectorAll('[data-bs-toggle="collapse"]').forEach(el => {
+                                el.style.pointerEvents = 'auto';
+                            });
+                            
                             this.disabled = false;
                             break;
 
@@ -635,6 +663,20 @@ document.getElementById('startProcessButton').addEventListener('click', function
                             // Re-enable all controls in the preview section
                             previewSection.querySelectorAll('input, button, select').forEach(el => {
                                 el.disabled = false;
+                            });
+                            
+                            // Re-enable time range elements
+                            const leftHandle = document.getElementById('leftHandle');
+                            const rightHandle = document.getElementById('rightHandle');
+                            const timeRangeSelection = document.getElementById('timeRangeSelection');
+                            
+                            if (leftHandle) leftHandle.style.pointerEvents = 'auto';
+                            if (rightHandle) rightHandle.style.pointerEvents = 'auto';
+                            if (timeRangeSelection) timeRangeSelection.style.pointerEvents = 'auto';
+                            
+                            // Re-enable collapsible card headers
+                            previewSection.querySelectorAll('[data-bs-toggle="collapse"]').forEach(el => {
+                                el.style.pointerEvents = 'auto';
                             });
                             
                             this.disabled = false;
@@ -651,6 +693,20 @@ document.getElementById('startProcessButton').addEventListener('click', function
                         el.disabled = false;
                     });
                     
+                    // Re-enable time range elements
+                    const leftHandle = document.getElementById('leftHandle');
+                    const rightHandle = document.getElementById('rightHandle');
+                    const timeRangeSelection = document.getElementById('timeRangeSelection');
+                    
+                    if (leftHandle) leftHandle.style.pointerEvents = 'auto';
+                    if (rightHandle) rightHandle.style.pointerEvents = 'auto';
+                    if (timeRangeSelection) timeRangeSelection.style.pointerEvents = 'auto';
+                    
+                    // Re-enable collapsible card headers
+                    previewSection.querySelectorAll('[data-bs-toggle="collapse"]').forEach(el => {
+                        el.style.pointerEvents = 'auto';
+                    });
+                    
                     this.disabled = false;
                 });
         };
@@ -663,6 +719,26 @@ document.getElementById('startProcessButton').addEventListener('click', function
         progressTitle.textContent = gettext('Error: ') + error.message;
         progressBar.classList.add('bg-danger');
         videoProcessingInfo.textContent = gettext('An error occurred while starting the video processing.');
+        
+        // Re-enable all controls in the preview section
+        previewSection.querySelectorAll('input, button, select').forEach(el => {
+            el.disabled = false;
+        });
+        
+        // Re-enable time range elements
+        const leftHandle = document.getElementById('leftHandle');
+        const rightHandle = document.getElementById('rightHandle');
+        const timeRangeSelection = document.getElementById('timeRangeSelection');
+        
+        if (leftHandle) leftHandle.style.pointerEvents = 'auto';
+        if (rightHandle) rightHandle.style.pointerEvents = 'auto';
+        if (timeRangeSelection) timeRangeSelection.style.pointerEvents = 'auto';
+        
+        // Re-enable collapsible card headers
+        previewSection.querySelectorAll('[data-bs-toggle="collapse"]').forEach(el => {
+            el.style.pointerEvents = 'auto';
+        });
+        
         this.disabled = false;
     });
 });
