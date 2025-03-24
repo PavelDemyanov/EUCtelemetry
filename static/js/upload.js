@@ -528,9 +528,22 @@ document.getElementById('startProcessButton').addEventListener('click', function
     };
 
     // Add time range values if available
+    const trimStartInput = document.getElementById('trimStartInput');
+    const trimEndInput = document.getElementById('trimEndInput');
+    
+    console.log("DEBUG: trimStartInput element:", trimStartInput);
+    console.log("DEBUG: trimEndInput element:", trimEndInput);
+    
     if (trimStartInput && trimEndInput) {
+        console.log("DEBUG: trimStartInput value:", trimStartInput.value);
+        console.log("DEBUG: trimEndInput value:", trimEndInput.value);
+        
         settings.trim_start = trimStartInput.value;
         settings.trim_end = trimEndInput.value;
+        
+        console.log("DEBUG: Added time range to settings:", settings);
+    } else {
+        console.log("DEBUG: Could not find trim input elements!");
     }
 
     // Start processing
