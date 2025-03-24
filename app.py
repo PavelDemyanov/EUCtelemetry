@@ -630,6 +630,10 @@ def upload_file():
                 return jsonify({'error': 'Invalid CSV format. Please upload a CSV file from DarknessBot or WheelLog.'}), 400
 
             csv_type = 'darnkessbot' if is_darkness_bot else 'wheellog'
+            
+            # Get time range from the CSV file
+            from utils.csv_time_range import get_csv_time_range
+            time_range = get_csv_time_range(file_path, csv_type)
 
         except Exception as e:
             logging.error(f"Error validating CSV format: {str(e)}")
@@ -645,7 +649,10 @@ def upload_file():
             expiry_date=datetime.now() + timedelta(hours=48),
             status='pending',
             folder_number=Project.get_next_folder_number(),
-            user_id=current_user.id
+            user_id=current_user.id,
+            trim_start=time_range['start_time'],
+            trim_end=time_range['end_time'],
+            total_duration=time_range['total_duration']
         )
         db.session.add(project)
         db.session.commit()

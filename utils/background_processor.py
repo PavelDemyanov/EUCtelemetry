@@ -11,7 +11,7 @@ import time
 running_processes = {}
 stop_flags = {}
 
-def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', text_settings=None, interpolate_values=True, locale='en'):
+def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', text_settings=None, interpolate_values=True, locale='en', trim_start=None, trim_end=None):
     """Process project in background thread"""
     from app import app, db
     from models import Project
