@@ -58,6 +58,215 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
     });
 });
 
+// CSV trimmer variables
+let csvTimeRange = {
+    min: 0,
+    max: 0,
+    start: 0,
+    end: 0,
+    totalRows: 0
+};
+
+// Function to format timestamp as date string
+function formatTimestamp(timestamp) {
+    const date = new Date(timestamp * 1000);
+    return date.toLocaleString();
+}
+
+// Function to update trimmer UI based on current selection
+function updateTrimmerUI() {
+    // Calculate percentages for positioning
+    const totalRange = csvTimeRange.max - csvTimeRange.min;
+    const startPercent = ((csvTimeRange.start - csvTimeRange.min) / totalRange) * 100;
+    const endPercent = ((csvTimeRange.end - csvTimeRange.min) / totalRange) * 100;
+    
+    // Update handle positions
+    document.getElementById('startHandle').style.left = `${startPercent}%`;
+    document.getElementById('endHandle').style.left = `${endPercent}%`;
+    
+    // Update selected area
+    document.getElementById('timelineSelected').style.left = `${startPercent}%`;
+    document.getElementById('timelineSelected').style.width = `${endPercent - startPercent}%`;
+    
+    // Update time displays
+    document.getElementById('startTimeDisplay').textContent = formatTimestamp(csvTimeRange.start);
+    document.getElementById('endTimeDisplay').textContent = formatTimestamp(csvTimeRange.end);
+}
+
+// Function to initialize CSV trimmer after upload
+function initCsvTrimmer(projectId) {
+    fetch(`/get_csv_timerange/${projectId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) throw new Error(data.error);
+            
+            // Store time range data
+            csvTimeRange.min = data.min_timestamp;
+            csvTimeRange.max = data.max_timestamp;
+            csvTimeRange.start = data.min_timestamp;
+            csvTimeRange.end = data.max_timestamp;
+            csvTimeRange.totalRows = data.total_rows;
+            
+            // Update UI elements
+            document.getElementById('totalRecordsInfo').textContent = data.total_rows.toLocaleString();
+            document.getElementById('csvTrimmerCard').classList.remove('d-none');
+            
+            // Initialize trimmer UI
+            updateTrimmerUI();
+            
+            // Set up drag handlers for the slider
+            setupTrimmerHandlers();
+        })
+        .catch(error => {
+            console.error('Error initializing CSV trimmer:', error);
+            // Keep trimmer hidden if there's an error
+        });
+}
+
+// Set up drag handlers for the slider
+function setupTrimmerHandlers() {
+    const startHandle = document.getElementById('startHandle');
+    const endHandle = document.getElementById('endHandle');
+    const container = document.getElementById('trimRangeContainer');
+    const containerRect = container.getBoundingClientRect();
+    const containerWidth = containerRect.width;
+    let isDragging = false;
+    let currentHandle = null;
+    
+    // Function to calculate timestamp from a pixel position
+    function getTimestampFromPosition(position) {
+        const totalRange = csvTimeRange.max - csvTimeRange.min;
+        const percent = Math.max(0, Math.min(100, (position / containerWidth) * 100)) / 100;
+        return csvTimeRange.min + (totalRange * percent);
+    }
+    
+    // Start dragging
+    const startDrag = function(e) {
+        isDragging = true;
+        currentHandle = this;
+        e.preventDefault();
+    };
+    
+    // Drag handling
+    const drag = function(e) {
+        if (!isDragging) return;
+        
+        // Get container's current position
+        const containerRect = container.getBoundingClientRect();
+        
+        // Calculate position within container
+        let position = e.clientX - containerRect.left;
+        position = Math.max(0, Math.min(containerWidth, position));
+        
+        // Calculate new timestamp
+        const timestamp = getTimestampFromPosition(position);
+        
+        if (currentHandle === startHandle) {
+            // Ensure start is not after end
+            if (timestamp < csvTimeRange.end) {
+                csvTimeRange.start = timestamp;
+                updateTrimmerUI();
+            }
+        } else if (currentHandle === endHandle) {
+            // Ensure end is not before start
+            if (timestamp > csvTimeRange.start) {
+                csvTimeRange.end = timestamp;
+                updateTrimmerUI();
+            }
+        }
+    };
+    
+    // End dragging
+    const endDrag = function() {
+        isDragging = false;
+        currentHandle = null;
+    };
+    
+    // Add event listeners
+    startHandle.addEventListener('mousedown', startDrag);
+    endHandle.addEventListener('mousedown', startDrag);
+    document.addEventListener('mousemove', drag);
+    document.addEventListener('mouseup', endDrag);
+    
+    // Add trim button handler
+    document.getElementById('trimCsvButton').addEventListener('click', function() {
+        const projectId = document.getElementById('startProcessButton').dataset.projectId;
+        if (!projectId) return;
+        
+        this.disabled = true;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> ' + gettext('Trimming...');
+        
+        // Get current display settings
+        const settings = {
+            resolution: document.querySelector('input[name="resolution"]:checked').value,
+            vertical_position: document.getElementById('verticalPosition').value,
+            top_padding: document.getElementById('topPadding').value,
+            bottom_padding: document.getElementById('bottomPadding').value,
+            spacing: document.getElementById('spacing').value,
+            font_size: document.getElementById('fontSize').value,
+            border_radius: document.getElementById('borderRadius').value,
+            indicator_scale: document.getElementById('indicatorScale').value,
+            indicator_x: document.getElementById('indicatorX').value,
+            indicator_y: document.getElementById('indicatorY').value,
+            speed_y: document.getElementById('speedY').value,
+            unit_y: document.getElementById('unitY').value,
+            speed_size: document.getElementById('speedSize').value,
+            unit_size: document.getElementById('unitSize').value,
+            show_speed: document.getElementById('showSpeed').checked,
+            show_max_speed: document.getElementById('showMaxSpeed').checked,
+            show_voltage: document.getElementById('showVoltage').checked,
+            show_temp: document.getElementById('showTemp').checked,
+            show_battery: document.getElementById('showBattery').checked,
+            show_mileage: document.getElementById('showMileage').checked,
+            show_pwm: document.getElementById('showPWM').checked,
+            show_power: document.getElementById('showPower').checked,
+            show_current: document.getElementById('showCurrent').checked,
+            show_gps: document.getElementById('showGPS').checked,
+            show_bottom_elements: document.getElementById('showBottomElements').checked,
+            start_timestamp: csvTimeRange.start,
+            end_timestamp: csvTimeRange.end
+        };
+        
+        // Send request to trim CSV
+        fetch(`/trim_csv/${projectId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(settings)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) throw new Error(data.error);
+            
+            // Update time range data
+            csvTimeRange.min = data.min_timestamp;
+            csvTimeRange.max = data.max_timestamp;
+            csvTimeRange.start = data.min_timestamp;
+            csvTimeRange.end = data.max_timestamp;
+            csvTimeRange.totalRows = data.total_rows;
+            
+            // Update UI elements
+            document.getElementById('totalRecordsInfo').textContent = data.total_rows.toLocaleString();
+            updateTrimmerUI();
+            
+            // Update preview image
+            document.getElementById('previewImage').src = data.preview_url + '?t=' + new Date().getTime();
+            
+            // Re-enable trim button
+            this.disabled = false;
+            this.innerHTML = '<i class="fas fa-cut me-1"></i> ' + gettext('Trim Data');
+        })
+        .catch(error => {
+            console.error('Error trimming CSV:', error);
+            // Re-enable trim button
+            this.disabled = false;
+            this.innerHTML = '<i class="fas fa-cut me-1"></i> ' + gettext('Trim Data');
+            alert(gettext('Error trimming CSV: ') + error.message);
+        });
+    });
+}
+
 // Function to update preview with current settings
 function updatePreview(projectId) {
     const previewSection = document.getElementById('previewSection');
@@ -133,6 +342,9 @@ function updatePreview(projectId) {
 
         // Store project ID for the start processing button
         document.getElementById('startProcessButton').dataset.projectId = projectId;
+        
+        // Initialize CSV trimmer with the current project ID
+        initCsvTrimmer(projectId);
     })
     .catch(error => {
         console.error('Error:', error);
