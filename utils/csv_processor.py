@@ -168,6 +168,65 @@ def interpolate_numeric_data(data, columns_to_interpolate):
         logging.error(f"Error during interpolation: {e}")
         raise
 
+def trim_csv_data(file_path, folder_number, start_timestamp, end_timestamp):
+    """
+    Trim the processed CSV data to only include records between the start and end timestamps
+    
+    Args:
+        file_path: Original CSV file path
+        folder_number: Project folder number
+        start_timestamp: Start timestamp in seconds (float)
+        end_timestamp: End timestamp in seconds (float)
+        
+    Returns:
+        Tuple of (csv_type, processed_data)
+    """
+    try:
+        logging.info(f"Trimming CSV data from {start_timestamp} to {end_timestamp}")
+        
+        # Get processed data path
+        processed_csv_path = os.path.join('processed_data', f'project_{folder_number}_{os.path.basename(file_path)}')
+        
+        # Check if processed file exists
+        if not os.path.exists(processed_csv_path):
+            logging.error(f"Processed CSV file not found: {processed_csv_path}")
+            raise FileNotFoundError(f"Processed CSV file not found: {processed_csv_path}")
+        
+        # Load existing processed data
+        df = pd.read_csv(processed_csv_path)
+        csv_type = 'darnkessbot' if 'Date' in df.columns else 'wheellog'
+        
+        # Filter data by timestamp range
+        df = df[(df['timestamp'] >= start_timestamp) & (df['timestamp'] <= end_timestamp)]
+        
+        if len(df) == 0:
+            raise ValueError("No data remains after trimming. Choose a wider time range.")
+        
+        # Save trimmed data back to the processed file
+        df.to_csv(processed_csv_path, index=False)
+        logging.info(f"Saved trimmed CSV with {len(df)} rows to {processed_csv_path}")
+        
+        # Convert DataFrame to dictionary format
+        processed_data = {
+            'timestamp': df['timestamp'].tolist(),
+            'speed': df['speed'].tolist(),
+            'gps': df['gps'].tolist(),
+            'voltage': df['voltage'].tolist(),
+            'temperature': df['temperature'].tolist(),
+            'current': df['current'].tolist(),
+            'battery': df['battery'].tolist(),
+            'mileage': df['mileage'].tolist(),
+            'pwm': df['pwm'].tolist(),
+            'power': df['power'].tolist()
+        }
+        
+        return csv_type, processed_data
+        
+    except Exception as e:
+        logging.error(f"Error trimming CSV data: {e}")
+        raise
+
+
 def process_csv_file(file_path, folder_number=None, existing_csv_type=None, interpolate_values=True):
     """Process CSV file and save processed data with unique project identifier"""
     try:

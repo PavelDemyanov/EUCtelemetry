@@ -849,6 +849,135 @@ def delete_project(project_id):
         logging.error(f"Error deleting project: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/get_csv_timerange/<int:project_id>', methods=['GET'])
+@login_required
+def get_csv_timerange(project_id):
+    """Get the minimum and maximum timestamps of the CSV file"""
+    try:
+        project = Project.query.get_or_404(project_id)
+        if project.user_id != current_user.id:
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        # Get processed file path
+        processed_csv_path = os.path.join('processed_data', f'project_{project.folder_number}_{os.path.basename(project.csv_file)}')
+        
+        if not os.path.exists(processed_csv_path):
+            return jsonify({'error': 'Processed CSV file not found'}), 404
+        
+        # Load the data and get min/max timestamps
+        df = pd.read_csv(processed_csv_path)
+        min_timestamp = float(df['timestamp'].min())
+        max_timestamp = float(df['timestamp'].max())
+        
+        # Format timestamps as human-readable date strings
+        min_date = datetime.fromtimestamp(min_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+        max_date = datetime.fromtimestamp(max_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+        
+        # Count total rows
+        total_rows = len(df)
+        
+        return jsonify({
+            'success': True, 
+            'min_timestamp': min_timestamp,
+            'max_timestamp': max_timestamp,
+            'min_date': min_date,
+            'max_date': max_date,
+            'total_rows': total_rows
+        })
+        
+    except Exception as e:
+        logging.error(f"Error getting CSV time range: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/trim_csv/<int:project_id>', methods=['POST'])
+@login_required
+def trim_csv(project_id):
+    """Trim CSV file to the specified time range"""
+    try:
+        from utils.csv_processor import trim_csv_data
+        
+        project = Project.query.get_or_404(project_id)
+        if project.user_id != current_user.id:
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        # Get start and end timestamps from request
+        data = request.json
+        start_timestamp = float(data.get('start_timestamp'))
+        end_timestamp = float(data.get('end_timestamp'))
+        
+        if start_timestamp >= end_timestamp:
+            return jsonify({'error': 'Start timestamp must be less than end timestamp'}), 400
+        
+        # Trim the CSV data
+        trim_csv_data(
+            os.path.join(app.config['UPLOAD_FOLDER'], project.csv_file),
+            project.folder_number,
+            start_timestamp,
+            end_timestamp
+        )
+        
+        # Get settings from request for preview update
+        resolution = data.get('resolution', 'fullhd')
+        text_settings = {
+            'vertical_position': int(data.get('vertical_position', 50)),
+            'top_padding': int(data.get('top_padding', 10)),
+            'bottom_padding': int(data.get('bottom_padding', 30)),
+            'spacing': int(data.get('spacing', 20)),
+            'font_size': int(data.get('font_size', 26)),
+            'border_radius': int(data.get('border_radius', 13)),
+            'indicator_x': float(data.get('indicator_x', 50)),
+            'indicator_y': float(data.get('indicator_y', 80)),
+            'speed_y': int(data.get('speed_y', 0)),
+            'unit_y': int(data.get('unit_y', 0)),
+            'speed_size': float(data.get('speed_size', 100)),
+            'unit_size': float(data.get('unit_size', 100)),
+            'indicator_scale': float(data.get('indicator_scale', 100)),
+            'show_speed': data.get('show_speed', True),
+            'show_max_speed': data.get('show_max_speed', True),
+            'show_voltage': data.get('show_voltage', True),
+            'show_temp': data.get('show_temp', True),
+            'show_battery': data.get('show_battery', True),
+            'show_gps': data.get('show_gps', True),
+            'show_mileage': data.get('show_mileage', True),
+            'show_pwm': data.get('show_pwm', True),
+            'show_power': data.get('show_power', True),
+            'show_current': data.get('show_current', True),
+            'show_bottom_elements': data.get('show_bottom_elements', True)
+        }
+        
+        # Get user's preferred locale
+        user_locale = 'ru' if current_user.is_authenticated and hasattr(current_user, 'locale') and current_user.locale == 'ru' else 'en'
+        
+        # Update preview after trimming
+        preview_path = create_preview_frame(
+            os.path.join(app.config['UPLOAD_FOLDER'], project.csv_file),
+            project.id,
+            resolution,
+            text_settings,
+            locale=user_locale
+        )
+        
+        # Get updated time range
+        processed_csv_path = os.path.join('processed_data', f'project_{project.folder_number}_{os.path.basename(project.csv_file)}')
+        df = pd.read_csv(processed_csv_path)
+        min_timestamp = float(df['timestamp'].min())
+        max_timestamp = float(df['timestamp'].max())
+        total_rows = len(df)
+        
+        return jsonify({
+            'success': True, 
+            'preview_url': url_for('serve_preview', filename=f'{project.id}_preview.png'),
+            'min_timestamp': min_timestamp,
+            'max_timestamp': max_timestamp,
+            'total_rows': total_rows
+        })
+        
+    except Exception as e:
+        logging.error(f"Error trimming CSV file: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/stop/<int:project_id>', methods=['POST'])
 @login_required
 def stop_project(project_id):
