@@ -355,17 +355,32 @@ def generate_frames(csv_file,
         
         # If trim_start is specified and valid, use it
         if trim_start is not None:
-            trim_start_timestamp = trim_start.timestamp()
-            if trim_start_timestamp > data_min_timestamp and trim_start_timestamp < data_max_timestamp:
-                T_min = trim_start_timestamp
-                logging.info(f"Using custom trim start: {trim_start}")
+            try:
+                trim_start_timestamp = trim_start.timestamp()
+                logging.info(f"Checking trim_start: {trim_start} (timestamp: {trim_start_timestamp})")
+                logging.info(f"Data range: {data_min_timestamp} to {data_max_timestamp}")
+                
+                if trim_start_timestamp >= data_min_timestamp and trim_start_timestamp < data_max_timestamp:
+                    T_min = trim_start_timestamp
+                    logging.info(f"Using custom trim start: {trim_start}")
+                else:
+                    logging.warning(f"Trim start {trim_start} is outside of data range")
+            except Exception as e:
+                logging.error(f"Error processing trim_start: {e}")
         
         # If trim_end is specified and valid, use it
         if trim_end is not None:
-            trim_end_timestamp = trim_end.timestamp()
-            if trim_end_timestamp > data_min_timestamp and trim_end_timestamp < data_max_timestamp:
-                T_max = trim_end_timestamp
-                logging.info(f"Using custom trim end: {trim_end}")
+            try:
+                trim_end_timestamp = trim_end.timestamp()
+                logging.info(f"Checking trim_end: {trim_end} (timestamp: {trim_end_timestamp})")
+                
+                if trim_end_timestamp > data_min_timestamp and trim_end_timestamp <= data_max_timestamp:
+                    T_max = trim_end_timestamp
+                    logging.info(f"Using custom trim end: {trim_end}")
+                else:
+                    logging.warning(f"Trim end {trim_end} is outside of data range")
+            except Exception as e:
+                logging.error(f"Error processing trim_end: {e}")
         
         # Calculate frame timestamps based on possibly trimmed range
         frame_count = int((T_max - T_min) * fps)

@@ -765,18 +765,25 @@ def generate_project_frames(project_id):
         trim_end = project.trim_end
         
         # If trim settings were provided in the request, update them
+        logging.info(f"Request data: {data}")
         if 'trim_start' in data and data['trim_start']:
             try:
+                logging.info(f"Parsing trim_start from: {data['trim_start']}")
                 trim_start = datetime.strptime(data['trim_start'], '%Y-%m-%d %H:%M:%S')
                 project.trim_start = trim_start
-            except ValueError:
+                logging.info(f"Set trim_start to: {trim_start}")
+            except ValueError as e:
+                logging.error(f"Error parsing trim_start: {e}")
                 pass
                 
         if 'trim_end' in data and data['trim_end']:
             try:
+                logging.info(f"Parsing trim_end from: {data['trim_end']}")
                 trim_end = datetime.strptime(data['trim_end'], '%Y-%m-%d %H:%M:%S')
                 project.trim_end = trim_end
-            except ValueError:
+                logging.info(f"Set trim_end to: {trim_end}")
+            except ValueError as e:
+                logging.error(f"Error parsing trim_end: {e}")
                 pass
                 
         # Calculate total duration if both trim values are set
