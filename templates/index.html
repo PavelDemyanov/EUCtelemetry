@@ -164,41 +164,48 @@
 
                     <!-- Add CSV trim control -->
                     <div id="csvTrimmerCard" class="card mb-3 d-none">
-                        <div class="card-header bg-light">
-                            <h5 class="mb-0">{{ _('Trim CSV Data') }}</h5>
+                        <div class="card-header" role="button" data-bs-toggle="collapse" data-bs-target="#csvTrimmerContent" aria-expanded="false" aria-controls="csvTrimmerContent">
+                            <h5 class="mb-0 d-flex justify-content-between align-items-center">
+                                <div>
+                                    {{ _('Trim CSV Data') }} <span class="badge text-bg-info ms-2">BETA</span>
+                                </div>
+                                <i class="fas fa-chevron-down"></i>
+                            </h5>
                         </div>
-                        <div class="card-body">
-                            <div class="form-text mb-2">
-                                {{ _('Use the slider to trim your CSV data. This will reduce file size and video length.') }}
-                            </div>
-                            <div class="row align-items-center mb-2">
-                                <div class="col-md-3">
-                                    <span id="startTimeDisplay" class="text-muted">{{ _('Start Time') }}</span>
+                        <div id="csvTrimmerContent" class="collapse">
+                            <div class="card-body">
+                                <div class="form-text mb-2">
+                                    {{ _('Use the slider to trim your CSV data. This will reduce file size and video length.') }}
                                 </div>
-                                <div class="col-md-6">
-                                    <div id="trimRangeContainer" class="position-relative mt-1 mb-3" style="height: 30px;">
-                                        <div id="timelineBackground" class="w-100 bg-secondary opacity-25" style="height: 20px; border-radius: 3px;"></div>
-                                        <div id="timelineSelected" class="position-absolute bg-success" style="height: 20px; border-radius: 3px; top: 0;"></div>
-                                        <div id="startHandle" class="position-absolute" style="width: 12px; height: 30px; background-color: #0d6efd; border-radius: 3px; top: -5px; cursor: ew-resize;"></div>
-                                        <div id="endHandle" class="position-absolute" style="width: 12px; height: 30px; background-color: #0d6efd; border-radius: 3px; top: -5px; cursor: ew-resize;"></div>
+                                <div class="row align-items-center mb-2">
+                                    <div class="col-md-3">
+                                        <span id="startTimeDisplay" class="text-muted">{{ _('Start Time') }}</span>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div id="trimRangeContainer" class="position-relative mt-1 mb-3" style="height: 30px;">
+                                            <div id="timelineBackground" class="w-100 bg-secondary opacity-25" style="height: 20px; border-radius: 3px;"></div>
+                                            <div id="timelineSelected" class="position-absolute bg-success" style="height: 20px; border-radius: 3px; top: 0;"></div>
+                                            <div id="startHandle" class="position-absolute" style="width: 12px; height: 30px; background-color: #0d6efd; border-radius: 3px; top: -5px; cursor: ew-resize;"></div>
+                                            <div id="endHandle" class="position-absolute" style="width: 12px; height: 30px; background-color: #0d6efd; border-radius: 3px; top: -5px; cursor: ew-resize;"></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <span id="endTimeDisplay" class="text-muted">{{ _('End Time') }}</span>
                                     </div>
                                 </div>
-                                <div class="col-md-3">
-                                    <span id="endTimeDisplay" class="text-muted">{{ _('End Time') }}</span>
-                                </div>
-                            </div>
-                            <div class="row mb-2">
-                                <div class="col-md-6">
-                                    <div class="d-flex align-items-center">
-                                        <span class="me-2">{{ _('Total Records:') }}</span>
-                                        <span id="totalRecordsInfo" class="badge bg-info"></span>
+                                <div class="row mb-2">
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            <span class="me-2">{{ _('Total Records:') }}</span>
+                                            <span id="totalRecordsInfo" class="badge bg-info"></span>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="d-flex justify-content-end">
-                                        <button type="button" id="trimCsvButton" class="btn btn-success">
-                                            <i class="fas fa-cut me-1"></i> {{ _('Trim Data') }}
-                                        </button>
+                                    <div class="col-md-6">
+                                        <div class="d-flex justify-content-end">
+                                            <button type="button" id="trimCsvButton" class="btn btn-success">
+                                                <i class="fas fa-cut me-1"></i> {{ _('Trim Data') }}
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
