@@ -99,7 +99,9 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     project_text_settings,
                     update_progress,
                     interpolate_values,
-                    locale
+                    locale,
+                    trim_start,
+                    trim_end
                 )
 
                 with app.app_context():

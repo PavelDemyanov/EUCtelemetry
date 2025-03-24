@@ -328,7 +328,9 @@ def generate_frames(csv_file,
                     text_settings=None,
                     progress_callback=None,
                     interpolate_values=True,
-                    locale='en'):
+                    locale='en',
+                    trim_start=None,
+                    trim_end=None):
     try:
         frames_dir = f'frames/project_{folder_number}'
         if os.path.exists(frames_dir):
@@ -343,13 +345,34 @@ def generate_frames(csv_file,
         # Sort dataframe by timestamp to ensure proper interpolation
         df = df.sort_values('timestamp')
 
-        # Calculate frame timestamps
-        T_min = df['timestamp'].min()
-        T_max = df['timestamp'].max()
+        # Get timestamp limits from data
+        data_min_timestamp = df['timestamp'].min()
+        data_max_timestamp = df['timestamp'].max()
+        
+        # Apply trim settings if provided
+        T_min = data_min_timestamp
+        T_max = data_max_timestamp
+        
+        # If trim_start is specified and valid, use it
+        if trim_start is not None:
+            trim_start_timestamp = trim_start.timestamp()
+            if trim_start_timestamp > data_min_timestamp and trim_start_timestamp < data_max_timestamp:
+                T_min = trim_start_timestamp
+                logging.info(f"Using custom trim start: {trim_start}")
+        
+        # If trim_end is specified and valid, use it
+        if trim_end is not None:
+            trim_end_timestamp = trim_end.timestamp()
+            if trim_end_timestamp > data_min_timestamp and trim_end_timestamp < data_max_timestamp:
+                T_max = trim_end_timestamp
+                logging.info(f"Using custom trim end: {trim_end}")
+        
+        # Calculate frame timestamps based on possibly trimmed range
         frame_count = int((T_max - T_min) * fps)
         logging.info(
             f"Generating {frame_count} frames at {fps} fps with interpolation {'enabled' if interpolate_values else 'disabled'}"
         )
+        logging.info(f"Time range: {T_min} to {T_max} (duration: {T_max - T_min:.2f} seconds)")
         frame_timestamps = np.linspace(T_min, T_max, frame_count)
 
         completed_frames = 0
