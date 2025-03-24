@@ -3,6 +3,7 @@ from datetime import datetime
 import logging
 import os
 import numpy as np
+import shutil
 
 def parse_timestamp_darnkessbot(date_str):
     try:
@@ -167,6 +168,89 @@ def interpolate_numeric_data(data, columns_to_interpolate):
     except Exception as e:
         logging.error(f"Error during interpolation: {e}")
         raise
+
+def trim_csv_file(file_path, trim_start=None, trim_end=None, folder_number=None):
+    """
+    Create a trimmed version of a CSV file based on start and end timestamps
+    
+    Args:
+        file_path (str): Path to the original CSV file
+        trim_start (datetime): Start datetime for trimming (or None to use beginning of file)
+        trim_end (datetime): End datetime for trimming (or None to use end of file)
+        folder_number (int): Folder number for the project
+        
+    Returns:
+        tuple: (trimmed_file_path, csv_type)
+    """
+    try:
+        # Process CSV file to detect type
+        df = pd.read_csv(file_path)
+        csv_type = detect_csv_type(df)
+        logging.info(f"Trim operation on CSV file {file_path} (type: {csv_type})")
+        
+        # Create a filename for the trimmed version
+        os.makedirs('processed_data', exist_ok=True)
+        timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+        trimmed_file_path = os.path.join('processed_data', f'trimmed_{timestamp_str}_{os.path.basename(file_path)}')
+        
+        # If no trimming needed, just copy the file
+        if trim_start is None and trim_end is None:
+            logging.info("No trimming needed, using original file")
+            shutil.copy(file_path, trimmed_file_path)
+            return trimmed_file_path, csv_type
+        
+        # Parse timestamps in the CSV based on its type
+        if csv_type == 'darnkessbot':
+            # Parse timestamps and create a mask for valid timestamps
+            df['unix_timestamp'] = df['Date'].apply(parse_timestamp_darnkessbot)
+            valid_timestamp_mask = df['unix_timestamp'].notna()
+            df = df[valid_timestamp_mask]
+        else:  # wheellog
+            # Parse timestamps and create a mask for valid timestamps
+            df['unix_timestamp'] = df.apply(lambda x: parse_timestamp_wheellog(x['date'], x['time']), axis=1)
+            valid_timestamp_mask = df['unix_timestamp'].notna()
+            df = df[valid_timestamp_mask]
+        
+        # Apply trimming
+        filter_applied = False
+        
+        if trim_start is not None:
+            try:
+                trim_start_timestamp = trim_start.timestamp()
+                logging.info(f"Trimming from {trim_start} (unix timestamp: {trim_start_timestamp})")
+                df = df[df['unix_timestamp'] >= trim_start_timestamp]
+                filter_applied = True
+            except Exception as e:
+                logging.error(f"Error processing trim_start during trimming: {e}")
+        
+        if trim_end is not None:
+            try:
+                trim_end_timestamp = trim_end.timestamp()
+                logging.info(f"Trimming to {trim_end} (unix timestamp: {trim_end_timestamp})")
+                df = df[df['unix_timestamp'] <= trim_end_timestamp]
+                filter_applied = True
+            except Exception as e:
+                logging.error(f"Error processing trim_end during trimming: {e}")
+        
+        # Drop temporary column
+        if 'unix_timestamp' in df.columns:
+            df = df.drop(columns=['unix_timestamp'])
+        
+        # If filtering was actually applied and we have data
+        if filter_applied and len(df) > 0:
+            logging.info(f"Saving trimmed CSV with {len(df)} rows to {trimmed_file_path}")
+            df.to_csv(trimmed_file_path, index=False)
+            return trimmed_file_path, csv_type
+        else:
+            # If trimming resulted in empty data or wasn't applied, use original file
+            logging.warning(f"Trimming resulted in no data or wasn't applied. Using original file.")
+            shutil.copy(file_path, trimmed_file_path)
+            return trimmed_file_path, csv_type
+            
+    except Exception as e:
+        logging.error(f"Error during CSV trimming: {e}")
+        # Return original file path if trimming fails
+        return file_path, "unknown"
 
 def process_csv_file(file_path, folder_number=None, existing_csv_type=None, interpolate_values=True):
     """Process CSV file and save processed data with unique project identifier"""

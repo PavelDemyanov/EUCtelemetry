@@ -26,6 +26,7 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
 
     def _process():
         folder_number = None
+        trimmed_csv_file = None
         try:
             logging.info(f"Starting processing for project {project_id}")
 
@@ -37,7 +38,7 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     return
 
                 folder_number = project.folder_number
-                csv_file = os.path.join('uploads', project.csv_file)
+                original_csv_file = os.path.join('uploads', project.csv_file)
 
                 hardware_info = get_hardware_info()
                 logging.info(f"Hardware configuration: {hardware_info}")
@@ -77,14 +78,39 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                 except Exception as e:
                     logging.error(f"Error updating progress: {e}")
                     raise
-
-            # Process CSV
+            
+            # Trim the CSV file according to the specified time range
+            from utils.csv_processor import trim_csv_file, process_csv_file
+            
             try:
-                logging.info(f"Processing CSV file {csv_file}")
+                logging.info(f"Trimming CSV file {original_csv_file} with time range: start={trim_start}, end={trim_end}")
+                
+                # Perform trimming operation on the CSV file
+                trimmed_csv_file, csv_type = trim_csv_file(
+                    original_csv_file, 
+                    trim_start=trim_start, 
+                    trim_end=trim_end, 
+                    folder_number=folder_number
+                )
+                
+                logging.info(f"Using trimmed CSV file: {trimmed_csv_file} (type: {csv_type})")
+                
+                # Replace the original CSV file with the trimmed version for processing
+                csv_file = trimmed_csv_file
+                
+                # Process the trimmed CSV file
+                logging.info(f"Processing trimmed CSV file {csv_file}")
                 _, _ = process_csv_file(csv_file, folder_number)
             except Exception as e:
-                logging.error(f"Error processing CSV: {e}")
-                raise
+                logging.error(f"Error processing/trimming CSV: {e}")
+                # Fall back to original file if trimming fails
+                csv_file = original_csv_file
+                logging.info(f"Falling back to original CSV file: {csv_file}")
+                try:
+                    _, _ = process_csv_file(csv_file, folder_number)
+                except Exception as e2:
+                    logging.error(f"Error processing original CSV: {e2}")
+                    raise
 
             if stop_flags.get(project_id, False):
                 raise InterruptedError("Processing was stopped by user")
