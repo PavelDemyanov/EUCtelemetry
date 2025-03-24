@@ -13,6 +13,7 @@ stop_flags = {}
 
 def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', text_settings=None, interpolate_values=True, locale='en', trim_start=None, trim_end=None):
     """Process project in background thread"""
+    logging.info(f"process_project called with trim_start={trim_start}, trim_end={trim_end}")
     from app import app, db
     from models import Project
     from utils.csv_processor import process_csv_file

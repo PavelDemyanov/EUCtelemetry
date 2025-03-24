@@ -331,6 +331,7 @@ def generate_frames(csv_file,
                     locale='en',
                     trim_start=None,
                     trim_end=None):
+    logging.info(f"generate_frames called with trim_start={trim_start}, trim_end={trim_end}")
     try:
         frames_dir = f'frames/project_{folder_number}'
         if os.path.exists(frames_dir):

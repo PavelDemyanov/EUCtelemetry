@@ -552,6 +552,12 @@ document.getElementById('startProcessButton').addEventListener('click', function
     if (trimStartInput && trimEndInput && trimStartInput.value && trimEndInput.value) {
         settings.trim_start = trimStartInput.value;
         settings.trim_end = trimEndInput.value;
+        console.log("Sending time range settings:", {
+            trim_start: trimStartInput.value,
+            trim_end: trimEndInput.value
+        });
+    } else {
+        console.log("No time range settings available to send");
     }
 
     // Start processing

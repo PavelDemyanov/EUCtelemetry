@@ -766,10 +766,13 @@ def generate_project_frames(project_id):
         
         # If trim settings were provided in the request, update them
         logging.info(f"Request data: {data}")
+        logging.info(f"Current trim settings - start: {trim_start}, end: {trim_end}")
+        
         if 'trim_start' in data and data['trim_start']:
             try:
-                logging.info(f"Parsing trim_start from: {data['trim_start']}")
-                trim_start = datetime.strptime(data['trim_start'], '%Y-%m-%d %H:%M:%S')
+                start_str = data['trim_start']
+                logging.info(f"Parsing trim_start from: '{start_str}'")
+                trim_start = datetime.strptime(start_str, '%Y-%m-%d %H:%M:%S')
                 project.trim_start = trim_start
                 logging.info(f"Set trim_start to: {trim_start}")
             except ValueError as e:
@@ -778,8 +781,9 @@ def generate_project_frames(project_id):
                 
         if 'trim_end' in data and data['trim_end']:
             try:
-                logging.info(f"Parsing trim_end from: {data['trim_end']}")
-                trim_end = datetime.strptime(data['trim_end'], '%Y-%m-%d %H:%M:%S')
+                end_str = data['trim_end']
+                logging.info(f"Parsing trim_end from: '{end_str}'")
+                trim_end = datetime.strptime(end_str, '%Y-%m-%d %H:%M:%S')
                 project.trim_end = trim_end
                 logging.info(f"Set trim_end to: {trim_end}")
             except ValueError as e:
