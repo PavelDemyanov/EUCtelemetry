@@ -8,7 +8,7 @@
                 <h2 class="card-title">{{ _('Create New Project') }}</h2>
             </div>
             <div class="card-body">
-                <form id="uploadForm" enctype="multipart/form-data" method="post" onsubmit="return false;">
+                <form id="uploadForm">
                     <div class="mb-3">
                         <label for="projectName" class="form-label">{{ _('Project Name') }}</label>
                         <input type="text" class="form-control" id="projectName" name="project_name" 
@@ -116,30 +116,7 @@
                         </div>
                     </div>
 
-                    <button type="button" class="btn btn-primary" id="uploadButton">{{ _('Upload and Show Preview') }}</button>
-                    
-                    <!-- Отладочная кнопка для прямой отправки формы -->
-                    <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="directUploadBtn" 
-                            onclick="document.getElementById('csvFile').files.length > 0 ? document.getElementById('directUploadForm').submit() : alert('{{ _('Please select a file') }}');">
-                        {{ _('Direct Upload (Debug)') }}
-                    </button>
-                    
-                    <!-- Скрытая отладочная форма -->
-                    <form id="directUploadForm" action="/upload" method="post" enctype="multipart/form-data" style="display:none">
-                        <input type="hidden" name="project_name" value="debug">
-                        <input type="file" name="file" id="debugFileInput">
-                    </form>
-                    
-                    <script>
-                    // Синхронизировать выбор файла между формами
-                    document.getElementById('csvFile').addEventListener('change', function() {
-                        if (this.files.length > 0) {
-                            // Клонируем файл в скрытую форму
-                            const fileInput = document.getElementById('debugFileInput');
-                            fileInput.files = this.files;
-                        }
-                    });
-                    </script>
+                    <button type="submit" class="btn btn-primary" id="uploadButton">{{ _('Upload and Show Preview') }}</button>
                 </form>
 
                 <div id="previewSection" class="mt-4 d-none">
@@ -205,9 +182,6 @@
                                         <span id="startTimeDisplay" class="text-muted">{{ _('Start Time') }}</span>
                                     </div>
                                     <div class="col-md-6">
-                                        <div id="speedChartContainer" class="mb-3" style="height: 250px; width: 100%;" data-bs-theme="dark">
-                                            <canvas id="speedChart"></canvas>
-                                        </div>
                                         <div id="trimRangeContainer" class="position-relative mt-1 mb-3" style="height: 40px;">
                                             <div id="timelineBackground" class="w-100 bg-secondary opacity-25" style="height: 24px; border-radius: 3px;"></div>
                                             <div id="timelineSelected" class="position-absolute bg-success" style="height: 24px; border-radius: 3px; top: 0;"></div>
