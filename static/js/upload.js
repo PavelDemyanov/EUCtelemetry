@@ -150,6 +150,9 @@ function createOrUpdateSpeedChart(speedData) {
                                 return new Date(tooltipItems[0].parsed.x).toLocaleString();
                             }
                         }
+                    },
+                    annotation: {
+                        annotations: {}
                     }
                 },
                 scales: {
