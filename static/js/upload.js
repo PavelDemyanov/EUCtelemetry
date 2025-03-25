@@ -68,6 +68,10 @@ let csvTimeRange = {
     totalRows: 0
 };
 
+// Speed chart variables
+let speedChart = null;
+let speedData = [];
+
 // Function to format timestamp as date string
 function formatTimestamp(timestamp) {
     const date = new Date(timestamp * 1000);
@@ -104,6 +108,109 @@ function updateTrimmerUI() {
 }
 
 // Function to initialize CSV trimmer after upload
+// Function to create or update the speed chart
+function createOrUpdateSpeedChart(speedData) {
+    const ctx = document.getElementById('speedChart').getContext('2d');
+    
+    // Prepare data for the chart
+    const labels = speedData.map(item => new Date(item.timestamp * 1000));
+    const speeds = speedData.map(item => item.speed);
+    
+    // Get the max speed for scaling the chart properly
+    const maxSpeed = Math.max(...speeds, 0);
+    
+    if (speedChart) {
+        // Update existing chart
+        speedChart.data.labels = labels;
+        speedChart.data.datasets[0].data = speeds;
+        speedChart.options.scales.y.suggestedMax = Math.ceil(maxSpeed * 1.1); // Add 10% padding
+        speedChart.update();
+    } else {
+        // Create new chart
+        speedChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Speed (km/h)',
+                    data: speeds,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            title: function(tooltipItems) {
+                                return new Date(tooltipItems[0].parsed.x).toLocaleString();
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'minute',
+                            displayFormats: {
+                                minute: 'HH:mm'
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        suggestedMax: Math.ceil(maxSpeed * 1.1), // Add 10% padding
+                        title: {
+                            display: true,
+                            text: 'Speed (km/h)'
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Update the chart when the selection handles move
+    document.getElementById('startHandle').addEventListener('mousedown', updateChartSelection);
+    document.getElementById('endHandle').addEventListener('mousedown', updateChartSelection);
+}
+
+// Function to update chart highlights based on selected range
+function updateChartSelection() {
+    if (!speedChart) return;
+    
+    // Calculate percentages for positioning
+    const totalRange = csvTimeRange.max - csvTimeRange.min;
+    const startPercent = ((csvTimeRange.start - csvTimeRange.min) / totalRange);
+    const endPercent = ((csvTimeRange.end - csvTimeRange.min) / totalRange);
+    
+    // Highlight selected area in chart
+    speedChart.options.plugins.annotation = {
+        annotations: {
+            box1: {
+                type: 'box',
+                xMin: speedChart.scales.x.min + (speedChart.scales.x.max - speedChart.scales.x.min) * startPercent,
+                xMax: speedChart.scales.x.min + (speedChart.scales.x.max - speedChart.scales.x.min) * endPercent,
+                backgroundColor: 'rgba(75, 192, 192, 0.3)',
+                borderColor: 'rgba(75, 192, 192, 0.8)',
+                borderWidth: 1
+            }
+        }
+    };
+    
+    speedChart.update();
+}
+
 function initCsvTrimmer(projectId) {
     console.log('Initializing CSV trimmer for project ID:', projectId);
     
@@ -126,6 +233,13 @@ function initCsvTrimmer(projectId) {
             csvTimeRange.start = data.min_timestamp;
             csvTimeRange.end = data.max_timestamp;
             csvTimeRange.totalRows = data.total_rows;
+            
+            // Store speed data for the chart
+            if (data.speed_data) {
+                speedData = data.speed_data;
+                // Create or update the speed chart
+                createOrUpdateSpeedChart(speedData);
+            }
             
             // Update UI elements
             document.getElementById('totalRecordsInfo').textContent = data.total_rows.toLocaleString();
