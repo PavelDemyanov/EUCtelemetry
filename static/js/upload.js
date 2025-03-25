@@ -70,6 +70,15 @@ let csvTimeRange = {
 
 // Speed chart variables
 let speedChart = null;
+
+// Function to reset/destroy the chart if needed
+function clearSpeedChart() {
+    if (speedChart) {
+        console.log('Destroying existing speed chart');
+        speedChart.destroy();
+        speedChart = null;
+    }
+}
 let speedData = [];
 
 // Function to format timestamp as date string
@@ -290,8 +299,37 @@ function createOrUpdateSpeedChart(speedData) {
             
             if (startHandle && endHandle) {
                 console.log('Adding event listeners to slider handles');
-                startHandle.addEventListener('mousedown', updateChartSelection);
-                endHandle.addEventListener('mousedown', updateChartSelection);
+                
+                // Mouse events for desktop
+                startHandle.addEventListener('mousedown', function() {
+                    // Немного задерживаем вызов, чтобы позволить элементу обновить свою позицию
+                    setTimeout(updateChartSelection, 50);
+                });
+                
+                endHandle.addEventListener('mousedown', function() {
+                    setTimeout(updateChartSelection, 50);
+                });
+                
+                // Touch events for mobile
+                startHandle.addEventListener('touchstart', function() {
+                    setTimeout(updateChartSelection, 50);
+                });
+                
+                endHandle.addEventListener('touchstart', function() {
+                    setTimeout(updateChartSelection, 50);
+                });
+                
+                // Track mousemove and touchmove on document level to update during dragging
+                document.addEventListener('mousemove', function() {
+                    if (speedChart && document.querySelector('.position-absolute:active')) {
+                        updateChartSelection();
+                    }
+                });
+                
+                document.addEventListener('touchmove', function() {
+                    updateChartSelection();
+                });
+                
                 chartListenersInitialized = true;
             } else {
                 console.error('Cannot find handle elements:', 
