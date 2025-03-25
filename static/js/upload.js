@@ -107,7 +107,6 @@ function updateTrimmerUI() {
     document.getElementById('endTimeDisplay').textContent = formatTimestamp(csvTimeRange.end);
 }
 
-// Function to initialize CSV trimmer after upload
 // Function to create or update the speed chart
 function createOrUpdateSpeedChart(speedData) {
     const ctx = document.getElementById('speedChart').getContext('2d');
@@ -302,12 +301,14 @@ function setupTrimmerHandlers() {
             if (timestamp < csvTimeRange.end) {
                 csvTimeRange.start = timestamp;
                 updateTrimmerUI();
+                updateChartSelection(); // Update chart selection on drag
             }
         } else if (currentHandle === endHandle) {
             // Ensure end is not before start
             if (timestamp > csvTimeRange.start) {
                 csvTimeRange.end = timestamp;
                 updateTrimmerUI();
+                updateChartSelection(); // Update chart selection on drag
             }
         }
     };
@@ -365,12 +366,14 @@ function setupTrimmerHandlers() {
             if (timestamp < csvTimeRange.end) {
                 csvTimeRange.start = timestamp;
                 updateTrimmerUI();
+                updateChartSelection(); // Update chart selection on drag
             }
         } else if (currentHandle === endHandle) {
             // Ensure end is not before start
             if (timestamp > csvTimeRange.start) {
                 csvTimeRange.end = timestamp;
                 updateTrimmerUI();
+                updateChartSelection(); // Update chart selection on drag
             }
         }
         
@@ -440,6 +443,12 @@ function setupTrimmerHandlers() {
             csvTimeRange.start = data.min_timestamp;
             csvTimeRange.end = data.max_timestamp;
             csvTimeRange.totalRows = data.total_rows;
+            
+            // Update speed data if available
+            if (data.speed_data) {
+                speedData = data.speed_data;
+                createOrUpdateSpeedChart(speedData);
+            }
             
             // Update UI elements
             document.getElementById('totalRecordsInfo').textContent = data.total_rows.toLocaleString();
@@ -554,407 +563,105 @@ function updatePreview(projectId) {
 document.getElementById('projectName').addEventListener('input', function() {
     const value = this.value.trim();
 
-    if (value === '') {
-        // Empty value is valid (will generate automatic name)
-        this.classList.remove('is-invalid');
-        return;
-    }
-
-    if (value.length > 7 || !/^[\p{L}\d]+$/u.test(value)) {
+    if (value.length > 7) {
         this.classList.add('is-invalid');
+        document.getElementById('projectNameFeedback').textContent = gettext('Project name must be 7 characters or less');
+    } else if (value && !/^[\p{L}\d]+$/u.test(value)) {
+        this.classList.add('is-invalid');
+        document.getElementById('projectNameFeedback').textContent = gettext('Project name must contain only letters and numbers');
     } else {
         this.classList.remove('is-invalid');
     }
 });
 
-// Add event listeners for text display settings
-const textSettings = ['verticalPosition', 'topPadding', 'bottomPadding', 'spacing', 'fontSize', 'borderRadius'];
-const speedIndicatorSettings = ['indicatorScale', 'indicatorX', 'indicatorY', 'speedSize', 'speedY', 'unitSize', 'unitY'];
-
-// Combine all settings
-const allSettings = [...textSettings, ...speedIndicatorSettings];
-
-// Add event listener for resolution change
-document.querySelectorAll('input[name="resolution"]').forEach(radio => {
-    radio.addEventListener('change', function() {
-        const projectId = document.getElementById('startProcessButton').dataset.projectId;
-        if (projectId) {
-            // Adjust slider values based on resolution
-            if (this.value === '4k') {
-                // Set specific values for 4K
-                document.getElementById('speedY').value = -50;
-                document.getElementById('speedYValue').textContent = '-50';
-                document.getElementById('unitY').value = 65;
-                document.getElementById('unitYValue').textContent = '65';
-            } else {
-                // Reset to default values for Full HD
-                document.getElementById('speedY').value = -28;
-                document.getElementById('speedYValue').textContent = '-28';
-                document.getElementById('unitY').value = 36;
-                document.getElementById('unitYValue').textContent = '36';
-            }
-            // Update preview with new settings
-            updatePreview(projectId);
-        }
-    });
-});
-
-allSettings.forEach(setting => {
-    const input = document.getElementById(setting);
-    const valueDisplay = document.getElementById(setting + 'Value');
-    if (!input || !valueDisplay) return; // Skip if elements don't exist
-
-    input.addEventListener('input', function() {
-        // Update value display without adding unit if it's already in the display text
-        const currentText = valueDisplay.textContent;
-        const value = this.value;
-
-        // Check if the current text already contains a unit
-        if (currentText.includes('%') || currentText.includes('px')) {
-            valueDisplay.textContent = value;
-        } else {
-            // Add unit only if it's not already present
-            valueDisplay.textContent = value + (
-                this.id === 'speedSize' || this.id === 'unitSize' || this.id.includes('indicator') ? '%' : 'px'
-            );
-        }
-
-        // Debounce the preview update
-        clearTimeout(this.timeout);
-        this.timeout = setTimeout(() => {
-            const projectId = document.getElementById('startProcessButton').dataset.projectId;
-            if (projectId) {
-                // Get current values for all settings including visibility
-                const settings = {
-                    resolution: document.querySelector('input[name="resolution"]:checked').value,
-                    vertical_position: document.getElementById('verticalPosition').value,
-                    top_padding: document.getElementById('topPadding').value,
-                    bottom_padding: document.getElementById('bottomPadding').value,
-                    spacing: document.getElementById('spacing').value,
-                    font_size: document.getElementById('fontSize').value,
-                    border_radius: document.getElementById('borderRadius').value,
-                    // Speed indicator settings
-                    indicator_x: document.getElementById('indicatorX').value,
-                    indicator_y: document.getElementById('indicatorY').value,
-                    speed_y: document.getElementById('speedY').value,
-                    unit_y: document.getElementById('unitY').value,
-                    speed_size: document.getElementById('speedSize').value,
-                    unit_size: document.getElementById('unitSize').value,
-                    indicator_scale: document.getElementById('indicatorScale').value,
-                    // Add visibility settings
-                    show_speed: document.getElementById('showSpeed').checked,
-                    show_max_speed: document.getElementById('showMaxSpeed').checked,
-                    show_voltage: document.getElementById('showVoltage').checked,
-                    show_temp: document.getElementById('showTemp').checked,
-                    show_battery: document.getElementById('showBattery').checked,
-                    show_mileage: document.getElementById('showMileage').checked,
-                    show_pwm: document.getElementById('showPWM').checked,
-                    show_power: document.getElementById('showPower').checked,
-                    show_current: document.getElementById('showCurrent').checked,
-                    show_gps: document.getElementById('showGPS').checked,
-                    show_bottom_elements: document.getElementById('showBottomElements').checked
-                };
-
-                // Update preview with all current settings
-                fetch(`/preview/${projectId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(settings)
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) throw new Error(data.error);
-                    document.getElementById('previewImage').src = data.preview_url + '?t=' + new Date().getTime();
-                })
-                .catch(error => {
-                    console.error('Error updating preview:', error);
-                });
-            }
-        }, 300);
-    });
-});
-
-// Add event listeners for visibility checkboxes
-const visibilitySettings = [
-    'showSpeed', 'showMaxSpeed', 'showVoltage', 'showTemp', 
-    'showBattery', 'showMileage', 'showPWM', 'showPower', 
-    'showCurrent', 'showGPS', 'showBottomElements'
-];
-
-visibilitySettings.forEach(setting => {
-    const checkbox = document.getElementById(setting);
-    if (checkbox) {
-        checkbox.addEventListener('change', function() {
-            const projectId = document.getElementById('startProcessButton').dataset.projectId;
-            if (projectId) {
-                updatePreview(projectId);
-            }
+// Set up range input values display
+document.querySelectorAll('input[type="range"]').forEach(range => {
+    const valueDisplay = document.getElementById(range.id + 'Value');
+    if (valueDisplay) {
+        valueDisplay.textContent = range.value;
+        range.addEventListener('input', () => {
+            valueDisplay.textContent = range.value;
+            // For preview updates, debounce to prevent too many requests
+            if (previewUpdateTimeout) clearTimeout(previewUpdateTimeout);
+            previewUpdateTimeout = setTimeout(schedulePreviewUpdate, 500);
         });
     }
 });
 
-// Handle start processing button click
-document.getElementById('startProcessButton').addEventListener('click', function() {
-    const projectId = this.dataset.projectId;
-    const progressDiv = document.getElementById('progress');
-    const progressBar = progressDiv.querySelector('.progress-bar');
-    const progressTitle = document.getElementById('progressTitle');
-    const videoProcessingInfo = document.getElementById('videoProcessingInfo');
-    const previewSection = document.getElementById('previewSection');
+// Preview update
+let previewUpdateTimeout = null;
+let previewUpdateScheduled = false;
 
-    // Show progress bar and processing info
-    progressDiv.classList.remove('d-none');
-    videoProcessingInfo.classList.remove('d-none');
+function schedulePreviewUpdate() {
+    if (previewUpdateScheduled) return;
+    previewUpdateScheduled = true;
     
-    // Disable all elements in the preview section above the start process button
-    // Including all settings sliders, checkboxes, radio buttons and preset controls
-    previewSection.querySelectorAll('input, button, select').forEach(el => {
-        // Skip the start process button itself as it's already being disabled
-        if (el !== this) {
-            el.disabled = true;
+    // Schedule update after UI thread is done updating
+    setTimeout(() => {
+        const projectId = document.getElementById('startProcessButton')?.dataset?.projectId;
+        if (projectId) {
+            const button = document.getElementById('updatePreviewButton');
+            button.classList.add('pulsing');
+            button.disabled = false;
         }
-    });
+        previewUpdateScheduled = false;
+    }, 100);
+}
+
+// Add event listener to update preview button
+document.getElementById('updatePreviewButton')?.addEventListener('click', function() {
+    const projectId = document.getElementById('startProcessButton')?.dataset?.projectId;
+    if (!projectId) return;
     
-    // Also disable the start process button
     this.disabled = true;
-
-    // Set initial background processing message
-    videoProcessingInfo.textContent = gettext("You can close your browser and come back later - the video processing will continue in the background.");
-
-    // Get all current settings
-    const settings = {
-        resolution: document.querySelector('input[name="resolution"]:checked').value,
-        fps: document.querySelector('input[name="fps"]:checked').value,
-        codec: document.querySelector('input[name="codec"]:checked').value,
-        interpolate_values: document.getElementById('interpolateValues').checked,
-        vertical_position: document.getElementById('verticalPosition').value,
-        top_padding: document.getElementById('topPadding').value,
-        bottom_padding: document.getElementById('bottomPadding').value,
-        spacing: document.getElementById('spacing').value,
-        font_size: document.getElementById('fontSize').value,
-        border_radius: document.getElementById('borderRadius').value,
-        indicator_x: document.getElementById('indicatorX').value,
-        indicator_y: document.getElementById('indicatorY').value,
-        speed_y: document.getElementById('speedY').value,
-        unit_y: document.getElementById('unitY').value,
-        speed_size: document.getElementById('speedSize').value,
-        unit_size: document.getElementById('unitSize').value,
-        indicator_scale: document.getElementById('indicatorScale').value,
-        // Add visibility settings
-        show_speed: document.getElementById('showSpeed').checked,
-        show_max_speed: document.getElementById('showMaxSpeed').checked,
-        show_voltage: document.getElementById('showVoltage').checked,
-        show_temp: document.getElementById('showTemp').checked,
-        show_battery: document.getElementById('showBattery').checked,
-        show_mileage: document.getElementById('showMileage').checked,
-        show_pwm: document.getElementById('showPWM').checked,
-        show_power: document.getElementById('showPower').checked,
-        show_current: document.getElementById('showCurrent').checked,
-        show_gps: document.getElementById('showGPS').checked,
-        show_bottom_elements: document.getElementById('showBottomElements').checked
-    };
-
-    // Start processing
-    fetch(`/generate_frames/${projectId}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(settings)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) throw new Error(data.error);
-
-        // Start polling for status
-        const checkStatus = () => {
-            fetch(`/project_status/${projectId}`)
-                .then(response => response.json())
-                .then(statusData => {
-                    // Ensure we have a valid status
-                    if (!statusData.status) {
-                        throw new Error(gettext('No status received from server'));
-                    }
-
-                    switch(statusData.status) {
-                        case 'processing':
-                            const progress = statusData.progress || 0;
-                            progressTitle.textContent = progress <= 50 ? 
-                                gettext('Creating frames...') : 
-                                gettext('Encoding video...');
-                            progressBar.style.width = `${progress}%`;
-                            progressBar.textContent = `${progress.toFixed(1)}%`;
-                            // Show processing stage below the main message
-                            videoProcessingInfo.textContent = gettext('You can close your browser and come back later - the video processing will continue in the background.') + ' ' +
-                                gettext('Alternatively, you can go to the Projects section to monitor the progress there.');
-                            setTimeout(checkStatus, progress <= 50 ? 200 : 1000);
-                            break;
-
-                        case 'completed':
-                            progressBar.style.width = '100%';
-                            progressBar.textContent = '100%';
-                            progressTitle.textContent = gettext('Complete!');
-                            videoProcessingInfo.textContent = gettext('Video processing completed successfully!');
-                            setTimeout(() => {
-                                window.location.href = '/projects';
-                            }, 1000);
-                            break;
-
-                        case 'pending':
-                            progressTitle.textContent = gettext('Waiting to start...');
-                            videoProcessingInfo.textContent = gettext('You can close your browser and come back later - the video processing will continue in the background.');
-                            setTimeout(checkStatus, 500);
-                            break;
-
-                        case 'error':
-                            const errorMsg = statusData.error_message || gettext('Processing failed');
-                            progressTitle.textContent = gettext('Error: ') + errorMsg;
-                            progressBar.classList.add('bg-danger');
-                            videoProcessingInfo.textContent = gettext('An error occurred during video processing.');
-                            
-                            // Re-enable all controls in the preview section
-                            previewSection.querySelectorAll('input, button, select').forEach(el => {
-                                el.disabled = false;
-                            });
-                            
-                            this.disabled = false;
-                            break;
-
-                        default:
-                            console.error('Unexpected status:', statusData.status);
-                            progressTitle.textContent = gettext('Error: Unexpected status');
-                            progressBar.classList.add('bg-danger');
-                            videoProcessingInfo.textContent = gettext('An unexpected error occurred.');
-                            
-                            // Re-enable all controls in the preview section
-                            previewSection.querySelectorAll('input, button, select').forEach(el => {
-                                el.disabled = false;
-                            });
-                            
-                            this.disabled = false;
-                    }
-                })
-                .catch(error => {
-                    console.error('Status check error:', error);
-                    progressTitle.textContent = gettext('Error checking status: ') + error.message;
-                    progressBar.classList.add('bg-danger');
-                    videoProcessingInfo.textContent = gettext('An error occurred while checking the processing status.');
-                    
-                    // Re-enable all controls in the preview section
-                    previewSection.querySelectorAll('input, button, select').forEach(el => {
-                        el.disabled = false;
-                    });
-                    
-                    this.disabled = false;
-                });
-        };
-
-        // Start checking status
-        checkStatus();
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        progressTitle.textContent = gettext('Error: ') + error.message;
-        progressBar.classList.add('bg-danger');
-        videoProcessingInfo.textContent = gettext('An error occurred while starting the video processing.');
-        this.disabled = false;
-    });
+    this.classList.remove('pulsing');
+    updatePreview(projectId);
 });
 
-// Add preset management functionality
+// Wait for checkbox values to be updated when loading page
 document.addEventListener('DOMContentLoaded', function() {
-    loadPresets();  // Load presets when page loads
-
-    // Reset to defaults button
-    document.getElementById('resetDefaultsButton').addEventListener('click', function() {
-        // Reset preset selection dropdown
-        const presetSelect = document.getElementById('presetSelect');
-        presetSelect.value = '';
-        document.getElementById('deletePresetButton').disabled = true;
-
-        // Reset resolution
-        document.querySelector('input[name="resolution"][value="fullhd"]').checked = true;
-        // Reset FPS
-        document.querySelector('input[name="fps"][value="14.985"]').checked = true;
-        // Reset codec
-        document.querySelector('input[name="codec"][value="h264"]').checked = true;
-        // Reset interpolation
-        document.getElementById('interpolateValues').checked = true;
-
-        // Reset all sliders to their default values
-        const defaultValues = {
-            'verticalPosition': 1,
-            'borderRadius': 13,
-            'topPadding': 14,
-            'bottomPadding': 45,
-            'spacing': 10,
-            'fontSize': 23,
-            'indicatorScale': 50,
-            'indicatorX': 50,
-            'indicatorY': 126,
-            'speedSize': 75,
-            'speedY': -28,
-            'unitSize': 40,
-            'unitY': 36
-        };
-
-        Object.entries(defaultValues).forEach(([id, value]) => {
-            const element = document.getElementById(id);
-            if (element) {
-                element.value = value;
-                const valueDisplay = document.getElementById(id + 'Value');
-                if (valueDisplay) {
-                    // Add unit if needed
-                    const unit = id.includes('Size') || id.includes('indicator') ? '%' : 'px';
-                    valueDisplay.textContent = value + (id === 'verticalPosition' ? '%' : unit);
-                }
-            }
+    // Default checkbox values
+    document.getElementById('showSpeed').checked = false;
+    document.getElementById('showMaxSpeed').checked = true;
+    document.getElementById('showVoltage').checked = true;
+    document.getElementById('showTemp').checked = true;
+    document.getElementById('showBattery').checked = true;
+    document.getElementById('showMileage').checked = true;
+    document.getElementById('showPWM').checked = false;
+    document.getElementById('showPower').checked = true;
+    document.getElementById('showCurrent').checked = false;
+    document.getElementById('showGPS').checked = false;
+    document.getElementById('showBottomElements').checked = true;
+    
+    // Set up checkbox listeners for preview updates
+    document.querySelectorAll('.form-check-input').forEach(checkbox => {
+        checkbox.addEventListener('change', () => {
+            if (previewUpdateTimeout) clearTimeout(previewUpdateTimeout);
+            previewUpdateTimeout = setTimeout(schedulePreviewUpdate, 250);
         });
-
-        // Reset visibility checkboxes
-        const visibilityDefaults = {
-            'showSpeed': false,
-            'showMaxSpeed': true,
-            'showVoltage': true,
-            'showTemp': true,
-            'showBattery': true,
-            'showMileage': true,
-            'showPWM': true,
-            'showPower': true,
-            'showCurrent': true,
-            'showGPS': true,
-            'showBottomElements': true
-        };
-
-        Object.entries(visibilityDefaults).forEach(([id, value]) => {
-            const element = document.getElementById(id);
-            if (element) {
-                element.checked = value;
-            }
-        });
-
-        // Update preview if project is loaded
-        const projectId = document.getElementById('startProcessButton').dataset.projectId;
-        if (projectId) {
-            updatePreview(projectId);
-        }
     });
-
-    // Save preset button
-    document.getElementById('confirmSavePreset').addEventListener('click', function() {
-        const presetName = document.getElementById('presetName').value.trim();
-        if (!presetName) {
-            alert(gettext('Please enter a preset name'));
-            return;
-        }
-
+    
+    // Set up radio button listeners for preview updates
+    document.querySelectorAll('input[type="radio"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+            if (previewUpdateTimeout) clearTimeout(previewUpdateTimeout);
+            previewUpdateTimeout = setTimeout(schedulePreviewUpdate, 250);
+        });
+    });
+    
+    // Load and display presets
+    loadPresets();
+    
+    // Handle start button
+    document.getElementById('startProcessButton')?.addEventListener('click', function() {
+        const projectId = this.dataset.projectId;
+        if (!projectId) return;
+        
+        // Get current settings to send to server
         const settings = {
             resolution: document.querySelector('input[name="resolution"]:checked').value,
-            fps: document.querySelector('input[name="fps"]:checked').value,
+            fps: document.getElementById('fps').value,
             codec: document.querySelector('input[name="codec"]:checked').value,
-            interpolate_values: document.getElementById('interpolateValues').checked,
             vertical_position: document.getElementById('verticalPosition').value,
             top_padding: document.getElementById('topPadding').value,
             bottom_padding: document.getElementById('bottomPadding').value,
@@ -978,154 +685,332 @@ document.addEventListener('DOMContentLoaded', function() {
             show_power: document.getElementById('showPower').checked,
             show_current: document.getElementById('showCurrent').checked,
             show_gps: document.getElementById('showGPS').checked,
-            show_bottom_elements: document.getElementById('showBottomElements').checked
+            show_bottom_elements: document.getElementById('showBottomElements').checked,
+            interpolate_values: document.getElementById('interpolateValues').checked
         };
-
+        
+        // Show processing info
+        const videoProcessingInfo = document.getElementById('videoProcessingInfo');
+        videoProcessingInfo.classList.remove('d-none');
+        
+        // Disable button to prevent multiple submissions
+        this.disabled = true;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> ' + gettext('Starting...');
+        
+        fetch(`/process/${projectId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(settings)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) throw new Error(data.error);
+            
+            // Hide buttons and show "Started" message
+            document.getElementById('projectButtons').classList.add('d-none');
+            
+            // Show success message
+            const successMessage = document.createElement('div');
+            successMessage.className = 'alert alert-success mt-3';
+            successMessage.innerHTML = `
+                <h5>${gettext('Video processing started!')}</h5>
+                <p>${gettext('You can close your browser and come back later - the video processing will continue in the background.')}</p>
+                <p>${gettext('Alternatively, you can go to the Projects section to monitor the progress there.')}</p>
+                <div class="mt-3">
+                    <a href="/list" class="btn btn-primary">${gettext('View Projects')}</a>
+                </div>
+            `;
+            
+            document.getElementById('processingStatus').appendChild(successMessage);
+            
+            // Set up status polling
+            pollProcessingStatus(projectId);
+        })
+        .catch(error => {
+            console.error('Error starting processing:', error);
+            alert(gettext('An error occurred while starting the video processing.'));
+            
+            // Re-enable button
+            this.disabled = false;
+            this.innerHTML = gettext('Start Processing');
+        });
+    });
+    
+    // Set up preset save button
+    document.getElementById('savePresetButton')?.addEventListener('click', function() {
+        const presetName = document.getElementById('presetName').value.trim();
+        if (!presetName) {
+            alert(gettext('Please enter a name for the preset'));
+            return;
+        }
+        
+        const settings = {
+            preset_name: presetName,
+            resolution: document.querySelector('input[name="resolution"]:checked').value,
+            fps: document.getElementById('fps').value,
+            codec: document.querySelector('input[name="codec"]:checked').value,
+            vertical_position: document.getElementById('verticalPosition').value,
+            top_padding: document.getElementById('topPadding').value,
+            bottom_padding: document.getElementById('bottomPadding').value,
+            spacing: document.getElementById('spacing').value,
+            font_size: document.getElementById('fontSize').value,
+            border_radius: document.getElementById('borderRadius').value,
+            indicator_scale: document.getElementById('indicatorScale').value,
+            indicator_x: document.getElementById('indicatorX').value,
+            indicator_y: document.getElementById('indicatorY').value,
+            speed_y: document.getElementById('speedY').value,
+            unit_y: document.getElementById('unitY').value,
+            speed_size: document.getElementById('speedSize').value,
+            unit_size: document.getElementById('unitSize').value,
+            show_speed: document.getElementById('showSpeed').checked,
+            show_max_speed: document.getElementById('showMaxSpeed').checked,
+            show_voltage: document.getElementById('showVoltage').checked,
+            show_temp: document.getElementById('showTemp').checked,
+            show_battery: document.getElementById('showBattery').checked,
+            show_mileage: document.getElementById('showMileage').checked,
+            show_pwm: document.getElementById('showPWM').checked,
+            show_power: document.getElementById('showPower').checked,
+            show_current: document.getElementById('showCurrent').checked,
+            show_gps: document.getElementById('showGPS').checked,
+            show_bottom_elements: document.getElementById('showBottomElements').checked,
+            interpolate_values: document.getElementById('interpolateValues').checked
+        };
+        
         fetch('/save_preset', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                name: presetName,
-                settings: settings
-            })
+            body: JSON.stringify(settings)
         })
         .then(response => response.json())
         .then(data => {
             if (data.error) throw new Error(data.error);
-            // Close modal
-            bootstrap.Modal.getInstance(document.getElementById('savePresetModal')).hide();
-            // Clear input
+            
+            // Clear preset name
             document.getElementById('presetName').value = '';
+            
+            // Show success message
+            alert(gettext('Preset saved successfully'));
+            
             // Reload presets
             loadPresets();
         })
         .catch(error => {
-            console.error('Error:', error);
+            console.error('Error saving preset:', error);
             alert(gettext('Error saving preset: ') + error.message);
-        });
-    });
-
-    // Load preset selection
-    document.getElementById('presetSelect').addEventListener('change', function() {
-        const presetId = this.value;
-        document.getElementById('deletePresetButton').disabled = !presetId;
-
-        if (!presetId) return;
-
-        fetch(`/get_preset/${presetId}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) throw new Error(data.error);
-
-                const settings = data.settings;
-
-                // Apply settings
-                document.querySelector(`input[name="resolution"][value="${settings.resolution}"]`).checked = true;
-                document.querySelector(`input[name="fps"][value="${settings.fps}"]`).checked = true;
-                document.querySelector(`input[name="codec"][value="${settings.codec}"]`).checked = true;
-                document.getElementById('interpolateValues').checked = settings.interpolate_values;
-
-                // Apply slider values
-                const sliderSettings = {
-                    'verticalPosition': settings.vertical_position,
-                    'topPadding': settings.top_padding,
-                    'bottomPadding': settings.bottom_padding,
-                    'spacing': settings.spacing,
-                    'fontSize': settings.font_size,
-                    'borderRadius': settings.border_radius,
-                    'indicatorScale': settings.indicator_scale,
-                    'indicatorX': settings.indicator_x,
-                    'indicatorY': settings.indicator_y,
-                    'speedY': settings.speed_y,
-                    'unitY': settings.unit_y,
-                    'speedSize': settings.speed_size,
-                    'unitSize': settings.unit_size
-                };
-
-                Object.entries(sliderSettings).forEach(([id, value]) => {
-                    const element = document.getElementById(id);
-                    if (element) {
-                        element.value = value;
-                        const valueDisplay = document.getElementById(id + 'Value');
-                        if (valueDisplay) {
-                            const unit = id.includes('Size') || id.includes('indicator') ? '%' : 'px';
-                            valueDisplay.textContent = value + (id === 'verticalPosition' ? '%' : unit);
-                        }
-                    }
-                });
-
-                // Apply visibility settings
-                document.getElementById('showSpeed').checked = settings.show_speed;
-                document.getElementById('showMaxSpeed').checked = settings.show_max_speed;
-                document.getElementById('showVoltage').checked = settings.show_voltage;
-                document.getElementById('showTemp').checked = settings.show_temp;
-                document.getElementById('showBattery').checked = settings.show_battery;
-                document.getElementById('showMileage').checked = settings.show_mileage;
-                document.getElementById('showPWM').checked = settings.show_pwm;
-                document.getElementById('showPower').checked = settings.show_power;
-                document.getElementById('showCurrent').checked = settings.show_current;
-                document.getElementById('showGPS').checked = settings.show_gps;
-                document.getElementById('showBottomElements').checked = settings.show_bottom_elements;
-
-                // Update preview if project is loaded
-                const projectId = document.getElementById('startProcessButton').dataset.projectId;
-                if (projectId) {
-                    updatePreview(projectId);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert(gettext('Error loading preset: ') + error.message);
-            });
-    });
-
-    // Delete preset button
-    document.getElementById('deletePresetButton').addEventListener('click', function() {
-        const presetSelect = document.getElementById('presetSelect');
-        const presetId = presetSelect.value;
-        if (!presetId) return;
-
-        if (!confirm(gettext('Are you sure you want to delete this preset?'))) return;
-
-        fetch(`/delete_preset/${presetId}`, {
-            method: 'DELETE'
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) throw new Error(data.error);
-            loadPresets();
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert(gettext('Error deleting preset: ') + error.message);
         });
     });
 });
 
-// Function to load presets into select
+// Function to load presets
 function loadPresets() {
     fetch('/get_presets')
         .then(response => response.json())
         .then(data => {
             if (data.error) throw new Error(data.error);
-
-            const presetSelect = document.getElementById('presetSelect');
-            presetSelect.innerHTML = `<option value="">${gettext('Select a Preset')}</option>`;
-
-            data.presets.forEach(preset => {
-                const option = document.createElement('option');
-                option.value = preset.id;
-                option.textContent = preset.name;
-                presetSelect.appendChild(option);
-            });
-
-            // Disable delete button when no preset is selected
-            document.getElementById('deletePresetButton').disabled = true;
+            
+            const presetsContainer = document.getElementById('presetsContainer');
+            presetsContainer.innerHTML = '';
+            
+            if (data.presets && data.presets.length > 0) {
+                document.getElementById('presetsCard').classList.remove('d-none');
+                
+                data.presets.forEach(preset => {
+                    const presetCard = document.createElement('div');
+                    presetCard.className = 'col-md-4 mb-3';
+                    presetCard.innerHTML = `
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">${preset.name}</h5>
+                                <p class="card-text text-muted small">${new Date(preset.created_at).toLocaleString()}</p>
+                                <div class="d-flex justify-content-between">
+                                    <button class="btn btn-sm btn-primary load-preset-btn" data-preset-id="${preset.id}">
+                                        ${gettext('Load')}
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger delete-preset-btn" data-preset-id="${preset.id}">
+                                        ${gettext('Delete')}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    presetsContainer.appendChild(presetCard);
+                });
+                
+                // Add event listeners for preset load buttons
+                document.querySelectorAll('.load-preset-btn').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const presetId = this.dataset.presetId;
+                        fetch(`/get_preset/${presetId}`)
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.error) throw new Error(data.error);
+                                
+                                const settings = data.settings;
+                                
+                                // Apply settings
+                                document.querySelectorAll('input[name="resolution"]').forEach(radio => {
+                                    radio.checked = (radio.value === settings.resolution);
+                                });
+                                
+                                document.getElementById('fps').value = settings.fps;
+                                
+                                document.querySelectorAll('input[name="codec"]').forEach(radio => {
+                                    radio.checked = (radio.value === settings.codec);
+                                });
+                                
+                                // Update range inputs
+                                const rangeInputs = [
+                                    'verticalPosition', 'topPadding', 'bottomPadding', 'spacing', 'fontSize', 'borderRadius',
+                                    'indicatorScale', 'indicatorX', 'indicatorY', 'speedY', 'unitY', 'speedSize', 'unitSize'
+                                ];
+                                
+                                rangeInputs.forEach(input => {
+                                    const inputEl = document.getElementById(input);
+                                    const valueKey = input.charAt(0).toLowerCase() + input.slice(1);
+                                    if (settings[valueKey] !== undefined) {
+                                        inputEl.value = settings[valueKey];
+                                        document.getElementById(input + 'Value').textContent = settings[valueKey];
+                                    }
+                                });
+                                
+                                // Update checkboxes
+                                const checkboxes = [
+                                    'showSpeed', 'showMaxSpeed', 'showVoltage', 'showTemp', 'showBattery',
+                                    'showMileage', 'showPWM', 'showPower', 'showCurrent', 'showGPS',
+                                    'showBottomElements', 'interpolateValues'
+                                ];
+                                
+                                checkboxes.forEach(checkbox => {
+                                    const checkboxEl = document.getElementById(checkbox);
+                                    const valueKey = checkbox.charAt(0).toLowerCase() + checkbox.slice(1);
+                                    if (settings[valueKey] !== undefined) {
+                                        checkboxEl.checked = settings[valueKey];
+                                    }
+                                });
+                                
+                                // Trigger preview update
+                                schedulePreviewUpdate();
+                            })
+                            .catch(error => {
+                                console.error('Error loading preset:', error);
+                                alert(gettext('Error loading preset: ') + error.message);
+                            });
+                    });
+                });
+                
+                // Add event listeners for preset delete buttons
+                document.querySelectorAll('.delete-preset-btn').forEach(button => {
+                    button.addEventListener('click', function() {
+                        if (!confirm(gettext('Are you sure you want to delete this preset?'))) return;
+                        
+                        const presetId = this.dataset.presetId;
+                        fetch(`/delete_preset/${presetId}`, { method: 'POST' })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.error) throw new Error(data.error);
+                                
+                                // Reload presets
+                                loadPresets();
+                            })
+                            .catch(error => {
+                                console.error('Error deleting preset:', error);
+                                alert(gettext('Error deleting preset: ') + error.message);
+                            });
+                    });
+                });
+            } else {
+                document.getElementById('presetsCard').classList.add('d-none');
+            }
         })
         .catch(error => {
-            console.error('Error:', error);
-            alert(gettext('Error loading presets: ') + error.message);
+            console.error('Error loading presets:', error);
         });
+}
+
+// Processing status polling
+function pollProcessingStatus(projectId) {
+    // Function to update progress bar
+    function updateProgressBar(progress, status, message) {
+        const progressBar = document.getElementById('processingProgressBar');
+        const progressText = document.getElementById('processingProgressText');
+        
+        if (!progressBar || !progressText) return;
+        
+        progressBar.style.width = progress + '%';
+        progressBar.setAttribute('aria-valuenow', progress);
+        
+        let statusText = '';
+        switch (status) {
+            case 'pending':
+                statusText = gettext('Waiting to start...');
+                break;
+            case 'processing':
+                statusText = gettext('Processing: ') + progress.toFixed(0) + '%';
+                break;
+            case 'completed':
+                statusText = gettext('Complete!');
+                break;
+            case 'error':
+                statusText = gettext('Error: ') + message;
+                break;
+            case 'stopped':
+                statusText = gettext('Processing stopped');
+                break;
+            default:
+                statusText = gettext('Unknown status');
+        }
+        
+        progressText.textContent = statusText;
+        
+        if (status === 'completed' || status === 'error' || status === 'stopped') {
+            // Stop polling on terminal states
+            return false;
+        }
+        
+        return true;
+    }
+    
+    // Set up interval for status polling
+    const statusInterval = setInterval(() => {
+        fetch(`/project_status/${projectId}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(gettext('No status received from server'));
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.error) throw new Error(data.error);
+                
+                const shouldContinue = updateProgressBar(
+                    data.progress,
+                    data.status,
+                    data.error_message
+                );
+                
+                if (!shouldContinue) {
+                    clearInterval(statusInterval);
+                    
+                    if (data.status === 'completed') {
+                        // Show success message for completed processing
+                        document.getElementById('videoProcessingSuccess').classList.remove('d-none');
+                        // Update video link
+                        document.getElementById('downloadVideoBtn').href = `/download_file/${projectId}/video`;
+                    } else if (data.status === 'error') {
+                        // Show error message
+                        const errorMsg = document.getElementById('videoProcessingError');
+                        errorMsg.textContent = gettext('Error: ') + data.error_message;
+                        errorMsg.classList.remove('d-none');
+                    }
+                }
+            })
+            .catch(error => {
+                console.error(gettext('Error checking status: '), error);
+                clearInterval(statusInterval);
+            });
+    }, 2000); // Check every 2 seconds
 }
