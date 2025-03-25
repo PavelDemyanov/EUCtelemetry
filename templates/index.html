@@ -8,7 +8,7 @@
                 <h2 class="card-title">{{ _('Create New Project') }}</h2>
             </div>
             <div class="card-body">
-                <form id="uploadForm">
+                <form id="uploadForm" enctype="multipart/form-data" method="post" onsubmit="return false;">
                     <div class="mb-3">
                         <label for="projectName" class="form-label">{{ _('Project Name') }}</label>
                         <input type="text" class="form-control" id="projectName" name="project_name" 

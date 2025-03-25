@@ -8,12 +8,48 @@ function setupUploadFormHandler() {
     }
     
     console.log('Found upload form, attaching event listener');
-    uploadForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        console.log('Form submission intercepted');
+    
+    // Добавляем слушатель на кнопку "Upload" внутри формы
+    const uploadButton = document.getElementById('uploadButton');
+    if (uploadButton) {
+        console.log('Found upload button, attaching click event');
+        uploadButton.addEventListener('click', function(e) {
+            console.log('Upload button clicked, calling handleFormSubmit');
+            handleFormSubmit(new Event('submit', {
+                bubbles: true,
+                cancelable: true,
+                target: uploadForm
+            }));
+        });
+    } else {
+        console.log('Upload button not found by ID, looking for submit button');
+        const submitButton = document.querySelector('#uploadForm button[type="submit"]');
+        if (submitButton) {
+            console.log('Found submit button, attaching click event');
+            submitButton.addEventListener('click', function() {
+                handleFormSubmit(new Event('submit', {
+                    bubbles: true,
+                    cancelable: true,
+                    target: uploadForm
+                }));
+            });
+        } else {
+            console.log('No buttons found, attaching submit event to form instead');
+            uploadForm.addEventListener('submit', handleFormSubmit);
+        }
+    }
+}
 
-        const projectNameInput = document.getElementById('projectName');
-        const projectName = projectNameInput ? projectNameInput.value.trim() : '';
+// Вынесем функцию обработки отправки формы для лучшей организации кода
+function handleFormSubmit(e) {
+    e.preventDefault();
+    console.log('Form submission intercepted');
+
+    const form = e.target;
+    console.log('Form element:', form);
+    
+    const projectNameInput = document.getElementById('projectName');
+    const projectName = projectNameInput ? projectNameInput.value.trim() : '';
 
     // Client-side validation
     if (projectName) {
@@ -27,7 +63,7 @@ function setupUploadFormHandler() {
         }
     }
 
-    const formData = new FormData(this);
+    const formData = new FormData(form);
     const previewSection = document.getElementById('previewSection');
     const progressDiv = document.getElementById('progress');
     const progressBar = progressDiv.querySelector('.progress-bar');
@@ -41,7 +77,7 @@ function setupUploadFormHandler() {
     progressTitle.textContent = gettext('Uploading CSV...');
 
     // Disable form
-    this.querySelectorAll('input, button').forEach(el => el.disabled = true);
+    form.querySelectorAll('input, button').forEach(el => el.disabled = true);
 
     // Upload CSV and get preview
     fetch('/upload', {
@@ -66,9 +102,14 @@ function setupUploadFormHandler() {
         progressTitle.textContent = gettext('Error: ') + error.message;
         progressBar.classList.add('bg-danger');
         // Re-enable form
-        this.querySelectorAll('input, button').forEach(el => el.disabled = false);
+        const form = document.getElementById('uploadForm');
+        if (form) {
+            form.querySelectorAll('input, button').forEach(el => el.disabled = false);
+        } else {
+            console.error('Cannot find upload form for re-enabling');
+        }
     });
-});
+}
 
 // CSV trimmer variables
 let csvTimeRange = {
