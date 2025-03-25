@@ -1,11 +1,13 @@
 // Функция для загрузки файла
 function setupUploadFormHandler() {
+    console.log('Trying to setup upload form handler');
     const uploadForm = document.getElementById('uploadForm');
     if (!uploadForm) {
         console.error('Upload form not found in the DOM');
         return;
     }
     
+    console.log('Found upload form, attaching event listener');
     uploadForm.addEventListener('submit', function(e) {
         e.preventDefault();
         console.log('Form submission intercepted');
