@@ -364,14 +364,16 @@ function createOrUpdateSpeedChart(speedData) {
                         datasets: [{
                             label: 'Speed (km/h)',
                             data: speeds,
-                            borderColor: 'rgba(75, 192, 192, 1)',
-                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            borderColor: 'rgba(40, 167, 69, 1)', // Bootstrap success color
+                            backgroundColor: 'rgba(40, 167, 69, 0.3)',
                             borderWidth: 2,
                             fill: true,
-                            tension: 0.1,
+                            tension: 0.2, // Немного увеличиваем сглаживание
                             pointRadius: 0, // Скрываем точки для визуальной чистоты
                             pointHoverRadius: 5, // Показываем при наведении
-                            pointHoverBackgroundColor: 'rgba(75, 192, 192, 1)'
+                            pointHoverBackgroundColor: 'rgba(40, 167, 69, 1)',
+                            pointHoverBorderColor: '#fff',
+                            pointHoverBorderWidth: 2
                         }]
                     },
                     options: {
@@ -386,12 +388,27 @@ function createOrUpdateSpeedChart(speedData) {
                                 display: false // Скрываем легенду для экономии места
                             },
                             tooltip: {
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                titleColor: 'rgba(255, 255, 255, 0.9)',
+                                bodyColor: 'rgba(255, 255, 255, 0.9)',
+                                titleFont: {
+                                    weight: 'bold'
+                                },
+                                bodyFont: {
+                                    size: 14
+                                },
+                                padding: 10,
+                                borderColor: 'rgba(255, 255, 255, 0.2)',
+                                borderWidth: 1,
                                 callbacks: {
                                     title: function(tooltipItems) {
                                         return new Date(tooltipItems[0].parsed.x).toLocaleString();
                                     },
                                     label: function(context) {
                                         return `Speed: ${context.parsed.y.toFixed(1)} km/h`;
+                                    },
+                                    labelTextColor: function() {
+                                        return '#28a745'; // Bootstrap success color
                                     }
                                 }
                             },
@@ -406,7 +423,8 @@ function createOrUpdateSpeedChart(speedData) {
                                     unit: 'minute',
                                     displayFormats: {
                                         minute: 'HH:mm'
-                                    }
+                                    },
+                                    tooltipFormat: 'HH:mm:ss'
                                 },
                                 grid: {
                                     display: true,
@@ -414,6 +432,11 @@ function createOrUpdateSpeedChart(speedData) {
                                 },
                                 title: {
                                     display: false // Скрываем заголовок для экономии места
+                                },
+                                ticks: {
+                                    autoSkip: true,
+                                    maxTicksLimit: 8, // Ограничиваем число отметок времени
+                                    color: 'rgba(255, 255, 255, 0.7)' // Более яркий цвет текста
                                 }
                             },
                             y: {
@@ -425,7 +448,11 @@ function createOrUpdateSpeedChart(speedData) {
                                 },
                                 ticks: {
                                     // Показываем меньше делений на оси для чистоты
-                                    maxTicksLimit: 5
+                                    maxTicksLimit: 5,
+                                    callback: function(value) {
+                                        return value + ' km/h'; // Добавляем единицы измерения
+                                    },
+                                    color: 'rgba(255, 255, 255, 0.7)' // Более яркий цвет текста
                                 },
                                 title: {
                                     display: false // Скрываем заголовок для экономии места
@@ -566,15 +593,19 @@ function updateChartSelection() {
         console.log('Chart x-axis range:', new Date(scaleMin).toLocaleTimeString(), 'to', new Date(scaleMax).toLocaleTimeString());
         console.log('Setting annotation from', new Date(xMin).toLocaleTimeString(), 'to', new Date(xMax).toLocaleTimeString());
         
-        // Create annotation configuration
+        // Format times for annotations
+        const startTime = new Date(xMin).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        const endTime = new Date(xMax).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+        // Create annotation configuration with improved visuals
         const annotationConfig = {
             annotations: {
                 box1: {
                     type: 'box',
                     xMin: xMin,
                     xMax: xMax,
-                    backgroundColor: 'rgba(75, 192, 192, 0.3)',
-                    borderColor: 'rgba(75, 192, 192, 0.8)',
+                    backgroundColor: 'rgba(40, 167, 69, 0.3)', // Bootstrap success color with transparency
+                    borderColor: 'rgba(40, 167, 69, 0.8)',
                     borderWidth: 1,
                     drawTime: 'beforeDatasetsDraw'
                 },
@@ -582,34 +613,40 @@ function updateChartSelection() {
                     type: 'line',
                     xMin: xMin,
                     xMax: xMin,
-                    borderColor: 'rgba(255, 255, 255, 0.8)',
+                    borderColor: 'rgba(255, 255, 255, 0.9)',
                     borderWidth: 2,
                     borderDash: [5, 5],
                     label: {
                         display: true,
-                        content: 'Start',
+                        content: `Start: ${startTime}`,
                         position: 'start',
-                        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                        color: '#ffffff',
                         font: {
-                            size: 10
-                        }
+                            size: 11,
+                            weight: 'bold'
+                        },
+                        padding: 5
                     }
                 },
                 endLine: {
                     type: 'line',
                     xMin: xMax,
                     xMax: xMax,
-                    borderColor: 'rgba(255, 255, 255, 0.8)',
+                    borderColor: 'rgba(255, 255, 255, 0.9)',
                     borderWidth: 2,
                     borderDash: [5, 5],
                     label: {
                         display: true,
-                        content: 'End',
+                        content: `End: ${endTime}`,
                         position: 'end',
-                        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                        color: '#ffffff',
                         font: {
-                            size: 10
-                        }
+                            size: 11,
+                            weight: 'bold'
+                        },
+                        padding: 5
                     }
                 }
             }
