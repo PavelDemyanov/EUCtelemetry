@@ -1,8 +1,17 @@
-document.getElementById('uploadForm').addEventListener('submit', function(e) {
-    e.preventDefault();
+// Функция для загрузки файла
+function setupUploadFormHandler() {
+    const uploadForm = document.getElementById('uploadForm');
+    if (!uploadForm) {
+        console.error('Upload form not found in the DOM');
+        return;
+    }
+    
+    uploadForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        console.log('Form submission intercepted');
 
-    const projectNameInput = document.getElementById('projectName');
-    const projectName = projectNameInput.value.trim();
+        const projectNameInput = document.getElementById('projectName');
+        const projectName = projectNameInput ? projectNameInput.value.trim() : '';
 
     // Client-side validation
     if (projectName) {
@@ -1000,18 +1009,33 @@ document.getElementById('updatePreviewButton')?.addEventListener('click', functi
 
 // Wait for checkbox values to be updated when loading page
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM fully loaded, initializing form handlers');
+    
+    // Инициализация обработчика формы загрузки
+    setupUploadFormHandler();
+    
     // Default checkbox values
-    document.getElementById('showSpeed').checked = false;
-    document.getElementById('showMaxSpeed').checked = true;
-    document.getElementById('showVoltage').checked = true;
-    document.getElementById('showTemp').checked = true;
-    document.getElementById('showBattery').checked = true;
-    document.getElementById('showMileage').checked = true;
-    document.getElementById('showPWM').checked = false;
-    document.getElementById('showPower').checked = true;
-    document.getElementById('showCurrent').checked = false;
-    document.getElementById('showGPS').checked = false;
-    document.getElementById('showBottomElements').checked = true;
+    const checkboxes = {
+        'showSpeed': false,
+        'showMaxSpeed': true,
+        'showVoltage': true,
+        'showTemp': true,
+        'showBattery': true,
+        'showMileage': true,
+        'showPWM': false,
+        'showPower': true,
+        'showCurrent': false,
+        'showGPS': false,
+        'showBottomElements': true
+    };
+    
+    // Установка значений чекбоксов с проверкой на существование элементов
+    Object.keys(checkboxes).forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.checked = checkboxes[id];
+        }
+    });
     
     // Set up checkbox listeners for preview updates
     document.querySelectorAll('.form-check-input').forEach(checkbox => {
