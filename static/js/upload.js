@@ -1,32 +1,104 @@
 // Функция для загрузки файла
 function setupUploadFormHandler() {
-    console.log('Trying to setup upload form handler');
+    console.log('[DEBUG] Trying to setup upload form handler');
     const uploadForm = document.getElementById('uploadForm');
     if (!uploadForm) {
-        console.error('Upload form not found in the DOM');
+        console.error('[ERROR] Upload form not found in the DOM');
         return;
     }
     
-    console.log('Found upload form, attaching event listener');
+    console.log('[DEBUG] Found upload form:', uploadForm);
     
-    // Добавляем слушатель на кнопку "Upload" внутри формы
+    // Дамп всех кнопок и полей формы для отладки
+    const formElements = uploadForm.elements;
+    console.log('[DEBUG] Form elements:', formElements);
+    
+    const allButtons = uploadForm.querySelectorAll('button');
+    console.log('[DEBUG] All form buttons:', allButtons);
+    
+    const allInputs = uploadForm.querySelectorAll('input');
+    console.log('[DEBUG] All form inputs:', allInputs);
+    
+    // Находим кнопку загрузки
     const uploadButton = document.getElementById('uploadButton');
     if (uploadButton) {
-        console.log('Found upload button, attaching click event');
-        uploadButton.addEventListener('click', function(e) {
-            console.log('Upload button clicked, calling handleFormSubmit');
-            handleFormSubmit(new Event('submit', {
-                bubbles: true,
-                cancelable: true,
-                target: uploadForm
-            }));
+        console.log('[DEBUG] Found upload button by ID:', uploadButton);
+        
+        // Удаляем существующие обработчики событий
+        const newUploadButton = uploadButton.cloneNode(true);
+        uploadButton.parentNode.replaceChild(newUploadButton, uploadButton);
+        
+        // Добавляем новый обработчик
+        newUploadButton.addEventListener('click', function(e) {
+            e.preventDefault(); // Предотвращаем стандартное поведение
+            e.stopPropagation(); // Предотвращаем всплытие события
+            console.log('[DEBUG] Upload button clicked');
+            
+            // Проверяем форму перед отправкой
+            const fileInput = document.getElementById('csvFile');
+            if (fileInput && fileInput.files.length > 0) {
+                console.log('[DEBUG] File selected:', fileInput.files[0].name);
+                
+                // Создаем новый FormData и заполняем его
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                
+                const projectNameInput = document.getElementById('projectName');
+                if (projectNameInput) {
+                    formData.append('project_name', projectNameInput.value.trim());
+                }
+                
+                // Показываем прогресс
+                const progressDiv = document.getElementById('progress');
+                const progressBar = progressDiv.querySelector('.progress-bar');
+                const progressTitle = document.getElementById('progressTitle');
+                
+                progressDiv.classList.remove('d-none');
+                progressTitle.textContent = gettext('Uploading CSV...');
+                progressBar.style.width = '0%';
+                progressBar.textContent = '0%';
+                
+                // Отправляем запрос
+                console.log('[DEBUG] Sending upload request...');
+                fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    console.log('[DEBUG] Upload response received:', response);
+                    if (!response.ok) {
+                        throw new Error(gettext('Upload failed'));
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('[DEBUG] Upload successful, data:', data);
+                    if (data.error) throw new Error(data.error);
+                    
+                    const projectId = data.project_id;
+                    console.log('[DEBUG] Project ID:', projectId);
+                    
+                    // Обновляем предпросмотр
+                    updatePreview(projectId);
+                })
+                .catch(error => {
+                    console.error('[ERROR] Upload failed:', error);
+                    progressTitle.textContent = gettext('Error: ') + error.message;
+                    progressBar.classList.add('bg-danger');
+                });
+            } else {
+                console.error('[ERROR] No file selected');
+                alert(gettext('Please select a CSV file.'));
+            }
         });
     } else {
-        console.log('Upload button not found by ID, looking for submit button');
+        console.warn('[WARN] Upload button not found by ID, looking for submit button');
         const submitButton = document.querySelector('#uploadForm button[type="submit"]');
         if (submitButton) {
-            console.log('Found submit button, attaching click event');
-            submitButton.addEventListener('click', function() {
+            console.log('[DEBUG] Found submit button:', submitButton);
+            submitButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('[DEBUG] Submit button clicked');
                 handleFormSubmit(new Event('submit', {
                     bubbles: true,
                     cancelable: true,
@@ -34,8 +106,11 @@ function setupUploadFormHandler() {
                 }));
             });
         } else {
-            console.log('No buttons found, attaching submit event to form instead');
-            uploadForm.addEventListener('submit', handleFormSubmit);
+            console.warn('[WARN] No buttons found, attaching submit event to form instead');
+            uploadForm.addEventListener('submit', function(e) {
+                console.log('[DEBUG] Form submit event fired');
+                handleFormSubmit(e);
+            });
         }
     }
 }
