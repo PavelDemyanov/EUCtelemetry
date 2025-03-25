@@ -882,13 +882,24 @@ def get_csv_timerange(project_id):
         # Count total rows
         total_rows = len(df)
         
+        # Extract speed data for the timeline chart
+        # Sample down data if too many points to keep response size reasonable
+        max_points = 500  # Maximum number of data points to return
+        if len(df) > max_points:
+            # Sample data evenly across the time range
+            sample_indices = np.linspace(0, len(df) - 1, max_points, dtype=int)
+            speed_data = [{"timestamp": float(df.iloc[i]['timestamp']), "speed": float(df.iloc[i]['speed'])} for i in sample_indices]
+        else:
+            speed_data = [{"timestamp": float(row['timestamp']), "speed": float(row['speed'])} for _, row in df.iterrows()]
+        
         return jsonify({
             'success': True, 
             'min_timestamp': min_timestamp,
             'max_timestamp': max_timestamp,
             'min_date': min_date,
             'max_date': max_date,
-            'total_rows': total_rows
+            'total_rows': total_rows,
+            'speed_data': speed_data
         })
         
     except Exception as e:
@@ -966,18 +977,30 @@ def trim_csv(project_id):
         
         # Get updated time range
         import pandas as pd
+        import numpy as np
         processed_csv_path = os.path.join('processed_data', f'project_{project.folder_number}_{os.path.basename(project.csv_file)}')
         df = pd.read_csv(processed_csv_path)
         min_timestamp = float(df['timestamp'].min())
         max_timestamp = float(df['timestamp'].max())
         total_rows = len(df)
         
+        # Extract speed data for the timeline chart
+        # Sample down data if too many points to keep response size reasonable
+        max_points = 500  # Maximum number of data points to return
+        if len(df) > max_points:
+            # Sample data evenly across the time range
+            sample_indices = np.linspace(0, len(df) - 1, max_points, dtype=int)
+            speed_data = [{"timestamp": float(df.iloc[i]['timestamp']), "speed": float(df.iloc[i]['speed'])} for i in sample_indices]
+        else:
+            speed_data = [{"timestamp": float(row['timestamp']), "speed": float(row['speed'])} for _, row in df.iterrows()]
+        
         return jsonify({
             'success': True, 
             'preview_url': url_for('serve_preview', filename=f'{project.id}_preview.png'),
             'min_timestamp': min_timestamp,
             'max_timestamp': max_timestamp,
-            'total_rows': total_rows
+            'total_rows': total_rows,
+            'speed_data': speed_data
         })
         
     except Exception as e:
