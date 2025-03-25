@@ -218,28 +218,61 @@ function createOrUpdateSpeedChart(speedData) {
 
 // Function to update chart highlights based on selected range
 function updateChartSelection() {
-    if (!speedChart) return;
+    console.log('updateChartSelection called');
+    if (!speedChart) {
+        console.warn('Speed chart not available, cannot update selection');
+        return;
+    }
     
-    // Calculate percentages for positioning
-    const totalRange = csvTimeRange.max - csvTimeRange.min;
-    const startPercent = ((csvTimeRange.start - csvTimeRange.min) / totalRange);
-    const endPercent = ((csvTimeRange.end - csvTimeRange.min) / totalRange);
-    
-    // Highlight selected area in chart
-    speedChart.options.plugins.annotation = {
-        annotations: {
-            box1: {
-                type: 'box',
-                xMin: speedChart.scales.x.min + (speedChart.scales.x.max - speedChart.scales.x.min) * startPercent,
-                xMax: speedChart.scales.x.min + (speedChart.scales.x.max - speedChart.scales.x.min) * endPercent,
-                backgroundColor: 'rgba(75, 192, 192, 0.3)',
-                borderColor: 'rgba(75, 192, 192, 0.8)',
-                borderWidth: 1
-            }
+    try {
+        // Calculate percentages for positioning
+        const totalRange = csvTimeRange.max - csvTimeRange.min;
+        if (totalRange === 0) {
+            console.warn('Total time range is zero, cannot update chart selection');
+            return;
         }
-    };
-    
-    speedChart.update();
+        
+        const startPercent = ((csvTimeRange.start - csvTimeRange.min) / totalRange);
+        const endPercent = ((csvTimeRange.end - csvTimeRange.min) / totalRange);
+        
+        console.log('Updating chart selection from', startPercent, 'to', endPercent);
+        
+        // Get the chart's time scale min and max values
+        if (!speedChart.scales || !speedChart.scales.x) {
+            console.error('Chart scales not available');
+            return;
+        }
+        
+        const scaleMin = speedChart.scales.x.min;
+        const scaleMax = speedChart.scales.x.max;
+        const rangeWidth = scaleMax - scaleMin;
+        
+        // Calculate annotation positions
+        const xMin = scaleMin + (rangeWidth * startPercent);
+        const xMax = scaleMin + (rangeWidth * endPercent);
+        
+        console.log('Chart x-axis range:', scaleMin, 'to', scaleMax);
+        console.log('Setting annotation from', xMin, 'to', xMax);
+        
+        // Highlight selected area in chart
+        speedChart.options.plugins.annotation = {
+            annotations: {
+                box1: {
+                    type: 'box',
+                    xMin: xMin,
+                    xMax: xMax,
+                    backgroundColor: 'rgba(75, 192, 192, 0.3)',
+                    borderColor: 'rgba(75, 192, 192, 0.8)',
+                    borderWidth: 1
+                }
+            }
+        };
+        
+        speedChart.update();
+        console.log('Chart updated with new selection');
+    } catch (error) {
+        console.error('Error updating chart selection:', error);
+    }
 }
 
 function initCsvTrimmer(projectId) {
