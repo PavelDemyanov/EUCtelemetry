@@ -116,7 +116,7 @@ function createOrUpdateSpeedChart(speedData) {
     
     try {
         // Find the canvas element
-        const canvas = document.getElementById('speedChart');
+        let canvas = document.getElementById('speedChart');
         if (!canvas) {
             console.error('Cannot find canvas element with id "speedChart"');
             
@@ -124,10 +124,29 @@ function createOrUpdateSpeedChart(speedData) {
             const container = document.getElementById('speedChartContainer');
             if (container) {
                 console.log('Parent container exists, visibility:', getComputedStyle(container).display);
+                
+                // Ensure the container is visible and has proper dimensions
+                container.style.display = 'block';
+                container.style.height = '100px';
+                console.log('Set container to display:block with height 100px');
+                
+                // Try to create canvas dynamically
+                const newCanvas = document.createElement('canvas');
+                newCanvas.id = 'speedChart';
+                container.innerHTML = ''; // Clear any existing content
+                container.appendChild(newCanvas);
+                console.log('Created new canvas element dynamically');
+                
+                // Get the newly created canvas
+                canvas = document.getElementById('speedChart');
+                if (!canvas) {
+                    console.error('Failed to create canvas element');
+                    return;
+                }
             } else {
                 console.error('Parent container #speedChartContainer not found');
+                return;
             }
-            return;
         }
         
         // Get canvas context
@@ -292,43 +311,73 @@ function createOrUpdateSpeedChart(speedData) {
 // Function to update chart highlights based on selected range
 function updateChartSelection() {
     console.log('updateChartSelection called');
+    
+    // Ensure the chart exists
     if (!speedChart) {
         console.warn('Speed chart not available, cannot update selection');
         return;
     }
     
     try {
+        // Make sure time range is valid
+        if (!csvTimeRange || typeof csvTimeRange.min !== 'number' || typeof csvTimeRange.max !== 'number' ||
+            typeof csvTimeRange.start !== 'number' || typeof csvTimeRange.end !== 'number') {
+            console.error('Invalid time range data:', csvTimeRange);
+            return;
+        }
+        
         // Calculate percentages for positioning
         const totalRange = csvTimeRange.max - csvTimeRange.min;
-        if (totalRange === 0) {
-            console.warn('Total time range is zero, cannot update chart selection');
+        if (totalRange <= 0) {
+            console.warn('Invalid time range (max <= min), cannot update chart selection');
             return;
         }
         
-        const startPercent = ((csvTimeRange.start - csvTimeRange.min) / totalRange);
-        const endPercent = ((csvTimeRange.end - csvTimeRange.min) / totalRange);
+        // Calculate selection percentages
+        const startPercent = Math.max(0, Math.min(1, (csvTimeRange.start - csvTimeRange.min) / totalRange));
+        const endPercent = Math.max(0, Math.min(1, (csvTimeRange.end - csvTimeRange.min) / totalRange));
         
-        console.log('Updating chart selection from', startPercent, 'to', endPercent);
+        if (isNaN(startPercent) || isNaN(endPercent)) {
+            console.error('Invalid percentage calculation:', {
+                start: csvTimeRange.start,
+                end: csvTimeRange.end,
+                min: csvTimeRange.min,
+                max: csvTimeRange.max,
+                startPercent: startPercent,
+                endPercent: endPercent
+            });
+            return;
+        }
         
-        // Get the chart's time scale min and max values
+        console.log('Updating chart selection from', startPercent.toFixed(2), 'to', endPercent.toFixed(2));
+        
+        // Ensure chart has initialized scales
         if (!speedChart.scales || !speedChart.scales.x) {
-            console.error('Chart scales not available');
+            console.warn('Chart scales not yet available, trying again in 100ms');
+            setTimeout(updateChartSelection, 100);
             return;
         }
         
+        // Get axis scale values
         const scaleMin = speedChart.scales.x.min;
         const scaleMax = speedChart.scales.x.max;
+        
+        if (typeof scaleMin !== 'number' || typeof scaleMax !== 'number' || scaleMin >= scaleMax) {
+            console.error('Invalid chart scale range:', { min: scaleMin, max: scaleMax });
+            return;
+        }
+        
         const rangeWidth = scaleMax - scaleMin;
         
         // Calculate annotation positions
         const xMin = scaleMin + (rangeWidth * startPercent);
         const xMax = scaleMin + (rangeWidth * endPercent);
         
-        console.log('Chart x-axis range:', scaleMin, 'to', scaleMax);
-        console.log('Setting annotation from', xMin, 'to', xMax);
+        console.log('Chart x-axis range:', new Date(scaleMin).toLocaleTimeString(), 'to', new Date(scaleMax).toLocaleTimeString());
+        console.log('Setting annotation from', new Date(xMin).toLocaleTimeString(), 'to', new Date(xMax).toLocaleTimeString());
         
-        // Highlight selected area in chart
-        speedChart.options.plugins.annotation = {
+        // Create annotation configuration
+        const annotationConfig = {
             annotations: {
                 box1: {
                     type: 'box',
@@ -341,19 +390,70 @@ function updateChartSelection() {
             }
         };
         
-        speedChart.update();
-        console.log('Chart updated with new selection');
+        // Apply annotation to chart
+        if (speedChart.options && speedChart.options.plugins) {
+            speedChart.options.plugins.annotation = annotationConfig;
+            
+            // Update chart to reflect new annotation
+            speedChart.update('none');  // 'none' option for minimal animation
+            console.log('Chart updated with new selection');
+        } else {
+            console.error('Chart options or plugins not available');
+        }
     } catch (error) {
         console.error('Error updating chart selection:', error);
+        console.error('Error stack:', error.stack);
     }
 }
 
 function initCsvTrimmer(projectId) {
     console.log('Initializing CSV trimmer for project ID:', projectId);
     
+    if (!projectId) {
+        console.error('No project ID provided to initCsvTrimmer');
+        return;
+    }
+    
+    // Убедимся, что все нужные элементы UI существуют
+    const requiredElements = [
+        { id: 'csvTrimmerCard', name: 'CSV Trimmer Card' },
+        { id: 'csvTrimmerContent', name: 'CSV Trimmer Content' },
+        { id: 'timelineBackground', name: 'Timeline Background' },
+        { id: 'timelineSelected', name: 'Timeline Selected Area' },
+        { id: 'startHandle', name: 'Start Handle' },
+        { id: 'endHandle', name: 'End Handle' },
+        { id: 'startTimeDisplay', name: 'Start Time Display' },
+        { id: 'endTimeDisplay', name: 'End Time Display' },
+        { id: 'totalRecordsInfo', name: 'Total Records Info' },
+        { id: 'speedChartContainer', name: 'Speed Chart Container' },
+        { id: 'trimCsvButton', name: 'Trim CSV Button' }
+    ];
+    
+    const missingElements = [];
+    requiredElements.forEach(element => {
+        if (!document.getElementById(element.id)) {
+            missingElements.push(element.name);
+        }
+    });
+    
+    if (missingElements.length > 0) {
+        console.error('Missing UI elements:', missingElements.join(', '));
+        // Продолжаем выполнение, может быть элементы добавятся динамически
+    }
+    
+    // Показываем индикатор загрузки на контейнере графика
+    const chartContainer = document.getElementById('speedChartContainer');
+    if (chartContainer) {
+        chartContainer.innerHTML = '<div class="text-center my-3"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><div class="mt-2">Loading chart data...</div></div>';
+    }
+    
+    // Запрашиваем данные для графика с сервера
     fetch(`/get_csv_timerange/${projectId}`)
         .then(response => {
             console.log('CSV timerange response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+            }
             return response.json();
         })
         .then(data => {
@@ -362,55 +462,79 @@ function initCsvTrimmer(projectId) {
                 throw new Error(data.error);
             }
             
+            // Проверяем корректность данных
+            if (!data.min_timestamp || !data.max_timestamp || !data.total_rows) {
+                console.error('Invalid data received:', data);
+                throw new Error('Invalid data received from server');
+            }
+            
             console.log('CSV timerange data received:', data);
             
-            // Store time range data
+            // Сохраняем диапазон времени
             csvTimeRange.min = data.min_timestamp;
             csvTimeRange.max = data.max_timestamp;
             csvTimeRange.start = data.min_timestamp;
             csvTimeRange.end = data.max_timestamp;
             csvTimeRange.totalRows = data.total_rows;
             
-            // Update UI elements
-            document.getElementById('totalRecordsInfo').textContent = data.total_rows.toLocaleString();
-            
-            // Make the trimmer card visible
-            const csvTrimmerCard = document.getElementById('csvTrimmerCard');
-            csvTrimmerCard.classList.remove('d-none');
-            console.log('CSV trimmer card is now visible');
-            
-            // Expand the trimmer content for better visibility
-            const trimmerContent = document.getElementById('csvTrimmerContent');
-            if (trimmerContent && trimmerContent.classList.contains('collapse')) {
-                // Use Bootstrap API to show the collapsed content if bootstrap is available
-                if (typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
-                    const bsCollapse = new bootstrap.Collapse(trimmerContent);
-                    console.log('Expanded trimmer content using Bootstrap API');
-                } else {
-                    // Manual fallback
-                    trimmerContent.classList.add('show');
-                    console.log('Expanded trimmer content manually');
-                }
+            // Обновляем информацию о количестве записей
+            const totalRecordsInfo = document.getElementById('totalRecordsInfo');
+            if (totalRecordsInfo) {
+                totalRecordsInfo.textContent = data.total_rows.toLocaleString();
             }
             
-            // Store speed data for the chart
-            if (data.speed_data) {
+            // Делаем карточку триммера видимой
+            const csvTrimmerCard = document.getElementById('csvTrimmerCard');
+            if (csvTrimmerCard) {
+                csvTrimmerCard.classList.remove('d-none');
+                console.log('CSV trimmer card is now visible');
+                
+                // Раскрываем содержимое триммера для лучшей видимости
+                const trimmerContent = document.getElementById('csvTrimmerContent');
+                if (trimmerContent && trimmerContent.classList.contains('collapse')) {
+                    // Используем Bootstrap API если доступен
+                    if (typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
+                        const bsCollapse = new bootstrap.Collapse(trimmerContent);
+                        console.log('Expanded trimmer content using Bootstrap API');
+                    } else {
+                        // Ручной фолбэк
+                        trimmerContent.classList.add('show');
+                        console.log('Expanded trimmer content manually');
+                    }
+                }
+            } else {
+                console.error('CSV trimmer card element not found');
+            }
+            
+            // Сохраняем данные о скорости и создаем график
+            if (data.speed_data && data.speed_data.length > 0) {
+                console.log(`Received ${data.speed_data.length} speed data points`);
                 speedData = data.speed_data;
-                // Create or update the speed chart
+                // Создаем или обновляем график скорости
                 createOrUpdateSpeedChart(speedData);
             } else {
                 console.error('No speed data received from server');
+                // Показываем сообщение об ошибке в контейнере графика
+                if (chartContainer) {
+                    chartContainer.innerHTML = '<div class="alert alert-warning">No speed data available for this CSV file.</div>';
+                }
             }
             
-            // Initialize trimmer UI
+            // Инициализируем UI триммера
             updateTrimmerUI();
             
-            // Set up drag handlers for the slider
+            // Настраиваем обработчики событий для слайдера
             setupTrimmerHandlers();
         })
         .catch(error => {
             console.error('Error initializing CSV trimmer:', error);
-            // Keep trimmer hidden if there's an error
+            
+            // Показываем сообщение об ошибке в контейнере графика
+            if (chartContainer) {
+                chartContainer.innerHTML = `<div class="alert alert-danger">Error loading chart data: ${error.message}</div>`;
+            }
+            
+            // При ошибке триммер остается скрытым
         });
 }
 
