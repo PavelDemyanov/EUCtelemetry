@@ -109,7 +109,19 @@ function updateTrimmerUI() {
 
 // Function to create or update the speed chart
 function createOrUpdateSpeedChart(speedData) {
-    const ctx = document.getElementById('speedChart').getContext('2d');
+    console.log('createOrUpdateSpeedChart called with data points:', speedData.length);
+    
+    const canvas = document.getElementById('speedChart');
+    if (!canvas) {
+        console.error('Cannot find canvas element with id "speedChart"');
+        return;
+    }
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+        console.error('Failed to get 2D context from canvas');
+        return;
+    }
     
     // Prepare data for the chart
     const labels = speedData.map(item => new Date(item.timestamp * 1000));
@@ -117,74 +129,91 @@ function createOrUpdateSpeedChart(speedData) {
     
     // Get the max speed for scaling the chart properly
     const maxSpeed = Math.max(...speeds, 0);
+    console.log('Maximum speed value:', maxSpeed);
     
     if (speedChart) {
+        console.log('Updating existing chart');
         // Update existing chart
         speedChart.data.labels = labels;
         speedChart.data.datasets[0].data = speeds;
         speedChart.options.scales.y.suggestedMax = Math.ceil(maxSpeed * 1.1); // Add 10% padding
         speedChart.update();
     } else {
+        console.log('Creating new speed chart');
         // Create new chart
-        speedChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Speed (km/h)',
-                    data: speeds,
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    tooltip: {
-                        callbacks: {
-                            title: function(tooltipItems) {
-                                return new Date(tooltipItems[0].parsed.x).toLocaleString();
-                            }
-                        }
-                    },
-                    annotation: {
-                        annotations: {}
-                    }
+        try {
+            speedChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Speed (km/h)',
+                        data: speeds,
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.1
+                    }]
                 },
-                scales: {
-                    x: {
-                        type: 'time',
-                        time: {
-                            unit: 'minute',
-                            displayFormats: {
-                                minute: 'HH:mm'
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                title: function(tooltipItems) {
+                                    return new Date(tooltipItems[0].parsed.x).toLocaleString();
+                                }
                             }
                         },
-                        title: {
-                            display: true,
-                            text: 'Time'
+                        annotation: {
+                            annotations: {}
                         }
                     },
-                    y: {
-                        beginAtZero: true,
-                        suggestedMax: Math.ceil(maxSpeed * 1.1), // Add 10% padding
-                        title: {
-                            display: true,
-                            text: 'Speed (km/h)'
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'minute',
+                                displayFormats: {
+                                    minute: 'HH:mm'
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Time'
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            suggestedMax: Math.ceil(maxSpeed * 1.1), // Add 10% padding
+                            title: {
+                                display: true,
+                                text: 'Speed (km/h)'
+                            }
                         }
                     }
                 }
-            }
-        });
+            });
+            console.log('Speed chart created successfully');
+        } catch (error) {
+            console.error('Failed to create chart:', error);
+        }
     }
     
     // Update the chart when the selection handles move
-    document.getElementById('startHandle').addEventListener('mousedown', updateChartSelection);
-    document.getElementById('endHandle').addEventListener('mousedown', updateChartSelection);
+    const startHandle = document.getElementById('startHandle');
+    const endHandle = document.getElementById('endHandle');
+    
+    if (startHandle && endHandle) {
+        startHandle.addEventListener('mousedown', updateChartSelection);
+        endHandle.addEventListener('mousedown', updateChartSelection);
+    } else {
+        console.error('Cannot find handle elements:', 
+            startHandle ? 'startHandle OK' : 'startHandle MISSING', 
+            endHandle ? 'endHandle OK' : 'endHandle MISSING');
+    }
 }
 
 // Function to update chart highlights based on selected range
