@@ -57,6 +57,10 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 app.config['WTF_CSRF_ENABLED'] = True
 app.config['BABEL_DEFAULT_LOCALE'] = 'en'
 
+# Session settings
+app.config['SESSION_PERMANENT'] = True
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=180)  # 6 months
+
 # Add Mail configuration
 app.config['MAIL_SERVER'] = os.environ.get('SMTP_SERVER')
 app.config['MAIL_PORT'] = int(os.environ.get('SMTP_PORT', 465))
@@ -393,7 +397,7 @@ def login():
         if not user.is_email_confirmed:
             flash('Please confirm your email address before logging in.')
             return redirect(url_for('login'))
-        login_user(user)
+        login_user(user, remember=True)  # Remember user session for 6 months
         return redirect(url_for('index'))
     return render_template('login.html', form=form)
 
