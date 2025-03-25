@@ -136,8 +136,8 @@ function createOrUpdateSpeedChart(speedData) {
                 
                 // Ensure the container is visible and has proper dimensions
                 container.style.display = 'block';
-                container.style.height = '100px';
-                console.log('Set container to display:block with height 100px');
+                container.style.height = '150px';
+                console.log('Set container to display:block with height 150px');
                 
                 // Try to create canvas dynamically
                 const newCanvas = document.createElement('canvas');
@@ -241,22 +241,35 @@ function createOrUpdateSpeedChart(speedData) {
                             backgroundColor: 'rgba(75, 192, 192, 0.2)',
                             borderWidth: 2,
                             fill: true,
-                            tension: 0.1
+                            tension: 0.1,
+                            pointRadius: 0, // Скрываем точки для визуальной чистоты
+                            pointHoverRadius: 5, // Показываем при наведении
+                            pointHoverBackgroundColor: 'rgba(75, 192, 192, 1)'
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
+                        },
                         plugins: {
+                            legend: {
+                                display: false // Скрываем легенду для экономии места
+                            },
                             tooltip: {
                                 callbacks: {
                                     title: function(tooltipItems) {
                                         return new Date(tooltipItems[0].parsed.x).toLocaleString();
+                                    },
+                                    label: function(context) {
+                                        return `Speed: ${context.parsed.y.toFixed(1)} km/h`;
                                     }
                                 }
                             },
                             annotation: {
-                                annotations: {}
+                                annotations: {} // Аннотации будут добавлены динамически
                             }
                         },
                         scales: {
@@ -268,21 +281,33 @@ function createOrUpdateSpeedChart(speedData) {
                                         minute: 'HH:mm'
                                     }
                                 },
-                                title: {
+                                grid: {
                                     display: true,
-                                    text: 'Time'
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                },
+                                title: {
+                                    display: false // Скрываем заголовок для экономии места
                                 }
                             },
                             y: {
                                 beginAtZero: true,
-                                suggestedMax: Math.ceil(maxSpeed * 1.1), // Add 10% padding
-                                title: {
+                                suggestedMax: Math.ceil(maxSpeed * 1.1), // Добавляем 10% отступа
+                                grid: {
                                     display: true,
-                                    text: 'Speed (km/h)'
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                },
+                                ticks: {
+                                    // Показываем меньше делений на оси для чистоты
+                                    maxTicksLimit: 5
+                                },
+                                title: {
+                                    display: false // Скрываем заголовок для экономии места
                                 }
                             }
+                        },
+                        animation: {
+                            duration: 300 // Быстрая анимация для лучшей производительности
                         }
-                    }
                 });
                 console.log('Speed chart created successfully');
             } catch (error) {
@@ -423,7 +448,42 @@ function updateChartSelection() {
                     xMax: xMax,
                     backgroundColor: 'rgba(75, 192, 192, 0.3)',
                     borderColor: 'rgba(75, 192, 192, 0.8)',
-                    borderWidth: 1
+                    borderWidth: 1,
+                    drawTime: 'beforeDatasetsDraw'
+                },
+                startLine: {
+                    type: 'line',
+                    xMin: xMin,
+                    xMax: xMin,
+                    borderColor: 'rgba(255, 255, 255, 0.8)',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    label: {
+                        display: true,
+                        content: 'Start',
+                        position: 'start',
+                        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                        font: {
+                            size: 10
+                        }
+                    }
+                },
+                endLine: {
+                    type: 'line',
+                    xMin: xMax,
+                    xMax: xMax,
+                    borderColor: 'rgba(255, 255, 255, 0.8)',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    label: {
+                        display: true,
+                        content: 'End',
+                        position: 'end',
+                        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                        font: {
+                            size: 10
+                        }
+                    }
                 }
             }
         };
