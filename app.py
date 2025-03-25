@@ -860,27 +860,51 @@ def get_csv_timerange(project_id):
     try:
         import pandas as pd
         
+        logging.info(f"get_csv_timerange called for project_id: {project_id}")
+        
         project = Project.query.get_or_404(project_id)
         if project.user_id != current_user.id:
+            logging.warning(f"Unauthorized access to project {project_id} by user {current_user.id}")
             return jsonify({'error': 'Unauthorized'}), 403
 
         # Get processed file path
         processed_csv_path = os.path.join('processed_data', f'project_{project.folder_number}_{os.path.basename(project.csv_file)}')
+        logging.info(f"Looking for processed CSV at: {processed_csv_path}")
         
         if not os.path.exists(processed_csv_path):
+            logging.error(f"Processed CSV file not found at: {processed_csv_path}")
             return jsonify({'error': 'Processed CSV file not found'}), 404
         
         # Load the data and get min/max timestamps
+        logging.info(f"Reading CSV file: {processed_csv_path}")
         df = pd.read_csv(processed_csv_path)
+        logging.info(f"CSV loaded successfully, shape: {df.shape}")
+        
+        # Verify required columns exist
+        if 'timestamp' not in df.columns or 'speed' not in df.columns:
+            missing_cols = []
+            if 'timestamp' not in df.columns:
+                missing_cols.append('timestamp')
+            if 'speed' not in df.columns:
+                missing_cols.append('speed')
+            logging.error(f"Required columns missing in CSV: {missing_cols}")
+            return jsonify({'error': f'Required columns missing in CSV: {missing_cols}'}), 400
+        
+        # Log column names for debugging
+        logging.info(f"CSV columns: {list(df.columns)}")
+        
         min_timestamp = float(df['timestamp'].min())
         max_timestamp = float(df['timestamp'].max())
+        logging.info(f"Timestamp range: {min_timestamp} to {max_timestamp}")
         
         # Format timestamps as human-readable date strings
         min_date = datetime.fromtimestamp(min_timestamp).strftime('%Y-%m-%d %H:%M:%S')
         max_date = datetime.fromtimestamp(max_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+        logging.info(f"Date range: {min_date} to {max_date}")
         
         # Count total rows
         total_rows = len(df)
+        logging.info(f"Total rows in CSV: {total_rows}")
         
         # Extract speed data for the timeline chart
         # Sample down data if too many points to keep response size reasonable
@@ -889,10 +913,16 @@ def get_csv_timerange(project_id):
             # Sample data evenly across the time range
             sample_indices = np.linspace(0, len(df) - 1, max_points, dtype=int)
             speed_data = [{"timestamp": float(df.iloc[i]['timestamp']), "speed": float(df.iloc[i]['speed'])} for i in sample_indices]
+            logging.info(f"Sampled down to {len(speed_data)} data points")
         else:
             speed_data = [{"timestamp": float(row['timestamp']), "speed": float(row['speed'])} for _, row in df.iterrows()]
+            logging.info(f"Using all {len(speed_data)} data points")
         
-        return jsonify({
+        # Log a sample of the speed data for debugging
+        if speed_data:
+            logging.info(f"Sample speed data point: {speed_data[0]}")
+        
+        response_data = {
             'success': True, 
             'min_timestamp': min_timestamp,
             'max_timestamp': max_timestamp,
@@ -900,10 +930,15 @@ def get_csv_timerange(project_id):
             'max_date': max_date,
             'total_rows': total_rows,
             'speed_data': speed_data
-        })
+        }
+        
+        logging.info(f"Successfully prepared response with {len(speed_data)} data points")
+        return jsonify(response_data)
         
     except Exception as e:
+        import traceback
         logging.error(f"Error getting CSV time range: {str(e)}")
+        logging.error(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
 

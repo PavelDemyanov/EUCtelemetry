@@ -107,112 +107,185 @@ function updateTrimmerUI() {
     document.getElementById('endTimeDisplay').textContent = formatTimestamp(csvTimeRange.end);
 }
 
+// Global variable to track if chart listeners are initialized to prevent duplicate bindings
+let chartListenersInitialized = false;
+
 // Function to create or update the speed chart
 function createOrUpdateSpeedChart(speedData) {
     console.log('createOrUpdateSpeedChart called with data points:', speedData.length);
     
-    const canvas = document.getElementById('speedChart');
-    if (!canvas) {
-        console.error('Cannot find canvas element with id "speedChart"');
-        return;
-    }
-    
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-        console.error('Failed to get 2D context from canvas');
-        return;
-    }
-    
-    // Prepare data for the chart
-    const labels = speedData.map(item => new Date(item.timestamp * 1000));
-    const speeds = speedData.map(item => item.speed);
-    
-    // Get the max speed for scaling the chart properly
-    const maxSpeed = Math.max(...speeds, 0);
-    console.log('Maximum speed value:', maxSpeed);
-    
-    if (speedChart) {
-        console.log('Updating existing chart');
-        // Update existing chart
-        speedChart.data.labels = labels;
-        speedChart.data.datasets[0].data = speeds;
-        speedChart.options.scales.y.suggestedMax = Math.ceil(maxSpeed * 1.1); // Add 10% padding
-        speedChart.update();
-    } else {
-        console.log('Creating new speed chart');
-        // Create new chart
-        try {
-            speedChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Speed (km/h)',
-                        data: speeds,
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        tooltip: {
-                            callbacks: {
-                                title: function(tooltipItems) {
-                                    return new Date(tooltipItems[0].parsed.x).toLocaleString();
-                                }
-                            }
-                        },
-                        annotation: {
-                            annotations: {}
-                        }
+    try {
+        // Find the canvas element
+        const canvas = document.getElementById('speedChart');
+        if (!canvas) {
+            console.error('Cannot find canvas element with id "speedChart"');
+            
+            // Check if the parent container exists and is visible
+            const container = document.getElementById('speedChartContainer');
+            if (container) {
+                console.log('Parent container exists, visibility:', getComputedStyle(container).display);
+            } else {
+                console.error('Parent container #speedChartContainer not found');
+            }
+            return;
+        }
+        
+        // Get canvas context
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            console.error('Failed to get 2D context from canvas');
+            return;
+        }
+        
+        // Make sure CSV trimmer card is visible
+        const csvTrimmerCard = document.getElementById('csvTrimmerCard');
+        if (csvTrimmerCard) {
+            csvTrimmerCard.classList.remove('d-none');
+            console.log('CSV trimmer card is now visible');
+        }
+        
+        // Expand the trimmer content for better visibility
+        const trimmerContent = document.getElementById('csvTrimmerContent');
+        if (trimmerContent && trimmerContent.classList.contains('collapse')) {
+            // Use Bootstrap API to show the collapsed content if bootstrap is available
+            if (typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
+                const bsCollapse = new bootstrap.Collapse(trimmerContent, {
+                    toggle: true
+                });
+                console.log('Expanded trimmer content using Bootstrap API');
+            } else {
+                // Manual fallback
+                trimmerContent.classList.add('show');
+                console.log('Expanded trimmer content manually');
+            }
+        }
+        
+        // Verify data structure
+        if (!Array.isArray(speedData) || speedData.length === 0) {
+            console.warn('speedData is empty or not an array:', speedData);
+            return;
+        }
+        
+        // Log a sample data point to verify structure
+        console.log('Sample data point:', speedData[0]);
+        
+        // Prepare data for the chart
+        const labels = speedData.map(item => new Date(item.timestamp * 1000));
+        const speeds = speedData.map(item => item.speed);
+        
+        // Get the max speed for scaling the chart properly
+        const maxSpeed = Math.max(...speeds, 0);
+        console.log('Maximum speed value:', maxSpeed);
+        
+        // Make sure Chart.js is available
+        if (typeof Chart === 'undefined') {
+            console.error('Chart.js library not loaded');
+            return;
+        }
+        
+        if (speedChart) {
+            console.log('Updating existing chart');
+            // Update existing chart data
+            speedChart.data.labels = labels;
+            speedChart.data.datasets[0].data = speeds;
+            
+            // Update y-axis scale
+            if (speedChart.options && speedChart.options.scales && speedChart.options.scales.y) {
+                speedChart.options.scales.y.suggestedMax = Math.ceil(maxSpeed * 1.1); // Add 10% padding
+            }
+            
+            // Update the chart
+            speedChart.update();
+            console.log('Chart updated successfully');
+        } else {
+            console.log('Creating new speed chart');
+            // Create new chart
+            try {
+                // Configure chart options
+                speedChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Speed (km/h)',
+                            data: speeds,
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.1
+                        }]
                     },
-                    scales: {
-                        x: {
-                            type: 'time',
-                            time: {
-                                unit: 'minute',
-                                displayFormats: {
-                                    minute: 'HH:mm'
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    title: function(tooltipItems) {
+                                        return new Date(tooltipItems[0].parsed.x).toLocaleString();
+                                    }
                                 }
                             },
-                            title: {
-                                display: true,
-                                text: 'Time'
+                            annotation: {
+                                annotations: {}
                             }
                         },
-                        y: {
-                            beginAtZero: true,
-                            suggestedMax: Math.ceil(maxSpeed * 1.1), // Add 10% padding
-                            title: {
-                                display: true,
-                                text: 'Speed (km/h)'
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    unit: 'minute',
+                                    displayFormats: {
+                                        minute: 'HH:mm'
+                                    }
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Time'
+                                }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                suggestedMax: Math.ceil(maxSpeed * 1.1), // Add 10% padding
+                                title: {
+                                    display: true,
+                                    text: 'Speed (km/h)'
+                                }
                             }
                         }
                     }
-                }
-            });
-            console.log('Speed chart created successfully');
-        } catch (error) {
-            console.error('Failed to create chart:', error);
+                });
+                console.log('Speed chart created successfully');
+            } catch (error) {
+                console.error('Failed to create chart:', error);
+                console.error('Error details:', error.message, error.stack);
+            }
         }
-    }
-    
-    // Update the chart when the selection handles move
-    const startHandle = document.getElementById('startHandle');
-    const endHandle = document.getElementById('endHandle');
-    
-    if (startHandle && endHandle) {
-        startHandle.addEventListener('mousedown', updateChartSelection);
-        endHandle.addEventListener('mousedown', updateChartSelection);
-    } else {
-        console.error('Cannot find handle elements:', 
-            startHandle ? 'startHandle OK' : 'startHandle MISSING', 
-            endHandle ? 'endHandle OK' : 'endHandle MISSING');
+        
+        // Add event listeners to update chart selection when handles move
+        // but only do this once to prevent duplicate listeners
+        if (!chartListenersInitialized) {
+            const startHandle = document.getElementById('startHandle');
+            const endHandle = document.getElementById('endHandle');
+            
+            if (startHandle && endHandle) {
+                console.log('Adding event listeners to slider handles');
+                startHandle.addEventListener('mousedown', updateChartSelection);
+                endHandle.addEventListener('mousedown', updateChartSelection);
+                chartListenersInitialized = true;
+            } else {
+                console.error('Cannot find handle elements:', 
+                    startHandle ? 'startHandle OK' : 'startHandle MISSING', 
+                    endHandle ? 'endHandle OK' : 'endHandle MISSING');
+            }
+            
+            // Call updateChartSelection to initialize chart highlighting
+            setTimeout(updateChartSelection, 100);
+        }
+    } catch (error) {
+        console.error('Unexpected error in createOrUpdateSpeedChart:', error);
+        console.error('Error stack:', error.stack);
     }
 }
 
@@ -298,16 +371,36 @@ function initCsvTrimmer(projectId) {
             csvTimeRange.end = data.max_timestamp;
             csvTimeRange.totalRows = data.total_rows;
             
+            // Update UI elements
+            document.getElementById('totalRecordsInfo').textContent = data.total_rows.toLocaleString();
+            
+            // Make the trimmer card visible
+            const csvTrimmerCard = document.getElementById('csvTrimmerCard');
+            csvTrimmerCard.classList.remove('d-none');
+            console.log('CSV trimmer card is now visible');
+            
+            // Expand the trimmer content for better visibility
+            const trimmerContent = document.getElementById('csvTrimmerContent');
+            if (trimmerContent && trimmerContent.classList.contains('collapse')) {
+                // Use Bootstrap API to show the collapsed content if bootstrap is available
+                if (typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
+                    const bsCollapse = new bootstrap.Collapse(trimmerContent);
+                    console.log('Expanded trimmer content using Bootstrap API');
+                } else {
+                    // Manual fallback
+                    trimmerContent.classList.add('show');
+                    console.log('Expanded trimmer content manually');
+                }
+            }
+            
             // Store speed data for the chart
             if (data.speed_data) {
                 speedData = data.speed_data;
                 // Create or update the speed chart
                 createOrUpdateSpeedChart(speedData);
+            } else {
+                console.error('No speed data received from server');
             }
-            
-            // Update UI elements
-            document.getElementById('totalRecordsInfo').textContent = data.total_rows.toLocaleString();
-            document.getElementById('csvTrimmerCard').classList.remove('d-none');
             
             // Initialize trimmer UI
             updateTrimmerUI();
