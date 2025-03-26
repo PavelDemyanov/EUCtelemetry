@@ -79,7 +79,7 @@ function formatTimestamp(timestamp) {
 
 // Function to update trimmer UI based on current selection
 function updateTrimmerUI() {
-    // Calculate percentages for positioning
+    // Calculate percentages for positioning (для скрытых элементов, которые больше не видны в UI)
     const totalRange = csvTimeRange.max - csvTimeRange.min;
     
     // Prevent division by zero
@@ -93,17 +93,32 @@ function updateTrimmerUI() {
     
     console.log('Updating UI - start%:', startPercent, 'end%:', endPercent);
     
-    // Update handle positions
-    document.getElementById('startHandle').style.left = `${startPercent}%`;
-    document.getElementById('endHandle').style.left = `${endPercent}%`;
+    // Устанавливаем положения скрытых ползунков (для поддержки совместимости)
+    if (document.getElementById('startHandle')) {
+        document.getElementById('startHandle').style.left = `${startPercent}%`;
+    }
     
-    // Update selected area
-    document.getElementById('timelineSelected').style.left = `${startPercent}%`;
-    document.getElementById('timelineSelected').style.width = `${endPercent - startPercent}%`;
+    if (document.getElementById('endHandle')) {
+        document.getElementById('endHandle').style.left = `${endPercent}%`;
+    }
+    
+    // Обновляем скрытую выделенную область (для поддержки совместимости)
+    if (document.getElementById('timelineSelected')) {
+        document.getElementById('timelineSelected').style.left = `${startPercent}%`;
+        document.getElementById('timelineSelected').style.width = `${endPercent - startPercent}%`;
+    }
     
     // Update time displays
-    document.getElementById('startTimeDisplay').textContent = formatTimestamp(csvTimeRange.start);
-    document.getElementById('endTimeDisplay').textContent = formatTimestamp(csvTimeRange.end);
+    const startDisplay = document.getElementById('startTimeDisplay');
+    const endDisplay = document.getElementById('endTimeDisplay');
+    
+    if (startDisplay) {
+        startDisplay.textContent = formatTimestamp(csvTimeRange.start);
+    }
+    
+    if (endDisplay) {
+        endDisplay.textContent = formatTimestamp(csvTimeRange.end);
+    }
     
     // Обновляем график и его маркеры, если он существует
     if (speedChart) {

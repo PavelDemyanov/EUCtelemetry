@@ -175,23 +175,14 @@
                         <div id="csvTrimmerContent" class="collapse">
                             <div class="card-body">
                                 <div class="form-text mb-2">
-                                    {{ _('Use the slider to trim your CSV data. This will reduce file size and video length.') }}
+                                    {{ _('Drag the blue and orange markers on the chart below to trim your CSV data. This will reduce file size and video length.') }}
                                 </div>
-                                <div class="row align-items-center mb-2">
-                                    <div class="col-md-3">
-                                        <span id="startTimeDisplay" class="text-muted">{{ _('Start Time') }}</span>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div id="trimRangeContainer" class="position-relative mt-1 mb-3" style="height: 40px;">
-                                            <div id="timelineBackground" class="w-100 bg-secondary opacity-25" style="height: 24px; border-radius: 3px;"></div>
-                                            <div id="timelineSelected" class="position-absolute bg-success" style="height: 24px; border-radius: 3px; top: 0;"></div>
-                                            <div id="startHandle" class="position-absolute" style="width: 24px; height: 40px; background-color: #0d6efd; border-radius: 3px; top: -8px; cursor: ew-resize;"></div>
-                                            <div id="endHandle" class="position-absolute" style="width: 24px; height: 40px; background-color: #0d6efd; border-radius: 3px; top: -8px; cursor: ew-resize;"></div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <span id="endTimeDisplay" class="text-muted">{{ _('End Time') }}</span>
-                                    </div>
+                                <div id="trimRangeContainer" class="d-none">
+                                    <!-- Скрытый контейнер с элементами для поддержки работы JavaScript -->
+                                    <div id="timelineBackground"></div>
+                                    <div id="timelineSelected"></div>
+                                    <div id="startHandle"></div>
+                                    <div id="endHandle"></div>
                                 </div>
                                 <div class="mb-3">
                                     <!-- Speed Chart -->
@@ -200,14 +191,20 @@
                                     </div>
                                 </div>
                                 <div class="row mb-2">
-                                    <div class="col-md-6">
-                                        <div class="d-flex align-items-center">
+                                    <div class="col-md-7">
+                                        <div class="d-flex align-items-center mb-2">
                                             <span class="me-2">{{ _('Total Records:') }}</span>
                                             <span id="totalRecordsInfo" class="badge bg-info"></span>
                                         </div>
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge bg-primary me-1">{{ _('Start:') }}</span>
+                                            <span id="startTimeDisplay" class="text-muted me-3">--:--:--</span>
+                                            <span class="badge bg-warning me-1">{{ _('End:') }}</span>
+                                            <span id="endTimeDisplay" class="text-muted">--:--:--</span>
+                                        </div>
                                     </div>
-                                    <div class="col-md-6">
-                                        <div class="d-flex justify-content-end">
+                                    <div class="col-md-5">
+                                        <div class="d-flex justify-content-end h-100 align-items-center">
                                             <button type="button" id="trimCsvButton" class="btn btn-success">
                                                 <i class="fas fa-cut me-1"></i> {{ _('Trim Data') }}
                                             </button>
