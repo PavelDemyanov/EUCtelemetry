@@ -267,6 +267,25 @@ function createSpeedChart(timestamps, speedValues, pwmValues) {
                     ctx.lineTo(endX, chartArea.bottom);
                     ctx.stroke();
                     
+                    // Рисуем маркеры-ручки для перетаскивания (круги на конце линий)
+                    // Маркер начала
+                    ctx.beginPath();
+                    ctx.arc(startX, chartArea.bottom - 15, 8, 0, 2 * Math.PI);
+                    ctx.fillStyle = 'rgba(0, 128, 255, 0.9)';
+                    ctx.fill();
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = 'white';
+                    ctx.stroke();
+                    
+                    // Маркер конца
+                    ctx.beginPath();
+                    ctx.arc(endX, chartArea.bottom - 15, 8, 0, 2 * Math.PI);
+                    ctx.fillStyle = 'rgba(255, 128, 0, 0.9)';
+                    ctx.fill();
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = 'white';
+                    ctx.stroke();
+                    
                     // Рисуем метки с временем
                     ctx.fillStyle = 'rgba(0, 128, 255, 0.9)';
                     ctx.fillRect(startX - 50, chartArea.top - 25, 100, 20);
@@ -280,14 +299,165 @@ function createSpeedChart(timestamps, speedValues, pwmValues) {
                     ctx.textAlign = 'center';
                     ctx.fillText(formatTimestamp(csvTimeRange.end), endX, chartArea.top - 12);
                     
+                    // Сохраняем позиции маркеров для использования в обработчике событий мыши
+                    chart.trimMarkers = {
+                        startX: startX,
+                        endX: endX,
+                        startIndex: startIndex,
+                        endIndex: endIndex,
+                        chartArea: chartArea
+                    };
+                    
                     ctx.restore();
                 }
             }
         }]
     };
     
-    // Create and return the chart
+    // Create the chart
     speedChart = new Chart(ctx, config);
+    
+    // Добавляем обработчики для перетаскивания линий непосредственно на графике
+    const chartCanvas = document.getElementById('speed-chart');
+    let isDraggingMarker = false;
+    let activeMarker = null; // 'start' or 'end'
+    
+    // Функция для проверки, находится ли курсор над маркером
+    function isOverMarker(event, chart) {
+        if (!chart.trimMarkers) return false;
+        
+        const rect = chartCanvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        
+        // Проверяем, находится ли указатель мыши рядом с маркером начала
+        const distanceToStart = Math.sqrt(
+            Math.pow(x - chart.trimMarkers.startX, 2) + 
+            Math.pow(y - (chart.trimMarkers.chartArea.bottom - 15), 2)
+        );
+        
+        // Проверяем, находится ли указатель мыши рядом с маркером конца
+        const distanceToEnd = Math.sqrt(
+            Math.pow(x - chart.trimMarkers.endX, 2) + 
+            Math.pow(y - (chart.trimMarkers.chartArea.bottom - 15), 2)
+        );
+        
+        // Визуальный радиус захвата маркера (немного больше, чем размер маркера)
+        const grabRadius = 12;
+        
+        if (distanceToStart <= grabRadius) {
+            return 'start';
+        } else if (distanceToEnd <= grabRadius) {
+            return 'end';
+        }
+        
+        return false;
+    }
+    
+    // Изменяем курсор при наведении на маркеры
+    chartCanvas.addEventListener('mousemove', function(e) {
+        const markerType = isOverMarker(e, speedChart);
+        if (markerType) {
+            this.style.cursor = 'ew-resize'; // Горизонтальный курсор изменения размера
+        } else {
+            this.style.cursor = 'default';
+        }
+        
+        // Если происходит перетаскивание маркера
+        if (isDraggingMarker && activeMarker) {
+            const rect = chartCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            
+            // Находим ближайшую временную метку к текущей позиции X
+            const xScale = speedChart.scales.x;
+            const valueIndex = Math.round(xScale.getValueForPixel(x));
+            
+            if (valueIndex >= 0 && valueIndex < timestamps.length) {
+                const newTimestamp = timestamps[valueIndex];
+                
+                if (activeMarker === 'start' && newTimestamp < csvTimeRange.end) {
+                    csvTimeRange.start = newTimestamp;
+                    updateTrimmerUI();
+                } else if (activeMarker === 'end' && newTimestamp > csvTimeRange.start) {
+                    csvTimeRange.end = newTimestamp;
+                    updateTrimmerUI();
+                }
+            }
+        }
+    });
+    
+    // Начало перетаскивания маркера
+    chartCanvas.addEventListener('mousedown', function(e) {
+        const markerType = isOverMarker(e, speedChart);
+        if (markerType) {
+            isDraggingMarker = true;
+            activeMarker = markerType;
+            e.preventDefault(); // Предотвращаем выделение текста
+        }
+    });
+    
+    // Окончание перетаскивания маркера
+    document.addEventListener('mouseup', function(e) {
+        if (isDraggingMarker) {
+            isDraggingMarker = false;
+            activeMarker = null;
+        }
+    });
+    
+    // Добавляем поддержку сенсорных устройств
+    
+    // Начало касания (аналог mousedown)
+    chartCanvas.addEventListener('touchstart', function(e) {
+        // Эмулируем событие mousedown для проверки маркеров
+        const touch = e.touches[0];
+        const mouseEvent = new MouseEvent('mousedown', {
+            clientX: touch.clientX,
+            clientY: touch.clientY
+        });
+        
+        const markerType = isOverMarker(mouseEvent, speedChart);
+        if (markerType) {
+            isDraggingMarker = true;
+            activeMarker = markerType;
+            e.preventDefault(); // Предотвращаем прокрутку
+        }
+    });
+    
+    // Движение пальца (аналог mousemove)
+    chartCanvas.addEventListener('touchmove', function(e) {
+        if (isDraggingMarker && activeMarker) {
+            const touch = e.touches[0];
+            const rect = chartCanvas.getBoundingClientRect();
+            const x = touch.clientX - rect.left;
+            
+            // Находим ближайшую временную метку к текущей позиции X
+            const xScale = speedChart.scales.x;
+            const valueIndex = Math.round(xScale.getValueForPixel(x));
+            
+            if (valueIndex >= 0 && valueIndex < timestamps.length) {
+                const newTimestamp = timestamps[valueIndex];
+                
+                if (activeMarker === 'start' && newTimestamp < csvTimeRange.end) {
+                    csvTimeRange.start = newTimestamp;
+                    updateTrimmerUI();
+                } else if (activeMarker === 'end' && newTimestamp > csvTimeRange.start) {
+                    csvTimeRange.end = newTimestamp;
+                    updateTrimmerUI();
+                }
+            }
+            
+            e.preventDefault(); // Предотвращаем прокрутку при перетаскивании
+        }
+    });
+    
+    // Окончание касания (аналог mouseup)
+    chartCanvas.addEventListener('touchend', function(e) {
+        if (isDraggingMarker) {
+            isDraggingMarker = false;
+            activeMarker = null;
+        }
+    });
+    
     return speedChart;
 }
 
