@@ -107,7 +107,7 @@ function updateTrimmerUI() {
 }
 
 // Function to create or update the speed chart
-function createSpeedChart(timestamps, speedValues) {
+function createSpeedChart(timestamps, speedValues, pwmValues) {
     const ctx = document.getElementById('speed-chart').getContext('2d');
     
     // Destroy existing chart if it exists
@@ -115,17 +115,39 @@ function createSpeedChart(timestamps, speedValues) {
         speedChart.destroy();
     }
     
-    // Create data for the chart
-    const data = {
-        labels: timestamps.map(ts => new Date(ts * 1000).toLocaleTimeString()),
-        datasets: [{
+    // Datasets for the chart
+    const datasets = [
+        {
             label: gettext('Speed (km/h)'),
             data: speedValues,
             borderColor: 'rgba(75, 192, 192, 1)',
             backgroundColor: 'rgba(75, 192, 192, 0.2)',
             tension: 0.4,
-            fill: true
-        }]
+            fill: true,
+            pointRadius: 0, // Remove individual data points
+            pointHoverRadius: 5 // Show points on hover
+        }
+    ];
+    
+    // Add PWM dataset if available
+    if (pwmValues && pwmValues.length > 0) {
+        datasets.push({
+            label: gettext('PWM'),
+            data: pwmValues,
+            borderColor: 'rgba(255, 99, 132, 1)',
+            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+            tension: 0.4,
+            fill: false,
+            pointRadius: 0, // Remove individual data points
+            pointHoverRadius: 5, // Show points on hover
+            yAxisID: 'y1' // Use secondary Y axis for PWM
+        });
+    }
+    
+    // Create data for the chart
+    const data = {
+        labels: timestamps.map(ts => new Date(ts * 1000).toLocaleTimeString()),
+        datasets: datasets
     };
     
     // Create chart configuration
@@ -170,6 +192,17 @@ function createSpeedChart(timestamps, speedValues) {
                         display: true,
                         text: gettext('Speed (km/h)')
                     }
+                },
+                y1: {
+                    beginAtZero: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: gettext('PWM')
+                    },
+                    grid: {
+                        drawOnChartArea: false // only want the grid lines for the PWM axis
+                    }
                 }
             }
         }
@@ -212,8 +245,12 @@ function initCsvTrimmer(projectId) {
             updateTrimmerUI();
             
             // Create speed chart if we have speed data
-            if (data.speed_data && data.speed_data.timestamps && data.speed_data.speed_values) {
-                createSpeedChart(data.speed_data.timestamps, data.speed_data.speed_values);
+            if (data.chart_data && data.chart_data.timestamps && data.chart_data.speed_values) {
+                createSpeedChart(
+                    data.chart_data.timestamps, 
+                    data.chart_data.speed_values,
+                    data.chart_data.pwm_values
+                );
             }
             
             // Set up drag handlers for the slider
@@ -417,8 +454,12 @@ function setupTrimmerHandlers() {
             document.getElementById('previewImage').src = data.preview_url + '?t=' + new Date().getTime();
             
             // Update speed chart if data is available
-            if (data.speed_data && data.speed_data.timestamps && data.speed_data.speed_values) {
-                createSpeedChart(data.speed_data.timestamps, data.speed_data.speed_values);
+            if (data.chart_data && data.chart_data.timestamps && data.chart_data.speed_values) {
+                createSpeedChart(
+                    data.chart_data.timestamps, 
+                    data.chart_data.speed_values,
+                    data.chart_data.pwm_values
+                );
             }
             
             // Re-enable trim button
