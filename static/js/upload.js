@@ -186,8 +186,8 @@ function createSpeedChart(timestamps, speedValues, pwmValues) {
             plugins: {
                 legend: {
                     display: true,
-                    position: 'top',
-                    align: 'start',
+                    position: 'bottom',
+                    align: 'center',
                     labels: {
                         boxHeight: 12,
                         boxWidth: 12,
@@ -331,18 +331,7 @@ function createSpeedChart(timestamps, speedValues, pwmValues) {
                     ctx.strokeStyle = 'white';
                     ctx.stroke();
                     
-                    // Рисуем метки с временем
-                    ctx.fillStyle = 'rgba(0, 128, 255, 0.9)';
-                    ctx.fillRect(startX - 50, chartArea.top - 25, 100, 20);
-                    ctx.fillStyle = 'white';
-                    ctx.textAlign = 'center';
-                    ctx.fillText(formatTimestamp(csvTimeRange.start), startX, chartArea.top - 12);
-                    
-                    ctx.fillStyle = 'rgba(255, 128, 0, 0.9)';
-                    ctx.fillRect(endX - 50, chartArea.top - 25, 100, 20);
-                    ctx.fillStyle = 'white';
-                    ctx.textAlign = 'center';
-                    ctx.fillText(formatTimestamp(csvTimeRange.end), endX, chartArea.top - 12);
+                    // Удаляем метки с временем
                     
                     // Сохраняем позиции маркеров для использования в обработчике событий мыши
                     chart.trimMarkers = {
