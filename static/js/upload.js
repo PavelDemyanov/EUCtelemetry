@@ -68,6 +68,9 @@ let csvTimeRange = {
     totalRows: 0
 };
 
+// Speed chart variable
+let speedChart = null;
+
 // Function to format timestamp as date string
 function formatTimestamp(timestamp) {
     const date = new Date(timestamp * 1000);
@@ -103,6 +106,80 @@ function updateTrimmerUI() {
     document.getElementById('endTimeDisplay').textContent = formatTimestamp(csvTimeRange.end);
 }
 
+// Function to create or update the speed chart
+function createSpeedChart(timestamps, speedValues) {
+    const ctx = document.getElementById('speed-chart').getContext('2d');
+    
+    // Destroy existing chart if it exists
+    if (speedChart) {
+        speedChart.destroy();
+    }
+    
+    // Create data for the chart
+    const data = {
+        labels: timestamps.map(ts => new Date(ts * 1000).toLocaleTimeString()),
+        datasets: [{
+            label: gettext('Speed (km/h)'),
+            data: speedValues,
+            borderColor: 'rgba(75, 192, 192, 1)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            tension: 0.4,
+            fill: true
+        }]
+    };
+    
+    // Create chart configuration
+    const config = {
+        type: 'line',
+        data: data,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                tooltip: {
+                    callbacks: {
+                        title: function(context) {
+                            const index = context[0].dataIndex;
+                            return formatTimestamp(timestamps[index]);
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        maxTicksLimit: 10,
+                        callback: function(val, index) {
+                            // Show fewer labels for better readability
+                            return index % Math.ceil(timestamps.length / 10) === 0 ? 
+                                this.getLabelForValue(val) : '';
+                        }
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: gettext('Speed (km/h)')
+                    }
+                }
+            }
+        }
+    };
+    
+    // Create and return the chart
+    speedChart = new Chart(ctx, config);
+    return speedChart;
+}
+
 // Function to initialize CSV trimmer after upload
 function initCsvTrimmer(projectId) {
     console.log('Initializing CSV trimmer for project ID:', projectId);
@@ -133,6 +210,11 @@ function initCsvTrimmer(projectId) {
             
             // Initialize trimmer UI
             updateTrimmerUI();
+            
+            // Create speed chart if we have speed data
+            if (data.speed_data && data.speed_data.timestamps && data.speed_data.speed_values) {
+                createSpeedChart(data.speed_data.timestamps, data.speed_data.speed_values);
+            }
             
             // Set up drag handlers for the slider
             setupTrimmerHandlers();
@@ -333,6 +415,11 @@ function setupTrimmerHandlers() {
             
             // Update preview image
             document.getElementById('previewImage').src = data.preview_url + '?t=' + new Date().getTime();
+            
+            // Update speed chart if data is available
+            if (data.speed_data && data.speed_data.timestamps && data.speed_data.speed_values) {
+                createSpeedChart(data.speed_data.timestamps, data.speed_data.speed_values);
+            }
             
             // Re-enable trim button
             this.disabled = false;

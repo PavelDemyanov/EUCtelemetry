@@ -979,12 +979,19 @@ def trim_csv(project_id):
         max_timestamp = float(df['timestamp'].max())
         total_rows = len(df)
         
+        # Get speed data for the chart
+        speed_data = {
+            'timestamps': df['timestamp'].tolist(),
+            'speed_values': df['speed'].tolist()
+        }
+        
         return jsonify({
             'success': True, 
             'preview_url': url_for('serve_preview', filename=f'{project.id}_preview.png'),
             'min_timestamp': min_timestamp,
             'max_timestamp': max_timestamp,
-            'total_rows': total_rows
+            'total_rows': total_rows,
+            'speed_data': speed_data
         })
         
     except Exception as e:
