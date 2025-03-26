@@ -882,10 +882,11 @@ def get_csv_timerange(project_id):
         # Count total rows
         total_rows = len(df)
         
-        # Get speed data for the chart (timestamp and speed values)
-        speed_data = {
+        # Get speed and PWM data for the chart
+        chart_data = {
             'timestamps': df['timestamp'].tolist(),
-            'speed_values': df['speed'].tolist()
+            'speed_values': df['speed'].tolist(),
+            'pwm_values': df['pwm'].tolist()
         }
         
         return jsonify({
