@@ -759,7 +759,9 @@ function setupTrimmerHandlers() {
             const trimDataText = document.getElementById('js-translation-trim-data') ? 
                               document.getElementById('js-translation-trim-data').textContent : 'Trim Data';
             this.innerHTML = '<i class="fas fa-cut me-1"></i> ' + trimDataText;
-            alert(gettext('Error trimming CSV: ') + error.message);
+            const errorTrimmingText = document.getElementById('js-translation-error-trimming') ? 
+                                       document.getElementById('js-translation-error-trimming').textContent : 'Error trimming CSV: ';
+            alert(errorTrimmingText + error.message);
         });
     });
 }
