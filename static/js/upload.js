@@ -287,11 +287,11 @@ function createSpeedChart(timestamps, speedValues, pwmValues) {
                     
                     // Затемняем области за пределами выбранного диапазона
                     // Левая часть (до startX)
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
                     ctx.fillRect(chartArea.left, chartArea.top, startX - chartArea.left, chartArea.bottom - chartArea.top);
                     
                     // Правая часть (после endX)
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
                     ctx.fillRect(endX, chartArea.top, chartArea.right - endX, chartArea.bottom - chartArea.top);
                     
                     // Рисуем вертикальную линию для начала выделения
