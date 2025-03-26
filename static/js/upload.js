@@ -186,7 +186,13 @@ function createSpeedChart(timestamps, speedValues, pwmValues) {
             plugins: {
                 legend: {
                     display: true,
-                    position: 'top'
+                    position: 'top',
+                    align: 'start',
+                    labels: {
+                        boxHeight: 12,
+                        boxWidth: 12,
+                        padding: 10
+                    }
                 },
                 tooltip: {
                     callbacks: {
@@ -261,9 +267,23 @@ function createSpeedChart(timestamps, speedValues, pwmValues) {
                         }
                     }
                     
-                    // Рисуем вертикальную линию для начала выделения
+                    // Расчет координат X для начала и конца выбранного диапазона
                     const startX = xAxis.getPixelForValue(startIndex);
+                    const endX = xAxis.getPixelForValue(endIndex);
+                    
+                    // Сохраняем контекст для восстановления после рисования
                     ctx.save();
+                    
+                    // Затемняем области за пределами выбранного диапазона
+                    // Левая часть (до startX)
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                    ctx.fillRect(chartArea.left, chartArea.top, startX - chartArea.left, chartArea.bottom - chartArea.top);
+                    
+                    // Правая часть (после endX)
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                    ctx.fillRect(endX, chartArea.top, chartArea.right - endX, chartArea.bottom - chartArea.top);
+                    
+                    // Рисуем вертикальную линию для начала выделения
                     ctx.beginPath();
                     ctx.setLineDash([5, 5]); // Пунктирная линия
                     ctx.lineWidth = 2;
@@ -273,7 +293,6 @@ function createSpeedChart(timestamps, speedValues, pwmValues) {
                     ctx.stroke();
                     
                     // Рисуем вертикальную линию для конца выделения
-                    const endX = xAxis.getPixelForValue(endIndex);
                     ctx.beginPath();
                     ctx.setLineDash([5, 5]); // Пунктирная линия
                     ctx.lineWidth = 2;

@@ -196,12 +196,9 @@
                                             <span class="me-2">{{ _('Total Records:') }}</span>
                                             <span id="totalRecordsInfo" class="badge bg-info"></span>
                                         </div>
-                                        <div class="d-flex align-items-center">
-                                            <span class="badge bg-primary me-1">{{ _('Start:') }}</span>
-                                            <span id="startTimeDisplay" class="text-muted me-3">--:--:--</span>
-                                            <span class="badge bg-warning me-1">{{ _('End:') }}</span>
-                                            <span id="endTimeDisplay" class="text-muted">--:--:--</span>
-                                        </div>
+                                        <!-- Скрытые элементы для отображения времени в JavaScript -->
+                                        <span id="startTimeDisplay" class="d-none"></span>
+                                        <span id="endTimeDisplay" class="d-none"></span>
                                     </div>
                                     <div class="col-md-5">
                                         <div class="d-flex justify-content-end h-100 align-items-center">
