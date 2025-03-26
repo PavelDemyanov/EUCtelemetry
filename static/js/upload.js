@@ -192,6 +192,17 @@ function createSpeedChart(timestamps, speedValues, pwmValues) {
                         boxHeight: 12,
                         boxWidth: 12,
                         padding: 10
+                    },
+                    onClick: function(e, legendItem, legend) {
+                        // Получаем индекс элемента легенды
+                        const index = legendItem.datasetIndex;
+                        const ci = legend.chart;
+                        
+                        // Изменяем видимость датасета
+                        ci.data.datasets[index].hidden = !ci.data.datasets[index].hidden;
+                        
+                        // Обновляем график без анимации
+                        ci.update(0); // передаем 0 для отключения анимации
                     }
                 },
                 tooltip: {
@@ -236,7 +247,7 @@ function createSpeedChart(timestamps, speedValues, pwmValues) {
         },
         plugins: [{
             id: 'trimMarkers',
-            beforeDraw: function(chart) {
+            afterDraw: function(chart) {
                 if (csvTimeRange && csvTimeRange.min !== csvTimeRange.max) {
                     const ctx = chart.ctx;
                     const xAxis = chart.scales.x;
@@ -285,18 +296,18 @@ function createSpeedChart(timestamps, speedValues, pwmValues) {
                     
                     // Рисуем вертикальную линию для начала выделения
                     ctx.beginPath();
-                    ctx.setLineDash([5, 5]); // Пунктирная линия
+                    ctx.setLineDash([]); // Сплошная линия
                     ctx.lineWidth = 2;
-                    ctx.strokeStyle = 'rgba(0, 128, 255, 0.7)'; // Синяя линия
+                    ctx.strokeStyle = 'rgba(0, 128, 255, 0.8)'; // Синяя линия
                     ctx.moveTo(startX, chartArea.top);
                     ctx.lineTo(startX, chartArea.bottom);
                     ctx.stroke();
                     
                     // Рисуем вертикальную линию для конца выделения
                     ctx.beginPath();
-                    ctx.setLineDash([5, 5]); // Пунктирная линия
+                    ctx.setLineDash([]); // Сплошная линия
                     ctx.lineWidth = 2;
-                    ctx.strokeStyle = 'rgba(255, 128, 0, 0.7)'; // Оранжевая линия
+                    ctx.strokeStyle = 'rgba(255, 128, 0, 0.8)'; // Оранжевая линия
                     ctx.moveTo(endX, chartArea.top);
                     ctx.lineTo(endX, chartArea.bottom);
                     ctx.stroke();
