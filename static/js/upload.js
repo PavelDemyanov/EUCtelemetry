@@ -104,6 +104,13 @@ function updateTrimmerUI() {
     // Update time displays
     document.getElementById('startTimeDisplay').textContent = formatTimestamp(csvTimeRange.start);
     document.getElementById('endTimeDisplay').textContent = formatTimestamp(csvTimeRange.end);
+    
+    // Обновляем график и его маркеры, если он существует
+    if (speedChart) {
+        // Обновление достаточно просто вызвать update() для перерисовки графика
+        // Наш плагин trimMarkers автоматически получит актуальные значения csvTimeRange
+        speedChart.update();
+    }
 }
 
 // Function to create or update the speed chart
@@ -205,7 +212,78 @@ function createSpeedChart(timestamps, speedValues, pwmValues) {
                     }
                 }
             }
-        }
+        },
+        plugins: [{
+            id: 'trimMarkers',
+            beforeDraw: function(chart) {
+                if (csvTimeRange && csvTimeRange.min !== csvTimeRange.max) {
+                    const ctx = chart.ctx;
+                    const xAxis = chart.scales.x;
+                    const yAxis = chart.scales.y;
+                    const chartArea = chart.chartArea;
+                    
+                    const totalRange = csvTimeRange.max - csvTimeRange.min;
+                    
+                    // Находим ближайшие к точкам обрезки индексы на графике
+                    let startIndex = 0;
+                    let endIndex = timestamps.length - 1;
+                    let minDistance = Number.MAX_VALUE;
+                    
+                    for (let i = 0; i < timestamps.length; i++) {
+                        const distToStart = Math.abs(timestamps[i] - csvTimeRange.start);
+                        if (distToStart < minDistance) {
+                            minDistance = distToStart;
+                            startIndex = i;
+                        }
+                    }
+                    
+                    minDistance = Number.MAX_VALUE;
+                    for (let i = 0; i < timestamps.length; i++) {
+                        const distToEnd = Math.abs(timestamps[i] - csvTimeRange.end);
+                        if (distToEnd < minDistance) {
+                            minDistance = distToEnd;
+                            endIndex = i;
+                        }
+                    }
+                    
+                    // Рисуем вертикальную линию для начала выделения
+                    const startX = xAxis.getPixelForValue(startIndex);
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.setLineDash([5, 5]); // Пунктирная линия
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = 'rgba(0, 128, 255, 0.7)'; // Синяя линия
+                    ctx.moveTo(startX, chartArea.top);
+                    ctx.lineTo(startX, chartArea.bottom);
+                    ctx.stroke();
+                    
+                    // Рисуем вертикальную линию для конца выделения
+                    const endX = xAxis.getPixelForValue(endIndex);
+                    ctx.beginPath();
+                    ctx.setLineDash([5, 5]); // Пунктирная линия
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = 'rgba(255, 128, 0, 0.7)'; // Оранжевая линия
+                    ctx.moveTo(endX, chartArea.top);
+                    ctx.lineTo(endX, chartArea.bottom);
+                    ctx.stroke();
+                    
+                    // Рисуем метки с временем
+                    ctx.fillStyle = 'rgba(0, 128, 255, 0.9)';
+                    ctx.fillRect(startX - 50, chartArea.top - 25, 100, 20);
+                    ctx.fillStyle = 'white';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(formatTimestamp(csvTimeRange.start), startX, chartArea.top - 12);
+                    
+                    ctx.fillStyle = 'rgba(255, 128, 0, 0.9)';
+                    ctx.fillRect(endX - 50, chartArea.top - 25, 100, 20);
+                    ctx.fillStyle = 'white';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(formatTimestamp(csvTimeRange.end), endX, chartArea.top - 12);
+                    
+                    ctx.restore();
+                }
+            }
+        }]
     };
     
     // Create and return the chart
