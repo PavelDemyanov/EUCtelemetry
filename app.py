@@ -979,10 +979,11 @@ def trim_csv(project_id):
         max_timestamp = float(df['timestamp'].max())
         total_rows = len(df)
         
-        # Get speed data for the chart
-        speed_data = {
+        # Get speed and PWM data for the chart
+        chart_data = {
             'timestamps': df['timestamp'].tolist(),
-            'speed_values': df['speed'].tolist()
+            'speed_values': df['speed'].tolist(),
+            'pwm_values': df['pwm'].tolist()
         }
         
         return jsonify({
@@ -991,7 +992,7 @@ def trim_csv(project_id):
             'min_timestamp': min_timestamp,
             'max_timestamp': max_timestamp,
             'total_rows': total_rows,
-            'speed_data': speed_data
+            'chart_data': chart_data
         })
         
     except Exception as e:
