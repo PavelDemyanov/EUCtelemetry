@@ -581,6 +581,36 @@ msgstr "Инициализация..."
 msgid "Preview frame"
 msgstr "Кадр предпросмотра"
 
+msgid "Preset Controls"
+msgstr "Управление пресетами"
+
+msgid "Reset to Defaults"
+msgstr "Сбросить к значениям по умолчанию"
+
+msgid "Save as Preset"
+msgstr "Сохранить как пресет"
+
+msgid "Select a Preset"
+msgstr "Выбрать пресет"
+
+msgid "Delete Preset"
+msgstr "Удалить пресет"
+
+msgid "Trim CSV Data"
+msgstr "Обрезка данных CSV"
+
+msgid "Drag the blue and orange markers on the chart below to trim your CSV data. This will reduce file size and video length."
+msgstr "Перетащите синие и оранжевые маркеры на графике ниже, чтобы обрезать данные CSV. Это уменьшит размер файла и длительность видео."
+
+msgid "Total Records:"
+msgstr "Всего записей:"
+
+msgid "Trim Data"
+msgstr "Обрезать данные"
+
+msgid "Trimming..."
+msgstr "Обрезка..."
+
 msgid "Complete!"
 msgstr "Завершено!"
 
