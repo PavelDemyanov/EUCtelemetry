@@ -676,7 +676,9 @@ function setupTrimmerHandlers() {
         if (!projectId) return;
         
         this.disabled = true;
-        this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> ' + gettext('Trimming...');
+        const trimmingText = document.getElementById('js-translation-trimming') ? 
+                           document.getElementById('js-translation-trimming').textContent : 'Trimming...';
+        this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> ' + trimmingText;
         
         // Get current display settings
         const settings = {
