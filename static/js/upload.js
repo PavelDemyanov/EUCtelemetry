@@ -748,13 +748,17 @@ function setupTrimmerHandlers() {
             
             // Re-enable trim button
             this.disabled = false;
-            this.innerHTML = '<i class="fas fa-cut me-1"></i> ' + gettext('Trim Data');
+            const trimDataText = document.getElementById('js-translation-trim-data') ? 
+                              document.getElementById('js-translation-trim-data').textContent : 'Trim Data';
+            this.innerHTML = '<i class="fas fa-cut me-1"></i> ' + trimDataText;
         })
         .catch(error => {
             console.error('Error trimming CSV:', error);
             // Re-enable trim button
             this.disabled = false;
-            this.innerHTML = '<i class="fas fa-cut me-1"></i> ' + gettext('Trim Data');
+            const trimDataText = document.getElementById('js-translation-trim-data') ? 
+                              document.getElementById('js-translation-trim-data').textContent : 'Trim Data';
+            this.innerHTML = '<i class="fas fa-cut me-1"></i> ' + trimDataText;
             alert(gettext('Error trimming CSV: ') + error.message);
         });
     });
