@@ -52,14 +52,14 @@ document.addEventListener('DOMContentLoaded', function() {
             return '';
         }
         
-        // Задаем минимальное количество меток - 20
+        // Принудительно отображаем метки времени независимо от масштаба
+        // Всегда показываем как минимум 20 меток на полном графике
+        const totalValues = values.length;
         const desiredLabelCount = 20;
+        const stepSize = Math.max(1, Math.floor(totalValues / desiredLabelCount));
         
-        // Определяем интервал для отображения меток
-        let stepSize = Math.max(1, Math.floor(values.length / desiredLabelCount));
-        
-        // Простая логика отображения меток через равные интервалы
-        // Показываем только каждую stepSize-ую метку
+        // Используем фиксированный шаг для отображения меток
+        // независимо от масштаба и границ видимой области
         if (index % stepSize !== 0) {
             return '';
         }
@@ -119,7 +119,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         },
                         ticks: {
                             callback: formatXAxisLabel,
-                            color: '#fff'
+                            color: '#fff',
+                            maxTicksLimit: 20, // Максимальное количество меток (минимум)
+                            autoSkip: false, // Отключаем автоматический пропуск меток
+                            major: {
+                                enabled: true
+                            }
                         },
                         grid: {
                             display: false  // Убираем сетку на фоне графика
