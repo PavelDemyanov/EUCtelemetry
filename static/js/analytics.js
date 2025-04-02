@@ -141,9 +141,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         pan: {
                             enabled: true,
                             mode: 'x',
-                            threshold: 3,
-                            modifierKey: null, // Использовать мышь без модификаторов (Shift, Alt, Ctrl)
-                            speed: 10, // Скорость перемещения
+                            modifierKey: null,
                             onPanStart: function() {
                                 const canvas = document.getElementById('dataChart');
                                 if (canvas) canvas.style.cursor = 'grabbing';
@@ -155,21 +153,15 @@ document.addEventListener('DOMContentLoaded', function() {
                         },
                         zoom: {
                             wheel: {
-                                enabled: true,
-                                speed: 0.1, // Скорость масштабирования при прокрутке
-                                threshold: 2 // Минимальное значение для срабатывания
+                                enabled: true
                             },
                             pinch: {
-                                enabled: true // Включено масштабирование щипком для сенсорных устройств
+                                enabled: true
                             },
                             drag: {
-                                enabled: false // Выключаем масштабирование выделением области
+                                enabled: false
                             },
-                            mode: 'x', // Масштабирование только по оси X
-                            overScaleMode: 'x', // Применять только к оси X
-                            onZoomComplete: function({chart}) {
-                                chart.update('none');
-                            }
+                            mode: 'x'
                         }
                     }
                 },
