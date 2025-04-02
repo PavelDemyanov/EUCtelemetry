@@ -52,18 +52,6 @@ document.addEventListener('DOMContentLoaded', function() {
             return '';
         }
         
-        // Принудительно отображаем метки времени независимо от масштаба
-        // Всегда показываем как минимум 20 меток на полном графике
-        const totalValues = values.length;
-        const desiredLabelCount = 20;
-        const stepSize = Math.max(1, Math.floor(totalValues / desiredLabelCount));
-        
-        // Используем фиксированный шаг для отображения меток
-        // независимо от масштаба и границ видимой области
-        if (index % stepSize !== 0) {
-            return '';
-        }
-        
         // Форматируем метку времени
         const hours = date.getUTCHours().toString().padStart(2, '0');
         const minutes = date.getUTCMinutes().toString().padStart(2, '0');
@@ -120,8 +108,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         ticks: {
                             callback: formatXAxisLabel,
                             color: '#fff',
-                            maxTicksLimit: 20, // Максимальное количество меток (минимум)
-                            autoSkip: false, // Отключаем автоматический пропуск меток
+                            maxTicksLimit: 20, // Фиксированное количество меток независимо от масштаба
+                            autoSkip: true, // Включаем автоматический пропуск меток
+                            autoSkipPadding: 20, // Добавляем отступ между метками
                             major: {
                                 enabled: true
                             }
