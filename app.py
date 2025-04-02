@@ -1558,13 +1558,19 @@ def analytics():
 @login_required
 def analyze_csv():
     """Process a CSV file for analytics and return data for charts"""
+    # Define the gettext function at the beginning to avoid issues
+    gettext = _
+    
     if 'file' not in request.files:
-        return jsonify({'error': _('No file provided')}), 400
+        return jsonify({'error': gettext('No file provided')}), 400
         
     file = request.files['file']
     if file.filename == '':
-        return jsonify({'error': _('No file selected')}), 400
+        return jsonify({'error': gettext('No file selected')}), 400
         
+    temp_dir = None
+    temp_file_path = None
+    
     try:
         # Create a temporary file to store the uploaded CSV
         temp_dir = tempfile.mkdtemp()
@@ -1580,7 +1586,7 @@ def analyze_csv():
                 try:
                     df = pd.read_csv(temp_file_path, encoding='latin1')
                 except UnicodeDecodeError:
-                    return jsonify({'error': _('Invalid file encoding. Please ensure your CSV file is properly encoded.')}), 400
+                    return jsonify({'error': gettext('Invalid file encoding. Please ensure your CSV file is properly encoded.')}), 400
             
             # Detect CSV type
             try:
@@ -1599,7 +1605,7 @@ def analyze_csv():
                 is_wheellog = len(wheellog_columns.intersection(df_columns)) >= len(wheellog_columns) * 0.8
 
                 if not (is_darkness_bot or is_wheellog):
-                    return jsonify({'error': _('Invalid CSV format. Please upload a CSV file from DarknessBot or WheelLog.')}), 400
+                    return jsonify({'error': gettext('Invalid CSV format. Please upload a CSV file from DarknessBot or WheelLog.')}), 400
 
                 csv_type = 'darnkessbot' if is_darkness_bot else 'wheellog'
             
@@ -1608,8 +1614,10 @@ def analyze_csv():
             
             # Convert processed data to a list of dictionaries for JSON serialization
             serializable_data = []
-            if processed_data is not None and not processed_data.empty:
-                # Convert pandas DataFrame to a list of dictionaries and handle non-serializable values
+            
+            # Check if processed_data is a dict or DataFrame and handle accordingly
+            if isinstance(processed_data, pd.DataFrame):
+                # For DataFrame format
                 for _, row in processed_data.iterrows():
                     row_dict = {}
                     for col in processed_data.columns:
@@ -1620,6 +1628,15 @@ def analyze_csv():
                         else:
                             row_dict[col] = float(value) if isinstance(value, (int, float)) else str(value)
                     serializable_data.append(row_dict)
+            elif isinstance(processed_data, dict):
+                # For dictionary format 
+                # Convert dictionary data to a list of records suitable for charting
+                for timestamp, values in processed_data.items():
+                    if isinstance(values, dict):  # If it's a dictionary of values for each timestamp
+                        record = {'timestamp': float(timestamp)}
+                        record.update({k: float(v) if isinstance(v, (int, float)) else (None if pd.isna(v) else str(v)) 
+                                      for k, v in values.items()})
+                        serializable_data.append(record)
             
             # Return the processed data for chart visualization
             return jsonify({
@@ -1630,17 +1647,17 @@ def analyze_csv():
             
         except Exception as e:
             logging.error(f"Error processing CSV file: {str(e)}")
-            return jsonify({'error': _('Error processing CSV file: ') + str(e)}), 400
+            return jsonify({'error': gettext('Error processing CSV file: ') + str(e)}), 400
             
     except Exception as e:
         logging.error(f"Error in analyze_csv: {str(e)}")
-        return jsonify({'error': _('An unexpected error occurred')}), 500
+        return jsonify({'error': gettext('An unexpected error occurred')}), 500
     finally:
         # Clean up temporary files
         try:
-            if 'temp_file_path' in locals() and os.path.exists(temp_file_path):
+            if temp_file_path and os.path.exists(temp_file_path):
                 os.remove(temp_file_path)
-            if 'temp_dir' in locals() and os.path.exists(temp_dir):
+            if temp_dir and os.path.exists(temp_dir):
                 os.rmdir(temp_dir)
         except Exception as e:
             logging.error(f"Error cleaning up temporary files: {str(e)}")

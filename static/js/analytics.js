@@ -250,8 +250,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Store CSV data
-            csvData = JSON.parse(data.csv_data);
-            const csvType = data.csv_type;
+            try {
+                csvData = JSON.parse(data.csv_data);
+                const csvType = data.csv_type;
+                console.log("Data loaded successfully:", csvType);
+            } catch (error) {
+                console.error("JSON parsing error:", error);
+                throw new Error("Error parsing data from server");
+            }
             
             // Populate column selector
             populateColumnSelector(csvData);
