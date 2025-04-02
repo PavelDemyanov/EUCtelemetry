@@ -177,8 +177,69 @@ document.addEventListener('DOMContentLoaded', function() {
                         },
                         position: 'nearest',
                         padding: 10,
-                        caretPadding: 30,  // Отодвигаем tooltip от курсора в 3 раза дальше
-                        yAlign: 'bottom'
+                        caretPadding: 30,  // Отодвигаем tooltip от курсора в 3 раза дальше по вертикали
+                        yAlign: 'bottom',
+                        // Добавляем кастомную функцию позиционирования для смещения вправо
+                        external: function(context) {
+                            // Получаем стандартное позиционирование
+                            const tooltipEl = document.getElementById('chartjs-tooltip') || document.createElement('div');
+                            tooltipEl.id = 'chartjs-tooltip';
+                            tooltipEl.innerHTML = '<table></table>';
+                            
+                            // Применяем стили
+                            const position = context.chart.canvas.getBoundingClientRect();
+                            tooltipEl.style.background = 'rgba(0, 0, 0, 0.7)';
+                            tooltipEl.style.borderRadius = '3px';
+                            tooltipEl.style.color = 'white';
+                            tooltipEl.style.opacity = 1;
+                            tooltipEl.style.pointerEvents = 'none';
+                            tooltipEl.style.position = 'absolute';
+                            tooltipEl.style.transform = 'translate(-50%, 0)';
+                            tooltipEl.style.transition = 'all .1s ease';
+                            
+                            const table = tooltipEl.querySelector('table');
+                            table.style.margin = '0px';
+                            
+                            // Заполняем содержимое
+                            if (context.tooltip.body) {
+                                const titleLines = context.tooltip.title || [];
+                                const bodyLines = context.tooltip.body.map(b => b.lines);
+                                
+                                let innerHtml = '<thead>';
+                                titleLines.forEach(title => {
+                                    innerHtml += '<tr><th>' + title + '</th></tr>';
+                                });
+                                innerHtml += '</thead><tbody>';
+                                
+                                bodyLines.forEach((body, i) => {
+                                    const colors = context.tooltip.labelColors[i];
+                                    let style = 'background:' + colors.backgroundColor;
+                                    style += '; border-color:' + colors.borderColor;
+                                    style += '; border-width: 2px';
+                                    style += '; margin-right: 10px';
+                                    style += '; display: inline-block';
+                                    style += '; width: 10px; height: 10px';
+                                    const span = '<span style="' + style + '"></span>';
+                                    innerHtml += '<tr><td>' + span + body + '</td></tr>';
+                                });
+                                innerHtml += '</tbody>';
+                                table.innerHTML = innerHtml;
+                            }
+                            
+                            // Позиционируем tooltip со смещением вправо на 30px
+                            if (context.tooltip.caretX && context.tooltip.caretY) {
+                                const caretX = context.tooltip.caretX + 30; // Добавляем 30px смещение вправо
+                                const caretY = context.tooltip.caretY;
+                                
+                                tooltipEl.style.left = position.left + window.pageXOffset + caretX + 'px';
+                                tooltipEl.style.top = position.top + window.pageYOffset + caretY + 'px';
+                                tooltipEl.style.padding = context.tooltip.options.padding + 'px ' + context.tooltip.options.padding + 'px';
+                            }
+                            
+                            if (document.body.contains(tooltipEl) === false) {
+                                document.body.appendChild(tooltipEl);
+                            }
+                        }
                     },
                     // Добавляем плагин для отображения вертикальной линии под курсором
                     crosshair: {
