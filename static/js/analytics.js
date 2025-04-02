@@ -55,8 +55,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
             
-            // Константное количество меток - примерно 10 меток для оси X независимо от уровня зума
-            const desiredLabelCount = 10;
+            // Константное количество меток - теперь минимум 20 меток для оси X независимо от уровня зума
+            const desiredLabelCount = 20;  // Увеличено до 20 меток
             const visibleStepSize = Math.max(1, Math.floor(visibleValues.length / desiredLabelCount));
             
             // Определяем, является ли текущая метка видимой на графике
@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } else {
             // Используем простую логику для начального состояния
-            const desiredLabelCount = 10;
+            const desiredLabelCount = 20;  // Увеличено до 20 меток
             const stepSize = Math.max(1, Math.floor(values.length / desiredLabelCount));
             
             if (index % stepSize !== 0) {
@@ -131,7 +131,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             color: '#fff'
                         },
                         grid: {
-                            color: 'rgba(255, 255, 255, 0.1)'
+                            display: false  // Убираем сетку на фоне графика
                         }
                     },
                     y: {
@@ -144,7 +144,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             color: '#fff'
                         },
                         grid: {
-                            color: 'rgba(255, 255, 255, 0.1)'
+                            display: false  // Убираем сетку на фоне графика
                         },
                         beginAtZero: false
                     }
