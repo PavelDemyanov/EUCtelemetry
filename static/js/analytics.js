@@ -39,41 +39,32 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Function to format X-axis labels in human-readable format
     function formatXAxisLabel(value, index, values) {
+        // Проверяем, что value не пустое значение
+        if (value === undefined || value === null) {
+            return '';
+        }
+
         const date = new Date(value * 1000);
         
-        // Проверяем, инициализирован ли график
-        if (chartInstance) {
-            // Получаем текущие границы видимой области графика
-            const min = chartInstance.scales.x.min || values[0];
-            const max = chartInstance.scales.x.max || values[values.length - 1];
-            
-            // Получаем только видимые метки
-            let visibleValues = [];
-            for (let i = 0; i < values.length; i++) {
-                if (values[i] >= min && values[i] <= max) {
-                    visibleValues.push(values[i]);
-                }
-            }
-            
-            // Константное количество меток - теперь минимум 20 меток для оси X независимо от уровня зума
-            const desiredLabelCount = 20;  // Увеличено до 20 меток
-            const visibleStepSize = Math.max(1, Math.floor(visibleValues.length / desiredLabelCount));
-            
-            // Определяем, является ли текущая метка видимой на графике
-            const visibleIndex = visibleValues.indexOf(value);
-            if (visibleIndex === -1 || visibleIndex % visibleStepSize !== 0) {
-                return '';
-            }
-        } else {
-            // Используем простую логику для начального состояния
-            const desiredLabelCount = 20;  // Увеличено до 20 меток
-            const stepSize = Math.max(1, Math.floor(values.length / desiredLabelCount));
-            
-            if (index % stepSize !== 0) {
-                return '';
-            }
+        // Проверяем, что дата валидна
+        if (isNaN(date.getTime())) {
+            console.warn("Invalid timestamp value:", value);
+            return '';
         }
         
+        // Задаем минимальное количество меток - 20
+        const desiredLabelCount = 20;
+        
+        // Определяем интервал для отображения меток
+        let stepSize = Math.max(1, Math.floor(values.length / desiredLabelCount));
+        
+        // Простая логика отображения меток через равные интервалы
+        // Показываем только каждую stepSize-ую метку
+        if (index % stepSize !== 0) {
+            return '';
+        }
+        
+        // Форматируем метку времени
         const hours = date.getUTCHours().toString().padStart(2, '0');
         const minutes = date.getUTCMinutes().toString().padStart(2, '0');
         const secs = date.getUTCSeconds().toString().padStart(2, '0');
@@ -403,18 +394,34 @@ document.addEventListener('DOMContentLoaded', function() {
     if (resetZoomButton) {
         resetZoomButton.addEventListener('click', function() {
             if (chartInstance) {
+                console.log("Reset zoom button clicked");
+                
                 // Сбрасываем ограничения осей, чтобы показать все данные
                 if (chartInstance.options.scales.x) {
                     delete chartInstance.options.scales.x.min;
                     delete chartInstance.options.scales.x.max;
                 }
-                // Если доступен метод resetZoom от плагина, тоже используем его для колесика
-                if (typeof chartInstance.resetZoom === 'function') {
+                
+                // Сбрасываем зум через ChartJS Zoom Plugin
+                if (chartInstance.resetZoom) {
+                    console.log("Using chartInstance.resetZoom()");
                     chartInstance.resetZoom();
                 } else {
+                    console.log("Using standard chart update");
+                    // Если нет плагина, просто обновляем график
                     chartInstance.update();
                 }
+                
+                // Дополнительная проверка, что все ограничения сняты
+                if (chartInstance.scales && chartInstance.scales.x) {
+                    console.log("Current x-axis min:", chartInstance.scales.x.min);
+                    console.log("Current x-axis max:", chartInstance.scales.x.max);
+                }
+            } else {
+                console.warn("Chart instance not found");
             }
         });
+    } else {
+        console.warn("Reset zoom button not found");
     }
 });
