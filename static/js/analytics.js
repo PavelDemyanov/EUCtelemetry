@@ -149,24 +149,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 plugins: {
                     tooltip: {
-                        position: function(context, options) {
-                            // Пользовательское позиционирование подсказки
-                            // Смещаем подсказку на значительное расстояние вправо от курсора
-                            const chart = context.chart;
-                            const position = chart.canvas.getBoundingClientRect();
-                            // Смещаем на 70 пикселей вправо и 20 пикселей вверх
-                            return {
-                                x: context.x + 70,
-                                y: context.y - 20
-                            };
-                        },
+                        position: 'nearest',
                         mode: 'index',
                         intersect: false,
-                        yAlign: 'bottom', // Размещаем подсказку над курсором
-                        xAlign: 'right',  // Сдвигаем подсказку вправо от курсора
-                        caretPadding: 30, // Значительно увеличиваем отступ указателя подсказки от курсора
-                        padding: 12,      // Увеличиваем внутренний отступ для лучшей читаемости
-                        titleMarginBottom: 10, // Добавляем отступ между заголовком и содержимым
+                        caretPadding: 15, // Небольшой отступ от курсора
+                        padding: 10,      // Внутренний отступ для лучшей читаемости
                         callbacks: {
                             title: function(context) {
                                 const index = context[0].dataIndex;
