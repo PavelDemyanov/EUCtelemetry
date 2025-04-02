@@ -41,9 +41,37 @@ document.addEventListener('DOMContentLoaded', function() {
     function formatXAxisLabel(value, index, values) {
         const date = new Date(value * 1000);
         
-        // If we have many values, show fewer labels
-        if (values.length > 20 && index % Math.ceil(values.length / 20) !== 0) {
-            return '';
+        // Проверяем, инициализирован ли график
+        if (chartInstance) {
+            // Получаем текущие границы видимой области графика
+            const min = chartInstance.scales.x.min || values[0];
+            const max = chartInstance.scales.x.max || values[values.length - 1];
+            
+            // Получаем только видимые метки
+            let visibleValues = [];
+            for (let i = 0; i < values.length; i++) {
+                if (values[i] >= min && values[i] <= max) {
+                    visibleValues.push(values[i]);
+                }
+            }
+            
+            // Константное количество меток - примерно 10 меток для оси X независимо от уровня зума
+            const desiredLabelCount = 10;
+            const visibleStepSize = Math.max(1, Math.floor(visibleValues.length / desiredLabelCount));
+            
+            // Определяем, является ли текущая метка видимой на графике
+            const visibleIndex = visibleValues.indexOf(value);
+            if (visibleIndex === -1 || visibleIndex % visibleStepSize !== 0) {
+                return '';
+            }
+        } else {
+            // Используем простую логику для начального состояния
+            const desiredLabelCount = 10;
+            const stepSize = Math.max(1, Math.floor(values.length / desiredLabelCount));
+            
+            if (index % stepSize !== 0) {
+                return '';
+            }
         }
         
         const hours = date.getUTCHours().toString().padStart(2, '0');
