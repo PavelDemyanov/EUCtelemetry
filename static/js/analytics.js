@@ -245,18 +245,26 @@ document.addEventListener('DOMContentLoaded', function() {
             return response.json();
         })
         .then(data => {
+            console.log("Response received:", data);
+            
             if (!data.success) {
                 throw new Error(data.error || 'Error processing CSV file');
             }
             
             // Store CSV data
             try {
+                if (!data.csv_data) {
+                    throw new Error("No CSV data returned from server");
+                }
+                
+                console.log("Raw CSV data:", data.csv_data.substring(0, 100) + "...");
                 csvData = JSON.parse(data.csv_data);
                 const csvType = data.csv_type;
                 console.log("Data loaded successfully:", csvType);
+                console.log("First record sample:", csvData.length > 0 ? JSON.stringify(csvData[0]) : "No records");
             } catch (error) {
                 console.error("JSON parsing error:", error);
-                throw new Error("Error parsing data from server");
+                throw new Error("Error parsing data from server: " + error.message);
             }
             
             // Populate column selector

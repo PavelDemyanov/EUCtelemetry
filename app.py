@@ -1558,8 +1558,8 @@ def analytics():
 @login_required
 def analyze_csv():
     """Process a CSV file for analytics and return data for charts"""
-    # Define the gettext function at the beginning to avoid issues
-    gettext = _
+    # Import gettext function directly instead of using _ alias
+    from flask_babel import gettext
     
     if 'file' not in request.files:
         return jsonify({'error': gettext('No file provided')}), 400
@@ -1612,6 +1612,14 @@ def analyze_csv():
             # Process the CSV file to get standardized data
             csv_type, processed_data = process_csv_file(temp_file_path, interpolate_values=True)
             
+            # Log the type of processed_data for debugging
+            logging.info(f"Processed data type: {type(processed_data)}")
+            if isinstance(processed_data, dict):
+                logging.info(f"Dict keys: {list(processed_data.keys())}")
+                if 'timestamp' in processed_data:
+                    logging.info(f"Timestamp data type: {type(processed_data['timestamp'])}")
+                    logging.info(f"Number of timestamps: {len(processed_data['timestamp'])}")
+            
             # Convert processed data to a list of dictionaries for JSON serialization
             serializable_data = []
             
@@ -1630,13 +1638,28 @@ def analyze_csv():
                     serializable_data.append(row_dict)
             elif isinstance(processed_data, dict):
                 # For dictionary format 
-                # Convert dictionary data to a list of records suitable for charting
-                for timestamp, values in processed_data.items():
-                    if isinstance(values, dict):  # If it's a dictionary of values for each timestamp
-                        record = {'timestamp': float(timestamp)}
-                        record.update({k: float(v) if isinstance(v, (int, float)) else (None if pd.isna(v) else str(v)) 
-                                      for k, v in values.items()})
+                # Process structure like {'timestamp': [...], 'speed': [...], ...}
+                if 'timestamp' in processed_data and isinstance(processed_data['timestamp'], (list, tuple)):
+                    # Get the number of data points
+                    num_points = len(processed_data['timestamp'])
+                    
+                    # Create a record for each data point
+                    for i in range(num_points):
+                        record = {}
+                        for key, values in processed_data.items():
+                            if i < len(values):
+                                value = values[i]
+                                # Handle special data types
+                                if pd.isna(value):
+                                    record[key] = None
+                                else:
+                                    record[key] = float(value) if isinstance(value, (int, float)) else str(value)
+                            else:
+                                record[key] = None
                         serializable_data.append(record)
+                else:
+                    # Handle other dictionary formats if needed
+                    logging.warning("Unrecognized dictionary data format")
             
             # Return the processed data for chart visualization
             return jsonify({
