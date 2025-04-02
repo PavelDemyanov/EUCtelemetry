@@ -1,231 +1,290 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const analyticsForm = document.getElementById('analyticsForm');
-    const processingStatus = document.getElementById('processingStatus');
-    const resultsSection = document.getElementById('resultsSection');
-    const processingMessage = document.getElementById('processingMessage');
-    const csvTypeElement = document.getElementById('csvType');
-    const timeRangeElement = document.getElementById('timeRange');
-    const dataPointsElement = document.getElementById('dataPoints');
-    const fileSizeElement = document.getElementById('fileSize');
-    const dataSelectors = document.getElementById('dataSelectors');
-    const chartCanvas = document.getElementById('dataChart');
+    const uploadForm = document.getElementById('uploadForm');
+    const csvFileInput = document.getElementById('csvFile');
+    const uploadButton = document.getElementById('uploadButton');
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const errorMessage = document.getElementById('errorMessage');
+    const analysisResults = document.getElementById('analysisResults');
+    const dataColumnSelect = document.getElementById('dataColumn');
+    const dataChart = document.getElementById('dataChart');
+    const statisticsTable = document.getElementById('statisticsTable');
+    const dataInfoTable = document.getElementById('dataInfoTable');
     
-    // Global chart instance
-    let dataChart = null;
-    
-    // Global data storage
+    let chartInstance = null;
     let csvData = null;
-    let availableColumns = [];
-    let selectedColumns = [];
     
-    // Format file size in KB or MB
-    function formatFileSize(bytes) {
-        if (bytes < 1024) {
-            return bytes + ' B';
-        } else if (bytes < 1024 * 1024) {
-            return (bytes / 1024).toFixed(2) + ' KB';
-        } else {
-            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
-        }
+    // Function to show error message
+    function showError(message) {
+        errorMessage.textContent = message;
+        errorMessage.style.display = 'block';
+        loadingIndicator.style.display = 'none';
     }
     
-    // Format timestamp as human-readable date
-    function formatTimestamp(timestamp) {
-        return new Date(timestamp * 1000).toLocaleString();
+    // Function to hide error message
+    function hideError() {
+        errorMessage.style.display = 'none';
     }
     
-    // Generate random color for chart datasets
-    function getRandomColor() {
-        const letters = '0123456789ABCDEF';
-        let color = '#';
-        for (let i = 0; i < 6; i++) {
-            color += letters[Math.floor(Math.random() * 16)];
-        }
-        return color;
+    // Function to format timestamps as HH:MM:SS
+    function formatTimestamp(seconds) {
+        const date = new Date(seconds * 1000);
+        const hours = date.getUTCHours().toString().padStart(2, '0');
+        const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+        const secs = date.getUTCSeconds().toString().padStart(2, '0');
+        return `${hours}:${minutes}:${secs}`;
     }
     
-    // Create checkboxes for selecting data columns to display
-    function createDataSelectors(columns) {
-        dataSelectors.innerHTML = '';
-        
-        columns.forEach(column => {
-            if (column === 'timestamp') return; // Skip timestamp column
-            
-            const checkboxId = `checkbox-${column}`;
-            const div = document.createElement('div');
-            div.className = 'form-check form-check-inline';
-            
-            const input = document.createElement('input');
-            input.className = 'form-check-input';
-            input.type = 'checkbox';
-            input.id = checkboxId;
-            input.value = column;
-            input.checked = selectedColumns.includes(column);
-            input.addEventListener('change', function() {
-                if (this.checked) {
-                    selectedColumns.push(column);
-                } else {
-                    const index = selectedColumns.indexOf(column);
-                    if (index > -1) {
-                        selectedColumns.splice(index, 1);
-                    }
-                }
-                updateChart();
-            });
-            
-            const label = document.createElement('label');
-            label.className = 'form-check-label btn btn-sm btn-outline-primary ms-1';
-            label.htmlFor = checkboxId;
-            label.textContent = column.charAt(0).toUpperCase() + column.slice(1); // Capitalize
-            
-            div.appendChild(input);
-            div.appendChild(label);
-            dataSelectors.appendChild(div);
-        });
-    }
-    
-    // Update or create the chart based on selected columns
-    function updateChart() {
-        const ctx = chartCanvas.getContext('2d');
-        
-        // Prepare datasets for the chart
-        const datasets = selectedColumns.map(column => {
-            const color = getRandomColor();
-            return {
-                label: column.charAt(0).toUpperCase() + column.slice(1), // Capitalize
-                data: csvData[column],
-                borderColor: color,
-                backgroundColor: color + '20', // Add transparency
-                tension: 0.4,
-                fill: false,
-                pointRadius: 0, // Hide points
-                pointHoverRadius: 5 // Show on hover
-            };
-        });
-        
-        // Prepare labels (time)
-        const labels = csvData.timestamp.map(ts => new Date(ts * 1000).toLocaleTimeString());
-        
-        // Destroy existing chart if it exists
-        if (dataChart) {
-            dataChart.destroy();
+    // Function to create a new chart
+    function createChart(labels, data, label) {
+        if (chartInstance) {
+            chartInstance.destroy();
         }
         
-        // Create new chart
-        dataChart = new Chart(ctx, {
+        const ctx = dataChart.getContext('2d');
+        chartInstance = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: labels,
-                datasets: datasets
+                datasets: [{
+                    label: label,
+                    data: data,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.1
+                }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                interaction: {
-                    mode: 'index',
-                    intersect: false
-                },
-                plugins: {
-                    legend: {
-                        position: 'top',
-                        align: 'start',
-                        labels: {
-                            boxWidth: 12,
-                            boxHeight: 12,
-                            padding: 10
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        },
+                        ticks: {
+                            maxTicksLimit: 20
                         }
                     },
+                    y: {
+                        title: {
+                            display: true,
+                            text: label
+                        },
+                        beginAtZero: false
+                    }
+                },
+                plugins: {
                     tooltip: {
                         callbacks: {
                             title: function(context) {
                                 const index = context[0].dataIndex;
-                                return formatTimestamp(csvData.timestamp[index]);
+                                return formatTimestamp(labels[index]);
                             }
                         }
-                    }
-                },
-                scales: {
-                    x: {
-                        ticks: {
-                            maxTicksLimit: 10,
-                            callback: function(val, index) {
-                                // Show fewer labels for better readability
-                                return index % Math.ceil(labels.length / 10) === 0 ? 
-                                    this.getLabelForValue(val) : '';
-                            }
-                        }
-                    },
-                    y: {
-                        beginAtZero: true
                     }
                 }
             }
         });
     }
     
-    // Handle form submission
-    analyticsForm.addEventListener('submit', function(e) {
+    // Function to calculate statistics
+    function calculateStatistics(data) {
+        if (!data || data.length === 0) return {};
+        
+        const numericData = data.filter(val => !isNaN(parseFloat(val)));
+        if (numericData.length === 0) return {};
+        
+        const values = numericData.map(val => parseFloat(val));
+        values.sort((a, b) => a - b);
+        
+        return {
+            min: values[0],
+            max: values[values.length - 1],
+            avg: values.reduce((sum, val) => sum + val, 0) / values.length,
+            median: values.length % 2 === 0 
+                ? (values[values.length / 2 - 1] + values[values.length / 2]) / 2
+                : values[Math.floor(values.length / 2)]
+        };
+    }
+    
+    // Function to populate the data column dropdown
+    function populateColumnSelector(data) {
+        // Clear existing options
+        dataColumnSelect.innerHTML = '';
+        
+        // Get the columns from the data
+        const columns = Object.keys(data[0]);
+        
+        // Create options for numeric columns
+        columns.forEach(column => {
+            if (column.toLowerCase() === 'timestamp') return; // Skip timestamp column
+            
+            // Check if column has numeric data
+            const hasNumericData = data.some(row => {
+                const val = parseFloat(row[column]);
+                return !isNaN(val);
+            });
+            
+            if (hasNumericData) {
+                const option = document.createElement('option');
+                option.value = column;
+                option.textContent = column;
+                dataColumnSelect.appendChild(option);
+            }
+        });
+        
+        // Trigger change event to load the first chart
+        if (dataColumnSelect.options.length > 0) {
+            dataColumnSelect.dispatchEvent(new Event('change'));
+        }
+    }
+    
+    // Function to populate statistics table
+    function populateStatisticsTable(column, stats) {
+        statisticsTable.innerHTML = '';
+        
+        if (!stats) return;
+        
+        const rows = [
+            { label: 'Minimum', value: stats.min?.toFixed(2) || 'N/A' },
+            { label: 'Maximum', value: stats.max?.toFixed(2) || 'N/A' },
+            { label: 'Average', value: stats.avg?.toFixed(2) || 'N/A' },
+            { label: 'Median', value: stats.median?.toFixed(2) || 'N/A' }
+        ];
+        
+        rows.forEach(row => {
+            const tr = document.createElement('tr');
+            
+            const tdLabel = document.createElement('td');
+            tdLabel.textContent = row.label;
+            tr.appendChild(tdLabel);
+            
+            const tdValue = document.createElement('td');
+            tdValue.textContent = row.value;
+            tr.appendChild(tdValue);
+            
+            statisticsTable.appendChild(tr);
+        });
+    }
+    
+    // Function to populate data info table
+    function populateDataInfoTable(data, csvType) {
+        dataInfoTable.innerHTML = '';
+        
+        if (!data || data.length === 0) return;
+        
+        const startTime = formatTimestamp(data[0].timestamp);
+        const endTime = formatTimestamp(data[data.length - 1].timestamp);
+        const duration = (data[data.length - 1].timestamp - data[0].timestamp) / 60; // Minutes
+        const dataPoints = data.length;
+        
+        const rows = [
+            { label: 'CSV Type', value: csvType },
+            { label: 'Start Time', value: startTime },
+            { label: 'End Time', value: endTime },
+            { label: 'Duration', value: `${duration.toFixed(2)} min` },
+            { label: 'Data Points', value: dataPoints }
+        ];
+        
+        rows.forEach(row => {
+            const tr = document.createElement('tr');
+            
+            const tdLabel = document.createElement('td');
+            tdLabel.textContent = row.label;
+            tr.appendChild(tdLabel);
+            
+            const tdValue = document.createElement('td');
+            tdValue.textContent = row.value;
+            tr.appendChild(tdValue);
+            
+            dataInfoTable.appendChild(tr);
+        });
+    }
+    
+    // Event listener for form submission
+    uploadForm.addEventListener('submit', function(e) {
         e.preventDefault();
         
-        // Show processing status, hide results
-        processingStatus.classList.remove('d-none');
-        resultsSection.classList.add('d-none');
-        processingMessage.textContent = gettext('Processing CSV file...');
+        // Check if a file is selected
+        if (!csvFileInput.files || csvFileInput.files.length === 0) {
+            showError('Please select a CSV file to upload.');
+            return;
+        }
         
-        // Disable form
-        analyticsForm.querySelectorAll('input, button').forEach(el => el.disabled = true);
+        const file = csvFileInput.files[0];
         
-        // Get form data
-        const formData = new FormData(analyticsForm);
+        // Check file extension
+        if (!file.name.toLowerCase().endsWith('.csv')) {
+            showError('Please upload a valid CSV file.');
+            return;
+        }
         
-        // Add file size info
-        const fileInput = document.getElementById('csvFile');
-        const fileSize = fileInput.files[0].size;
-        fileSizeElement.textContent = formatFileSize(fileSize);
+        // Hide error message and show loading indicator
+        hideError();
+        loadingIndicator.style.display = 'block';
+        analysisResults.style.display = 'none';
         
-        // Send the file for processing
+        // Create form data
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        // Send AJAX request
         fetch('/analyze_csv', {
             method: 'POST',
             body: formData
         })
         .then(response => {
-            if (!response.ok) throw new Error(gettext('Upload failed'));
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.error || 'Error processing CSV file');
+                });
+            }
             return response.json();
         })
         .then(data => {
-            if (data.error) throw new Error(data.error);
+            if (!data.success) {
+                throw new Error(data.error || 'Error processing CSV file');
+            }
             
-            // Store the data
-            csvData = data.csv_data;
-            availableColumns = Object.keys(csvData);
+            // Store CSV data
+            csvData = JSON.parse(data.csv_data);
+            const csvType = data.csv_type;
             
-            // Set initial selected columns (choose 2-3 important ones)
-            selectedColumns = ['speed'];
-            if (availableColumns.includes('pwm')) selectedColumns.push('pwm');
-            if (availableColumns.includes('power')) selectedColumns.push('power');
+            // Populate column selector
+            populateColumnSelector(csvData);
             
-            // Update UI
-            csvTypeElement.textContent = data.csv_type.toUpperCase();
-            timeRangeElement.textContent = `${formatTimestamp(csvData.timestamp[0])} - ${formatTimestamp(csvData.timestamp[csvData.timestamp.length - 1])}`;
-            dataPointsElement.textContent = csvData.timestamp.length;
+            // Populate data info table
+            populateDataInfoTable(csvData, csvType);
             
-            // Create selectors
-            createDataSelectors(availableColumns);
-            
-            // Create chart
-            updateChart();
-            
-            // Hide processing, show results
-            processingStatus.classList.add('d-none');
-            resultsSection.classList.remove('d-none');
-            
-            // Re-enable form
-            analyticsForm.querySelectorAll('input, button').forEach(el => el.disabled = false);
+            // Hide loading indicator and show results
+            loadingIndicator.style.display = 'none';
+            analysisResults.style.display = 'block';
         })
         .catch(error => {
-            console.error('Error:', error);
-            processingMessage.textContent = gettext('Error: ') + error.message;
-            analyticsForm.querySelectorAll('input, button').forEach(el => el.disabled = false);
+            showError(error.message);
         });
+    });
+    
+    // Event listener for column selection change
+    dataColumnSelect.addEventListener('change', function() {
+        if (!csvData) return;
+        
+        const selectedColumn = this.value;
+        
+        // Extract data for the selected column
+        const timestamps = csvData.map(row => row.timestamp);
+        const values = csvData.map(row => parseFloat(row[selectedColumn]) || 0);
+        
+        // Calculate statistics
+        const stats = calculateStatistics(csvData.map(row => row[selectedColumn]));
+        
+        // Update statistics table
+        populateStatisticsTable(selectedColumn, stats);
+        
+        // Create chart
+        createChart(timestamps, values, selectedColumn);
     });
 });

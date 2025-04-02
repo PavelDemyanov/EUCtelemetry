@@ -1,118 +1,107 @@
 {% extends "base.html" %}
 
+{% block title %}{{ _('Analytics') }}{% endblock %}
+
 {% block content %}
-<div class="container">
-    <h1 class="mb-4">{{ _('CSV Analytics') }}</h1>
-    
-    <div class="card shadow mb-4">
-        <div class="card-header">
-            <h5 class="mb-0">{{ _('Upload CSV File for Analysis') }}</h5>
-        </div>
-        <div class="card-body">
-            <form id="analyticsForm" enctype="multipart/form-data">
-                <div class="mb-3">
-                    <label for="csvFile" class="form-label">{{ _('Choose CSV File') }}</label>
-                    <input type="file" class="form-control" id="csvFile" name="file" accept=".csv" required>
-                    <div class="form-text">{{ _('Upload a CSV file from DarknessBot or WheelLog to analyze the data.') }}</div>
-                </div>
-                <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-graph-up"></i> {{ _('Analyze Data') }}
-                </button>
-            </form>
-        </div>
+<div class="row">
+    <div class="col-md-12">
+        <h1 class="mb-4 text-center">{{ _('EUC Data Analytics') }}</h1>
+        <p class="text-center mb-4">{{ _('Upload a CSV file from DarknessBot or WheelLog to visualize and analyze your ride data.') }}</p>
     </div>
+</div>
 
-    <!-- Processing Status -->
-    <div id="processingStatus" class="d-none">
-        <div class="card shadow mb-4">
-            <div class="card-header">
-                <h5 class="mb-0">{{ _('Processing') }}</h5>
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">{{ _('Upload your data') }}</h5>
             </div>
             <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="spinner-border text-primary me-3" role="status">
-                        <span class="visually-hidden">{{ _('Loading...') }}</span>
+                <form id="uploadForm" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="csvFile" class="form-label">{{ _('CSV File') }}</label>
+                        <input class="form-control" type="file" id="csvFile" name="file" accept=".csv">
+                        <div class="form-text">{{ _('Upload a CSV file exported from DarknessBot or WheelLog.') }}</div>
                     </div>
-                    <span id="processingMessage">{{ _('Processing CSV file...') }}</span>
-                </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary" id="uploadButton">
+                            <i class="bi bi-upload me-2"></i>{{ _('Upload and Analyze') }}
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Results Section -->
-    <div id="resultsSection" class="d-none">
-        <div class="card shadow mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">{{ _('CSV Information') }}</h5>
-                <div>
-                    <span class="badge bg-primary" id="csvType">{{ _('Unknown') }}</span>
+<div id="analysisResults" style="display: none;">
+    <div class="row">
+        <div class="col-md-12 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">{{ _('Data Visualization') }}</h5>
                 </div>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-4 mb-3">
-                        <div class="card bg-dark h-100">
-                            <div class="card-body">
-                                <h6 class="card-title">{{ _('Time Range') }}</h6>
-                                <p class="card-text">
-                                    <i class="bi bi-calendar-event me-2"></i> <span id="timeRange">-</span>
-                                </p>
-                            </div>
-                        </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="dataColumn" class="form-label">{{ _('Select Data to Visualize') }}</label>
+                        <select class="form-select" id="dataColumn">
+                            <!-- Options will be populated dynamically -->
+                        </select>
                     </div>
-                    <div class="col-md-4 mb-3">
-                        <div class="card bg-dark h-100">
-                            <div class="card-body">
-                                <h6 class="card-title">{{ _('Data Points') }}</h6>
-                                <p class="card-text">
-                                    <i class="bi bi-database me-2"></i> <span id="dataPoints">-</span>
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <div class="card bg-dark h-100">
-                            <div class="card-body">
-                                <h6 class="card-title">{{ _('File Size') }}</h6>
-                                <p class="card-text">
-                                    <i class="bi bi-file-binary me-2"></i> <span id="fileSize">-</span>
-                                </p>
-                            </div>
-                        </div>
+                    <div class="bg-light p-3 rounded mb-4">
+                        <canvas id="dataChart"></canvas>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Chart Controls -->
-        <div class="card shadow mb-4">
-            <div class="card-header">
-                <h5 class="mb-0">{{ _('Chart Settings') }}</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-12 mb-3">
-                        <div id="dataSelectors" class="d-flex flex-wrap gap-2">
-                            <!-- Checkboxes will be dynamically added here -->
-                        </div>
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">{{ _('Ride Statistics') }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <tbody id="statisticsTable">
+                                <!-- Will be populated dynamically -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- Charts Section -->
-        <div class="card shadow mb-4">
-            <div class="card-header">
-                <h5 class="mb-0">{{ _('Data Visualization') }}</h5>
-            </div>
-            <div class="card-body">
-                <div style="height: 500px;">
-                    <canvas id="dataChart"></canvas>
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">{{ _('Data Overview') }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <tbody id="dataInfoTable">
+                                <!-- Will be populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<div id="loadingIndicator" style="display: none;">
+    <div class="d-flex justify-content-center my-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">{{ _('Loading...') }}</span>
+        </div>
+        <span class="ms-3">{{ _('Processing data...') }}</span>
+    </div>
+</div>
+
+<div id="errorMessage" class="alert alert-danger mt-3" style="display: none;"></div>
 {% endblock %}
 
 {% block scripts %}
