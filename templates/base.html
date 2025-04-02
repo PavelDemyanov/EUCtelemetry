@@ -75,6 +75,9 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('list_projects') }}">{{ _('My Projects') }}</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('analytics') }}">{{ _('Analytics') }}</a>
+                    </li>
                     {% endif %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('about') }}">{{ _('About') }}</a>
@@ -171,6 +174,7 @@
                                 <li><a href="{{ url_for('about') }}" class="text-decoration-none text-light">{{ _('About') }}</a></li>
                                 {% if current_user.is_authenticated %}
                                 <li><a href="{{ url_for('list_projects') }}" class="text-decoration-none text-light">{{ _('My Projects') }}</a></li>
+                                <li><a href="{{ url_for('analytics') }}" class="text-decoration-none text-light">{{ _('Analytics') }}</a></li>
                                 {% else %}
                                 <li><a href="{{ url_for('register') }}" class="text-decoration-none text-light">{{ _('Register') }}</a></li>
                                 {% endif %}

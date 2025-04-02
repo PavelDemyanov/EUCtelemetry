@@ -6,11 +6,13 @@ import shutil
 import threading
 import time
 import json
+import tempfile
 from datetime import datetime, timedelta
 from collections import defaultdict
 from functools import wraps
 
 import psutil
+import pandas as pd
 from dotenv import load_dotenv
 from flask import (Flask, render_template, request, jsonify, send_file, 
                   url_for, send_from_directory, flash, redirect, abort)
@@ -19,7 +21,7 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from werkzeug.utils import secure_filename
 from flask_babel import Babel, gettext as _, get_locale
 from extensions import db
-from utils.csv_processor import process_csv_file
+from utils.csv_processor import process_csv_file, detect_csv_type
 from utils.image_generator import generate_frames, create_preview_frame
 from utils.video_creator import create_video
 from utils.background_processor import process_project, stop_project_processing
@@ -1544,3 +1546,86 @@ def delete_preset(preset_id):
         logging.error(f"Error deleting preset {preset_id}: {str(e)}")
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+        
+# Analytics routes
+@app.route('/analytics')
+@login_required
+def analytics():
+    """Render the analytics page"""
+    return render_template('analytics.html')
+
+@app.route('/analyze_csv', methods=['POST'])
+@login_required
+def analyze_csv():
+    """Process a CSV file for analytics and return data for charts"""
+    if 'file' not in request.files:
+        return jsonify({'error': _('No file provided')}), 400
+        
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': _('No file selected')}), 400
+        
+    try:
+        # Create a temporary file to store the uploaded CSV
+        temp_dir = tempfile.mkdtemp()
+        temp_file_path = os.path.join(temp_dir, secure_filename(file.filename))
+        file.save(temp_file_path)
+        
+        # Read and validate CSV file
+        try:
+            # Try reading with different encodings
+            try:
+                df = pd.read_csv(temp_file_path, encoding='utf-8')
+            except UnicodeDecodeError:
+                try:
+                    df = pd.read_csv(temp_file_path, encoding='latin1')
+                except UnicodeDecodeError:
+                    return jsonify({'error': _('Invalid file encoding. Please ensure your CSV file is properly encoded.')}), 400
+            
+            # Detect CSV type
+            try:
+                csv_type = detect_csv_type(df)
+                logging.info(f"Detected CSV type: {csv_type}")
+            except ValueError:
+                # Check for DarknessBot format
+                darkness_bot_columns = {'Date', 'Speed', 'GPS Speed', 'Voltage', 'Temperature', 
+                                    'Current', 'Battery level', 'Total mileage', 'PWM', 'Power'}
+                # Check for WheelLog format
+                wheellog_columns = {'date', 'speed', 'gps_speed', 'voltage', 'system_temp',
+                                'current', 'battery_level', 'totaldistance', 'pwm', 'power'}
+
+                df_columns = set(df.columns)
+                is_darkness_bot = len(darkness_bot_columns.intersection(df_columns)) >= len(darkness_bot_columns) * 0.8
+                is_wheellog = len(wheellog_columns.intersection(df_columns)) >= len(wheellog_columns) * 0.8
+
+                if not (is_darkness_bot or is_wheellog):
+                    return jsonify({'error': _('Invalid CSV format. Please upload a CSV file from DarknessBot or WheelLog.')}), 400
+
+                csv_type = 'darnkessbot' if is_darkness_bot else 'wheellog'
+            
+            # Process the CSV file to get standardized data
+            csv_type, processed_data = process_csv_file(temp_file_path, interpolate_values=True)
+            
+            # Return the processed data for chart visualization
+            return jsonify({
+                'success': True,
+                'csv_type': csv_type,
+                'csv_data': processed_data
+            })
+            
+        except Exception as e:
+            logging.error(f"Error processing CSV file: {str(e)}")
+            return jsonify({'error': _('Error processing CSV file: ') + str(e)}), 400
+            
+    except Exception as e:
+        logging.error(f"Error in analyze_csv: {str(e)}")
+        return jsonify({'error': _('An unexpected error occurred')}), 500
+    finally:
+        # Clean up temporary files
+        try:
+            if 'temp_file_path' in locals() and os.path.exists(temp_file_path):
+                os.remove(temp_file_path)
+            if 'temp_dir' in locals() and os.path.exists(temp_dir):
+                os.rmdir(temp_dir)
+        except Exception as e:
+            logging.error(f"Error cleaning up temporary files: {str(e)}")
