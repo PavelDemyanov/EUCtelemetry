@@ -5,12 +5,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const loadingIndicator = document.getElementById('loadingIndicator');
     const errorMessage = document.getElementById('errorMessage');
     const analysisResults = document.getElementById('analysisResults');
-    const dataColumnsSelect = document.getElementById('dataColumns');
-    const plotButton = document.getElementById('plotButton');
-    const clearButton = document.getElementById('clearButton');
     const dataChart = document.getElementById('dataChart');
-    const statisticsTable = document.getElementById('statisticsTable');
-    const dataInfoTable = document.getElementById('dataInfoTable');
     
     let chartInstance = null;
     let csvData = null;
@@ -66,7 +61,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     backgroundColor: colorPalette[index % colorPalette.length].backgroundColor,
                     borderWidth: 2,
                     fill: false, // Set to false for multiple datasets to avoid overlapping
-                    tension: 0.1
+                    tension: 0.1,
+                    pointRadius: 0, // Remove points on the line
+                    pointHoverRadius: 3 // Show points only on hover
                 }))
             },
             options: {
@@ -76,7 +73,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     x: {
                         title: {
                             display: true,
-                            text: 'Time'
+                            text: 'Время'
                         },
                         ticks: {
                             maxTicksLimit: 20
@@ -85,7 +82,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     y: {
                         title: {
                             display: true,
-                            text: 'Values'
+                            text: 'Значения'
                         },
                         beginAtZero: false
                     }
@@ -101,7 +98,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     legend: {
                         display: true,
-                        position: 'top'
+                        position: 'top',
+                        onClick: function(e, legendItem, legend) {
+                            // Toggle visibility
+                            const index = legendItem.datasetIndex;
+                            const meta = chartInstance.getDatasetMeta(index);
+                            meta.hidden = meta.hidden === null ? !chartInstance.data.datasets[index].hidden : null;
+                            chartInstance.update();
+                        }
                     }
                 },
                 interaction: {
@@ -137,136 +141,37 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     }
     
-    // Function to populate the data columns select
-    function populateColumnSelector(data) {
-        // Clear existing options
-        dataColumnsSelect.innerHTML = '';
+    // Function to plot all available columns
+    function plotAllColumns(data) {
+        if (!data) return;
         
-        // Get the columns from the data
-        const columns = Object.keys(data[0]);
+        // Get timestamps for x-axis
+        const timestamps = data.map(row => row.timestamp);
         
-        // Create options for numeric columns
-        columns.forEach(column => {
-            if (column.toLowerCase() === 'timestamp') return; // Skip timestamp column
+        // Get all numeric columns
+        const columns = Object.keys(data[0]).filter(column => {
+            if (column.toLowerCase() === 'timestamp') return false; // Skip timestamp column
             
             // Check if column has numeric data
-            const hasNumericData = data.some(row => {
+            return data.some(row => {
                 const val = parseFloat(row[column]);
                 return !isNaN(val);
             });
-            
-            if (hasNumericData) {
-                const option = document.createElement('option');
-                option.value = column;
-                option.textContent = column;
-                dataColumnsSelect.appendChild(option);
-            }
         });
         
-        // Select the first option by default
-        if (dataColumnsSelect.options.length > 0) {
-            dataColumnsSelect.options[0].selected = true;
-            
-            // Plot the first column
-            plotSelectedColumns();
-        }
-    }
-    
-    // Function to plot selected columns
-    function plotSelectedColumns() {
-        if (!csvData) return;
-        
-        // Get selected columns
-        const selectedOptions = Array.from(dataColumnsSelect.selectedOptions);
-        if (selectedOptions.length === 0) return;
-        
-        // Get timestamps for x-axis
-        const timestamps = csvData.map(row => row.timestamp);
-        
-        // Create dataset for each selected column
-        const datasets = selectedOptions.map(option => {
-            const column = option.value;
+        // Create dataset for each column
+        const datasets = columns.map(column => {
             return {
                 label: column,
-                data: csvData.map(row => parseFloat(row[column]) || 0)
+                data: data.map(row => parseFloat(row[column]) || 0)
             };
         });
-        
-        // Update statistics for the first selected column
-        if (selectedOptions.length > 0) {
-            const firstColumn = selectedOptions[0].value;
-            const stats = calculateStatistics(csvData.map(row => row[firstColumn]));
-            populateStatisticsTable(firstColumn, stats);
-        }
         
         // Create multi-line chart
         createMultiChart(timestamps, datasets);
     }
     
-    // Function to populate statistics table
-    function populateStatisticsTable(column, stats) {
-        statisticsTable.innerHTML = '';
-        
-        if (!stats) return;
-        
-        const rows = [
-            { label: 'Minimum', value: stats.min?.toFixed(2) || 'N/A' },
-            { label: 'Maximum', value: stats.max?.toFixed(2) || 'N/A' },
-            { label: 'Average', value: stats.avg?.toFixed(2) || 'N/A' },
-            { label: 'Median', value: stats.median?.toFixed(2) || 'N/A' }
-        ];
-        
-        rows.forEach(row => {
-            const tr = document.createElement('tr');
-            
-            const tdLabel = document.createElement('td');
-            tdLabel.textContent = row.label;
-            tr.appendChild(tdLabel);
-            
-            const tdValue = document.createElement('td');
-            tdValue.textContent = row.value;
-            tr.appendChild(tdValue);
-            
-            statisticsTable.appendChild(tr);
-        });
-    }
-    
-    // Function to populate data info table
-    function populateDataInfoTable(data, csvTypeParam) {
-        dataInfoTable.innerHTML = '';
-        
-        if (!data || data.length === 0) return;
-        
-        // Use passed parameter or global variable
-        const csvType = csvTypeParam || window.csvType;
-        
-        const startTime = formatTimestamp(data[0].timestamp);
-        const endTime = formatTimestamp(data[data.length - 1].timestamp);
-        const duration = (data[data.length - 1].timestamp - data[0].timestamp) / 60; // Minutes
-        const dataPoints = data.length;
-        
-        const rows = [
-            { label: 'CSV Type', value: csvType },
-            { label: 'Start Time', value: startTime },
-            { label: 'End Time', value: endTime },
-            { label: 'Duration', value: `${duration.toFixed(2)} min` },
-            { label: 'Data Points', value: dataPoints }
-        ];
-        
-        rows.forEach(row => {
-            const tr = document.createElement('tr');
-            
-            const tdLabel = document.createElement('td');
-            tdLabel.textContent = row.label;
-            tr.appendChild(tdLabel);
-            
-            const tdValue = document.createElement('td');
-            tdValue.textContent = row.value;
-            tr.appendChild(tdValue);
-            
-            dataInfoTable.appendChild(tr);
-        });
-    }
+    // Statistics functions removed as per requirements
     
     // Event listener for form submission
     uploadForm.addEventListener('submit', function(e) {
@@ -332,11 +237,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error("Error parsing data from server: " + error.message);
             }
             
-            // Populate column selector
-            populateColumnSelector(csvData);
-            
-            // Populate data info table
-            populateDataInfoTable(csvData, window.csvType);
+            // Plot all data columns
+            plotAllColumns(csvData);
             
             // Hide loading indicator and show results
             loadingIndicator.style.display = 'none';
@@ -347,31 +249,5 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Event listener for Plot button
-    plotButton.addEventListener('click', function() {
-        plotSelectedColumns();
-    });
-    
-    // Event listener for Clear Selection button
-    clearButton.addEventListener('click', function() {
-        // Deselect all options
-        for (let i = 0; i < dataColumnsSelect.options.length; i++) {
-            dataColumnsSelect.options[i].selected = false;
-        }
-        
-        // Clear the chart
-        if (chartInstance) {
-            chartInstance.destroy();
-            chartInstance = null;
-        }
-        
-        // Clear statistics table
-        statisticsTable.innerHTML = '';
-    });
-    
-    // Event listener for columns selection change
-    dataColumnsSelect.addEventListener('change', function() {
-        // Don't automatically plot on change - user will use the Plot button
-        // This improves performance when selecting multiple columns
-    });
+    // No additional event listeners needed as all graphs are shown by default
 });
