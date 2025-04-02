@@ -169,36 +169,38 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 plugins: {
                     tooltip: {
-                        callbacks: {
-                            title: function(context) {
-                                const index = context[0].dataIndex;
-                                return formatTimestamp(labels[index]);
-                            }
-                        },
-                        position: 'nearest',
-                        padding: 10,
-                        caretPadding: 30,  // Отодвигаем tooltip от курсора в 3 раза дальше по вертикали
-                        yAlign: 'bottom',
-                        // Добавляем кастомную функцию позиционирования для смещения вправо
+                        enabled: false, // Отключаем встроенный tooltip, будем использовать только наш кастомный
                         external: function(context) {
-                            // Получаем стандартное позиционирование
+                            // Получаем существующий или создаем новый tooltip
                             const tooltipEl = document.getElementById('chartjs-tooltip') || document.createElement('div');
                             tooltipEl.id = 'chartjs-tooltip';
+                            
+                            // Если нет активных элементов, скрываем tooltip и выходим
+                            if (!context.tooltip._active || context.tooltip._active.length === 0) {
+                                tooltipEl.style.opacity = 0;
+                                return;
+                            }
+                            
                             tooltipEl.innerHTML = '<table></table>';
                             
                             // Применяем стили
                             const position = context.chart.canvas.getBoundingClientRect();
-                            tooltipEl.style.background = 'rgba(0, 0, 0, 0.7)';
-                            tooltipEl.style.borderRadius = '3px';
+                            tooltipEl.style.background = 'rgba(0, 0, 0, 0.85)';
+                            tooltipEl.style.borderRadius = '4px';
                             tooltipEl.style.color = 'white';
                             tooltipEl.style.opacity = 1;
                             tooltipEl.style.pointerEvents = 'none';
                             tooltipEl.style.position = 'absolute';
-                            tooltipEl.style.transform = 'translate(-50%, 0)';
+                            tooltipEl.style.transform = 'translate(0, 0)'; // Убираем смещение по горизонтали через transform
                             tooltipEl.style.transition = 'all .1s ease';
+                            tooltipEl.style.boxShadow = '0 2px 5px rgba(0,0,0,0.5)';
+                            tooltipEl.style.fontFamily = 'Arial, sans-serif';
+                            tooltipEl.style.fontSize = '12px';
                             
                             const table = tooltipEl.querySelector('table');
                             table.style.margin = '0px';
+                            table.style.borderCollapse = 'collapse';
+                            table.style.width = '100%';
                             
                             // Заполняем содержимое
                             if (context.tooltip.body) {
@@ -207,7 +209,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                 
                                 let innerHtml = '<thead>';
                                 titleLines.forEach(title => {
-                                    innerHtml += '<tr><th>' + title + '</th></tr>';
+                                    innerHtml += '<tr><th style="padding: 4px 8px; text-align: center; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.2);">' + 
+                                        title + '</th></tr>';
                                 });
                                 innerHtml += '</thead><tbody>';
                                 
@@ -219,8 +222,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                     style += '; margin-right: 10px';
                                     style += '; display: inline-block';
                                     style += '; width: 10px; height: 10px';
+                                    style += '; border-radius: 50%'; // Делаем цветовые метки круглыми
                                     const span = '<span style="' + style + '"></span>';
-                                    innerHtml += '<tr><td>' + span + body + '</td></tr>';
+                                    innerHtml += '<tr><td style="padding: 3px 8px;">' + span + body + '</td></tr>';
                                 });
                                 innerHtml += '</tbody>';
                                 table.innerHTML = innerHtml;
