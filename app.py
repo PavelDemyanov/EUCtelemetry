@@ -1606,11 +1606,26 @@ def analyze_csv():
             # Process the CSV file to get standardized data
             csv_type, processed_data = process_csv_file(temp_file_path, interpolate_values=True)
             
+            # Convert processed data to a list of dictionaries for JSON serialization
+            serializable_data = []
+            if processed_data is not None and not processed_data.empty:
+                # Convert pandas DataFrame to a list of dictionaries and handle non-serializable values
+                for _, row in processed_data.iterrows():
+                    row_dict = {}
+                    for col in processed_data.columns:
+                        value = row[col]
+                        # Handle special data types
+                        if pd.isna(value):
+                            row_dict[col] = None
+                        else:
+                            row_dict[col] = float(value) if isinstance(value, (int, float)) else str(value)
+                    serializable_data.append(row_dict)
+            
             # Return the processed data for chart visualization
             return jsonify({
                 'success': True,
                 'csv_type': csv_type,
-                'csv_data': processed_data
+                'csv_data': json.dumps(serializable_data)
             })
             
         except Exception as e:
