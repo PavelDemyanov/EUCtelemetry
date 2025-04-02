@@ -140,7 +140,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     zoom: {
                         pan: {
                             enabled: true,
-                            mode: 'x'
+                            mode: 'x',
+                            threshold: 5,
+                            onPanStart: function() {
+                                const canvas = document.getElementById('dataChart');
+                                if (canvas) canvas.style.cursor = 'grabbing';
+                            },
+                            onPanComplete: function() {
+                                const canvas = document.getElementById('dataChart');
+                                if (canvas) canvas.style.cursor = 'grab';
+                            }
                         },
                         zoom: {
                             wheel: {
@@ -148,6 +157,12 @@ document.addEventListener('DOMContentLoaded', function() {
                             },
                             pinch: {
                                 enabled: true
+                            },
+                            drag: {
+                                enabled: true,
+                                backgroundColor: 'rgba(255,255,255,0.1)',
+                                borderColor: 'rgba(255,255,255,0.2)',
+                                borderWidth: 1
                             },
                             mode: 'x',
                             onZoomComplete: function({chart}) {
