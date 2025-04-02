@@ -43,10 +43,15 @@
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
-                        <label for="dataColumn" class="form-label">{{ _('Select Data to Visualize') }}</label>
-                        <select class="form-select" id="dataColumn">
+                        <label for="dataColumns" class="form-label">{{ _('Select Data to Visualize') }}</label>
+                        <select class="form-select" id="dataColumns" multiple size="5">
                             <!-- Options will be populated dynamically -->
                         </select>
+                        <small class="form-text text-muted">{{ _('Используйте Ctrl+клик (или Cmd+клик на Mac) для выбора нескольких колонок') }}</small>
+                    </div>
+                    <div class="mb-3">
+                        <button id="plotButton" class="btn btn-primary">{{ _('Plot Selected Columns') }}</button>
+                        <button id="clearButton" class="btn btn-outline-secondary ms-2">{{ _('Clear Selection') }}</button>
                     </div>
                     <div class="bg-light p-3 rounded mb-4">
                         <canvas id="dataChart"></canvas>
