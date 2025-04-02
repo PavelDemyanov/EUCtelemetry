@@ -199,7 +199,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 enabled: true  // Оставляем возможность зума щипком на мобильных
                             },
                             drag: {
-                                enabled: false
+                                enabled: false  // Отключаем зум при перетаскивании
                             },
                             mode: 'x'
                         }
@@ -414,7 +414,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Event listener for reset zoom button
-    const resetZoomButton = document.getElementById('resetZoomButton');
+    const resetZoomButton = document.getElementById('resetZoom');
     if (resetZoomButton) {
         resetZoomButton.addEventListener('click', function() {
             if (chartInstance) {
