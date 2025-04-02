@@ -152,8 +152,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         position: 'nearest',
                         mode: 'index',
                         intersect: false,
-                        caretPadding: 15, // Небольшой отступ от курсора
-                        padding: 10,      // Внутренний отступ для лучшей читаемости
+                        yAlign: 'bottom', // Размещаем подсказку над курсором
+                        xAlign: 'right',  // Сдвигаем подсказку вправо от курсора
+                        caretPadding: 10, // Дополнительный отступ указателя подсказки
                         callbacks: {
                             title: function(context) {
                                 const index = context[0].dataIndex;
@@ -199,7 +200,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 enabled: true  // Оставляем возможность зума щипком на мобильных
                             },
                             drag: {
-                                enabled: false  // Отключаем зум при перетаскивании
+                                enabled: false
                             },
                             mode: 'x'
                         }
@@ -414,7 +415,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Event listener for reset zoom button
-    const resetZoomButton = document.getElementById('resetZoom');
+    const resetZoomButton = document.getElementById('resetZoomButton');
     if (resetZoomButton) {
         resetZoomButton.addEventListener('click', function() {
             if (chartInstance) {
