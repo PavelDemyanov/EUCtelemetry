@@ -171,10 +171,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Function to populate data info table
-    function populateDataInfoTable(data, csvType) {
+    function populateDataInfoTable(data, csvTypeParam) {
         dataInfoTable.innerHTML = '';
         
         if (!data || data.length === 0) return;
+        
+        // Use passed parameter or global variable
+        const csvType = csvTypeParam || window.csvType;
         
         const startTime = formatTimestamp(data[0].timestamp);
         const endTime = formatTimestamp(data[data.length - 1].timestamp);
@@ -259,8 +262,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 console.log("Raw CSV data:", data.csv_data.substring(0, 100) + "...");
                 csvData = JSON.parse(data.csv_data);
-                const csvType = data.csv_type;
-                console.log("Data loaded successfully:", csvType);
+                // Store CSV type at global level
+                window.csvType = data.csv_type;
+                console.log("Data loaded successfully:", window.csvType);
                 console.log("First record sample:", csvData.length > 0 ? JSON.stringify(csvData[0]) : "No records");
             } catch (error) {
                 console.error("JSON parsing error:", error);
@@ -271,7 +275,7 @@ document.addEventListener('DOMContentLoaded', function() {
             populateColumnSelector(csvData);
             
             // Populate data info table
-            populateDataInfoTable(csvData, csvType);
+            populateDataInfoTable(csvData, window.csvType);
             
             // Hide loading indicator and show results
             loadingIndicator.style.display = 'none';
