@@ -16,6 +16,39 @@ document.addEventListener('DOMContentLoaded', function() {
     let chartStartMin = 0;
     let chartStartMax = 0;
     
+    // Создаем и регистрируем плагин для вертикальной линии под курсором
+    const crosshairPlugin = {
+        id: 'crosshair',
+        afterDraw: (chart, args, options) => {
+            if (!chart.tooltip._active || !chart.tooltip._active.length) return;
+            
+            const activePoint = chart.tooltip._active[0];
+            const ctx = chart.ctx;
+            const x = activePoint.element.x;
+            const topY = chart.scales.y.top;
+            const bottomY = chart.scales.y.bottom;
+            
+            // Рисуем вертикальную линию
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(x, topY);
+            ctx.lineTo(x, bottomY);
+            ctx.lineWidth = options.line?.width || 1;
+            ctx.strokeStyle = options.line?.color || 'rgba(255, 255, 255, 0.5)';
+            
+            // Устанавливаем штриховую линию, если задан шаблон
+            if (options.line?.dashPattern) {
+                ctx.setLineDash(options.line.dashPattern);
+            }
+            
+            ctx.stroke();
+            ctx.restore();
+        }
+    };
+    
+    // Регистрируем плагин
+    Chart.register(crosshairPlugin);
+    
     // Function to show error message
     function showError(message) {
         errorMessage.textContent = message;
@@ -141,6 +174,26 @@ document.addEventListener('DOMContentLoaded', function() {
                                 const index = context[0].dataIndex;
                                 return formatTimestamp(labels[index]);
                             }
+                        },
+                        position: 'nearest',
+                        padding: 10,
+                        caretPadding: 30,  // Отодвигаем tooltip от курсора в 3 раза дальше
+                        yAlign: 'bottom'
+                    },
+                    // Добавляем плагин для отображения вертикальной линии под курсором
+                    crosshair: {
+                        line: {
+                            color: 'rgba(255, 255, 255, 0.5)',  // Полупрозрачная белая линия
+                            width: 1,
+                            dashPattern: [5, 5]
+                        },
+                        sync: {
+                            enabled: true,
+                            group: 1,
+                            suppressTooltips: false
+                        },
+                        zoom: {
+                            enabled: false
                         }
                     },
                     legend: {
