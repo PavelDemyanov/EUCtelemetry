@@ -175,17 +175,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                 return formatTimestamp(labels[index]);
                             }
                         },
-                        position: function(context) {
-                            // Смещаем tooltip вправо от курсора
-                            const position = Chart.Tooltip.positioners.nearest(context, true);
-                            // Добавляем смещение на 80 пикселей вправо от курсора
-                            position.x += 80;
-                            return position;
-                        },
+                        position: 'nearest',
                         padding: 10,
                         caretPadding: 30,  // Отодвигаем tooltip от курсора в 3 раза дальше
-                        yAlign: 'bottom',
-                        xAlign: 'left'  // Выравнивание tooltip по левому краю относительно точки
+                        yAlign: 'bottom'
                     },
                     // Добавляем плагин для отображения вертикальной линии под курсором
                     crosshair: {
