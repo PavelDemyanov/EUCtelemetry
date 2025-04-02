@@ -281,8 +281,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         },
                         zoom: {
                             wheel: {
-                                enabled: true,  // Оставляем возможность зума колесиком мыши
-                                speed: 0.1     // Уменьшаем скорость зума, чтобы он был более плавным
+                                enabled: true  // Оставляем возможность зума колесиком мыши
                             },
                             pinch: {
                                 enabled: true  // Оставляем возможность зума щипком на мобильных
@@ -290,12 +289,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             drag: {
                                 enabled: false
                             },
-                            mode: 'x',
-                            overScaleMode: 'x', // Ограничиваем зум только по оси X
-                            sensitivity: 3,     // Увеличиваем чувствительность
-                            limits: {
-                                x: {min: 'original', max: 'original'}
-                            }
+                            mode: 'x'
                         }
                     }
                 },
@@ -333,7 +327,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Function to plot all available columns
-    function plotAllColumns(data, forceRecreate = false) {
+    function plotAllColumns(data) {
         if (!data) return;
         
         // Get timestamps for x-axis
@@ -357,13 +351,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 data: data.map(row => parseFloat(row[column]) || 0)
             };
         });
-        
-        // Если нужно принудительно пересоздать график
-        if (forceRecreate && chartInstance) {
-            console.log("Destroying existing chart instance for recreation");
-            chartInstance.destroy();
-            chartInstance = null;
-        }
         
         // Create multi-line chart
         createMultiChart(timestamps, datasets);
@@ -518,33 +505,32 @@ document.addEventListener('DOMContentLoaded', function() {
     const resetZoomButton = document.getElementById('resetZoomButton');
     if (resetZoomButton) {
         resetZoomButton.addEventListener('click', function() {
-            console.log("Reset zoom button clicked");
-            
-            // Вместо сложной логики сброса масштаба, сразу пересоздаем график полностью
-            if (csvData && csvData.length > 0) {
-                console.log("Recreating chart from scratch");
+            if (chartInstance) {
+                console.log("Reset zoom button clicked");
                 
-                // Устанавливаем небольшую задержку для визуальной индикации
-                resetZoomButton.textContent = "Сбрасываем...";
-                resetZoomButton.disabled = true;
+                // Сбрасываем ограничения осей, чтобы показать все данные
+                if (chartInstance.options.scales.x) {
+                    delete chartInstance.options.scales.x.min;
+                    delete chartInstance.options.scales.x.max;
+                }
                 
-                setTimeout(() => {
-                    if (chartInstance) {
-                        chartInstance.destroy();
-                        chartInstance = null;
-                    }
-                    
-                    // Полностью заново создаем график с исходными данными
-                    plotAllColumns(csvData, true);
-                    
-                    // Восстанавливаем текст кнопки
-                    resetZoomButton.textContent = "Сбросить масштаб";
-                    resetZoomButton.disabled = false;
-                    
-                    console.log("Chart reset completed");
-                }, 100);
+                // Сбрасываем зум через ChartJS Zoom Plugin
+                if (chartInstance.resetZoom) {
+                    console.log("Using chartInstance.resetZoom()");
+                    chartInstance.resetZoom();
+                } else {
+                    console.log("Using standard chart update");
+                    // Если нет плагина, просто обновляем график
+                    chartInstance.update();
+                }
+                
+                // Дополнительная проверка, что все ограничения сняты
+                if (chartInstance.scales && chartInstance.scales.x) {
+                    console.log("Current x-axis min:", chartInstance.scales.x.min);
+                    console.log("Current x-axis max:", chartInstance.scales.x.max);
+                }
             } else {
-                console.warn("No chart data available for reset");
+                console.warn("Chart instance not found");
             }
         });
     } else {
