@@ -1,17 +1,4 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Регистрация плагина crosshair для вертикальной линии
-    if (Chart && typeof Chart.register === 'function') {
-        try {
-            // Проверяем, существует ли плагин crosshair
-            if (window.ChartPluginCrosshair) {
-                Chart.register(window.ChartPluginCrosshair);
-                console.log('Crosshair plugin registered successfully');
-            }
-        } catch (e) {
-            console.error('Error registering crosshair plugin:', e);
-        }
-    }
-    
     const uploadForm = document.getElementById('uploadForm');
     const csvFileInput = document.getElementById('csvFile');
     const uploadButton = document.getElementById('uploadButton');
@@ -149,29 +136,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 plugins: {
                     tooltip: {
-                        position: 'nearest',
-                        mode: 'index',
-                        intersect: false,
-                        yAlign: 'bottom', // Размещаем подсказку над курсором
-                        xAlign: 'right',  // Сдвигаем подсказку вправо от курсора
-                        caretPadding: 10, // Дополнительный отступ указателя подсказки
                         callbacks: {
                             title: function(context) {
                                 const index = context[0].dataIndex;
                                 return formatTimestamp(labels[index]);
                             }
-                        }
-                    },
-                    crosshair: {
-                        line: {
-                            color: 'rgba(255, 255, 255, 0.5)',  // Полупрозрачная белая линия
-                            width: 1                           // Толщина линии
-                        },
-                        sync: {
-                            enabled: true                       // Синхронизация между графиками
-                        },
-                        zoom: {
-                            enabled: true                       // Интеграция с зумом
                         }
                     },
                     legend: {
