@@ -159,10 +159,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 enabled: true
                             },
                             drag: {
-                                enabled: true,
-                                backgroundColor: 'rgba(255,255,255,0.1)',
-                                borderColor: 'rgba(255,255,255,0.2)',
-                                borderWidth: 1
+                                enabled: false // Выключаем зум с помощью выделения области
                             },
                             mode: 'x',
                             onZoomComplete: function({chart}) {
