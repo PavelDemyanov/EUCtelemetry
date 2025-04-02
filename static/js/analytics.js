@@ -31,6 +31,21 @@ document.addEventListener('DOMContentLoaded', function() {
         return `${hours}:${minutes}:${secs}`;
     }
     
+    // Function to format X-axis labels in human-readable format
+    function formatXAxisLabel(value, index, values) {
+        const date = new Date(value * 1000);
+        
+        // If we have many values, show fewer labels
+        if (values.length > 20 && index % Math.ceil(values.length / 20) !== 0) {
+            return '';
+        }
+        
+        const hours = date.getUTCHours().toString().padStart(2, '0');
+        const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+        const secs = date.getUTCSeconds().toString().padStart(2, '0');
+        return `${hours}:${minutes}:${secs}`;
+    }
+    
     // Color palette for multiple datasets
     const colorPalette = [
         { borderColor: 'rgba(75, 192, 192, 1)', backgroundColor: 'rgba(75, 192, 192, 0.2)' },  // Teal
@@ -73,16 +88,28 @@ document.addEventListener('DOMContentLoaded', function() {
                     x: {
                         title: {
                             display: true,
-                            text: 'Время'
+                            text: 'Время',
+                            color: '#fff'
                         },
                         ticks: {
-                            maxTicksLimit: 20
+                            callback: formatXAxisLabel,
+                            color: '#fff'
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
                         }
                     },
                     y: {
                         title: {
                             display: true,
-                            text: 'Значения'
+                            text: 'Значения',
+                            color: '#fff'
+                        },
+                        ticks: {
+                            color: '#fff'
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
                         },
                         beginAtZero: false
                     }
@@ -99,12 +126,33 @@ document.addEventListener('DOMContentLoaded', function() {
                     legend: {
                         display: true,
                         position: 'top',
+                        labels: {
+                            color: '#fff'
+                        },
                         onClick: function(e, legendItem, legend) {
                             // Toggle visibility
                             const index = legendItem.datasetIndex;
                             const meta = chartInstance.getDatasetMeta(index);
                             meta.hidden = meta.hidden === null ? !chartInstance.data.datasets[index].hidden : null;
                             chartInstance.update();
+                        }
+                    },
+                    zoom: {
+                        pan: {
+                            enabled: true,
+                            mode: 'x'
+                        },
+                        zoom: {
+                            wheel: {
+                                enabled: true
+                            },
+                            pinch: {
+                                enabled: true
+                            },
+                            mode: 'x',
+                            onZoomComplete: function({chart}) {
+                                chart.update('none');
+                            }
                         }
                     }
                 },
@@ -249,5 +297,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // No additional event listeners needed as all graphs are shown by default
+    // Event listener for reset zoom button
+    const resetZoomButton = document.getElementById('resetZoomButton');
+    if (resetZoomButton) {
+        resetZoomButton.addEventListener('click', function() {
+            if (chartInstance) {
+                chartInstance.resetZoom();
+            }
+        });
+    }
 });
