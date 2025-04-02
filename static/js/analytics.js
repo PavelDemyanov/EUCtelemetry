@@ -10,6 +10,12 @@ document.addEventListener('DOMContentLoaded', function() {
     let chartInstance = null;
     let csvData = null;
     
+    // Переменные для собственной реализации перетаскивания
+    let isDragging = false;
+    let dragStartX = 0;
+    let chartStartMin = 0;
+    let chartStartMax = 0;
+    
     // Function to show error message
     function showError(message) {
         errorMessage.textContent = message;
@@ -65,6 +71,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         const ctx = dataChart.getContext('2d');
+        // Создаем новый экземпляр Chart.js
         chartInstance = new Chart(ctx, {
             type: 'line',
             data: {
@@ -139,24 +146,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     zoom: {
                         pan: {
-                            enabled: true,
-                            mode: 'x',
-                            modifierKey: null,
-                            onPanStart: function() {
-                                const canvas = document.getElementById('dataChart');
-                                if (canvas) canvas.style.cursor = 'grabbing';
-                            },
-                            onPanComplete: function() {
-                                const canvas = document.getElementById('dataChart');
-                                if (canvas) canvas.style.cursor = 'grab';
-                            }
+                            enabled: false  // Отключаем встроенное панорамирование в пользу нашей реализации
                         },
                         zoom: {
                             wheel: {
-                                enabled: true
+                                enabled: true  // Оставляем возможность зума колесиком мыши
                             },
                             pinch: {
-                                enabled: true
+                                enabled: true  // Оставляем возможность зума щипком на мобильных
                             },
                             drag: {
                                 enabled: false
@@ -226,6 +223,73 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Create multi-line chart
         createMultiChart(timestamps, datasets);
+        
+        // Добавляем обработчики событий для ручного перетаскивания
+        setupManualPanning();
+    }
+    
+    // Функция для настройки ручного перетаскивания графика
+    function setupManualPanning() {
+        const canvas = document.getElementById('dataChart');
+        if (!canvas) return;
+        
+        // Устанавливаем начальный стиль курсора
+        canvas.style.cursor = 'grab';
+        
+        // Обработчик начала перетаскивания
+        canvas.addEventListener('mousedown', function(e) {
+            if (!chartInstance) return;
+            
+            isDragging = true;
+            dragStartX = e.clientX;
+            chartStartMin = chartInstance.scales.x.min;
+            chartStartMax = chartInstance.scales.x.max;
+            
+            canvas.style.cursor = 'grabbing';
+            
+            // Предотвращаем выделение текста при перетаскивании
+            e.preventDefault();
+        });
+        
+        // Обработчик перемещения мыши
+        window.addEventListener('mousemove', function(e) {
+            if (!isDragging || !chartInstance) return;
+            
+            // Вычисляем смещение в пикселях
+            const deltaX = e.clientX - dragStartX;
+            
+            // Преобразуем пиксели в значения оси X
+            const rangeX = chartStartMax - chartStartMin;
+            const pixelPerValue = canvas.width / rangeX;
+            const valueShift = -deltaX / pixelPerValue;
+            
+            // Применяем смещение к границам видимой области графика
+            if (!chartInstance.options.scales.x) {
+                chartInstance.options.scales.x = {};
+            }
+            
+            chartInstance.options.scales.x.min = chartStartMin + valueShift;
+            chartInstance.options.scales.x.max = chartStartMax + valueShift;
+            
+            // Обновляем график без анимации
+            chartInstance.update('none');
+        });
+        
+        // Обработчик окончания перетаскивания
+        window.addEventListener('mouseup', function() {
+            if (isDragging) {
+                isDragging = false;
+                if (canvas) canvas.style.cursor = 'grab';
+            }
+        });
+        
+        // Обработчик выхода мыши за пределы окна
+        window.addEventListener('mouseleave', function() {
+            if (isDragging) {
+                isDragging = false;
+                if (canvas) canvas.style.cursor = 'grab';
+            }
+        });
     }
     
     // Statistics functions removed as per requirements
@@ -311,7 +375,17 @@ document.addEventListener('DOMContentLoaded', function() {
     if (resetZoomButton) {
         resetZoomButton.addEventListener('click', function() {
             if (chartInstance) {
-                chartInstance.resetZoom();
+                // Сбрасываем ограничения осей, чтобы показать все данные
+                if (chartInstance.options.scales.x) {
+                    delete chartInstance.options.scales.x.min;
+                    delete chartInstance.options.scales.x.max;
+                }
+                // Если доступен метод resetZoom от плагина, тоже используем его для колесика
+                if (typeof chartInstance.resetZoom === 'function') {
+                    chartInstance.resetZoom();
+                } else {
+                    chartInstance.update();
+                }
             }
         });
     }
