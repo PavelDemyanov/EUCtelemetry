@@ -323,25 +323,39 @@ document.addEventListener('DOMContentLoaded', function() {
                                     const originalIndex = item.index;
                                     const color = colorPalette[originalIndex % colorPalette.length].borderColor;
                                     
-                                    // Получаем оригинальное значение для данной точки
+                                    // Получаем оригинальное значение для данной точки - индекс в массиве данных
                                     const dataIndex = context.tooltip.dataPoints[0].dataIndex;
+                                    let value;
                                     
-                                    // Извлекаем реальное значение напрямую из оригинального массива
-                                    const columnName = dataset.columnName;
-                                    // Находим соответствующий индекс в исходных данных
-                                    const originalValue = csvData[dataIndex][columnName];
-                                    let value = parseFloat(originalValue);
-                                    
-                                    // Если не удалось получить значение напрямую из csvData (например, если это вычисляемое значение)
-                                    if (isNaN(value) && dataset.originalData && dataset.originalData[dataIndex] !== undefined) {
+                                    // Получаем значение из originalData, который мы создали во время формирования датасета
+                                    if (dataset.originalData && dataset.originalData[dataIndex] !== undefined) {
                                         value = dataset.originalData[dataIndex];
-                                    }
-                                    
-                                    // Форматируем значение с 2 знаками после запятой, если это число
-                                    if (typeof value === 'number' && !isNaN(value)) {
-                                        value = value.toFixed(2);
+                                        
+                                        // Форматируем значение с 2 знаками после запятой, если это число
+                                        if (typeof value === 'number' && !isNaN(value)) {
+                                            value = value.toFixed(2);
+                                        }
                                     } else {
-                                        value = originalValue || "N/A"; // Показываем исходное значение как строку или N/A
+                                        // Резервный путь: пытаемся получить из исходных данных напрямую, если есть
+                                        const columnName = dataset.columnName;
+                                        if (csvData && csvData[dataIndex] && csvData[dataIndex][columnName] !== undefined) {
+                                            const originalValue = csvData[dataIndex][columnName];
+                                            value = parseFloat(originalValue);
+                                            
+                                            if (!isNaN(value)) {
+                                                value = value.toFixed(2);
+                                            } else {
+                                                value = originalValue;
+                                            }
+                                        } else {
+                                            // Если нет доступного значения, показываем фактическое значение с графика
+                                            value = context.tooltip.dataPoints.find(p => p.datasetIndex === originalIndex)?.raw;
+                                            if (typeof value === 'number' && !isNaN(value)) {
+                                                value = value.toFixed(2);
+                                            } else {
+                                                value = "—"; // Используем em dash вместо N/A
+                                            }
+                                        }
                                     }
                                     
                                     // Создаем стиль для цветового маркера
