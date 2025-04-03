@@ -6,9 +6,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const errorMessage = document.getElementById('errorMessage');
     const analysisResults = document.getElementById('analysisResults');
     const dataChart = document.getElementById('dataChart');
+    const adaptiveChartToggle = document.getElementById('adaptiveChartToggle');
     
     let chartInstance = null;
     let csvData = null;
+    let isAdaptiveChart = true; // По умолчанию адаптивный график включен
     
     // Переменные для собственной реализации перетаскивания
     let isDragging = false;
@@ -90,6 +92,32 @@ document.addEventListener('DOMContentLoaded', function() {
         const minutes = date.getUTCMinutes().toString().padStart(2, '0');
         const secs = date.getUTCSeconds().toString().padStart(2, '0');
         return `${hours}:${minutes}:${secs}`;
+    }
+    
+    // Функция для нормализации значений в адаптивном режиме
+    function normalizeValueForAdaptiveScale(value, columnName) {
+        if (!isAdaptiveChart) {
+            return value; // Возвращаем исходное значение, если адаптивный режим выключен
+        }
+        
+        // Нормализуем значения в зависимости от типа данных
+        columnName = columnName.toLowerCase();
+        
+        if (columnName === 'power') {
+            // Power: 6000 -> 100, -6000 -> 0, линейная шкала между ними
+            return ((value + 6000) / 12000) * 100;
+        } else if (columnName === 'current') {
+            // Current: 100 -> 100, -100 -> 0, линейная шкала между ними
+            return ((value + 100) / 200) * 100;
+        } else if (columnName === 'voltage') {
+            // Если точный минимум неизвестен, используем 50 как примерное минимальное значение
+            // Voltage: 150 -> 100, минимум -> 0
+            const minVoltage = 50; // Примерное минимальное значение
+            return ((value - minVoltage) / (150 - minVoltage)) * 100;
+        }
+        
+        // Для остальных столбцов возвращаем исходное значение
+        return value;
     }
     
     // Color palette for multiple datasets
@@ -393,7 +421,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const datasets = columns.map(column => {
             return {
                 label: column,
-                data: data.map(row => parseFloat(row[column]) || 0)
+                data: data.map(row => {
+                    const rawValue = parseFloat(row[column]) || 0;
+                    // Применяем нормализацию для адаптивного графика
+                    return normalizeValueForAdaptiveScale(rawValue, column);
+                })
             };
         });
         
@@ -639,5 +671,24 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     } else {
         console.warn("Reset zoom button not found");
+    }
+    
+    // Event listener for adaptive chart toggle
+    if (adaptiveChartToggle) {
+        // Устанавливаем начальное значение переключателя (по умолчанию включен)
+        adaptiveChartToggle.checked = isAdaptiveChart;
+        
+        adaptiveChartToggle.addEventListener('change', function() {
+            // Обновляем глобальное состояние адаптивного графика
+            isAdaptiveChart = adaptiveChartToggle.checked;
+            console.log("Adaptive chart mode:", isAdaptiveChart ? "enabled" : "disabled");
+            
+            // Перестраиваем график с учетом нового режима, если данные уже загружены
+            if (csvData) {
+                plotAllColumns(csvData);
+            }
+        });
+    } else {
+        console.warn("Adaptive chart toggle not found");
     }
 });
