@@ -110,6 +110,32 @@ document.addEventListener('DOMContentLoaded', function() {
             chartInstance.destroy();
         }
         
+        // Добавляем CSS стили для контроля курсора
+        const styleId = 'chart-cursor-styles';
+        if (!document.getElementById(styleId)) {
+            const style = document.createElement('style');
+            style.id = styleId;
+            style.textContent = `
+                /* Стиль для легенды - обычный курсор */
+                .chartjs-legend-item,
+                li.chartjs-legend-item,
+                ul.chartjs-legend-ul li {
+                    cursor: pointer !important;
+                }
+                
+                /* Стиль для области графика - рука */
+                #dataChart {
+                    cursor: grab !important;
+                }
+                
+                /* Стиль при активном перетаскивании */
+                #dataChart.grabbing {
+                    cursor: grabbing !important;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
         const ctx = dataChart.getContext('2d');
         // Создаем новый экземпляр Chart.js
         chartInstance = new Chart(ctx, {
@@ -266,7 +292,25 @@ document.addEventListener('DOMContentLoaded', function() {
                         display: true,
                         position: 'top',
                         labels: {
-                            color: '#fff'
+                            color: '#fff',
+                            // Добавляем функцию генерации стиля текста для элементов легенды
+                            generateLabels: function(chart) {
+                                // Получаем стандартные лейблы
+                                const original = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                                
+                                // Применяем наш стиль к каждому лейблу
+                                original.forEach(label => {
+                                    const meta = chart.getDatasetMeta(label.datasetIndex);
+                                    if (meta.hidden) {
+                                        // Если график скрыт, делаем текст полупрозрачным
+                                        label.fillStyle = 'rgba(150, 150, 150, 0.5)'; // Серый цвет для неактивных элементов
+                                        label.strokeStyle = 'rgba(150, 150, 150, 0.5)';
+                                        label.fontColor = 'rgba(150, 150, 150, 0.5)'; // Делаем текст тусклым
+                                    }
+                                });
+                                
+                                return original;
+                            }
                         },
                         onClick: function(e, legendItem, legend) {
                             // Toggle visibility
@@ -365,12 +409,64 @@ document.addEventListener('DOMContentLoaded', function() {
         const canvas = document.getElementById('dataChart');
         if (!canvas) return;
         
-        // Устанавливаем начальный стиль курсора
+        // Находим элемент легенды, чтобы применить к нему другой стиль курсора
+        const chartContainer = document.querySelector('.chart-container');
+        let legendElement = null;
+        
+        if (chartContainer) {
+            // Ищем элемент легенды внутри контейнера графика
+            legendElement = chartContainer.querySelector('.chartjs-legend');
+            
+            // Если не нашли стандартную легенду, пробуем найти другим селектором
+            if (!legendElement) {
+                // Chart.js создает легенду внутри div.chartjs-legend-body или ul.chartjs-legend-ul
+                legendElement = chartContainer.querySelector('.chartjs-legend-body, .chartjs-legend-ul');
+            }
+            
+            // Если всё еще не нашли, используем все элементы li внутри контейнера
+            if (!legendElement) {
+                const legendItems = chartContainer.querySelectorAll('li');
+                if (legendItems.length > 0) {
+                    // Для каждого элемента легенды устанавливаем обычный курсор
+                    legendItems.forEach(item => {
+                        item.style.cursor = 'pointer';
+                    });
+                }
+            } else {
+                // Если нашли легенду как единый элемент, устанавливаем курсор для неё
+                legendElement.style.cursor = 'default';
+            }
+        }
+        
+        // Устанавливаем начальный стиль курсора для области графика
         canvas.style.cursor = 'grab';
         
         // Обработчик начала перетаскивания
         canvas.addEventListener('mousedown', function(e) {
             if (!chartInstance) return;
+            
+            // Проверяем, что нажатие произошло в области графика, а не легенды
+            const legendBox = chartInstance.legend.legendHitBoxes;
+            const position = {
+                x: e.offsetX, 
+                y: e.offsetY
+            };
+            
+            // Проверяем, кликнули ли мы по легенде
+            let clickedOnLegend = false;
+            for (let i = 0; i < legendBox.length; i++) {
+                const box = legendBox[i];
+                if (position.x >= box.left && 
+                    position.x <= box.left + box.width &&
+                    position.y >= box.top &&
+                    position.y <= box.top + box.height) {
+                    clickedOnLegend = true;
+                    break;
+                }
+            }
+            
+            // Если клик по легенде, не начинаем перетаскивание
+            if (clickedOnLegend) return;
             
             isDragging = true;
             dragStartX = e.clientX;
@@ -378,6 +474,7 @@ document.addEventListener('DOMContentLoaded', function() {
             chartStartMax = chartInstance.scales.x.max;
             
             canvas.style.cursor = 'grabbing';
+            canvas.classList.add('grabbing'); // Добавляем класс для CSS селектора
             
             // Предотвращаем выделение текста при перетаскивании
             e.preventDefault();
@@ -411,7 +508,10 @@ document.addEventListener('DOMContentLoaded', function() {
         window.addEventListener('mouseup', function() {
             if (isDragging) {
                 isDragging = false;
-                if (canvas) canvas.style.cursor = 'grab';
+                if (canvas) {
+                    canvas.style.cursor = 'grab';
+                    canvas.classList.remove('grabbing'); // Удаляем класс при окончании перетаскивания
+                }
             }
         });
         
@@ -419,7 +519,10 @@ document.addEventListener('DOMContentLoaded', function() {
         window.addEventListener('mouseleave', function() {
             if (isDragging) {
                 isDragging = false;
-                if (canvas) canvas.style.cursor = 'grab';
+                if (canvas) {
+                    canvas.style.cursor = 'grab';
+                    canvas.classList.remove('grabbing'); // Удаляем класс при выходе за пределы
+                }
             }
         });
     }
