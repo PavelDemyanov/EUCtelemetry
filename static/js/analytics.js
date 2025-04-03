@@ -94,6 +94,26 @@ document.addEventListener('DOMContentLoaded', function() {
         return `${hours}:${minutes}:${secs}`;
     }
     
+    // Функция для форматирования времени в человекочитаемом формате для tooltip
+    function formatTooltipTimestamp(timestamp) {
+        if (timestamp === undefined || timestamp === null) {
+            return 'Unknown';
+        }
+        
+        const date = new Date(timestamp * 1000);
+        
+        if (isNaN(date.getTime())) {
+            return 'Invalid time';
+        }
+        
+        const hours = date.getUTCHours().toString().padStart(2, '0');
+        const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+        const secs = date.getUTCSeconds().toString().padStart(2, '0');
+        const ms = date.getUTCMilliseconds().toString().padStart(3, '0');
+        
+        return `${hours}:${minutes}:${secs}.${ms}`;
+    }
+    
     // Функция для нормализации значений в адаптивном режиме
     function normalizeValueForAdaptiveScale(value, columnName) {
         if (!isAdaptiveChart) {
@@ -224,6 +244,34 @@ document.addEventListener('DOMContentLoaded', function() {
                 plugins: {
                     tooltip: {
                         enabled: false, // Отключаем встроенный tooltip, будем использовать только наш кастомный
+                        callbacks: {
+                            title: function(context) {
+                                // Форматируем заголовок (время) в человекочитаемом формате
+                                if (context[0] && context[0].parsed && context[0].parsed.x !== undefined) {
+                                    return formatTooltipTimestamp(context[0].parsed.x);
+                                }
+                                return '';
+                            },
+                            label: function(context) {
+                                // Используем исходные значения вместо нормализованных
+                                const dataset = context.dataset;
+                                const dataIndex = context.dataIndex;
+                                const label = dataset.label || '';
+                                
+                                // Если есть оригинальные данные, используем их
+                                let value = context.parsed.y;
+                                if (dataset.originalData && dataset.originalData[dataIndex] !== undefined) {
+                                    value = dataset.originalData[dataIndex];
+                                }
+                                
+                                // Форматируем значение с 2 знаками после запятой, если это число
+                                if (typeof value === 'number') {
+                                    value = value.toFixed(2);
+                                }
+                                
+                                return `${label}: ${value}`;
+                            }
+                        },
                         external: function(context) {
                             // Получаем существующий или создаем новый tooltip
                             const tooltipEl = document.getElementById('chartjs-tooltip') || document.createElement('div');
@@ -268,19 +316,38 @@ document.addEventListener('DOMContentLoaded', function() {
                                 });
                                 innerHtml += '</thead><tbody>';
                                 
-                                bodyLines.forEach((body, i) => {
-                                    // Берем цвета напрямую из датасета, чтобы они совпадали с графиком
-                                    const dataset = chartInstance.data.datasets[i];
-                                    const color = dataset.borderColor || dataset.backgroundColor;
-                                    let style = 'background:' + color;
-                                    style += '; border: none'; // Убираем рамку, делая цвет сплошным
-                                    style += '; margin-right: 10px';
-                                    style += '; display: inline-block';
-                                    style += '; width: 10px; height: 10px';
-                                    style += '; border-radius: 50%'; // Делаем цветовые метки круглыми
-                                    const span = '<span style="' + style + '"></span>';
-                                    innerHtml += '<tr><td style="padding: 3px 8px;">' + span + body + '</td></tr>';
+                                // Собираем все видимые датасеты для корректного отображения
+                                const visibleDatasets = [];
+                                chartInstance.data.datasets.forEach((dataset, index) => {
+                                    const meta = chartInstance.getDatasetMeta(index);
+                                    if (!meta.hidden) {
+                                        visibleDatasets.push({
+                                            dataset: dataset,
+                                            index: index
+                                        });
+                                    }
                                 });
+                                
+                                // Отображаем только видимые датасеты в правильном порядке их цветов
+                                bodyLines.forEach((body, i) => {
+                                    // Берем цвета напрямую из датасета, но учитываем только видимые датасеты
+                                    if (i < visibleDatasets.length) {
+                                        const dataset = visibleDatasets[i].dataset;
+                                        // Используем оригинальный индекс датасета для получения правильного цвета
+                                        const originalIndex = visibleDatasets[i].index;
+                                        const color = colorPalette[originalIndex % colorPalette.length].borderColor;
+                                        
+                                        let style = 'background:' + color;
+                                        style += '; border: none'; // Убираем рамку, делая цвет сплошным
+                                        style += '; margin-right: 10px';
+                                        style += '; display: inline-block';
+                                        style += '; width: 10px; height: 10px';
+                                        style += '; border-radius: 50%'; // Делаем цветовые метки круглыми
+                                        const span = '<span style="' + style + '"></span>';
+                                        innerHtml += '<tr><td style="padding: 3px 8px;">' + span + body + '</td></tr>';
+                                    }
+                                });
+                                
                                 innerHtml += '</tbody>';
                                 table.innerHTML = innerHtml;
                             }
@@ -419,13 +486,20 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Create dataset for each column
         const datasets = columns.map(column => {
+            // Создаем массив исходных значений для каждого столбца (для tooltip)
+            const rawValues = data.map(row => parseFloat(row[column]) || 0);
+            
             return {
                 label: column,
                 data: data.map(row => {
                     const rawValue = parseFloat(row[column]) || 0;
                     // Применяем нормализацию для адаптивного графика
                     return normalizeValueForAdaptiveScale(rawValue, column);
-                })
+                }),
+                // Сохраняем исходные значения для отображения в tooltip
+                originalData: rawValues,
+                // Сохраняем название колонки для идентификации при нормализации
+                columnName: column
             };
         });
         
