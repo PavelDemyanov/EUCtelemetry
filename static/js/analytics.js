@@ -243,172 +243,72 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 plugins: {
                     tooltip: {
-                        enabled: false, // Отключаем встроенный tooltip, будем использовать только наш кастомный
+                        enabled: true, // Включаем встроенный tooltip
+                        mode: 'index',
+                        intersect: false,
                         callbacks: {
-                            title: function(context) {
-                                // Форматируем заголовок (время) в человекочитаемом формате
-                                if (context[0] && context[0].parsed && context[0].parsed.x !== undefined) {
-                                    return formatTooltipTimestamp(context[0].parsed.x);
+                            title: function(tooltipItems) {
+                                // Форматируем заголовок как timestamp
+                                if (tooltipItems.length > 0) {
+                                    const timestamp = tooltipItems[0].parsed.x;
+                                    return formatTooltipTimestamp(timestamp);
                                 }
                                 return '';
                             },
                             label: function(context) {
-                                // ВАЖНО: Этот callback не используется для отображения tooltip
-                                // Мы полностью заменили его своей реализацией с доступом к исходным данным
-                                // См. функцию external tooltip
-                                return "";
+                                const dataset = context.dataset;
+                                const index = context.dataIndex;
+                                let value;
+                                
+                                // Проверяем наличие rawData (новый метод)
+                                if (dataset.rawData && dataset.rawData[index] !== undefined) {
+                                    const rawValue = dataset.rawData[index];
+                                    // Парсим число, если это возможно
+                                    const numValue = parseFloat(rawValue);
+                                    if (!isNaN(numValue)) {
+                                        value = numValue.toFixed(2);
+                                    } else {
+                                        value = rawValue || "—"; // Em dash если значение отсутствует
+                                    }
+                                }
+                                // Проверяем наличие originalData (старый метод)
+                                else if (dataset.originalData && dataset.originalData[index] !== undefined) {
+                                    const origValue = dataset.originalData[index];
+                                    if (typeof origValue === 'number' && !isNaN(origValue)) {
+                                        value = origValue.toFixed(2);
+                                    } else {
+                                        value = origValue || "—";
+                                    }
+                                }
+                                // Резервный вариант - берем значение из графика
+                                else {
+                                    value = context.raw;
+                                    if (typeof value === 'number' && !isNaN(value)) {
+                                        value = value.toFixed(2);
+                                    } else {
+                                        value = value || "—";
+                                    }
+                                }
+                                
+                                return `${dataset.label}: ${value}`;
                             }
                         },
-                        external: function(context) {
-                            // Получаем существующий или создаем новый tooltip
-                            const tooltipEl = document.getElementById('chartjs-tooltip') || document.createElement('div');
-                            tooltipEl.id = 'chartjs-tooltip';
-                            
-                            // Если нет активных элементов, скрываем tooltip и выходим
-                            if (!context.tooltip._active || context.tooltip._active.length === 0) {
-                                tooltipEl.style.opacity = 0;
-                                return;
-                            }
-                            
-                            tooltipEl.innerHTML = '<table></table>';
-                            
-                            // Применяем стили
-                            const position = context.chart.canvas.getBoundingClientRect();
-                            tooltipEl.style.background = 'rgba(0, 0, 0, 0.85)';
-                            tooltipEl.style.borderRadius = '4px';
-                            tooltipEl.style.color = 'white';
-                            tooltipEl.style.opacity = 1;
-                            tooltipEl.style.pointerEvents = 'none';
-                            tooltipEl.style.position = 'absolute';
-                            tooltipEl.style.transform = 'translate(0, 0)'; // Убираем смещение по горизонтали через transform
-                            tooltipEl.style.transition = 'all .1s ease';
-                            tooltipEl.style.boxShadow = '0 2px 5px rgba(0,0,0,0.5)';
-                            tooltipEl.style.fontFamily = 'Arial, sans-serif';
-                            tooltipEl.style.fontSize = '12px';
-                            
-                            const table = tooltipEl.querySelector('table');
-                            table.style.margin = '0px';
-                            table.style.borderCollapse = 'collapse';
-                            table.style.width = '100%';
-                            
-                            // Заполняем содержимое
-                            if (context.tooltip.body) {
-                                const titleLines = context.tooltip.title || [];
-                                const bodyLines = context.tooltip.body.map(b => b.lines);
-                                
-                                let innerHtml = '<thead>';
-                                titleLines.forEach(title => {
-                                    innerHtml += '<tr><th style="padding: 4px 8px; text-align: center; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.2);">' + 
-                                        title + '</th></tr>';
-                                });
-                                innerHtml += '</thead><tbody>';
-                                
-                                // Собираем все видимые датасеты для корректного отображения
-                                const visibleDatasets = [];
-                                chartInstance.data.datasets.forEach((dataset, index) => {
-                                    const meta = chartInstance.getDatasetMeta(index);
-                                    if (!meta.hidden) {
-                                        visibleDatasets.push({
-                                            dataset: dataset,
-                                            index: index
-                                        });
-                                    }
-                                });
-                                
-                                // Отображаем только видимые датасеты в правильном порядке их цветов и с оригинальными значениями
-                                visibleDatasets.forEach((item, i) => {
-                                    // Берем цвета напрямую из датасета, но учитываем только видимые датасеты
-                                    const dataset = item.dataset;
-                                    // Используем оригинальный индекс датасета для получения правильного цвета
-                                    const originalIndex = item.index;
-                                    const color = colorPalette[originalIndex % colorPalette.length].borderColor;
-                                    
-                                    // Получаем индекс точки данных для текущей позиции курсора
-                                    const dataIndex = context.tooltip.dataPoints[0].dataIndex;
-                                    let value;
-                                    
-                                    // Шаг 1: Пытаемся использовать новое поле rawData (содержит оригинальные строки)
-                                    if (dataset.rawData && dataset.rawData[dataIndex] !== undefined) {
-                                        const rawValue = dataset.rawData[dataIndex];
-                                        // Если это строка с числом, преобразуем её для форматирования
-                                        const numValue = parseFloat(rawValue);
-                                        if (!isNaN(numValue)) {
-                                            value = numValue.toFixed(2);
-                                        } else {
-                                            value = rawValue || "—"; // Em dash если значение отсутствует
-                                        }
-                                    }
-                                    // Шаг 2: Пробуем старый подход с originalData
-                                    else if (dataset.originalData && dataset.originalData[dataIndex] !== undefined) {
-                                        const origValue = dataset.originalData[dataIndex];
-                                        if (typeof origValue === 'number' && !isNaN(origValue)) {
-                                            value = origValue.toFixed(2);
-                                        } else {
-                                            value = origValue || "—";
-                                        }
-                                    }
-                                    // Шаг 3: Пытаемся получить значение напрямую из данных CSV
-                                    else if (csvData && dataset.columnName) {
-                                        const columnName = dataset.columnName;
-                                        if (csvData[dataIndex] && csvData[dataIndex][columnName] !== undefined) {
-                                            const csvValue = csvData[dataIndex][columnName];
-                                            const numValue = parseFloat(csvValue);
-                                            if (!isNaN(numValue)) {
-                                                value = numValue.toFixed(2);
-                                            } else {
-                                                value = csvValue || "—";
-                                            }
-                                        } else {
-                                            value = "—"; // Em dash если данные отсутствуют
-                                        }
-                                    }
-                                    // Шаг 4: Последний вариант - берем текущее значение с графика
-                                    else {
-                                        const pointData = context.tooltip.dataPoints.find(p => p.datasetIndex === originalIndex);
-                                        if (pointData && pointData.raw !== undefined) {
-                                            const rawValue = pointData.raw;
-                                            if (typeof rawValue === 'number' && !isNaN(rawValue)) {
-                                                value = rawValue.toFixed(2);
-                                            } else {
-                                                value = rawValue || "—";
-                                            }
-                                        } else {
-                                            value = "—"; // Em dash если ничего не найдено
-                                        }
-                                    }
-                                    
-                                    // Создаем стиль для цветового маркера
-                                    let style = 'background:' + color;
-                                    style += '; border: none'; // Убираем рамку, делая цвет сплошным
-                                    style += '; margin-right: 10px';
-                                    style += '; display: inline-block';
-                                    style += '; width: 10px; height: 10px';
-                                    style += '; border-radius: 50%'; // Делаем цветовые метки круглыми
-                                    const span = '<span style="' + style + '"></span>';
-                                    
-                                    // Строка с названием датасета и оригинальным значением
-                                    const label = dataset.label || 'Unknown';
-                                    innerHtml += '<tr><td style="padding: 3px 8px;">' + span + label + ': ' + value + '</td></tr>';
-                                });
-                                
-                                innerHtml += '</tbody>';
-                                table.innerHTML = innerHtml;
-                            }
-                            
-                            // Позиционируем tooltip со смещением вправо на 30px
-                            if (context.tooltip.caretX && context.tooltip.caretY) {
-                                const caretX = context.tooltip.caretX + 30; // Добавляем 30px смещение вправо
-                                const caretY = context.tooltip.caretY;
-                                
-                                tooltipEl.style.left = position.left + window.pageXOffset + caretX + 'px';
-                                tooltipEl.style.top = position.top + window.pageYOffset + caretY + 'px';
-                                tooltipEl.style.padding = context.tooltip.options.padding + 'px ' + context.tooltip.options.padding + 'px';
-                            }
-                            
-                            if (document.body.contains(tooltipEl) === false) {
-                                document.body.appendChild(tooltipEl);
-                            }
-                        }
+                        // Стилизация tooltip для соответствия дизайну
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleFont: { size: 12, weight: 'bold' },
+                        bodyFont: { size: 12 },
+                        padding: 8,
+                        cornerRadius: 4,
+                        caretSize: 5,
+                        displayColors: true, // Показывать цветные маркеры рядом с метками
+                        // Дополнительная настройка отступов
+                        padding: {
+                            left: 12,
+                            right: 12,
+                            top: 8,
+                            bottom: 8
+                        },
+                        position: 'nearest'
                     },
                     // Добавляем плагин для отображения вертикальной линии под курсором
                     crosshair: {
