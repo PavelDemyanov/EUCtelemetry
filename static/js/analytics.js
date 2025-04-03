@@ -7,718 +7,304 @@ document.addEventListener('DOMContentLoaded', function() {
     const analysisResults = document.getElementById('analysisResults');
     const dataChart = document.getElementById('dataChart');
     const adaptiveChartToggle = document.getElementById('adaptiveChartToggle');
-    
+    const resetZoomButton = document.getElementById('resetZoomButton');
+
     let chartInstance = null;
     let csvData = null;
-    let isAdaptiveChart = true; // По умолчанию адаптивный график включен
-    
-    // Переменные для собственной реализации перетаскивания
+    let isAdaptiveChart = true;
     let isDragging = false;
     let dragStartX = 0;
     let chartStartMin = 0;
     let chartStartMax = 0;
-    
-    // Создаем и регистрируем плагин для вертикальной линии под курсором
+
     const crosshairPlugin = {
         id: 'crosshair',
         afterDraw: (chart, args, options) => {
             if (!chart.tooltip._active || !chart.tooltip._active.length) return;
-            
             const activePoint = chart.tooltip._active[0];
             const ctx = chart.ctx;
             const x = activePoint.element.x;
             const topY = chart.scales.y.top;
             const bottomY = chart.scales.y.bottom;
-            
-            // Рисуем вертикальную линию
             ctx.save();
             ctx.beginPath();
             ctx.moveTo(x, topY);
             ctx.lineTo(x, bottomY);
             ctx.lineWidth = options.line?.width || 1;
             ctx.strokeStyle = options.line?.color || 'rgba(255, 255, 255, 0.5)';
-            
-            // Устанавливаем штриховую линию, если задан шаблон
-            if (options.line?.dashPattern) {
-                ctx.setLineDash(options.line.dashPattern);
-            }
-            
+            if (options.line?.dashPattern) ctx.setLineDash(options.line.dashPattern);
             ctx.stroke();
             ctx.restore();
         }
     };
-    
-    // Регистрируем плагин
+
     Chart.register(crosshairPlugin);
-    
-    // Function to show error message
+
     function showError(message) {
         errorMessage.textContent = message;
         errorMessage.style.display = 'block';
         loadingIndicator.style.display = 'none';
     }
-    
-    // Function to hide error message
+
     function hideError() {
         errorMessage.style.display = 'none';
     }
-    
-    // Function to format timestamps as HH:MM:SS
-    function formatTimestamp(seconds) {
-        const date = new Date(seconds * 1000);
-        const hours = date.getUTCHours().toString().padStart(2, '0');
-        const minutes = date.getUTCMinutes().toString().padStart(2, '0');
-        const secs = date.getUTCSeconds().toString().padStart(2, '0');
-        return `${hours}:${minutes}:${secs}`;
-    }
-    
-    // Function to format X-axis labels in human-readable format
-    function formatXAxisLabel(value, index, values) {
-        // Проверяем, что value не пустое значение
-        if (value === undefined || value === null) {
-            return '';
-        }
 
+    function formatXAxisLabel(value) {
+        if (value === undefined || value === null) return '';
         const date = new Date(value * 1000);
-        
-        // Проверяем, что дата валидна
-        if (isNaN(date.getTime())) {
-            console.warn("Invalid timestamp value:", value);
-            return '';
-        }
-        
-        // Форматируем метку времени
+        if (isNaN(date.getTime())) return '';
         const hours = date.getUTCHours().toString().padStart(2, '0');
         const minutes = date.getUTCMinutes().toString().padStart(2, '0');
         const secs = date.getUTCSeconds().toString().padStart(2, '0');
         return `${hours}:${minutes}:${secs}`;
     }
-    
-    // Функция для форматирования времени в человекочитаемом формате для tooltip
+
     function formatTooltipTimestamp(timestamp) {
-        if (timestamp === undefined || timestamp === null) {
-            return 'Unknown';
-        }
-        
+        if (timestamp === undefined || timestamp === null) return 'Unknown';
         const date = new Date(timestamp * 1000);
-        
-        if (isNaN(date.getTime())) {
-            return 'Invalid time';
-        }
-        
+        if (isNaN(date.getTime())) return 'Invalid time';
         const hours = date.getUTCHours().toString().padStart(2, '0');
         const minutes = date.getUTCMinutes().toString().padStart(2, '0');
         const secs = date.getUTCSeconds().toString().padStart(2, '0');
         const ms = date.getUTCMilliseconds().toString().padStart(3, '0');
-        
         return `${hours}:${minutes}:${secs}.${ms}`;
     }
-    
-    // Функция для нормализации значений в адаптивном режиме
+
     function normalizeValueForAdaptiveScale(value, columnName) {
-        if (!isAdaptiveChart) {
-            return value; // Возвращаем исходное значение, если адаптивный режим выключен
-        }
-        
-        // Нормализуем значения в зависимости от типа данных
+        if (!isAdaptiveChart) return value;
         columnName = columnName.toLowerCase();
-        
-        if (columnName === 'power') {
-            // Power: 6000 -> 100, -6000 -> 0, линейная шкала между ними
-            return ((value + 6000) / 12000) * 100;
-        } else if (columnName === 'current') {
-            // Current: 100 -> 100, -100 -> 0, линейная шкала между ними
-            return ((value + 100) / 200) * 100;
-        } else if (columnName === 'voltage') {
-            // Если точный минимум неизвестен, используем 50 как примерное минимальное значение
-            // Voltage: 150 -> 100, минимум -> 0
-            const minVoltage = 50; // Примерное минимальное значение
-            return ((value - minVoltage) / (150 - minVoltage)) * 100;
-        }
-        
-        // Для остальных столбцов возвращаем исходное значение
+        if (columnName === 'power') return ((value + 6000) / 12000) * 100;
+        if (columnName === 'current') return ((value + 100) / 200) * 100;
+        if (columnName === 'voltage') return ((value - 50) / (150 - 50)) * 100;
         return value;
     }
-    
-    // Color palette for multiple datasets
-    const colorPalette = [
-        { borderColor: 'rgba(75, 192, 192, 1)', backgroundColor: 'rgba(75, 192, 192, 0.2)' },  // Teal
-        { borderColor: 'rgba(255, 99, 132, 1)', backgroundColor: 'rgba(255, 99, 132, 0.2)' },  // Red
-        { borderColor: 'rgba(54, 162, 235, 1)', backgroundColor: 'rgba(54, 162, 235, 0.2)' },  // Blue
-        { borderColor: 'rgba(255, 206, 86, 1)', backgroundColor: 'rgba(255, 206, 86, 0.2)' },  // Yellow
-        { borderColor: 'rgba(153, 102, 255, 1)', backgroundColor: 'rgba(153, 102, 255, 0.2)' }, // Purple
-        { borderColor: 'rgba(255, 159, 64, 1)', backgroundColor: 'rgba(255, 159, 64, 0.2)' },  // Orange
-        { borderColor: 'rgba(76, 175, 80, 1)', backgroundColor: 'rgba(76, 175, 80, 0.2)' },    // Green
-        { borderColor: 'rgba(244, 67, 54, 1)', backgroundColor: 'rgba(244, 67, 54, 0.2)' }     // Deep Red
-    ];
 
-    // Function to create a new chart with multiple datasets
+    const colorPalette = {
+        // Основные цвета для определенных метрик
+        pwm: { borderColor: '#9c5bc0', backgroundColor: 'rgba(156, 91, 192, 0.2)' },      // Лавандовый
+        speed: { borderColor: '#4a90e2', backgroundColor: 'rgba(74, 144, 226, 0.2)' },    // Приглушенный синий
+        gps: { borderColor: '#5abcb9', backgroundColor: 'rgba(90, 188, 185, 0.2)' },      // Бирюзовый
+        current: { borderColor: '#e2725b', backgroundColor: 'rgba(226, 114, 91, 0.2)' },  // Терракотовый
+        voltage: { borderColor: '#ffc857', backgroundColor: 'rgba(255, 200, 87, 0.2)' },  // Горчичный
+        temperature: { borderColor: '#e67c73', backgroundColor: 'rgba(230, 124, 115, 0.2)' }, // Лососевый
+        power: { borderColor: '#7cb342', backgroundColor: 'rgba(124, 179, 66, 0.2)' },    // Оливковый
+        battery: { borderColor: '#56c271', backgroundColor: 'rgba(86, 194, 113, 0.2)' },  // Мятный
+        mileage: { borderColor: '#9575cd', backgroundColor: 'rgba(149, 117, 205, 0.2)' }, // Сиреневый
+        // Запасные цвета для остальных метрик
+        default: [
+            { borderColor: '#6e7c7c', backgroundColor: 'rgba(110, 124, 124, 0.2)' },      // Серо-зеленый
+            { borderColor: '#a2845e', backgroundColor: 'rgba(162, 132, 94, 0.2)' },       // Песочный
+            { borderColor: '#8c9eff', backgroundColor: 'rgba(140, 158, 255, 0.2)' },      // Лавандово-синий
+            { borderColor: '#b39ddb', backgroundColor: 'rgba(179, 157, 219, 0.2)' },      // Светло-фиолетовый
+            { borderColor: '#90a4ae', backgroundColor: 'rgba(144, 164, 174, 0.2)' },      // Серо-голубой
+            { borderColor: '#80cbc4', backgroundColor: 'rgba(128, 203, 196, 0.2)' }       // Аквамарин
+        ]
+    };
+
     function createMultiChart(labels, datasets) {
-        if (chartInstance) {
-            chartInstance.destroy();
-        }
-        
-        // Добавляем CSS стили для контроля курсора
-        const styleId = 'chart-cursor-styles';
-        if (!document.getElementById(styleId)) {
-            const style = document.createElement('style');
-            style.id = styleId;
-            style.textContent = `
-                /* Стиль для легенды - обычный курсор */
-                .chartjs-legend-item,
-                li.chartjs-legend-item,
-                ul.chartjs-legend-ul li {
-                    cursor: pointer !important;
-                }
-                
-                /* Стиль для области графика - рука */
-                #dataChart {
-                    cursor: grab !important;
-                }
-                
-                /* Стиль при активном перетаскивании */
-                #dataChart.grabbing {
-                    cursor: grabbing !important;
-                }
-            `;
-            document.head.appendChild(style);
-        }
-        
+        if (chartInstance) chartInstance.destroy();
         const ctx = dataChart.getContext('2d');
-        // Создаем новый экземпляр Chart.js
         chartInstance = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: labels,
-                datasets: datasets.map((ds, index) => ({
-                    label: ds.label,
-                    data: ds.data,
-                    borderColor: colorPalette[index % colorPalette.length].borderColor,
-                    backgroundColor: colorPalette[index % colorPalette.length].backgroundColor,
-                    borderWidth: 2,
-                    fill: false, // Set to false for multiple datasets to avoid overlapping
-                    tension: 0.1,
-                    pointRadius: 0, // Remove points on the line
-                    pointHoverRadius: 3 // Show points only on hover
-                }))
+                datasets: datasets.map((ds, index) => {
+                    const columnName = ds.label.toLowerCase();
+                    const color = colorPalette[columnName] || colorPalette.default[index % colorPalette.default.length];
+                    return {
+                        label: ds.label,
+                        data: ds.data,
+                        borderColor: color.borderColor,
+                        backgroundColor: color.backgroundColor,
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.1,
+                        pointRadius: 0,
+                        pointHoverRadius: 3,
+                        originalData: ds.originalData
+                    };
+                })
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
                     x: {
-                        title: {
-                            display: true,
-                            text: 'Время',
-                            color: '#fff'
-                        },
-                        ticks: {
-                            callback: formatXAxisLabel,
-                            color: '#fff',
-                            maxTicksLimit: 20, // Фиксированное количество меток независимо от масштаба
-                            autoSkip: true, // Включаем автоматический пропуск меток
-                            autoSkipPadding: 20, // Добавляем отступ между метками
-                            major: {
-                                enabled: true
-                            }
-                        },
-                        grid: {
-                            display: false  // Убираем сетку на фоне графика
-                        }
+                        title: { display: true, text: 'Время', color: '#fff' },
+                        ticks: { callback: formatXAxisLabel, color: '#fff', maxTicksLimit: 20, autoSkip: true },
+                        grid: { display: false }
                     },
                     y: {
-                        title: {
-                            display: true,
-                            text: 'Значения',
-                            color: '#fff'
-                        },
-                        ticks: {
-                            color: '#fff'
-                        },
-                        grid: {
-                            display: false  // Убираем сетку на фоне графика
-                        },
+                        title: { display: true, text: 'Значения', color: '#fff' },
+                        ticks: { color: '#fff' },
+                        grid: { display: false },
                         beginAtZero: false
                     }
                 },
                 plugins: {
                     tooltip: {
-                        enabled: true, // Включаем встроенный tooltip
+                        enabled: true,
                         mode: 'index',
                         intersect: false,
                         callbacks: {
-                            title: function(tooltipItems) {
-                                // Форматируем заголовок как timestamp
-                                if (tooltipItems.length > 0) {
-                                    const timestamp = tooltipItems[0].parsed.x;
-                                    return formatTooltipTimestamp(timestamp);
-                                }
-                                return '';
-                            },
-                            label: function(context) {
+                            title: (tooltipItems) => tooltipItems.length > 0 ? formatTooltipTimestamp(tooltipItems[0].parsed.x) : '',
+                            label: (context) => {
                                 const dataset = context.dataset;
                                 const index = context.dataIndex;
-                                let value;
-                                
-                                // Проверяем наличие rawData (новый метод)
-                                if (dataset.rawData && dataset.rawData[index] !== undefined) {
-                                    const rawValue = dataset.rawData[index];
-                                    // Парсим число, если это возможно
-                                    const numValue = parseFloat(rawValue);
-                                    if (!isNaN(numValue)) {
-                                        value = numValue.toFixed(2);
-                                    } else {
-                                        value = rawValue || "—"; // Em dash если значение отсутствует
-                                    }
-                                }
-                                // Проверяем наличие originalData (старый метод)
-                                else if (dataset.originalData && dataset.originalData[index] !== undefined) {
-                                    const origValue = dataset.originalData[index];
-                                    if (typeof origValue === 'number' && !isNaN(origValue)) {
-                                        value = origValue.toFixed(2);
-                                    } else {
-                                        value = origValue || "—";
-                                    }
-                                }
-                                // Резервный вариант - берем значение из графика
-                                else {
-                                    value = context.raw;
-                                    if (typeof value === 'number' && !isNaN(value)) {
-                                        value = value.toFixed(2);
-                                    } else {
-                                        value = value || "—";
-                                    }
-                                }
-                                
+                                let value = dataset.originalData[index];
+                                value = (typeof value === 'number' && !isNaN(value)) ? value.toFixed(2) : '—';
                                 return `${dataset.label}: ${value}`;
                             }
                         },
-                        // Стилизация tooltip для соответствия дизайну
                         backgroundColor: 'rgba(0, 0, 0, 0.8)',
                         titleFont: { size: 12, weight: 'bold' },
                         bodyFont: { size: 12 },
-                        padding: 8,
-                        cornerRadius: 4,
-                        caretSize: 5,
-                        displayColors: true, // Показывать цветные маркеры рядом с метками
-                        // Дополнительная настройка отступов
-                        padding: {
-                            left: 12,
-                            right: 12,
-                            top: 8,
-                            bottom: 8
-                        },
-                        position: 'nearest'
+                        padding: 8
                     },
-                    // Добавляем плагин для отображения вертикальной линии под курсором
                     crosshair: {
-                        line: {
-                            color: 'rgba(255, 255, 255, 0.5)',  // Полупрозрачная белая линия
-                            width: 1,
-                            dashPattern: [5, 5]
-                        },
-                        sync: {
-                            enabled: true,
-                            group: 1,
-                            suppressTooltips: false
-                        },
-                        zoom: {
-                            enabled: false
-                        }
+                        line: { color: 'rgba(255, 255, 255, 0.5)', width: 1, dashPattern: [5, 5] }
                     },
                     legend: {
                         display: true,
                         position: 'top',
                         labels: {
                             color: '#fff',
-                            // Добавляем функцию генерации стиля текста для элементов легенды
-                            generateLabels: function(chart) {
-                                // Получаем стандартные лейблы
-                                const original = Chart.defaults.plugins.legend.labels.generateLabels(chart);
-                                
-                                // Применяем наш стиль к каждому лейблу
-                                original.forEach(label => {
-                                    const meta = chart.getDatasetMeta(label.datasetIndex);
-                                    if (meta.hidden) {
-                                        // Если график скрыт, делаем текст полупрозрачным
-                                        label.fillStyle = 'rgba(150, 150, 150, 0.5)'; // Серый цвет для неактивных элементов
-                                        label.strokeStyle = 'rgba(150, 150, 150, 0.5)';
-                                        label.fontColor = 'rgba(150, 150, 150, 0.5)'; // Делаем текст тусклым
-                                    }
+                            generateLabels: (chart) => {
+                                const datasets = chart.data.datasets;
+                                return datasets.map((dataset, i) => {
+                                    const meta = chart.getDatasetMeta(i);
+                                    const isHidden = meta.hidden;
+                                    return {
+                                        text: dataset.label,
+                                        fillStyle: isHidden ? '#555555' : dataset.borderColor,
+                                        strokeStyle: isHidden ? '#555555' : dataset.borderColor,
+                                        lineWidth: 2,
+                                        hidden: isHidden,
+                                        index: i,
+                                        fontColor: isHidden ? '#555555' : '#fff'
+                                    };
                                 });
-                                
-                                return original;
                             }
                         },
-                        onClick: function(e, legendItem, legend) {
-                            // Toggle visibility
-                            const index = legendItem.datasetIndex;
+                        onClick: (e, legendItem) => {
+                            const index = legendItem.index;
                             const meta = chartInstance.getDatasetMeta(index);
-                            meta.hidden = meta.hidden === null ? !chartInstance.data.datasets[index].hidden : null;
+                            meta.hidden = !meta.hidden;
                             chartInstance.update();
                         }
                     },
                     zoom: {
-                        pan: {
-                            enabled: false  // Отключаем встроенное панорамирование в пользу нашей реализации
-                        },
-                        zoom: {
-                            wheel: {
-                                enabled: true  // Оставляем возможность зума колесиком мыши
-                            },
-                            pinch: {
-                                enabled: true  // Оставляем возможность зума щипком на мобильных
-                            },
-                            drag: {
-                                enabled: false
-                            },
-                            mode: 'x'
-                        }
+                        pan: { enabled: false },
+                        zoom: { wheel: { enabled: true }, pinch: { enabled: true }, drag: { enabled: false }, mode: 'x' }
                     }
                 },
-                interaction: {
-                    mode: 'index',
-                    intersect: false
-                }
+                interaction: { mode: 'index', intersect: false }
             }
         });
     }
-    
-    // Legacy function for backward compatibility
-    function createChart(labels, data, label) {
-        createMultiChart(labels, [{label: label, data: data}]);
-    }
-    
-    // Function to calculate statistics
-    function calculateStatistics(data) {
-        if (!data || data.length === 0) return {};
-        
-        const numericData = data.filter(val => !isNaN(parseFloat(val)));
-        if (numericData.length === 0) return {};
-        
-        const values = numericData.map(val => parseFloat(val));
-        values.sort((a, b) => a - b);
-        
-        return {
-            min: values[0],
-            max: values[values.length - 1],
-            avg: values.reduce((sum, val) => sum + val, 0) / values.length,
-            median: values.length % 2 === 0 
-                ? (values[values.length / 2 - 1] + values[values.length / 2]) / 2
-                : values[Math.floor(values.length / 2)]
-        };
-    }
-    
-    // Function to plot all available columns
+
     function plotAllColumns(data) {
         if (!data) return;
-        
-        // Get timestamps for x-axis
         const timestamps = data.map(row => row.timestamp);
-        
-        // Get all numeric columns
-        const columns = Object.keys(data[0]).filter(column => {
-            if (column.toLowerCase() === 'timestamp') return false; // Skip timestamp column
-            
-            // Check if column has numeric data
-            return data.some(row => {
-                const val = parseFloat(row[column]);
-                return !isNaN(val);
-            });
-        });
-        
-        // Create dataset for each column
-        const datasets = columns.map(column => {
-            // Создаем массивы исходных и нормализованных значений для каждого столбца
-            const rawValues = [];
-            const normalizedValues = [];
-            
-            // Для каждой строки в данных сохраняем и оригинальное, и нормализованное значение
-            data.forEach(row => {
-                // Получаем исходное значение как строку, чтобы сохранить точный формат
-                const rawValueStr = row[column];
-                // Сохраняем исходное значение как число для нормализации
-                const rawValue = parseFloat(rawValueStr) || 0;
-                // Применяем нормализацию для адаптивного графика
-                const normalizedValue = normalizeValueForAdaptiveScale(rawValue, column);
-                
-                // Добавляем значения в соответствующие массивы
-                rawValues.push(rawValueStr);
-                normalizedValues.push(normalizedValue);
-            });
-            
+        const columns = Object.keys(data[0]).filter(col => col.toLowerCase() !== 'timestamp' && data.some(row => !isNaN(parseFloat(row[col]))));
+        const datasets = columns.map((column, index) => {
+            const originalValues = data.map(row => parseFloat(row[column]) || 0);
+            const normalizedValues = originalValues.map(value => normalizeValueForAdaptiveScale(value, column));
             return {
                 label: column,
-                data: normalizedValues,
-                // Сохраняем оригинальные строки исходных значений для отображения в tooltip
-                rawData: rawValues,
-                // Сохраняем исходные числовые значения
-                originalData: data.map(row => parseFloat(row[column]) || 0),
-                // Сохраняем название колонки для идентификации при нормализации
-                columnName: column
+                data: isAdaptiveChart ? normalizedValues : originalValues,
+                originalData: originalValues
             };
         });
-        
-        // Create multi-line chart
         createMultiChart(timestamps, datasets);
-        
-        // Добавляем обработчики событий для ручного перетаскивания
         setupManualPanning();
     }
-    
-    // Функция для настройки ручного перетаскивания графика
+
     function setupManualPanning() {
-        const canvas = document.getElementById('dataChart');
+        const canvas = dataChart;
         if (!canvas) return;
-        
-        // Находим элемент легенды, чтобы применить к нему другой стиль курсора
-        const chartContainer = document.querySelector('.chart-container');
-        let legendElement = null;
-        
-        if (chartContainer) {
-            // Ищем элемент легенды внутри контейнера графика
-            legendElement = chartContainer.querySelector('.chartjs-legend');
-            
-            // Если не нашли стандартную легенду, пробуем найти другим селектором
-            if (!legendElement) {
-                // Chart.js создает легенду внутри div.chartjs-legend-body или ul.chartjs-legend-ul
-                legendElement = chartContainer.querySelector('.chartjs-legend-body, .chartjs-legend-ul');
-            }
-            
-            // Если всё еще не нашли, используем все элементы li внутри контейнера
-            if (!legendElement) {
-                const legendItems = chartContainer.querySelectorAll('li');
-                if (legendItems.length > 0) {
-                    // Для каждого элемента легенды устанавливаем обычный курсор
-                    legendItems.forEach(item => {
-                        item.style.cursor = 'pointer';
-                    });
-                }
-            } else {
-                // Если нашли легенду как единый элемент, устанавливаем курсор для неё
-                legendElement.style.cursor = 'default';
-            }
-        }
-        
-        // Устанавливаем начальный стиль курсора для области графика
         canvas.style.cursor = 'grab';
-        
-        // Обработчик начала перетаскивания
-        canvas.addEventListener('mousedown', function(e) {
+        canvas.addEventListener('mousedown', (e) => {
             if (!chartInstance) return;
-            
-            // Проверяем, что нажатие произошло в области графика, а не легенды
-            const legendBox = chartInstance.legend.legendHitBoxes;
-            const position = {
-                x: e.offsetX, 
-                y: e.offsetY
-            };
-            
-            // Проверяем, кликнули ли мы по легенде
-            let clickedOnLegend = false;
-            for (let i = 0; i < legendBox.length; i++) {
-                const box = legendBox[i];
-                if (position.x >= box.left && 
-                    position.x <= box.left + box.width &&
-                    position.y >= box.top &&
-                    position.y <= box.top + box.height) {
-                    clickedOnLegend = true;
-                    break;
-                }
-            }
-            
-            // Если клик по легенде, не начинаем перетаскивание
-            if (clickedOnLegend) return;
-            
             isDragging = true;
             dragStartX = e.clientX;
             chartStartMin = chartInstance.scales.x.min;
             chartStartMax = chartInstance.scales.x.max;
-            
             canvas.style.cursor = 'grabbing';
-            canvas.classList.add('grabbing'); // Добавляем класс для CSS селектора
-            
-            // Предотвращаем выделение текста при перетаскивании
             e.preventDefault();
         });
-        
-        // Обработчик перемещения мыши
-        window.addEventListener('mousemove', function(e) {
+        window.addEventListener('mousemove', (e) => {
             if (!isDragging || !chartInstance) return;
-            
-            // Вычисляем смещение в пикселях
             const deltaX = e.clientX - dragStartX;
-            
-            // Преобразуем пиксели в значения оси X
             const rangeX = chartStartMax - chartStartMin;
             const pixelPerValue = canvas.width / rangeX;
             const valueShift = -deltaX / pixelPerValue;
-            
-            // Применяем смещение к границам видимой области графика
-            if (!chartInstance.options.scales.x) {
-                chartInstance.options.scales.x = {};
-            }
-            
             chartInstance.options.scales.x.min = chartStartMin + valueShift;
             chartInstance.options.scales.x.max = chartStartMax + valueShift;
-            
-            // Обновляем график без анимации
             chartInstance.update('none');
         });
-        
-        // Обработчик окончания перетаскивания
-        window.addEventListener('mouseup', function() {
+        window.addEventListener('mouseup', () => {
             if (isDragging) {
                 isDragging = false;
-                if (canvas) {
-                    canvas.style.cursor = 'grab';
-                    canvas.classList.remove('grabbing'); // Удаляем класс при окончании перетаскивания
-                }
+                canvas.style.cursor = 'grab';
             }
         });
-        
-        // Обработчик выхода мыши за пределы окна
-        window.addEventListener('mouseleave', function() {
+        window.addEventListener('mouseleave', () => {
             if (isDragging) {
                 isDragging = false;
-                if (canvas) {
-                    canvas.style.cursor = 'grab';
-                    canvas.classList.remove('grabbing'); // Удаляем класс при выходе за пределы
-                }
+                canvas.style.cursor = 'grab';
             }
         });
     }
-    
-    // Statistics functions removed as per requirements
-    
-    // Event listener for form submission
+
     uploadForm.addEventListener('submit', function(e) {
         e.preventDefault();
-        
-        // Check if a file is selected
         if (!csvFileInput.files || csvFileInput.files.length === 0) {
-            showError('Please select a CSV file to upload.');
+            showError('Пожалуйста, выберите CSV-файл для загрузки.');
             return;
         }
-        
         const file = csvFileInput.files[0];
-        
-        // Check file extension
         if (!file.name.toLowerCase().endsWith('.csv')) {
-            showError('Please upload a valid CSV file.');
+            showError('Пожалуйста, загрузите действительный CSV-файл.');
             return;
         }
-        
-        // Hide error message and show loading indicator
         hideError();
         loadingIndicator.style.display = 'block';
         analysisResults.style.display = 'none';
-        
-        // Create form data
         const formData = new FormData();
         formData.append('file', file);
-        
-        // Send AJAX request
         fetch('/analyze_csv', {
             method: 'POST',
             body: formData
         })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(data => {
-                    throw new Error(data.error || 'Error processing CSV file');
-                });
-            }
-            return response.json();
-        })
+        .then(response => response.ok ? response.json() : response.json().then(data => { throw new Error(data.error || 'Ошибка обработки CSV'); }))
         .then(data => {
-            console.log("Response received:", data);
-            
-            if (!data.success) {
-                throw new Error(data.error || 'Error processing CSV file');
-            }
-            
-            // Store CSV data
-            try {
-                if (!data.csv_data) {
-                    throw new Error("No CSV data returned from server");
-                }
-                
-                console.log("Raw CSV data:", data.csv_data.substring(0, 100) + "...");
-                csvData = JSON.parse(data.csv_data);
-                // Store CSV type at global level
-                window.csvType = data.csv_type;
-                console.log("Data loaded successfully:", window.csvType);
-                console.log("First record sample:", csvData.length > 0 ? JSON.stringify(csvData[0]) : "No records");
-            } catch (error) {
-                console.error("JSON parsing error:", error);
-                throw new Error("Error parsing data from server: " + error.message);
-            }
-            
-            // Plot all data columns
+            if (!data.success) throw new Error(data.error || 'Ошибка обработки CSV');
+            csvData = JSON.parse(data.csv_data);
+            window.csvType = data.csv_type;
             plotAllColumns(csvData);
-            
-            // Hide loading indicator and show results
             loadingIndicator.style.display = 'none';
             analysisResults.style.display = 'block';
         })
-        .catch(error => {
-            showError(error.message);
-        });
+        .catch(error => showError(error.message));
     });
-    
-    // Event listener for reset zoom button
-    const resetZoomButton = document.getElementById('resetZoomButton');
+
     if (resetZoomButton) {
-        resetZoomButton.addEventListener('click', function() {
+        resetZoomButton.addEventListener('click', () => {
             if (chartInstance) {
-                console.log("Reset zoom button clicked");
-                
-                // Сбрасываем ограничения осей, чтобы показать все данные
-                if (chartInstance.options.scales.x) {
-                    delete chartInstance.options.scales.x.min;
-                    delete chartInstance.options.scales.x.max;
-                }
-                
-                // Сбрасываем зум через ChartJS Zoom Plugin
-                if (chartInstance.resetZoom) {
-                    console.log("Using chartInstance.resetZoom()");
-                    chartInstance.resetZoom();
-                } else {
-                    console.log("Using standard chart update");
-                    // Если нет плагина, просто обновляем график
-                    chartInstance.update();
-                }
-                
-                // Дополнительная проверка, что все ограничения сняты
-                if (chartInstance.scales && chartInstance.scales.x) {
-                    console.log("Current x-axis min:", chartInstance.scales.x.min);
-                    console.log("Current x-axis max:", chartInstance.scales.x.max);
-                }
-            } else {
-                console.warn("Chart instance not found");
+                delete chartInstance.options.scales.x.min;
+                delete chartInstance.options.scales.x.max;
+                chartInstance.update();
             }
         });
-    } else {
-        console.warn("Reset zoom button not found");
     }
-    
-    // Event listener for adaptive chart toggle
+
     if (adaptiveChartToggle) {
-        // Устанавливаем начальное значение переключателя (по умолчанию включен)
         adaptiveChartToggle.checked = isAdaptiveChart;
-        
-        adaptiveChartToggle.addEventListener('change', function() {
-            // Обновляем глобальное состояние адаптивного графика
+        adaptiveChartToggle.addEventListener('change', () => {
             isAdaptiveChart = adaptiveChartToggle.checked;
-            console.log("Adaptive chart mode:", isAdaptiveChart ? "enabled" : "disabled");
-            
-            // Перестраиваем график с учетом нового режима, если данные уже загружены
-            if (csvData) {
-                plotAllColumns(csvData);
-            }
+            if (csvData) plotAllColumns(csvData);
         });
-    } else {
-        console.warn("Adaptive chart toggle not found");
     }
 });
