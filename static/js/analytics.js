@@ -323,38 +323,57 @@ document.addEventListener('DOMContentLoaded', function() {
                                     const originalIndex = item.index;
                                     const color = colorPalette[originalIndex % colorPalette.length].borderColor;
                                     
-                                    // Получаем оригинальное значение для данной точки - индекс в массиве данных
+                                    // Получаем индекс точки данных для текущей позиции курсора
                                     const dataIndex = context.tooltip.dataPoints[0].dataIndex;
                                     let value;
                                     
-                                    // Получаем значение из originalData, который мы создали во время формирования датасета
-                                    if (dataset.originalData && dataset.originalData[dataIndex] !== undefined) {
-                                        value = dataset.originalData[dataIndex];
-                                        
-                                        // Форматируем значение с 2 знаками после запятой, если это число
-                                        if (typeof value === 'number' && !isNaN(value)) {
-                                            value = value.toFixed(2);
+                                    // Шаг 1: Пытаемся использовать новое поле rawData (содержит оригинальные строки)
+                                    if (dataset.rawData && dataset.rawData[dataIndex] !== undefined) {
+                                        const rawValue = dataset.rawData[dataIndex];
+                                        // Если это строка с числом, преобразуем её для форматирования
+                                        const numValue = parseFloat(rawValue);
+                                        if (!isNaN(numValue)) {
+                                            value = numValue.toFixed(2);
+                                        } else {
+                                            value = rawValue || "—"; // Em dash если значение отсутствует
                                         }
-                                    } else {
-                                        // Резервный путь: пытаемся получить из исходных данных напрямую, если есть
+                                    }
+                                    // Шаг 2: Пробуем старый подход с originalData
+                                    else if (dataset.originalData && dataset.originalData[dataIndex] !== undefined) {
+                                        const origValue = dataset.originalData[dataIndex];
+                                        if (typeof origValue === 'number' && !isNaN(origValue)) {
+                                            value = origValue.toFixed(2);
+                                        } else {
+                                            value = origValue || "—";
+                                        }
+                                    }
+                                    // Шаг 3: Пытаемся получить значение напрямую из данных CSV
+                                    else if (csvData && dataset.columnName) {
                                         const columnName = dataset.columnName;
-                                        if (csvData && csvData[dataIndex] && csvData[dataIndex][columnName] !== undefined) {
-                                            const originalValue = csvData[dataIndex][columnName];
-                                            value = parseFloat(originalValue);
-                                            
-                                            if (!isNaN(value)) {
-                                                value = value.toFixed(2);
+                                        if (csvData[dataIndex] && csvData[dataIndex][columnName] !== undefined) {
+                                            const csvValue = csvData[dataIndex][columnName];
+                                            const numValue = parseFloat(csvValue);
+                                            if (!isNaN(numValue)) {
+                                                value = numValue.toFixed(2);
                                             } else {
-                                                value = originalValue;
+                                                value = csvValue || "—";
                                             }
                                         } else {
-                                            // Если нет доступного значения, показываем фактическое значение с графика
-                                            value = context.tooltip.dataPoints.find(p => p.datasetIndex === originalIndex)?.raw;
-                                            if (typeof value === 'number' && !isNaN(value)) {
-                                                value = value.toFixed(2);
+                                            value = "—"; // Em dash если данные отсутствуют
+                                        }
+                                    }
+                                    // Шаг 4: Последний вариант - берем текущее значение с графика
+                                    else {
+                                        const pointData = context.tooltip.dataPoints.find(p => p.datasetIndex === originalIndex);
+                                        if (pointData && pointData.raw !== undefined) {
+                                            const rawValue = pointData.raw;
+                                            if (typeof rawValue === 'number' && !isNaN(rawValue)) {
+                                                value = rawValue.toFixed(2);
                                             } else {
-                                                value = "—"; // Используем em dash вместо N/A
+                                                value = rawValue || "—";
                                             }
+                                        } else {
+                                            value = "—"; // Em dash если ничего не найдено
                                         }
                                     }
                                     
@@ -510,18 +529,31 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Create dataset for each column
         const datasets = columns.map(column => {
-            // Создаем массив исходных значений для каждого столбца (для tooltip)
-            const rawValues = data.map(row => parseFloat(row[column]) || 0);
+            // Создаем массивы исходных и нормализованных значений для каждого столбца
+            const rawValues = [];
+            const normalizedValues = [];
+            
+            // Для каждой строки в данных сохраняем и оригинальное, и нормализованное значение
+            data.forEach(row => {
+                // Получаем исходное значение как строку, чтобы сохранить точный формат
+                const rawValueStr = row[column];
+                // Сохраняем исходное значение как число для нормализации
+                const rawValue = parseFloat(rawValueStr) || 0;
+                // Применяем нормализацию для адаптивного графика
+                const normalizedValue = normalizeValueForAdaptiveScale(rawValue, column);
+                
+                // Добавляем значения в соответствующие массивы
+                rawValues.push(rawValueStr);
+                normalizedValues.push(normalizedValue);
+            });
             
             return {
                 label: column,
-                data: data.map(row => {
-                    const rawValue = parseFloat(row[column]) || 0;
-                    // Применяем нормализацию для адаптивного графика
-                    return normalizeValueForAdaptiveScale(rawValue, column);
-                }),
-                // Сохраняем исходные значения для отображения в tooltip
-                originalData: rawValues,
+                data: normalizedValues,
+                // Сохраняем оригинальные строки исходных значений для отображения в tooltip
+                rawData: rawValues,
+                // Сохраняем исходные числовые значения
+                originalData: data.map(row => parseFloat(row[column]) || 0),
                 // Сохраняем название колонки для идентификации при нормализации
                 columnName: column
             };
