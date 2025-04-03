@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const csvFileInput = document.getElementById('csvFile');
     const loadingIndicator = document.getElementById('loadingIndicator');
     const analysisResults = document.getElementById('analysisResults');
-    const errorContainer = document.getElementById('errorContainer');
+    const errorContainer = document.getElementById('errorMessage');
     const adaptiveChartToggle = document.getElementById('adaptiveChartToggle');
     
     // Глобальные переменные
