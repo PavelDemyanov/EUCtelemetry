@@ -253,24 +253,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                 return '';
                             },
                             label: function(context) {
-                                // Всегда используем оригинальные значения
-                                const dataset = context.dataset;
-                                const dataIndex = context.dataIndex;
-                                const label = dataset.label || '';
-                                
-                                // Получаем оригинальное (не нормализованное) значение для отображения
-                                const originalValue = dataset.originalData ? dataset.originalData[dataIndex] : null;
-                                
-                                // Если не можем найти оригинальное значение, используем текущее
-                                let value = originalValue !== null && originalValue !== undefined ? 
-                                    originalValue : context.parsed.y;
-                                
-                                // Форматируем значение с 2 знаками после запятой, если это число
-                                if (typeof value === 'number') {
-                                    value = value.toFixed(2);
-                                }
-                                
-                                return `${label}: ${value}`;
+                                // ВАЖНО: Этот callback не используется для отображения tooltip
+                                // Мы полностью заменили его своей реализацией с доступом к исходным данным
+                                // См. функцию external tooltip
+                                return "";
                             }
                         },
                         external: function(context) {
@@ -339,13 +325,23 @@ document.addEventListener('DOMContentLoaded', function() {
                                     
                                     // Получаем оригинальное значение для данной точки
                                     const dataIndex = context.tooltip.dataPoints[0].dataIndex;
-                                    const originalValue = dataset.originalData ? dataset.originalData[dataIndex] : null;
-                                    let value = originalValue !== null && originalValue !== undefined ? 
-                                        originalValue : dataset.data[dataIndex];
+                                    
+                                    // Извлекаем реальное значение напрямую из оригинального массива
+                                    const columnName = dataset.columnName;
+                                    // Находим соответствующий индекс в исходных данных
+                                    const originalValue = csvData[dataIndex][columnName];
+                                    let value = parseFloat(originalValue);
+                                    
+                                    // Если не удалось получить значение напрямую из csvData (например, если это вычисляемое значение)
+                                    if (isNaN(value) && dataset.originalData && dataset.originalData[dataIndex] !== undefined) {
+                                        value = dataset.originalData[dataIndex];
+                                    }
                                     
                                     // Форматируем значение с 2 знаками после запятой, если это число
-                                    if (typeof value === 'number') {
+                                    if (typeof value === 'number' && !isNaN(value)) {
                                         value = value.toFixed(2);
+                                    } else {
+                                        value = originalValue || "N/A"; // Показываем исходное значение как строку или N/A
                                     }
                                     
                                     // Создаем стиль для цветового маркера
