@@ -253,16 +253,17 @@ document.addEventListener('DOMContentLoaded', function() {
                                 return '';
                             },
                             label: function(context) {
-                                // Используем исходные значения вместо нормализованных
+                                // Всегда используем оригинальные значения
                                 const dataset = context.dataset;
                                 const dataIndex = context.dataIndex;
                                 const label = dataset.label || '';
                                 
-                                // Если есть оригинальные данные, используем их
-                                let value = context.parsed.y;
-                                if (dataset.originalData && dataset.originalData[dataIndex] !== undefined) {
-                                    value = dataset.originalData[dataIndex];
-                                }
+                                // Получаем оригинальное (не нормализованное) значение для отображения
+                                const originalValue = dataset.originalData ? dataset.originalData[dataIndex] : null;
+                                
+                                // Если не можем найти оригинальное значение, используем текущее
+                                let value = originalValue !== null && originalValue !== undefined ? 
+                                    originalValue : context.parsed.y;
                                 
                                 // Форматируем значение с 2 знаками после запятой, если это число
                                 if (typeof value === 'number') {
@@ -328,24 +329,37 @@ document.addEventListener('DOMContentLoaded', function() {
                                     }
                                 });
                                 
-                                // Отображаем только видимые датасеты в правильном порядке их цветов
-                                bodyLines.forEach((body, i) => {
+                                // Отображаем только видимые датасеты в правильном порядке их цветов и с оригинальными значениями
+                                visibleDatasets.forEach((item, i) => {
                                     // Берем цвета напрямую из датасета, но учитываем только видимые датасеты
-                                    if (i < visibleDatasets.length) {
-                                        const dataset = visibleDatasets[i].dataset;
-                                        // Используем оригинальный индекс датасета для получения правильного цвета
-                                        const originalIndex = visibleDatasets[i].index;
-                                        const color = colorPalette[originalIndex % colorPalette.length].borderColor;
-                                        
-                                        let style = 'background:' + color;
-                                        style += '; border: none'; // Убираем рамку, делая цвет сплошным
-                                        style += '; margin-right: 10px';
-                                        style += '; display: inline-block';
-                                        style += '; width: 10px; height: 10px';
-                                        style += '; border-radius: 50%'; // Делаем цветовые метки круглыми
-                                        const span = '<span style="' + style + '"></span>';
-                                        innerHtml += '<tr><td style="padding: 3px 8px;">' + span + body + '</td></tr>';
+                                    const dataset = item.dataset;
+                                    // Используем оригинальный индекс датасета для получения правильного цвета
+                                    const originalIndex = item.index;
+                                    const color = colorPalette[originalIndex % colorPalette.length].borderColor;
+                                    
+                                    // Получаем оригинальное значение для данной точки
+                                    const dataIndex = context.tooltip.dataPoints[0].dataIndex;
+                                    const originalValue = dataset.originalData ? dataset.originalData[dataIndex] : null;
+                                    let value = originalValue !== null && originalValue !== undefined ? 
+                                        originalValue : dataset.data[dataIndex];
+                                    
+                                    // Форматируем значение с 2 знаками после запятой, если это число
+                                    if (typeof value === 'number') {
+                                        value = value.toFixed(2);
                                     }
+                                    
+                                    // Создаем стиль для цветового маркера
+                                    let style = 'background:' + color;
+                                    style += '; border: none'; // Убираем рамку, делая цвет сплошным
+                                    style += '; margin-right: 10px';
+                                    style += '; display: inline-block';
+                                    style += '; width: 10px; height: 10px';
+                                    style += '; border-radius: 50%'; // Делаем цветовые метки круглыми
+                                    const span = '<span style="' + style + '"></span>';
+                                    
+                                    // Строка с названием датасета и оригинальным значением
+                                    const label = dataset.label || 'Unknown';
+                                    innerHtml += '<tr><td style="padding: 3px 8px;">' + span + label + ': ' + value + '</td></tr>';
                                 });
                                 
                                 innerHtml += '</tbody>';
