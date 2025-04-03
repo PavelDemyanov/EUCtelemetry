@@ -81,25 +81,15 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     const colorPalette = {
-        // Основные цвета для определенных метрик
-        pwm: { borderColor: '#9c5bc0', backgroundColor: 'rgba(156, 91, 192, 0.2)' },      // Лавандовый
-        speed: { borderColor: '#4a90e2', backgroundColor: 'rgba(74, 144, 226, 0.2)' },    // Приглушенный синий
-        gps: { borderColor: '#5abcb9', backgroundColor: 'rgba(90, 188, 185, 0.2)' },      // Бирюзовый
-        current: { borderColor: '#e2725b', backgroundColor: 'rgba(226, 114, 91, 0.2)' },  // Терракотовый
-        voltage: { borderColor: '#ffc857', backgroundColor: 'rgba(255, 200, 87, 0.2)' },  // Горчичный
-        temperature: { borderColor: '#e67c73', backgroundColor: 'rgba(230, 124, 115, 0.2)' }, // Лососевый
-        power: { borderColor: '#7cb342', backgroundColor: 'rgba(124, 179, 66, 0.2)' },    // Оливковый
-        battery: { borderColor: '#56c271', backgroundColor: 'rgba(86, 194, 113, 0.2)' },  // Мятный
-        mileage: { borderColor: '#9575cd', backgroundColor: 'rgba(149, 117, 205, 0.2)' }, // Сиреневый
-        // Запасные цвета для остальных метрик
-        default: [
-            { borderColor: '#6e7c7c', backgroundColor: 'rgba(110, 124, 124, 0.2)' },      // Серо-зеленый
-            { borderColor: '#a2845e', backgroundColor: 'rgba(162, 132, 94, 0.2)' },       // Песочный
-            { borderColor: '#8c9eff', backgroundColor: 'rgba(140, 158, 255, 0.2)' },      // Лавандово-синий
-            { borderColor: '#b39ddb', backgroundColor: 'rgba(179, 157, 219, 0.2)' },      // Светло-фиолетовый
-            { borderColor: '#90a4ae', backgroundColor: 'rgba(144, 164, 174, 0.2)' },      // Серо-голубой
-            { borderColor: '#80cbc4', backgroundColor: 'rgba(128, 203, 196, 0.2)' }       // Аквамарин
-        ]
+        speed: { borderColor: '#0000FF', backgroundColor: 'rgba(0, 0, 255, 0.2)' },    // Синий
+        gps: { borderColor: '#00daff', backgroundColor: 'rgba(255, 165, 0, 0.2)' },    // Голубой
+        voltage: { borderColor: '#800080', backgroundColor: 'rgba(128, 0, 128, 0.2)' }, // Темно-фиолетовый
+        temperature: { borderColor: '#FF00FF', backgroundColor: 'rgba(255, 0, 255, 0.2)' }, // Ярко-розовый
+        current: { borderColor: '#FFFF00', backgroundColor: 'rgba(255, 255, 0, 0.2)' }, // Желтый
+        battery: { borderColor: '#008000', backgroundColor: 'rgba(0, 128, 0, 0.2)' },  // Зеленый
+        mileage: { borderColor: '#FF8C00', backgroundColor: 'rgba(255, 140, 0, 0.2)' }, // Светло-оранжевый
+        pwm: { borderColor: '#FF0000', backgroundColor: 'rgba(255, 0, 0, 0.2)' },      // Красный
+        power: { borderColor: '#ed5165', backgroundColor: 'rgba(199, 21, 133, 0.2)' }  // бирюбзовый
     };
 
     function createMultiChart(labels, datasets) {
@@ -109,9 +99,9 @@ document.addEventListener('DOMContentLoaded', function() {
             type: 'line',
             data: {
                 labels: labels,
-                datasets: datasets.map((ds, index) => {
+                datasets: datasets.map((ds) => {
                     const columnName = ds.label.toLowerCase();
-                    const color = colorPalette[columnName] || colorPalette.default[index % colorPalette.default.length];
+                    const color = colorPalette[columnName] || { borderColor: '#808080', backgroundColor: 'rgba(128, 128, 128, 0.2)' }; // Серый для неизвестных
                     return {
                         label: ds.label,
                         data: ds.data,
@@ -208,7 +198,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!data) return;
         const timestamps = data.map(row => row.timestamp);
         const columns = Object.keys(data[0]).filter(col => col.toLowerCase() !== 'timestamp' && data.some(row => !isNaN(parseFloat(row[col]))));
-        const datasets = columns.map((column, index) => {
+        const datasets = columns.map((column) => {
             const originalValues = data.map(row => parseFloat(row[column]) || 0);
             const normalizedValues = originalValues.map(value => normalizeValueForAdaptiveScale(value, column));
             return {
