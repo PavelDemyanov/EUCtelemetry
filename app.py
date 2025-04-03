@@ -1552,8 +1552,7 @@ def delete_preset(preset_id):
 @login_required
 def analytics():
     """Render the analytics page"""
-    from datetime import datetime
-    return render_template('analytics.html', now=datetime.now())
+    return render_template('analytics.html')
 
 @app.route('/analyze_csv', methods=['POST'])
 @login_required
