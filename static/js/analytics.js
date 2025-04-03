@@ -215,10 +215,11 @@ document.addEventListener('DOMContentLoaded', function() {
                                 innerHtml += '</thead><tbody>';
                                 
                                 bodyLines.forEach((body, i) => {
-                                    const colors = context.tooltip.labelColors[i];
-                                    let style = 'background:' + colors.backgroundColor;
-                                    style += '; border-color:' + colors.borderColor;
-                                    style += '; border-width: 2px';
+                                    // Берем цвета напрямую из датасета, чтобы они совпадали с графиком
+                                    const dataset = chartInstance.data.datasets[i];
+                                    const color = dataset.borderColor || dataset.backgroundColor;
+                                    let style = 'background:' + color;
+                                    style += '; border: none'; // Убираем рамку, делая цвет сплошным
                                     style += '; margin-right: 10px';
                                     style += '; display: inline-block';
                                     style += '; width: 10px; height: 10px';
