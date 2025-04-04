@@ -250,16 +250,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                     max: maxTimestamp, // Максимальный предел оси X
                                     minRange: fullRange // Минимальный видимый диапазон (не меньше полной оси X)
                                 }
-                            },
-                            // Обработчик события масштабирования для строгого ограничения минимального диапазона
-                            onZoomComplete: function({chart}) {
-                                const xAxis = chart.scales.x;
-                                const currentRange = xAxis.max - xAxis.min;
-                                
-                                // Если текущий диапазон меньше полного диапазона данных, сбрасываем его до полного диапазона
-                                if (currentRange < fullRange) {
-                                    chart.resetZoom();
-                                }
                             }
                         }
                     }
@@ -267,17 +257,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 interaction: { mode: 'index', intersect: false } // Режим взаимодействия для тултипов
             }
         });
-
-        // Дополнительное ограничение для предотвращения сжатия графика
-        chartInstance.options.plugins.zoom.zoom.onZoomComplete = function({chart}) {
-            const xAxis = chart.scales.x;
-            const currentRange = xAxis.max - xAxis.min;
-            
-            // Если текущий диапазон меньше полного диапазона данных, сбрасываем масштаб
-            if (currentRange < fullRange) {
-                chart.resetZoom();
-            }
-        };
     }
 
     // Функция для построения графика на основе всех столбцов данных
@@ -317,10 +296,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const deltaX = e.clientX - dragStartX; // Смещение по X
             const rangeX = chartStartMax - chartStartMin; // Диапазон оси X
             const pixelPerValue = canvas.width / rangeX; // Пикселей на единицу значения
-            const valueShift = -deltaX / pixelPerValue; // Смещение в единицах значения
+            const valueShift = -deltaX / pixelPerValue; // Смещение значений
             chartInstance.options.scales.x.min = chartStartMin + valueShift;
             chartInstance.options.scales.x.max = chartStartMax + valueShift;
-            chartInstance.update('none'); // Обновление графика без анимации
+            chartInstance.update('none'); // Обновляем график без анимации
         });
         window.addEventListener('mouseup', () => {
             if (isDragging) {
@@ -336,7 +315,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Обработчик события отправки формы загрузки CSV-файла
+    // Обработка отправки формы с CSV-файлом
     uploadForm.addEventListener('submit', function(e) {
         e.preventDefault();
         if (!csvFileInput.files || csvFileInput.files.length === 0) {
@@ -349,41 +328,43 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         hideError();
-        loadingIndicator.style.display = 'block';
-        analysisResults.style.display = 'none';
+        loadingIndicator.style.display = 'block'; // Показываем индикатор загрузки
+        analysisResults.style.display = 'none'; // Скрываем результаты
         const formData = new FormData();
         formData.append('file', file);
-        fetch('/analyze_csv', {
+        fetch('/analyze_csv', { // Отправляем файл на сервер
             method: 'POST',
             body: formData
         })
         .then(response => response.ok ? response.json() : response.json().then(data => { throw new Error(data.error || 'Ошибка обработки CSV'); }))
         .then(data => {
             if (!data.success) throw new Error(data.error || 'Ошибка обработки CSV');
-            csvData = JSON.parse(data.csv_data);
+            csvData = JSON.parse(data.csv_data); // Парсим данные из ответа сервера
             window.csvType = data.csv_type;
-            plotAllColumns(csvData);
-            loadingIndicator.style.display = 'none';
-            analysisResults.style.display = 'block';
+            plotAllColumns(csvData); // Строим график
+            loadingIndicator.style.display = 'none'; // Скрываем индикатор
+            analysisResults.style.display = 'block'; // Показываем результаты
         })
-        .catch(error => showError(error.message));
+        .catch(error => showError(error.message)); // Обрабатываем ошибки
     });
 
-    // Обработчик события клика по кнопке сброса масштаба
+    // Обработка кнопки сброса масштаба
     if (resetZoomButton) {
         resetZoomButton.addEventListener('click', () => {
             if (chartInstance) {
-                chartInstance.resetZoom(); // Используем встроенный метод сброса масштаба
+                delete chartInstance.options.scales.x.min; // Удаляем пользовательские пределы
+                delete chartInstance.options.scales.x.max;
+                chartInstance.update(); // Обновляем график
             }
         });
     }
 
-    // Обработчик события изменения переключателя адаптивного масштаба
+    // Обработка переключателя адаптивного графика
     if (adaptiveChartToggle) {
         adaptiveChartToggle.checked = isAdaptiveChart;
         adaptiveChartToggle.addEventListener('change', () => {
-            isAdaptiveChart = adaptiveChartToggle.checked;
-            if (csvData) plotAllColumns(csvData);
+            isAdaptiveChart = adaptiveChartToggle.checked; // Обновляем флаг
+            if (csvData) plotAllColumns(csvData); // Перестраиваем график
         });
     }
 });
