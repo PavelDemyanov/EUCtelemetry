@@ -184,7 +184,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 let value = dataset.originalData[index];
                                 value = (typeof value === 'number' && !isNaN(value)) ? Math.round(value).toString() : '—';
                                 const unit = units[dataset.label.toLowerCase()] || '';
-                                return `${dataset.label}: \u200B${value} ${unit}`;
+                                return `${dataset.label}: \u200B<b>${value} ${unit}</b>`;
                             },
                             // Настраиваем цвет маркера в тултипе
                             labelColor: (tooltipItem) => {
@@ -197,7 +197,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         },
                         backgroundColor: 'rgba(0, 0, 0, 0.9)', // Цвет фона тултипа
                         titleFont: { size: 14, weight: 'bold' }, // Шрифт заголовка
-                        bodyFont: { size: 14, weight: 'bold' }, // Шрифт текста
+                        bodyFont: { size: 14 }, // Шрифт текста (обычный)
                         padding: 12 // Отступ внутри тултипа
                     },
                     crosshair: {
