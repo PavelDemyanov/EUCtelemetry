@@ -234,10 +234,10 @@ msgid "Home"
 msgstr "Главная"
 
 msgid "Create Project"
-msgstr "Создать проект"
+msgstr "Создать"
 
 msgid "My Projects"
-msgstr "Мои проекты"
+msgstr "Проекты"
 
 msgid "About"
 msgstr "О программе"
