@@ -174,19 +174,20 @@ document.addEventListener('DOMContentLoaded', function() {
                         mode: 'index', // Показываем данные для всех линий по текущей позиции
                         intersect: false, // Тултип показывается без пересечения с точкой
                         usePointStyle: true, // Используем стиль точек для маркеров
+                        useHTML: true,
                         callbacks: {
-                            // Форматируем заголовок тултипа (время)
-                            title: (tooltipItems) => tooltipItems.length > 0 ? formatTooltipTimestamp(tooltipItems[0].parsed.x) : '',
-                            // Форматируем текст тултипа (значение и единицы измерения)
-                            label: (context) => {
+                            beforeLabel: function(context) {
+                                return true;
+                            },
+                            label: function(context) {
                                 const dataset = context.dataset;
                                 const index = context.dataIndex;
                                 let value = dataset.originalData[index];
                                 value = (typeof value === 'number' && !isNaN(value)) ? Math.round(value).toString() : '—';
                                 const unit = units[dataset.label.toLowerCase()] || '';
-                                return `${dataset.label}: \u200B${value} ${unit}`;
+                                return [`${dataset.label}: `, `<b>${value} ${unit}</b>`];
                             },
-                            // Настраиваем цвет маркера в тултипе
+                            title: (tooltipItems) => tooltipItems.length > 0 ? formatTooltipTimestamp(tooltipItems[0].parsed.x) : '',
                             labelColor: (tooltipItem) => {
                                 const dataset = chartInstance.data.datasets[tooltipItem.datasetIndex];
                                 return {
@@ -197,7 +198,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         },
                         backgroundColor: 'rgba(0, 0, 0, 0.9)', // Цвет фона тултипа
                         titleFont: { size: 14, weight: 'bold' }, // Шрифт заголовка
-                        bodyFont: { size: 14, weight: 'bold' }, // Шрифт текста
+                        bodyFont: { size: 14 }, // Шрифт текста (обычный)
                         padding: 12 // Отступ внутри тултипа
                     },
                     crosshair: {
