@@ -293,104 +293,117 @@ document.addEventListener('DOMContentLoaded', function() {
         setupManualPanning(); // Setup manual panning
     }
 
-    // Setup manual chart panning with optimization
+    // Setup manual panning with mouse dragging
     function setupManualPanning() {
         const canvas = dataChart;
-        if (!canvas) return;
-        canvas.style.cursor = 'grab'; // Hand cursor
-
-        // Variables for animation/throttling
-        let animationFrameId = null;
-        let lastDeltaX = 0;
-        let updateRequired = false;
-
-        // Handle mouse down - start dragging
-        canvas.addEventListener('mousedown', (e) => {
-            if (!chartInstance) return;
-            
-            // Cancel any pending animation
-            if (animationFrameId) {
-                cancelAnimationFrame(animationFrameId);
-                animationFrameId = null;
-            }
-            
+        
+        // Handle mouse down event to start dragging
+        canvas.addEventListener('mousedown', function(e) {
+            if (e.button !== 0) return; // Only handle left button
             isDragging = true;
-            dragStartX = e.clientX;
-            chartStartMin = chartInstance.scales.x.min;
-            chartStartMax = chartInstance.scales.x.max;
-            canvas.style.cursor = 'grabbing'; // Grabbing cursor during dragging
-            e.preventDefault();
+            dragStartX = e.offsetX;
+            chartStartMin = chartInstance.options.scales.x.min;
+            chartStartMax = chartInstance.options.scales.x.max;
+            canvas.style.cursor = 'grabbing';
         });
-
-        // Throttled update function using requestAnimationFrame
-        function updateChartAnimated() {
-            if (!updateRequired) return;
+        
+        // Handle mouse move to pan the chart
+        canvas.addEventListener('mousemove', function(e) {
+            if (!isDragging) return;
             
-            const chartWidth = canvas.width;
-            const rangeWidth = chartStartMax - chartStartMin;
-            const deltaPercent = (lastDeltaX / chartWidth) * rangeWidth;
+            // Calculate drag distance
+            const diffX = e.offsetX - dragStartX;
+            const fullWidth = canvas.width;
+            const fullRange = chartStartMax - chartStartMin;
+            const shiftAmount = (diffX / fullWidth) * fullRange;
             
-            // Update chart viewport
-            chartInstance.scales.x.options.min = chartStartMin - deltaPercent;
-            chartInstance.scales.x.options.max = chartStartMax - deltaPercent;
-            
-            // Use lower animation performance mode for smoother panning
-            chartInstance.update('none'); // 'none' skips animation
-            
-            updateRequired = false;
-            animationFrameId = null;
-        }
-
-        // Handle mouse move
-        document.addEventListener('mousemove', (e) => {
-            if (!isDragging || !chartInstance) return;
-            
-            // Calculate delta since last movement
-            lastDeltaX = e.clientX - dragStartX;
-            
-            // Request animation frame if not already pending
-            updateRequired = true;
-            if (!animationFrameId) {
-                animationFrameId = requestAnimationFrame(updateChartAnimated);
+            // Apply pan if chart exists
+            if (chartInstance) {
+                chartInstance.options.scales.x.min = chartStartMin - shiftAmount;
+                chartInstance.options.scales.x.max = chartStartMax - shiftAmount;
+                chartInstance.update('none'); // Update without animation
             }
         });
-
-        // Handle mouse up - stop dragging and do final update
-        document.addEventListener('mouseup', () => {
-            if (isDragging && chartInstance) {
-                // Make sure we do a final update to settle the chart
-                if (updateRequired) {
-                    cancelAnimationFrame(animationFrameId);
-                    updateChartAnimated();
-                }
+        
+        // End dragging on mouse up or mouse leave
+        const endDrag = function() {
+            if (isDragging) {
+                isDragging = false;
+                canvas.style.cursor = 'grab';
             }
-            
-            isDragging = false;
-            if (canvas) canvas.style.cursor = 'grab';
-        });
+        };
+        
+        canvas.addEventListener('mouseup', endDrag);
+        canvas.addEventListener('mouseleave', endDrag);
+    }
 
-        // Handle mouse leave - same as mouse up
-        document.addEventListener('mouseleave', () => {
-            if (isDragging && chartInstance) {
-                // Make sure we do a final update to settle the chart
-                if (updateRequired) {
-                    cancelAnimationFrame(animationFrameId);
-                    updateChartAnimated();
-                }
+    // Toggle between adaptive and original scale
+    if (adaptiveChartToggle) {
+        adaptiveChartToggle.addEventListener('change', function() {
+            isAdaptiveChart = this.checked;
+            if (csvData) {
+                plotAllColumns(csvData);
             }
-            
-            isDragging = false;
-            if (canvas) canvas.style.cursor = 'grab';
         });
     }
 
-    // Handle form submission
+    // Reset zoom button click handler
+    if (resetZoomButton) {
+        resetZoomButton.addEventListener('click', function() {
+            if (chartInstance) {
+                // Get original minimum and maximum timestamps
+                const minTimestamp = Math.min(...chartInstance.data.labels);
+                const maxTimestamp = Math.max(...chartInstance.data.labels);
+                
+                // Reset chart boundaries
+                chartInstance.options.scales.x.min = minTimestamp;
+                chartInstance.options.scales.x.max = maxTimestamp;
+                chartInstance.update();
+            }
+        });
+    }
+
+    // Process URL parameters
+    function processUrlParams() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const fileParam = urlParams.get('file');
+        if (fileParam) {
+            // Show loading indicator
+            loadingIndicator.style.display = 'block';
+            
+            // Fetch CSV data
+            fetch(`/analyze_csv?file=${encodeURIComponent(fileParam)}`)
+                .then(response => {
+                    if (!response.ok) {
+                        showError(window.gettext('Could not load the specified file'));
+                        return null;
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data && data.success && data.csv_data) {
+                        // Hide loading, show results
+                        loadingIndicator.style.display = 'none';
+                        analysisResults.style.display = 'block';
+                        
+                        // Parse data and create chart
+                        csvData = JSON.parse(data.csv_data);
+                        plotAllColumns(csvData);
+                    } else if (data && data.error) {
+                        showError(data.error);
+                    }
+                })
+                .catch(error => {
+                    showError(window.gettext('An error occurred while processing the file'));
+                    console.error(error);
+                });
+        }
+    }
+
+    // Form submission handler for CSV upload
     uploadForm.addEventListener('submit', function(e) {
         e.preventDefault();
         hideError();
-        
-        // Debug alert
-        alert('Submit event triggered');
         
         const formData = new FormData();
         const file = csvFileInput.files[0];
@@ -399,8 +412,6 @@ document.addEventListener('DOMContentLoaded', function() {
             showError(window.gettext('Please select a CSV file'));
             return;
         }
-        
-        alert('File selected: ' + file.name);
         
         formData.append('file', file);
         
@@ -433,63 +444,34 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     // Plot the data
                     plotAllColumns(csvData);
+                    
+                    // Add file parameter to URL without reloading
+                    const url = new URL(window.location);
+                    url.searchParams.set('file', data.file_id || 'uploaded');
+                    window.history.pushState({}, '', url);
+                    
                 } catch (e) {
                     showError(window.gettext('Error parsing CSV data: ') + e.message);
-                    console.error('JSON Parse Error:', e);
+                    console.error('Error parsing CSV data:', e);
                 }
+            } else if (data && data.error) {
+                showError(data.error);
             } else {
                 showError(window.gettext('Received invalid data format from server'));
-                console.error('Invalid data format:', data);
             }
         })
         .catch(error => {
             showError(error.message || window.gettext('An error occurred while processing the file'));
             console.error('Error:', error);
+        })
+        .finally(() => {
+            // Ensure loading indicator is hidden
+            if (analysisResults.style.display === 'none') {
+                loadingIndicator.style.display = 'none';
+            }
         });
     });
 
-    // Handle adaptive chart toggle
-    adaptiveChartToggle.addEventListener('change', function() {
-        isAdaptiveChart = this.checked;
-        if (csvData) {
-            plotAllColumns(csvData);
-        }
-    });
-
-    // Handle zoom reset button
-    resetZoomButton.addEventListener('click', function() {
-        if (chartInstance) {
-            chartInstance.resetZoom();
-        }
-    });
-
-    // Check if URL contains file parameter and load it
-    const urlParams = new URLSearchParams(window.location.search);
-    const fileParam = urlParams.get('file');
-    
-    if (fileParam) {
-        // Simulate file selection and form submission
-        const dataTransfer = new DataTransfer();
-        
-        // Create a file object with the name from URL
-        fetch(`/uploads/${fileParam}`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('File not found');
-                }
-                return response.blob();
-            })
-            .then(blob => {
-                const file = new File([blob], fileParam, { type: 'text/csv' });
-                dataTransfer.items.add(file);
-                csvFileInput.files = dataTransfer.files;
-                
-                // Submit the form
-                uploadForm.dispatchEvent(new Event('submit'));
-            })
-            .catch(error => {
-                showError(window.gettext('Could not load the specified file'));
-                console.error('Error:', error);
-            });
-    }
+    // Process URL parameters on page load
+    processUrlParams();
 });
