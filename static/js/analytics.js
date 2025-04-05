@@ -351,14 +351,25 @@ document.addEventListener('DOMContentLoaded', function() {
             return response.json();
         })
         .then(data => {
-            csvData = data;
-            
-            // Hide loading, show results
-            loadingIndicator.style.display = 'none';
-            analysisResults.style.display = 'block';
-            
-            // Plot the data
-            plotAllColumns(csvData);
+            // Parse JSON data from the server
+            if (data && data.success && data.csv_data) {
+                try {
+                    csvData = JSON.parse(data.csv_data);
+                    
+                    // Hide loading, show results
+                    loadingIndicator.style.display = 'none';
+                    analysisResults.style.display = 'block';
+                    
+                    // Plot the data
+                    plotAllColumns(csvData);
+                } catch (e) {
+                    showError('Error parsing CSV data: ' + e.message);
+                    console.error('JSON Parse Error:', e);
+                }
+            } else {
+                showError('Received invalid data format from server');
+                console.error('Invalid data format:', data);
+            }
         })
         .catch(error => {
             showError(error.message || 'An error occurred while processing the file');
