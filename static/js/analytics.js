@@ -133,21 +133,20 @@ document.addEventListener('DOMContentLoaded', function() {
             // Для напряжения используем новую логику нормализации
             if (!csvData) return value; // Нет данных
             
-            // Находим максимальные значения напряжения и заряда батареи
+            // Находим минимальные и максимальные значения напряжения и заряда батареи
             const voltageValues = csvData.map(row => parseFloat(row.voltage) || 0);
             const batteryValues = csvData.map(row => parseFloat(row.battery) || 0);
             const maxVoltage = Math.max(...voltageValues);
             const minVoltage = Math.min(...voltageValues);
             const maxBattery = Math.max(...batteryValues);
+            const minBattery = Math.min(...batteryValues);
             
-            // Находим текущий процент от максимального напряжения
-            if (maxVoltage === minVoltage) return maxBattery; // Предотвращаем деление на ноль
+            // Если нет разницы между мин. и макс. напряжением, возвращаем среднее значение батареи
+            if (maxVoltage === minVoltage) return (minBattery + maxBattery) / 2;
             
-            const voltagePercent = ((value - minVoltage) / (maxVoltage - minVoltage)) * 100;
-            
-            // Преобразуем проценты напряжения с учетом коэффициента 0.25
-            // Если батарея снижается на 1%, напряжение снижается на 0.25%
-            return maxBattery - ((100 - voltagePercent) * 0.25);
+            // Линейное отображение из диапазона напряжения [minVoltage, maxVoltage] 
+            // в диапазон батареи [minBattery, maxBattery]
+            return minBattery + ((value - minVoltage) / (maxVoltage - minVoltage)) * (maxBattery - minBattery);
         }
         
         return value;
