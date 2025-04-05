@@ -14,15 +14,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize global variables
     let chartInstance = null; // Chart.js instance
     let csvData = null; // CSV file data
-    let fullDataId = null; // ID for fetching full data
-    let hasFullData = false; // Flag indicating if full data is available
-    let isFullDataLoaded = false; // Flag indicating if full data has been loaded
     let isAdaptiveChart = true; // Adaptive scaling flag
     let isDragging = false; // Dragging state flag
     let dragStartX = 0; // Initial X position when dragging
     let chartStartMin = 0; // Initial minimum X-axis value
     let chartStartMax = 0; // Initial maximum X-axis value
-    let zoomLevel = 1; // Current zoom level (1 = full view)
 
     // Register crosshair plugin to display vertical line on hover
     const crosshairPlugin = {
@@ -251,22 +247,11 @@ document.addEventListener('DOMContentLoaded', function() {
                             wheel: { enabled: true }, // Zoom with mouse wheel
                             pinch: { enabled: true }, // Zoom with gestures
                             mode: 'x', // Zoom on X-axis
-                            onZoom: (context) => {
-                                // Handle zoom event
-                                const chart = context.chart;
-                                const newMin = chart.scales.x.min;
-                                const newMax = chart.scales.x.max;
-                                const fullRange = maxTimestamp - minTimestamp;
-                                const visibleRange = newMax - newMin;
-                                
-                                // Calculate zoom level (percentage of full range that's visible)
-                                const newZoomLevel = fullRange / visibleRange;
-                                zoomLevel = newZoomLevel;
-                                
-                                // If we've zoomed in significantly and haven't loaded full data yet
-                                // We'll load the full data for better resolution
-                                if (newZoomLevel > 2 && hasFullData && !isFullDataLoaded) {
-                                    loadFullData();
+                            limits: {
+                                x: {
+                                    min: minTimestamp, // Minimum X-axis limit
+                                    max: maxTimestamp, // Maximum X-axis limit
+                                    minRange: fullRange // Minimum visible range (not less than full X-axis)
                                 }
                             }
                         }
@@ -275,73 +260,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 interaction: { mode: 'index', intersect: false } // Interaction mode for tooltips
             }
         });
-    }
-
-    // Function to load full data from server
-    function loadFullData() {
-        if (!hasFullData || !fullDataId || isFullDataLoaded) return;
-        
-        // Show a small loading indicator
-        const zoomLoadingMsg = document.createElement('div');
-        zoomLoadingMsg.textContent = 'Loading detailed data...';
-        zoomLoadingMsg.style.position = 'absolute';
-        zoomLoadingMsg.style.top = '50%';
-        zoomLoadingMsg.style.left = '50%';
-        zoomLoadingMsg.style.transform = 'translate(-50%, -50%)';
-        zoomLoadingMsg.style.background = 'rgba(0,0,0,0.7)';
-        zoomLoadingMsg.style.color = 'white';
-        zoomLoadingMsg.style.padding = '10px';
-        zoomLoadingMsg.style.borderRadius = '5px';
-        zoomLoadingMsg.style.zIndex = '1000';
-        document.body.appendChild(zoomLoadingMsg);
-        
-        // Get the current view state so we can restore it
-        const currentMin = chartInstance ? chartInstance.scales.x.min : null;
-        const currentMax = chartInstance ? chartInstance.scales.x.max : null;
-        
-        // Fetch the full data from server
-        fetch(`/get_full_data/${fullDataId}`)
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(err => {
-                        throw new Error(err.error || 'Server error');
-                    });
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data && data.success && data.csv_data) {
-                    try {
-                        // Parse the full data
-                        const fullDataset = JSON.parse(data.csv_data);
-                        csvData = fullDataset;
-                        isFullDataLoaded = true;
-                        
-                        // Replot with full data
-                        plotAllColumns(csvData);
-                        
-                        // Restore the zoom level
-                        if (currentMin !== null && currentMax !== null) {
-                            chartInstance.scales.x.options.min = currentMin;
-                            chartInstance.scales.x.options.max = currentMax;
-                            chartInstance.update();
-                        }
-                        
-                        console.log('Full data loaded successfully');
-                    } catch (e) {
-                        console.error('Error parsing full data:', e);
-                    }
-                }
-            })
-            .catch(error => {
-                console.error('Error loading full data:', error);
-            })
-            .finally(() => {
-                // Remove the loading indicator
-                if (zoomLoadingMsg && zoomLoadingMsg.parentNode) {
-                    zoomLoadingMsg.parentNode.removeChild(zoomLoadingMsg);
-                }
-            });
     }
 
     // Function to plot chart based on all data columns
@@ -472,11 +390,6 @@ document.addEventListener('DOMContentLoaded', function() {
         loadingIndicator.style.display = 'block';
         analysisResults.style.display = 'none';
         
-        // Reset flags for full data
-        hasFullData = false;
-        isFullDataLoaded = false;
-        fullDataId = null;
-        
         // Send request to the server
         fetch('/analyze_csv', {
             method: 'POST',
@@ -494,12 +407,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Parse JSON data from the server
             if (data && data.success && data.csv_data) {
                 try {
-                    // Parse the data
                     csvData = JSON.parse(data.csv_data);
-                    
-                    // Check if full data is available
-                    hasFullData = data.has_full_data || false;
-                    fullDataId = data.full_data_id || null;
                     
                     // Hide loading, show results
                     loadingIndicator.style.display = 'none';
@@ -507,40 +415,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     // Plot the data
                     plotAllColumns(csvData);
-                    
-                    // Add a hint about zooming if full data is available
-                    if (hasFullData) {
-                        const zoomHint = document.createElement('div');
-                        zoomHint.className = 'zoom-hint';
-                        zoomHint.textContent = 'Zoom in for more detailed data';
-                        zoomHint.style.position = 'absolute';
-                        zoomHint.style.top = '10px';
-                        zoomHint.style.right = '10px';
-                        zoomHint.style.background = 'rgba(0,0,0,0.7)';
-                        zoomHint.style.color = 'white';
-                        zoomHint.style.padding = '5px 10px';
-                        zoomHint.style.borderRadius = '5px';
-                        zoomHint.style.fontSize = '0.8rem';
-                        zoomHint.style.opacity = '0.8';
-                        
-                        // Add to the chart container
-                        const chartContainer = dataChart.parentNode;
-                        if (chartContainer) {
-                            chartContainer.style.position = 'relative';
-                            chartContainer.appendChild(zoomHint);
-                            
-                            // Hide hint after 5 seconds
-                            setTimeout(() => {
-                                zoomHint.style.opacity = '0';
-                                zoomHint.style.transition = 'opacity 1s';
-                                setTimeout(() => {
-                                    if (zoomHint.parentNode) {
-                                        zoomHint.parentNode.removeChild(zoomHint);
-                                    }
-                                }, 1000);
-                            }, 5000);
-                        }
-                    }
                 } catch (e) {
                     showError('Error parsing CSV data: ' + e.message);
                     console.error('JSON Parse Error:', e);

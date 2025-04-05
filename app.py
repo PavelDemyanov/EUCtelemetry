@@ -7,7 +7,6 @@ import threading
 import time
 import json
 import tempfile
-import uuid
 from datetime import datetime, timedelta
 from collections import defaultdict
 from functools import wraps
@@ -1555,37 +1554,6 @@ def analytics():
     """Render the analytics page"""
     return render_template('analytics.html')
 
-@app.route('/get_full_data/<data_id>')
-@login_required
-def get_full_data(data_id):
-    """Return full data for detailed analytics view"""
-    # Validate data_id format (should be UUID)
-    try:
-        # Simple validation to prevent directory traversal attacks
-        uuid_obj = uuid.UUID(data_id)
-        if str(uuid_obj) != data_id:
-            raise ValueError("Invalid UUID format")
-    except ValueError:
-        return jsonify({'error': _('Invalid data ID')}), 400
-
-    # Load the full data from the temp file
-    data_cache_path = os.path.join('processed_data', f'temp_analytics_{data_id}.json')
-    
-    if not os.path.exists(data_cache_path):
-        return jsonify({'error': _('Requested data not found')}), 404
-        
-    try:
-        with open(data_cache_path, 'r') as f:
-            full_data = json.load(f)
-        
-        return jsonify({
-            'success': True,
-            'csv_data': json.dumps(full_data)
-        })
-    except Exception as e:
-        logging.error(f"Error loading full data: {str(e)}")
-        return jsonify({'error': _('Error loading data: ') + str(e)}), 500
-
 @app.route('/analyze_csv', methods=['POST'])
 @login_required
 def analyze_csv():
@@ -1707,11 +1675,7 @@ def analyze_csv():
                     # Handle other dictionary formats if needed
                     logging.warning("Unrecognized dictionary data format")
             
-            # Always return both optimized and full data
-            full_data = serializable_data
-            optimized_data = full_data
-            
-            # Optimize data for preview if it has too many points
+            # Optimize data for visualization if it has too many points
             if len(serializable_data) > 5000:
                 # Downsample the data to reduce network load and improve browser performance
                 # We'll use a simple algorithm that keeps points from beginning, middle, and end
@@ -1731,28 +1695,13 @@ def analyze_csv():
                     # Combine the sets
                     optimized_data = start_points + middle_points + end_points
                     logging.info(f"Downsampled data from {len(serializable_data)} to {len(optimized_data)} points")
+                    serializable_data = optimized_data
             
-            # Save the full data to a temp file and return a reference to it
-            # This allows the client to fetch the full data only when needed (upon zoom)
-            data_id = str(uuid.uuid4())
-            data_cache_path = os.path.join('processed_data', f'temp_analytics_{data_id}.json')
-            
-            # Create the temp file with full data
-            try:
-                with open(data_cache_path, 'w') as f:
-                    json.dump(full_data, f)
-                logging.info(f"Saved full data to temp file: {data_cache_path}")
-            except Exception as e:
-                logging.error(f"Failed to save full data cache: {str(e)}")
-                # If we can't save the cache, we'll just use the optimized data
-                
             # Return the processed data for chart visualization
             return jsonify({
                 'success': True,
                 'csv_type': csv_type,
-                'csv_data': json.dumps(optimized_data),
-                'has_full_data': len(full_data) > len(optimized_data),
-                'full_data_id': data_id if len(full_data) > len(optimized_data) else None
+                'csv_data': json.dumps(serializable_data)
             })
             
         except MemoryError:
