@@ -162,12 +162,22 @@ document.addEventListener('DOMContentLoaded', function() {
                             maxTicksLimit: 20, // Maximum number of labels
                             autoSkip: true // Automatic label skipping
                         },
-                        grid: { display: false } // Disable grid
+                        grid: { 
+                            display: true, // Enable grid
+                            color: 'rgba(255, 255, 255, 0.1)', // Very light color
+                            lineWidth: 0.5, // Thin lines
+                            drawTicks: false // Don't draw ticks
+                        }
                     },
                     y: {
                         title: { display: true, text: 'Values', color: '#fff' }, // Y-axis title
                         ticks: { color: '#fff' }, // Label text color
-                        grid: { display: false }, // Disable grid
+                        grid: { 
+                            display: true, // Enable grid
+                            color: 'rgba(255, 255, 255, 0.1)', // Very light color
+                            lineWidth: 0.5, // Thin lines
+                            drawTicks: false // Don't draw ticks
+                        },
                         beginAtZero: false // Don't start axis at zero
                     }
                 },
