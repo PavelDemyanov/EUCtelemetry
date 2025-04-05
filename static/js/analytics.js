@@ -85,7 +85,22 @@ document.addEventListener('DOMContentLoaded', function() {
     function normalizeValueForAdaptiveScale(value, columnName) {
         if (!isAdaptiveChart) return value;
         columnName = columnName.toLowerCase();
-        if (columnName === 'power') return ((value + 6000) / 12000) * 100; // Normalize power
+        
+        if (columnName === 'power') {
+            // For power, find the min and max values in current data to calculate dynamic scaling
+            // Min power should be 0%, max power should be 100% (same as PWM)
+            if (!csvData) return value; // No data yet
+            
+            // Find min and max power values in current data
+            const powerValues = csvData.map(row => parseFloat(row.power) || 0);
+            const minPower = Math.min(...powerValues);
+            const maxPower = Math.max(...powerValues);
+            
+            // Scale from min power to max power (0% to 100%)
+            if (maxPower === minPower) return 50; // Prevent division by zero, return middle value
+            return ((value - minPower) / (maxPower - minPower)) * 100;
+        }
+        
         if (columnName === 'current') return ((value + 100) / 200) * 100; // Normalize current
         if (columnName === 'voltage') return ((value - 50) / (150 - 50)) * 100; // Normalize voltage
         return value;
