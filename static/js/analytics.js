@@ -104,17 +104,17 @@ document.addEventListener('DOMContentLoaded', function() {
         power: { borderColor: '#ed5165', backgroundColor: 'rgba(199, 21, 133, 0.2)' }
     };
 
-    // Units for tooltips
+    // Units for tooltips with translations
     const units = {
-        speed: 'km/h',
-        gps: 'km/h',
-        voltage: 'V',
-        temperature: '°C',
-        current: 'A',
-        battery: '%',
-        mileage: 'km',
-        pwm: '%',
-        power: 'W'
+        speed: window.gettext('km/h'),
+        gps: window.gettext('km/h'),
+        voltage: window.gettext('V'),
+        temperature: window.gettext('°C'),
+        current: window.gettext('A'),
+        battery: window.gettext('%'),
+        mileage: window.gettext('km'),
+        pwm: window.gettext('%'),
+        power: window.gettext('W')
     };
 
     // Function to create a linear chart with multiple datasets
@@ -197,7 +197,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 let value = dataset.originalData[index];
                                 value = (typeof value === 'number' && !isNaN(value)) ? Math.round(value).toString() : '—';
                                 const unit = units[dataset.label.toLowerCase()] || '';
-                                return `${dataset.label}: \u200B${value} ${unit}`;
+                                return `${window.gettext(dataset.label.toLowerCase())}: \u200B${value} ${unit}`;
                             },
                             // Configure marker color in tooltip
                             labelColor: (tooltipItem) => {
@@ -227,7 +227,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     const meta = chart.getDatasetMeta(i);
                                     const isHidden = meta.hidden;
                                     return {
-                                        text: dataset.label,
+                                        text: window.gettext(dataset.label.toLowerCase()),
                                         fillStyle: isHidden ? '#555555' : dataset.borderColor,
                                         strokeStyle: isHidden ? '#555555' : dataset.borderColor,
                                         lineWidth: 2,
@@ -281,7 +281,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const originalValues = data.map(row => parseFloat(row[column]) || 0); // Original values
             const normalizedValues = originalValues.map(value => normalizeValueForAdaptiveScale(value, column)); // Normalized values
             return {
-                label: column,
+                label: window.gettext(column),
                 data: isAdaptiveChart ? normalizedValues : originalValues, // Select data based on mode
                 originalData: originalValues // Save original data for tooltips
             };

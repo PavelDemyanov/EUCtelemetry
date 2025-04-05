@@ -915,3 +915,52 @@ msgstr "Файл не выбран"
 
 msgid "File is too large. Please upload a CSV file smaller than 50MB."
 msgstr "Файл слишком большой. Пожалуйста, загрузите CSV файл размером менее 50МБ."
+
+msgid "speed"
+msgstr "скорость"
+
+msgid "gps"
+msgstr "gps"
+
+msgid "voltage"
+msgstr "напряжение"
+
+msgid "temperature"
+msgstr "температура"
+
+msgid "current"
+msgstr "ток"
+
+msgid "battery"
+msgstr "батарея"
+
+msgid "mileage"
+msgstr "пробег"
+
+msgid "pwm"
+msgstr "шим"
+
+msgid "power"
+msgstr "мощность"
+
+msgid "km/h"
+msgstr "км/ч"
+
+msgid "V"
+msgstr "В"
+
+msgid "°C"
+msgstr "°C"
+
+msgid "A"
+msgstr "А"
+
+msgid "%"
+msgstr "%"
+
+msgid "km"
+msgstr "км"
+
+msgid "W"
+msgstr "Вт"
+
