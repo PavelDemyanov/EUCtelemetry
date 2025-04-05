@@ -128,6 +128,28 @@ document.addEventListener('DOMContentLoaded', function() {
             // Затем масштабируем, чтобы соответствовать максимальному PWM
             return normalizedValue * (maxPwm / 100);
         }
+        
+        if (columnName === 'voltage') {
+            // Для напряжения используем новую логику нормализации
+            if (!csvData) return value; // Нет данных
+            
+            // Находим максимальные значения напряжения и заряда батареи
+            const voltageValues = csvData.map(row => parseFloat(row.voltage) || 0);
+            const batteryValues = csvData.map(row => parseFloat(row.battery) || 0);
+            const maxVoltage = Math.max(...voltageValues);
+            const minVoltage = Math.min(...voltageValues);
+            const maxBattery = Math.max(...batteryValues);
+            
+            // Находим текущий процент от максимального напряжения
+            if (maxVoltage === minVoltage) return maxBattery; // Предотвращаем деление на ноль
+            
+            const voltagePercent = ((value - minVoltage) / (maxVoltage - minVoltage)) * 100;
+            
+            // Преобразуем проценты напряжения с учетом коэффициента 0.25
+            // Если батарея снижается на 1%, напряжение снижается на 0.25%
+            return maxBattery - ((100 - voltagePercent) * 0.25);
+        }
+        
         return value;
     }
 
