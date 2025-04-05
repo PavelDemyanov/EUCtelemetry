@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2025-04-05 10:27+0000\n"
-"PO-Revision-Date: 2025-04-05 10:29+0000\n"
+"POT-Creation-Date: 2025-02-17 17:04+0000\n"
+"PO-Revision-Date: 2025-02-17 17:04+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ru\n"
 "Language-Team: ru <LL@li.org>\n"
@@ -19,1062 +19,736 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.17.0\n"
 
-#: app.py:456
-msgid "Please check your email to complete registration."
-msgstr ""
-
-#: app.py:458
-msgid "Error sending confirmation email. Please try registering again."
-msgstr ""
-
-#: app.py:467
-msgid "An error occurred during registration. Please try again later."
-msgstr ""
-
-#: app.py:477
-msgid "Invalid confirmation link."
-msgstr ""
-
-#: app.py:481
-msgid "This confirmation link has expired. Please register again."
-msgstr ""
-
-#: app.py:490
-msgid "Your email has been confirmed! You can now log in."
-msgstr ""
-
-#: app.py:514
-msgid "Profile updated successfully"
-msgstr ""
-
-#: app.py:590 app.py:1565
-msgid "No file provided"
-msgstr ""
-
-#: app.py:594 app.py:1569
-msgid "No file selected"
-msgstr ""
-
-#: app.py:601
-msgid "Invalid project name. Use up to 7 letters, numbers, dashes or underscores."
-msgstr ""
-
-#: app.py:1270
-msgid "Invalid unsubscribe link."
-msgstr ""
-
-#: app.py:1277
-msgid "You have been successfully unsubscribed from email notifications."
-msgstr ""
-
-#: app.py:1292
-msgid "No subscribed users found."
-msgstr ""
-
-#: app.py:1339
-#, python-format
-msgid "Error sending email to %(email)s"
-msgstr ""
-
-#: app.py:1341
-#, python-format
-msgid "Campaign sent successfully to %(count)d users."
-msgstr ""
-
-#: app.py:1342
-msgid "Campaign sent successfully."
-msgstr ""
-
-#: app.py:1392
-msgid "News created successfully"
-msgstr ""
-
-#: app.py:1406
-msgid "News updated successfully"
-msgstr ""
-
-#: app.py:1417
-msgid "News deleted successfully"
-msgstr ""
-
-#: app.py:1496
-msgid "Preset name is required."
-msgstr ""
-
-#: app.py:1524 app.py:1540
-msgid "Unauthorized"
-msgstr ""
-
-#: app.py:1579
-msgid "File is too large. Please upload a CSV file smaller than 50MB."
-msgstr ""
-
-#: app.py:1603
-msgid "Invalid file encoding. Please ensure your CSV file is properly encoded."
-msgstr ""
-
-#: app.py:1622
-msgid "Invalid CSV format. Please upload a CSV file from DarknessBot or WheelLog."
-msgstr ""
-
-#: app.py:1688
-msgid ""
-"Memory error while processing CSV file. The file is too large or contains"
-" too much data. Try uploading a smaller file or reducing the data points."
-msgstr ""
-
-#: app.py:1694
-msgid ""
-"The CSV file appears to be too large for processing. Please try a smaller"
-" file or contact support."
-msgstr ""
-
-#: app.py:1695
-msgid "Error processing CSV file: "
-msgstr ""
-
-#: app.py:1699
-msgid "An unexpected error occurred"
-msgstr ""
-
-#: static/js/main.js:2
-msgid "Are you sure you want to stop this project processing?"
-msgstr ""
-
-#: static/js/main.js:11 templates/base.html:32
-msgid "Error stopping project: "
-msgstr ""
-
-#: static/js/main.js:16 templates/base.html:33
-msgid "Error stopping project"
-msgstr ""
-
-#: static/js/main.js:22 templates/base.html:34
-msgid "Are you sure you want to delete this project?"
-msgstr ""
-
-#: static/js/main.js:31 templates/base.html:35
-msgid "Error deleting project: "
-msgstr ""
-
-#: static/js/main.js:36 templates/base.html:36
-msgid "Error deleting project"
-msgstr ""
-
-#: static/js/upload.js:30 templates/base.html:13
-msgid "Uploading CSV..."
-msgstr ""
-
-#: static/js/upload.js:42
-msgid "Upload failed"
-msgstr ""
-
-#: static/js/upload.js:55 static/js/upload.js:850 static/js/upload.js:1117
-#: static/js/upload.js:1163 templates/base.html:17
-msgid "Error: "
-msgstr ""
-
-#: static/js/upload.js:143 static/js/upload.js:232
-msgid "Speed (km/h)"
-msgstr ""
-
-#: static/js/upload.js:157 static/js/upload.js:240 templates/index.html:438
-msgid "PWM"
-msgstr ""
-
-#: static/js/upload.js:1028 static/js/upload.js:1094 static/js/upload.js:1111
-#: templates/base.html:28 templates/index.html:476
-msgid ""
-"You can close your browser and come back later - the video processing "
-"will continue in the background."
-msgstr ""
-
-#: static/js/upload.js:1082 templates/base.html:20
-msgid "No status received from server"
-msgstr ""
-
-#: static/js/upload.js:1089 templates/base.html:14
-msgid "Creating frames..."
-msgstr ""
-
-#: static/js/upload.js:1090 templates/base.html:15
-msgid "Encoding video..."
-msgstr ""
-
-#: static/js/upload.js:1095 templates/base.html:29 templates/index.html:477
-msgid ""
-"Alternatively, you can go to the Projects section to monitor the progress"
-" there."
-msgstr ""
-
-#: static/js/upload.js:1102 templates/base.html:16
-msgid "Complete!"
-msgstr ""
-
-#: static/js/upload.js:1103 templates/base.html:27
-msgid "Video processing completed successfully!"
-msgstr ""
-
-#: static/js/upload.js:1110 templates/base.html:19
-msgid "Waiting to start..."
-msgstr ""
-
-#: static/js/upload.js:1116 templates/base.html:18
-msgid "Processing failed"
-msgstr ""
-
-#: static/js/upload.js:1119 templates/base.html:21
-msgid "An error occurred during video processing."
-msgstr ""
-
-#: static/js/upload.js:1131 templates/base.html:22
-msgid "Error: Unexpected status"
-msgstr ""
-
-#: static/js/upload.js:1133 templates/base.html:23
-msgid "An unexpected error occurred."
-msgstr ""
-
-#: static/js/upload.js:1145 templates/base.html:24
-msgid "Error checking status: "
-msgstr ""
-
-#: static/js/upload.js:1147 templates/base.html:25
-msgid "An error occurred while checking the processing status."
-msgstr ""
-
-#: static/js/upload.js:1165 templates/base.html:26
-msgid "An error occurred while starting the video processing."
-msgstr ""
-
-#: static/js/upload.js:1253
-msgid "Please enter a preset name"
-msgstr ""
-
-#: static/js/upload.js:1310
-msgid "Error saving preset: "
-msgstr ""
-
-#: static/js/upload.js:1384
-msgid "Error loading preset: "
-msgstr ""
-
-#: static/js/upload.js:1394
-msgid "Are you sure you want to delete this preset?"
-msgstr ""
-
-#: static/js/upload.js:1406
-msgid "Error deleting preset: "
-msgstr ""
-
-#: static/js/upload.js:1433
-msgid "Error loading presets: "
-msgstr ""
-
-#: templates/_home_content.html:5
-msgid "How to Export Telemetry Data"
-msgstr ""
-
-#: templates/_home_content.html:10
-msgid "From DarknessBot:"
-msgstr ""
-
-#: templates/_home_content.html:12
-msgid "Open DarknessBot and go to the \"Trips\" section"
-msgstr ""
-
-#: templates/_home_content.html:13
-msgid "Select the desired \"Trip\""
-msgstr ""
-
-#: templates/_home_content.html:14
-msgid "Click the export button"
-msgstr ""
-
-#: templates/_home_content.html:15
-msgid "Save the CSV file of the trip to a convenient location"
-msgstr ""
-
-#: templates/_home_content.html:20
-msgid "For WheelLog:"
-msgstr ""
-
-#: templates/_home_content.html:22
-msgid "Open the WheelLog app"
-msgstr ""
-
-#: templates/_home_content.html:23
-msgid "Scroll right until your trip list appears"
-msgstr ""
-
-#: templates/_home_content.html:24
-msgid "Tap on the trip dropdown icon"
-msgstr ""
-
-#: templates/_home_content.html:25
-msgid "Tap \"Share\" to save the trip as a CSV"
-msgstr ""
-
-#: templates/_home_content.html:33 templates/_home_content.html:40
-#: templates/_home_content.html:62 templates/_home_content.html:83
-msgid "Your browser does not support the video tag."
-msgstr ""
-
-#: templates/_home_content.html:52
-msgid "Running the Program"
-msgstr ""
-
-#: templates/_home_content.html:54
-msgid "Open the CSV file"
-msgstr ""
-
-#: templates/_home_content.html:55
-msgid "Choose the desired FPS, resolution (FullHD or 4K), and codec settings"
-msgstr ""
-
-#: templates/_home_content.html:56
-msgid "Set up the display of telemetry elements on the video"
-msgstr ""
-
-#: templates/_home_content.html:57
-msgid "Start the process of creating a video on the blue background (Chroma Key)"
-msgstr ""
-
-#: templates/_home_content.html:58
-msgid "Go to the \"My Projects\" section to download the finished video"
-msgstr ""
-
-#: templates/_home_content.html:72
-msgid ""
-"Overlaying on Your Trip Video from iPhone, insta360, GoPro, and Other "
-"Cameras"
-msgstr ""
-
-#: templates/_home_content.html:74
-msgid ""
-"You can use any video editor that supports chroma key removal, such as <a"
-" href=\"https://www.blackmagicdesign.com/products/davinciresolve\" "
-"target=\"_blank\">Davinci Resolve</a>"
-msgstr ""
-
-#: templates/_home_content.html:75
-msgid "Open your camera video in Davinci Resolve"
-msgstr ""
-
-#: templates/_home_content.html:76
-msgid "Overlay the video created by euctelemetry.app on top"
-msgstr ""
-
-#: templates/_home_content.html:77
-msgid "Apply the 3D keyer effect to the video from euctelemetry.app"
-msgstr ""
-
-#: templates/_home_content.html:78
-msgid "Align the telemetry data with your trip on the timeline"
-msgstr ""
-
-#: templates/_home_content.html:79
-msgid "Export the video with your desired quality settings"
-msgstr ""
-
-#: templates/about.html:11 templates/about.html:15
-msgid "Pavel Demyanov"
-msgstr ""
-
-#: templates/about.html:14
-msgid "About the Creator"
-msgstr ""
-
-#: templates/about.html:19
-msgid "About EUCtelemetry"
-msgstr ""
-
-#: templates/about.html:21
-msgid ""
-"EUCtelemetry is an application designed to process and visualize Electric"
-" Unicycle telemetry data, creating professional-looking overlays for your"
-" ride videos. As the creator of this tool, I'm committed to helping the "
-"EUC community enhance their riding content."
-msgstr ""
-
-#: templates/about.html:26
-msgid "Contact Information"
-msgstr ""
-
-#: templates/about.html:31
-msgid "Telegram"
-msgstr ""
-
-#: templates/about.html:35
-msgid "Facebook"
-msgstr ""
-
-#: templates/about.html:41
-msgid "Instagram"
-msgstr ""
-
-#: templates/about.html:45 templates/profile.html:12
-msgid "Email"
-msgstr ""
-
-#: templates/about.html:52
-msgid "Open Source"
-msgstr ""
-
-#: templates/about.html:54
-msgid ""
-"The application is open source and available on GitHub. You can download,"
-" fork, or distribute it according to the license terms. I appreciate "
-"attribution when you use or modify the software."
-msgstr ""
-
-#: templates/about.html:59
-msgid "Access the GitHub Repository"
-msgstr ""
-
-#: templates/analytics.html:3 templates/base.html:79 templates/base.html:177
-msgid "Analytics"
-msgstr "Аналитика"
-
-#: templates/analytics.html:8
-msgid "EUC Data Analytics"
-msgstr "Аналитика данных моноколеса"
-
-#: templates/analytics.html:9
-msgid ""
-"Upload a CSV file from DarknessBot or WheelLog to visualize and analyze "
-"your ride data."
-msgstr "Загрузите CSV-файл из DarknessBot или WheelLog для визуализации и анализа данных вашей поездки."
-
-#: templates/analytics.html:17
-msgid "Upload your data"
-msgstr "Загрузите ваши данные"
-
-#: templates/analytics.html:22 templates/index.html:22
-msgid "CSV File"
-msgstr "CSV-файл"
-
-#: templates/analytics.html:24
-msgid "Upload a CSV file exported from DarknessBot or WheelLog."
-msgstr "Загрузите CSV-файл, экспортированный из DarknessBot или WheelLog."
-
-#: templates/analytics.html:28
-msgid "Upload and Analyze"
-msgstr "Загрузить и анализировать"
-
-#: templates/analytics.html:42
-msgid "Ride Telemetry"
-msgstr "Телеметрия поездки"
-
-#: templates/analytics.html:52
-msgid "Adaptive Chart"
-msgstr "Адаптивный график"
-
-#: templates/analytics.html:53
-msgid "(normalizes values for better visualization)"
-msgstr "(нормализует значения для лучшей визуализации)"
-
-#: templates/analytics.html:55
-msgid "Reset Zoom"
-msgstr "Сбросить масштаб"
-
-#: templates/analytics.html:58
-msgid "Click on legend items to show or hide each chart"
-msgstr "Нажмите на элементы легенды, чтобы показать или скрыть каждый график"
-
-#: templates/analytics.html:59
-msgid ""
-"On PC: mouse wheel - zoom, left mouse button - move. On touch devices: "
-"two fingers - zoom, one finger - move"
-msgstr "На ПК: колесо мыши - масштабирование, левая кнопка мыши - перемещение. На сенсорных устройствах: два пальца - масштабирование, один палец - перемещение"
-
-#: templates/analytics.html:71
-msgid "Loading..."
-msgstr "Загрузка..."
-
-#: templates/analytics.html:73
-msgid "Processing data..."
-msgstr "Обработка данных..."
-
-#: templates/base.html:6 templates/base.html:58 templates/base.html:164
-#: templates/home.html:14
-msgid "EUCTelemetry"
-msgstr ""
-
-#: templates/base.html:31
-msgid "Are you sure you want to stop and delete this project?"
-msgstr ""
-
-#: templates/base.html:38
-msgid "Processing"
-msgstr ""
-
-#: templates/base.html:39
-msgid "Completed"
-msgstr ""
-
-#: templates/base.html:40
-msgid "Error"
-msgstr ""
-
-#: templates/base.html:41
-msgid "Stopped"
-msgstr ""
-
-#: templates/base.html:42
-msgid "Pending"
-msgstr ""
-
-#: templates/base.html:55 templates/home.html:11
-msgid "EUCTelemetry Icon"
-msgstr ""
-
-#: templates/base.html:66 templates/base.html:172
-msgid "Home"
-msgstr ""
-
-#: templates/base.html:69 templates/base.html:173 templates/news/list.html:7
+# News Section
 msgid "News"
-msgstr ""
+msgstr "Новости"
 
-#: templates/base.html:73
-msgid "Create"
-msgstr ""
-
-#: templates/base.html:76 templates/projects.html:6
-msgid "Projects"
-msgstr ""
-
-#: templates/base.html:83 templates/base.html:174
-msgid "About"
-msgstr ""
-
-#: templates/base.html:87
-msgid "Admin"
-msgstr ""
-
-#: templates/base.html:97 templates/base.html:100
-msgid "Language"
-msgstr ""
-
-#: templates/base.html:125
-msgid "Profile"
-msgstr ""
-
-#: templates/base.html:128
-msgid "Logout"
-msgstr ""
-
-#: templates/base.html:132
-msgid "Login"
-msgstr ""
-
-#: templates/base.html:135 templates/base.html:179 templates/login.html:32
-msgid "Register"
-msgstr ""
-
-#: templates/base.html:166
-msgid "Transform your EUC ride videos with professional telemetry overlays."
-msgstr ""
-
-#: templates/base.html:170
-msgid "Quick Links"
-msgstr ""
-
-#: templates/base.html:176
-msgid "My Projects"
-msgstr ""
-
-#: templates/base.html:184
-msgid "Connect"
-msgstr ""
-
-#: templates/base.html:203
-msgid "EUCTelemetry. Created by Pavel Demyanov. All rights reserved."
-msgstr ""
-
-#: templates/forgot_password.html:8
-msgid "Reset Password"
-msgstr ""
-
-#: templates/forgot_password.html:24
-msgid "Remember your password?"
-msgstr ""
-
-#: templates/forgot_password.html:24 templates/register.html:45
-msgid "Sign in"
-msgstr ""
-
-#: templates/home.html:17
-msgid ""
-"The program is designed to extract telemetry data (speed, PWM, GPS speed,"
-" power, current, voltage, battery charge, trip mileage, temperature) from"
-" popular programs like <strong>DarknessBot</strong> and "
-"<strong>WheelLog</strong> and overlay them on a blue background (chroma "
-"key) for further integration of telemetry data onto your video recorded "
-"during a trip or from cameras such as <strong>insta360</strong>, "
-"<strong>GoPro</strong>, <strong>iPhone</strong>, or any other camera."
-msgstr ""
-
-#: templates/index.html:8
-msgid "Create New Project"
-msgstr ""
-
-#: templates/index.html:13
-msgid "Project Name"
-msgstr ""
-
-#: templates/index.html:15
-msgid "Leave empty for auto-generation"
-msgstr ""
-
-#: templates/index.html:17
-msgid "Project name can only contain letters and numbers (max 7 characters)"
-msgstr ""
-
-#: templates/index.html:27 templates/projects.html:19
-msgid "Resolution"
-msgstr ""
-
-#: templates/index.html:31
-msgid "Full HD (1920x1080)"
-msgstr ""
-
-#: templates/index.html:32 templates/index.html:50 templates/index.html:57
-#: templates/index.html:96
-msgid "Fast"
-msgstr ""
-
-#: templates/index.html:38
-msgid "4K (3840x2160)"
-msgstr ""
-
-#: templates/index.html:39 templates/index.html:78 templates/index.html:85
-msgid "Slow"
-msgstr ""
-
-#: templates/index.html:45 templates/projects.html:18
-msgid "FPS"
-msgstr ""
-
-#: templates/index.html:64 templates/index.html:71 templates/index.html:103
-msgid "Medium"
-msgstr ""
-
-#: templates/index.html:91
-msgid "Video Codec"
-msgstr ""
-
-#: templates/index.html:112
-msgid "Interpolate Missing Values"
-msgstr ""
-
-#: templates/index.html:113
-msgid "Two-way interpolation"
-msgstr ""
-
-#: templates/index.html:115
-msgid "Automatically fill missing values using two-way interpolation"
-msgstr ""
-
-#: templates/index.html:119
-msgid "Upload and Show Preview"
-msgstr ""
-
-#: templates/index.html:123 templates/news/edit.html:55
-msgid "Preview"
-msgstr ""
-
-#: templates/index.html:130
-msgid "Preset Controls"
-msgstr ""
-
-#: templates/index.html:140
-msgid "Reset to Defaults"
-msgstr ""
-
-#: templates/index.html:145
-msgid "Save as Preset"
-msgstr ""
-
-#: templates/index.html:152
-msgid "Select a Preset"
-msgstr ""
-
-#: templates/index.html:157
-msgid "Delete Preset"
-msgstr ""
-
-#: templates/index.html:170
-msgid "Trim CSV Data"
-msgstr ""
-
-#: templates/index.html:178
-msgid ""
-"Drag the blue and orange markers on the chart below to trim your CSV "
-"data. This will reduce file size and video length."
-msgstr ""
-
-#: templates/index.html:196
-msgid "Total Records:"
-msgstr ""
-
-#: templates/index.html:206 templates/index.html:217
-msgid "Trim Data"
-msgstr ""
-
-#: templates/index.html:218
-msgid "Trimming..."
-msgstr ""
-
-#: templates/index.html:219
-msgid "Error trimming CSV: "
-msgstr ""
-
-#: templates/index.html:223
-msgid "Preview frame"
-msgstr ""
-
-#: templates/index.html:229
-msgid "Text Display Settings"
-msgstr ""
-
-#: templates/index.html:238
-msgid "Vertical Position"
-msgstr ""
-
-#: templates/index.html:241 templates/index.html:249 templates/index.html:259
-#: templates/index.html:267 templates/index.html:277 templates/index.html:285
-#: templates/index.html:308 templates/index.html:318 templates/index.html:326
-#: templates/index.html:336 templates/index.html:344 templates/index.html:354
-#: templates/index.html:362
-msgid "Current:"
-msgstr ""
-
-#: templates/index.html:246
-msgid "Corner Radius"
-msgstr ""
-
-#: templates/index.html:249 templates/index.html:259 templates/index.html:267
-#: templates/index.html:277 templates/index.html:285 templates/index.html:344
-#: templates/index.html:362
-msgid "px"
-msgstr ""
-
-#: templates/index.html:256
-msgid "Box Width"
-msgstr ""
-
-#: templates/index.html:264
-msgid "Box Height"
-msgstr ""
-
-#: templates/index.html:274
-msgid "Spacing Between Items"
-msgstr ""
-
-#: templates/index.html:282
-msgid "Font Size"
-msgstr ""
-
-#: templates/index.html:296
-msgid "Speed Indicator Display Settings"
-msgstr ""
-
-#: templates/index.html:305
-msgid "Indicator Scale"
-msgstr ""
-
-#: templates/index.html:315
-msgid "Indicator Horizontal Position"
-msgstr ""
-
-#: templates/index.html:323
-msgid "Indicator Vertical Position"
-msgstr ""
-
-#: templates/index.html:333
-msgid "Speed Value Size"
-msgstr ""
-
-#: templates/index.html:341
-msgid "Speed Text Vertical Offset"
-msgstr ""
-
-#: templates/index.html:351
-msgid "Unit Text Size"
-msgstr ""
-
-#: templates/index.html:359
-msgid "Unit Text Vertical Offset"
-msgstr ""
-
-#: templates/index.html:374
-msgid "Telemetry Elements Visibility"
-msgstr ""
-
-#: templates/index.html:386
-msgid "Speed"
-msgstr ""
-
-#: templates/index.html:392
-msgid "Max Speed"
-msgstr ""
-
-#: templates/index.html:398
-msgid "Voltage"
-msgstr ""
-
-#: templates/index.html:404
-msgid "Temperature"
-msgstr ""
-
-#: templates/index.html:410
-msgid "Battery"
-msgstr ""
-
-#: templates/index.html:416
-msgid "GPS"
-msgstr ""
-
-#: templates/index.html:422
-msgid "Current"
-msgstr ""
-
-#: templates/index.html:432
-msgid "Mileage"
-msgstr ""
-
-#: templates/index.html:444
-msgid "Power"
-msgstr ""
-
-#: templates/index.html:453
-msgid "Bottom Elements (Arc and Speed)"
-msgstr ""
-
-#: templates/index.html:463
-msgid "Start Processing"
-msgstr ""
-
-#: templates/index.html:467
-msgid "Processing..."
-msgstr ""
-
-#: templates/index.html:490
-msgid "Save Preset"
-msgstr ""
-
-#: templates/index.html:495
-msgid "Preset Name"
-msgstr ""
-
-#: templates/index.html:500 templates/news/edit.html:48
-msgid "Cancel"
-msgstr ""
-
-#: templates/index.html:501
-msgid "Save"
-msgstr ""
-
-#: templates/login.html:8
-msgid "Sign In"
-msgstr ""
-
-#: templates/login.html:29
-msgid "Forgot password?"
-msgstr ""
-
-#: templates/login.html:32
-msgid "Don't have an account?"
-msgstr ""
-
-#: templates/profile.html:8
-msgid "Profile Settings"
-msgstr ""
-
-#: templates/profile.html:14
-msgid "Email cannot be changed"
-msgstr ""
-
-#: templates/profile.html:26
-msgid "Preferred Language"
-msgstr ""
-
-#: templates/profile.html:37
-msgid "You can unsubscribe from email notifications at any time"
-msgstr ""
-
-#: templates/profile.html:48
-msgid "Change Password"
-msgstr ""
-
-#: templates/profile.html:83
-msgid "Delete Account"
-msgstr ""
-
-#: templates/profile.html:87
-msgid "Warning!"
-msgstr ""
-
-#: templates/profile.html:87
-msgid "This action cannot be undone. All your data will be permanently deleted."
-msgstr ""
-
-#: templates/projects.html:13
-msgid "Name"
-msgstr ""
-
-#: templates/projects.html:14
-msgid "Created"
-msgstr ""
-
-#: templates/projects.html:15
-msgid "Type"
-msgstr ""
-
-#: templates/projects.html:16
-msgid "Status"
-msgstr ""
-
-#: templates/projects.html:17
-msgid "Frames"
-msgstr ""
-
-#: templates/projects.html:20
-msgid "Codec"
-msgstr ""
-
-#: templates/projects.html:21
-msgid "Duration"
-msgstr ""
-
-#: templates/projects.html:22
-msgid "Proc. Time"
-msgstr ""
-
-#: templates/projects.html:23
-msgid "Expires In"
-msgstr ""
-
-#: templates/admin/email_campaigns.html:62 templates/projects.html:24
-msgid "Actions"
-msgstr ""
-
-#: templates/projects.html:63
-msgid "CSV"
-msgstr ""
-
-#: templates/projects.html:68
-msgid "Video"
-msgstr ""
-
-#: templates/projects.html:74
-msgid "Stop"
-msgstr ""
-
-#: templates/news/list.html:29 templates/projects.html:79
-msgid "Delete"
-msgstr ""
-
-#: templates/news/list.html:59 templates/projects.html:94
-msgid "Previous"
-msgstr ""
-
-#: templates/news/list.html:73 templates/projects.html:129
-msgid "Next"
-msgstr ""
-
-#: templates/register.html:8
-msgid "Registration"
-msgstr ""
-
-#: templates/register.html:45
-msgid "Already have an account?"
-msgstr ""
-
-#: templates/reset_password.html:8
-msgid "Set New Password"
-msgstr ""
-
-#: templates/admin/email_campaigns.html:4
-msgid "Email Campaigns"
-msgstr ""
-
-#: templates/admin/email_campaigns.html:9
-msgid "New Campaign"
-msgstr ""
-
-#: templates/admin/email_campaigns.html:29
-msgid ""
-"An unsubscribe link will be automatically added to the bottom of the "
-"email."
-msgstr ""
-
-#: templates/admin/email_campaigns.html:33
-#: templates/admin/email_campaigns.html:179
-msgid "Send Campaign"
-msgstr ""
-
-#: templates/admin/email_campaigns.html:54
-msgid "Campaign History"
-msgstr ""
-
-#: templates/admin/email_campaigns.html:59
-msgid "Date"
-msgstr ""
-
-#: templates/admin/email_campaigns.html:60
-msgid "Subject"
-msgstr ""
-
-#: templates/admin/email_campaigns.html:61
-msgid "Recipients"
-msgstr ""
-
-#: templates/admin/email_campaigns.html:76
-msgid "View"
-msgstr ""
-
-#: templates/admin/email_campaigns.html:93
-msgid "Campaign Details"
-msgstr ""
-
-#: templates/admin/email_campaigns.html:132
-msgid "Sending..."
-msgstr ""
-
-#: templates/admin/email_campaigns.html:164
-msgid "Failed to send campaign"
-msgstr ""
-
-#: templates/news/edit.html:9 templates/news/list.html:10
-msgid "Create News"
-msgstr ""
-
-#: templates/news/edit.html:11
-msgid "Edit News"
-msgstr ""
-
-#: templates/news/edit.html:33
-msgid "You can use Markdown syntax"
-msgstr ""
-
-#: templates/news/list.html:24
-msgid "Edit"
-msgstr ""
-
-#: templates/news/list.html:27
-msgid "Are you sure you want to delete this news?"
-msgstr ""
-
-#: templates/news/list.html:41
-#, python-format
 msgid "Posted by %(author)s on %(date)s"
-msgstr ""
+msgstr "Опубликовано %(date)s пользователем %(author)s"
 
-#: templates/news/list.html:66
-#, python-format
+# WheelLog Instructions
+msgid "For WheelLog:"
+msgstr "Из WheelLog:"
+
+msgid "Open the WheelLog app"
+msgstr "Откройте приложение WheelLog"
+
+msgid "Scroll right until your trip list appears"
+msgstr "Листайте экраны вправо до появления списка ваших поездок"
+
+msgid "Tap on the trip dropdown icon"
+msgstr "Нажмите на иконку выпадающего списка поездки"
+
+msgid "Tap \"Share\" to save the trip as a CSV"
+msgstr "Нажмите \"поделиться\" что бы сохранить CSV поездки"
+
+# Project status translations
+msgid "pending"
+msgstr "в ожидании"
+
+msgid "Pending"
+msgstr "В ожидании"
+
+msgid "processing"
+msgstr "обработка"
+
+msgid "Processing"
+msgstr "Обработка"
+
+msgid "completed"
+msgstr "завершено"
+
+msgid "Completed"
+msgstr "Завершено"
+
+msgid "error"
+msgstr "ошибка"
+
+msgid "Error"
+msgstr "Ошибка"
+
+msgid "stopped"
+msgstr "остановлено"
+
+msgid "Stopped"
+msgstr "Остановлено"
+
+# Telemetry elements translations
+msgid "Telemetry Elements Visibility"
+msgstr "Отображение элементов телеметрии"
+
+msgid "Speed"
+msgstr "Скорость"
+
+msgid "Max Speed"
+msgstr "Максимальная скорость"
+
+msgid "Voltage"
+msgstr "Напряжение"
+
+msgid "Temperature"
+msgstr "Температура"
+
+msgid "Battery"
+msgstr "Батарея"
+
+msgid "Mileage"
+msgstr "Пробег"
+
+msgid "PWM"
+msgstr "ШИМ"
+
+msgid "Power"
+msgstr "Мощность"
+
+msgid "Bottom Elements (Arc and Speed)"
+msgstr "Нижние элементы (Дуга и скорость)"
+
+# Email and registration messages
+msgid "Please check your email to complete registration."
+msgstr "Пожалуйста, проверьте вашу почту для завершения регистрации."
+
+msgid "Error sending confirmation email. Please try registering again."
+msgstr "Ошибка при отправке письма для подтверждения. Пожалуйста, попробуйте зарегистрироваться снова."
+
+msgid "An error occurred during registration. Please try again later."
+msgstr "Произошла ошибка при регистрации. Пожалуйста, попробуйте позже."
+
+msgid "Invalid confirmation link."
+msgstr "Неверная ссылка подтверждения."
+
+msgid "This confirmation link has expired. Please register again."
+msgstr "Срок действия этой ссылки подтверждения истек. Пожалуйста, зарегистрируйтесь снова."
+
+msgid "Your email has been confirmed! You can now log in."
+msgstr "Ваш email подтвержден! Теперь вы можете войти в систему."
+
+# Authentication pages translations
+msgid "Sign In"
+msgstr "Войти"
+
+msgid "Email"
+msgstr "Электронная почта"
+
+msgid "Password"
+msgstr "Пароль"
+
+msgid "Forgot password?"
+msgstr "Забыли пароль?"
+
+msgid "Don't have an account?"
+msgstr "Нет аккаунта?"
+
+msgid "Register"
+msgstr "Регистрация"
+
+msgid "Registration"
+msgstr "Регистрация"
+
+msgid "Name"
+msgstr "Имя"
+
+msgid "Confirm Password"
+msgstr "Подтвердите пароль"
+
+msgid "Already have an account?"
+msgstr "Уже есть аккаунт?"
+
+msgid "Sign in"
+msgstr "Войти"
+
+msgid "Set New Password"
+msgstr "Установить новый пароль"
+
+msgid "Reset Password"
+msgstr "Сбросить пароль"
+
+msgid "Remember your password?"
+msgstr "Вспомнили пароль?"
+
+msgid "Send Reset Link"
+msgstr "Отправить ссылку для сброса"
+
+msgid "New Password"
+msgstr "Новый пароль"
+
+msgid "Confirm New Password"
+msgstr "Подтвердите новый пароль"
+
+msgid "Current Password"
+msgstr "Текущий пароль"
+
+msgid "Change Password"
+msgstr "Изменить пароль"
+
+msgid "Save Changes"
+msgstr "Сохранить изменения"
+
+msgid "Delete Account"
+msgstr "Удалить аккаунт"
+
+# Form validation messages
+msgid "Passwords must match"
+msgstr "Пароли должны совпадать"
+
+msgid "Password must be at least 6 characters long"
+msgstr "Пароль должен быть не менее 6 символов"
+
+msgid "Profile Settings"
+msgstr "Настройки профиля"
+
+msgid "Email"
+msgstr "Электронная почта"
+
+msgid "Email cannot be changed"
+msgstr "Электронную почту нельзя изменить"
+
+msgid "Preferred Language"
+msgstr "Предпочитаемый язык"
+
+msgid "Change Password"
+msgstr "Изменить пароль"
+
+msgid "Delete Account"
+msgstr "Удалить аккаунт"
+
+msgid "Warning!"
+msgstr "Внимание!"
+
+msgid "This action cannot be undone. All your data will be permanently deleted."
+msgstr "Это действие нельзя отменить. Все ваши данные будут удалены безвозвратно."
+
+msgid "Are you sure you want to delete your account? This action cannot be undone."
+msgstr "Вы уверены, что хотите удалить свой аккаунт? Это действие нельзя отменить."
+
+msgid "Profile updated successfully"
+msgstr "Профиль успешно обновлен"
+
+msgid "EUCTelemetry"
+msgstr "EUCTelemetry"
+
+msgid "EUCTelemetry Icon"
+msgstr "Иконка EUCTelemetry"
+
+msgid "Home"
+msgstr "Главная"
+
+msgid "Create Project"
+msgstr "Создать"
+
+msgid "My Projects"
+msgstr "Проекты"
+
+msgid "About"
+msgstr "О программе"
+
+msgid "Admin"
+msgstr "Админ"
+
+msgid "Language"
+msgstr "Язык"
+
+msgid "Profile"
+msgstr "Профиль"
+
+msgid "Logout"
+msgstr "Выйти"
+
+msgid "Login"
+msgstr "Войти"
+
+msgid "Register"
+msgstr "Регистрация"
+
+msgid "Transform your EUC ride videos with professional telemetry overlays."
+msgstr "Преобразуйте ваши видео поездок на моноколесе с помощью профессиональных наложений телеметрии."
+
+msgid "Quick Links"
+msgstr "Быстрые ссылки"
+
+msgid "Connect"
+msgstr "Связаться"
+
+msgid "EUCTelemetry. Created by Pavel Demyanov. All rights reserved."
+msgstr "EUCTelemetry. Создано Павлом Демьяновым. Все права защищены."
+
+msgid "The program is designed to extract telemetry data (speed, PWM, GPS speed, power, current, voltage, battery charge, trip mileage, temperature) from popular programs like <strong>DarknessBot</strong> and <strong>WheelLog</strong> and overlay them on a blue background (chroma key) for further integration of telemetry data onto your video recorded during a trip or from cameras such as <strong>insta360</strong>, <strong>GoPro</strong>, <strong>iPhone</strong>, or any other camera."
+msgstr "Программа предназначена для извлечения данных телеметрии (скорость, ШИМ, GPS скорость, мощность, ток, напряжение, заряд батареи, пробег, температура) из популярных программ, таких как <strong>DarknessBot</strong> и <strong>WheelLog</strong>, и наложения их на синий фон (хромакей) для дальнейшего наложения данных телеметрии на ваше видео, записанное во время поездки с камер, таких как <strong>insta360</strong>, <strong>GoPro</strong>, <strong>iPhone</strong> или любой другой камеры."
+
+msgid "How to Export Telemetry Data"
+msgstr "Как экспортировать данные телеметрии"
+
+msgid "From DarknessBot:"
+msgstr "Из DarknessBot:"
+
+msgid "Open DarknessBot and go to the \"Trips\" section"
+msgstr "Откройте DarknessBot и перейдите в раздел \"Поездки\""
+
+msgid "Select the desired \"Trip\""
+msgstr "Выберите нужную \"Поездку\""
+
+msgid "Click the export button"
+msgstr "Нажмите кнопку экспорта"
+
+msgid "Save the CSV file of the trip to a convenient location"
+msgstr "Сохраните CSV файл поездки в удобное место"
+
+msgid "Your browser does not support the video tag."
+msgstr "Ваш браузер не поддерживает тег видео."
+
+msgid "From WheelLog:"
+msgstr "Из WheelLog:"
+
+msgid "Open WheelLog and go to the section"
+msgstr "Откройте WheelLog и перейдите в раздел"
+
+msgid "Additional steps"
+msgstr "Дополнительные шаги"
+
+msgid "Running the Program"
+msgstr "Запуск программы"
+
+msgid "Open the CSV file"
+msgstr "Откройте CSV файл"
+
+msgid "Choose the desired FPS, resolution (FullHD or 4K), and codec settings"
+msgstr "Выберите желаемые настройки FPS, разрешения (FullHD или 4K) и кодека"
+
+msgid "Set up the display of telemetry elements on the video"
+msgstr "Настройте отображение элементов телеметрии на видео"
+
+msgid "Start the process of creating a video on the blue background (Chroma Key)"
+msgstr "Запустите процесс создания видео на синем фоне (Хромакей)"
+
+msgid "Go to the \"My Projects\" section to download the finished video"
+msgstr "Перейдите в раздел \"Мои проекты\" для загрузки готового видео"
+
+msgid "Overlaying on Your Trip Video from iPhone, insta360, GoPro, and Other Cameras"
+msgstr "Наложение на видео вашей поездки с iPhone, insta360, GoPro и других камер"
+
+msgid "You can use any video editor that supports chroma key removal, such as <a href=\"https://www.blackmagicdesign.com/products/davinciresolve\" target=\"_blank\">Davinci Resolve</a>"
+msgstr "Вы можете использовать любой видеоредактор, поддерживающий удаление хромакея, например <a href=\"https://www.blackmagicdesign.com/products/davinciresolve\" target=\"_blank\">Davinci Resolve</a>"
+
+msgid "Open your camera video in Davinci Resolve"
+msgstr "Откройте видео с вашей камеры в Davinci Resolve"
+
+msgid "Overlay the video created by euctelemetry.app on top"
+msgstr "Наложите видео, созданное euctelemetry.app, сверху"
+
+msgid "Apply the 3D keyer effect to the video from euctelemetry.app"
+msgstr "Примените эффект 3D keyer к видео из euctelemetry.app"
+
+msgid "Align the telemetry data with your trip on the timeline"
+msgstr "Выровняйте данные телеметрии с вашей поездкой на временной шкале"
+
+msgid "Export the video with your desired quality settings"
+msgstr "Экспортируйте видео с желаемыми настройками качества"
+
+msgid "About the Creator"
+msgstr "О создателе"
+
+msgid "Pavel Demyanov"
+msgstr "Павел Демьянов"
+
+msgid "About EUCtelemetry"
+msgstr "О EUCtelemetry"
+
+msgid "EUCtelemetry is an application designed to process and visualize Electric Unicycle telemetry data, creating professional-looking overlays for your ride videos. As the creator of this tool, I'm committed to helping the EUC community enhance their riding content."
+msgstr "EUCtelemetry - это приложение, разработанное для обработки и визуализации данных телеметрии электрических моноколес, создающее профессионально выглядящие наложения для ваших видео поездок. Как создатель этого инструмента, я стремлюсь помочь сообществу EUC улучшить качество их контента."
+
+msgid "Contact Information"
+msgstr "Контактная информация"
+
+msgid "Telegram"
+msgstr "Telegram"
+
+msgid "Facebook"
+msgstr "Facebook"
+
+msgid "Instagram"
+msgstr "Instagram"
+
+msgid "Email"
+msgstr "Email"
+
+msgid "Open Source"
+msgstr "Открытый исходный код"
+
+msgid "The application is open source and available on GitHub. You can download, fork, or distribute it according to the license terms. I appreciate attribution when you use or modify the software."
+msgstr "Приложение имеет открытый исходный код и доступно на GitHub. Вы можете скачать, форкнуть или распространять его в соответствии с условиями лицензии. Я буду признателен за указание авторства при использовании или модификации программного обеспечения."
+
+msgid "Access the GitHub Repository"
+msgstr "Перейти в репозиторий GitHub"
+
+msgid "Projects"
+msgstr "Проекты"
+
+msgid "Name"
+msgstr "Название"
+
+msgid "Created"
+msgstr "Создано"
+
+msgid "Type"
+msgstr "Тип"
+
+msgid "Status"
+msgstr "Статус"
+
+msgid "Frames"
+msgstr "Кадры"
+
+msgid "FPS"
+msgstr "FPS"
+
+msgid "Resolution"
+msgstr "Разреш."
+
+msgid "Codec"
+msgstr "Кодек"
+
+msgid "Duration"
+msgstr "Длит."
+
+msgid "Proc. Time"
+msgstr "Обработ."
+
+msgid "Expires In"
+msgstr "Истекает"
+
+msgid "Actions"
+msgstr "Действия"
+
+msgid "Processing"
+msgstr "Обработка"
+
+msgid "Completed"
+msgstr "Завершено"
+
+msgid "Error"
+msgstr "Ошибка"
+
+msgid "CSV"
+msgstr "CSV"
+
+msgid "Video"
+msgstr "Видео"
+
+msgid "Stop"
+msgstr "Остановить"
+
+msgid "Delete"
+msgstr "Удалить"
+
+msgid "Previous"
+msgstr "Предыдущая"
+
+msgid "Next"
+msgstr "Следующая"
+
+msgid "Create New Project"
+msgstr "Создать новый проект"
+
+msgid "Project Name"
+msgstr "Название проекта"
+
+msgid "Leave empty for auto-generation"
+msgstr "Оставьте пустым для автоматической генерации"
+
+msgid "Project name can only contain letters and numbers (max 7 characters)"
+msgstr "Название проекта может содержать только буквы и цифры (макс. 7 символов)"
+
+msgid "CSV File"
+msgstr "CSV файл"
+
+msgid "Resolution"
+msgstr "Разрешение"
+
+msgid "Full HD (1920x1080)"
+msgstr "Full HD (1920x1080)"
+
+msgid "4K (3840x2160)"
+msgstr "4K (3840x2160)"
+
+msgid "Fast"
+msgstr "Быстро"
+
+msgid "Slow"
+msgstr "Медленно"
+
+msgid "Medium"
+msgstr "Средне"
+
+msgid "FPS"
+msgstr "FPS"
+
+msgid "Video Codec"
+msgstr "Видеокодек"
+
+msgid "Interpolate Missing Values"
+msgstr "Интерполировать отсутствующие значения"
+
+msgid "Two-way interpolation"
+msgstr "Двухсторонняя интерполяция"
+
+msgid "Automatically fill missing values using two-way interpolation"
+msgstr "Автоматически заполнять пропущенные значения используя двухстороннюю интерполяцию"
+
+msgid "Upload and Show Preview"
+msgstr "Загрузить и показать предпросмотр"
+
+msgid "Preview"
+msgstr "Предпросмотр"
+
+msgid "Text Display Settings"
+msgstr "Настройки отображения текста"
+
+msgid "Vertical Position"
+msgstr "Вертикальное положение"
+
+msgid "Corner Radius"
+msgstr "Радиус углов"
+
+msgid "Box Width"
+msgstr "Ширина блока"
+
+msgid "Box Height"
+msgstr "Высота блока"
+
+msgid "Spacing Between Items"
+msgstr "Расстояние между элементами"
+
+msgid "Font Size"
+msgstr "Размер шрифта"
+
+msgid "Speed Indicator Display Settings"
+msgstr "Настройки отображения индикатора скорости"
+
+msgid "Indicator Scale"
+msgstr "Масштаб индикатора"
+
+msgid "Indicator Horizontal Position"
+msgstr "Горизонтальное положение индикатора"
+
+msgid "Indicator Vertical Position"
+msgstr "Вертикальное положение индикатора"
+
+msgid "Speed Value Size"
+msgstr "Размер значения скорости"
+
+msgid "Speed Text Vertical Offset"
+msgstr "Вертикальное смещение текста скорости"
+
+msgid "Unit Text Size"
+msgstr "Размер текста единиц измерения"
+
+msgid "Unit Text Vertical Offset"
+msgstr "Вертикальное смещение текста единиц измерения"
+
+msgid "Start Processing"
+msgstr "Начать обработку"
+
+msgid "Processing..."
+msgstr "Обработка..."
+
+msgid "You can close your browser and come back later - the video processing will continue in the background."
+msgstr "Вы можете закрыть браузер и вернуться позже - обработка видео продолжится в фоновом режиме."
+
+msgid "Alternatively, you can go to the Projects section to monitor the progress there."
+msgstr "Кроме того, вы можете перейти в раздел Проекты, чтобы отслеживать прогресс там."
+
+msgid "Current:"
+msgstr "Текущее:"
+
+msgid "px"
+msgstr "пх"
+
+msgid "Creating frames..."
+msgstr "Создание кадров..."
+
+msgid "Processing video..."
+msgstr "Обработка видео..."
+
+msgid "Analyzing CSV data..."
+msgstr "Анализ CSV данных..."
+
+msgid "Generating preview..."
+msgstr "Создание предпросмотра..."
+
+msgid "Initializing..."
+msgstr "Инициализация..."
+
+msgid "Preview frame"
+msgstr "Кадр предпросмотра"
+
+msgid "Preset Controls"
+msgstr "Управление пресетами"
+
+msgid "Reset to Defaults"
+msgstr "Сбросить к значениям по умолчанию"
+
+msgid "Save as Preset"
+msgstr "Сохранить как пресет"
+
+msgid "Select a Preset"
+msgstr "Выбрать пресет"
+
+msgid "Delete Preset"
+msgstr "Удалить пресет"
+
+msgid "Trim CSV Data"
+msgstr "Обрезка данных CSV"
+
+msgid "Drag the blue and orange markers on the chart below to trim your CSV data. This will reduce file size and video length."
+msgstr "Перетащите синие и оранжевые маркеры на графике ниже, чтобы обрезать данные CSV. Это уменьшит размер файла и длительность видео."
+
+msgid "Total Records:"
+msgstr "Всего записей:"
+
+msgid "Trim Data"
+msgstr "Обрезать данные"
+
+msgid "Trimming..."
+msgstr "Обрезка..."
+
+msgid "Complete!"
+msgstr "Завершено!"
+
+msgid "Creating frames... Complete!"
+msgstr "Создание кадров... Завершено!"
+
+msgid "Processing video... Complete!"
+msgstr "Обработка видео... Завершено!"
+
+msgid "Analyzing CSV data... Complete!"
+msgstr "Анализ CSV данных... Завершено!"
+
+msgid "Generating preview... Complete!"
+msgstr "Создание предпросмотра... Завершено!"
+
+msgid "Uploading CSV..."
+msgstr "Загрузка CSV..."
+
+msgid "Uploading CSV... Complete!"
+msgstr "Загрузка CSV... Завершено!"
+
+msgid "Current status:"
+msgstr "Текущий статус:"
+
+msgid "Waiting to start..."
+msgstr "Ожидание начала..."
+
+msgid "Encoding video..."
+msgstr "Кодирование видео..."
+
+msgid "Error: "
+msgstr "Ошибка: "
+
+msgid "No status received from server"
+msgstr "Не получен статус от сервера"
+
+msgid "Processing failed"
+msgstr "Обработка не удалась"
+
+msgid "An error occurred during video processing."
+msgstr "Произошла ошибка при обработке видео."
+
+msgid "Error: Unexpected status"
+msgstr "Ошибка: Неожиданный статус"
+
+msgid "An unexpected error occurred."
+msgstr "Произошла непредвиденная ошибка."
+
+msgid "Error checking status: "
+msgstr "Ошибка при проверке статуса: "
+
+msgid "An error occurred while checking the processing status."
+msgstr "Произошла ошибка при проверке статуса обработки."
+
+msgid "An error occurred while starting the video processing."
+msgstr "Произошла ошибка при запуске обработки видео."
+
+msgid "Video processing completed successfully!"
+msgstr "Обработка видео успешно завершена!"
+
+msgid "You can close your browser and come back later - the video processing will continue in the background."
+msgstr "Вы можете закрыть браузер и вернуться позже - обработка видео продолжится в фоновом режиме."
+
+msgid "Alternatively, you can go to the Projects section to monitor the progress there."
+msgstr "Кроме того, вы можете перейти в раздел Проекты, чтобы отслеживать прогресс там."
+
+msgid "Are you sure you want to stop and delete this project?"
+msgstr "Вы уверены, что хотите остановить и удалить этот проект?"
+
+msgid "Error stopping project: "
+msgstr "Ошибка при остановке проекта: "
+
+msgid "Error stopping project"
+msgstr "Ошибка при остановке проекта"
+
+msgid "Are you sure you want to delete this project?"
+msgstr "Вы уверены, что хотите удалить этот проект?"
+
+msgid "Error deleting project: "
+msgstr "Ошибка при удалении проекта: "
+
+msgid "Error deleting project"
+msgstr "Ошибка при удалении проекта"
+
+# News related translations
+msgid "News"
+msgstr "Новости"
+
+msgid "Create News"
+msgstr "Создать новость"
+
+msgid "Edit News"
+msgstr "Редактировать новость"
+
+msgid "Title"
+msgstr "Заголовок"
+
+msgid "Content"
+msgstr "Содержание"
+
+msgid "Save News"
+msgstr "Сохранить новость"
+
+msgid "Edit"
+msgstr "Редактировать"
+
+msgid "Delete"
+msgstr "Удалить"
+
+msgid "Are you sure you want to delete this news?"
+msgstr "Вы уверены, что хотите удалить эту новость?"
+
+msgid "Posted by %(author)s on %(date)s"
+msgstr "Опубликовано %(date)s пользователем %(author)s"
+
+msgid "Previous"
+msgstr "Предыдущая"
+
+msgid "Next"
+msgstr "Следующая"
+
 msgid "Page %(current)s of %(total)s"
-msgstr ""
+msgstr "Страница %(current)s из %(total)s"
 
+msgid "News created successfully"
+msgstr "Новость успешно создана"
+
+msgid "News updated successfully"
+msgstr "Новость успешно обновлена"
+
+msgid "News deleted successfully"
+msgstr "Новость успешно удалена"
+
+msgid "You can use Markdown syntax"
+msgstr "Вы можете использовать синтаксис Markdown"
+
+msgid "Cancel"
+msgstr "Отмена"
+
+msgid "Title must be between 1 and 200 characters"
+msgstr "Заголовок должен быть от 1 до 200 символов"
