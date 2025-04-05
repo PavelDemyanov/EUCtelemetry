@@ -68,9 +68,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Format time for tooltip with milliseconds and date in DD.MM.YYYY format
     function formatTooltipTimestamp(timestamp) {
-        if (timestamp === undefined || timestamp === null) return 'Unknown';
+        if (timestamp === undefined || timestamp === null) return window.gettext('Unknown');
         const date = new Date(timestamp * 1000);
-        if (isNaN(date.getTime())) return 'Invalid time';
+        if (isNaN(date.getTime())) return window.gettext('Invalid time');
         const day = date.getUTCDate().toString().padStart(2, '0');
         const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
         const year = date.getUTCFullYear();
@@ -155,7 +155,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         type: 'linear', // Linear scale for X-axis
                         min: minTimestamp, // X-axis start
                         max: maxTimestamp, // X-axis end
-                        title: { display: true, text: 'Time', color: '#fff' }, // Axis title
+                        title: { display: true, text: window.gettext('Time'), color: '#fff' }, // Axis title
                         ticks: { 
                             callback: formatXAxisLabel, // Label formatting
                             color: '#fff', // Text color
@@ -170,7 +170,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     },
                     y: {
-                        title: { display: true, text: 'Values', color: '#fff' }, // Y-axis title
+                        title: { display: true, text: window.gettext('Values'), color: '#fff' }, // Y-axis title
                         ticks: { color: '#fff' }, // Label text color
                         grid: { 
                             display: true, // Enable grid
@@ -390,7 +390,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const file = csvFileInput.files[0];
         
         if (!file) {
-            showError('Please select a CSV file');
+            showError(window.gettext('Please select a CSV file'));
             return;
         }
         
@@ -426,16 +426,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Plot the data
                     plotAllColumns(csvData);
                 } catch (e) {
-                    showError('Error parsing CSV data: ' + e.message);
+                    showError(window.gettext('Error parsing CSV data: ') + e.message);
                     console.error('JSON Parse Error:', e);
                 }
             } else {
-                showError('Received invalid data format from server');
+                showError(window.gettext('Received invalid data format from server'));
                 console.error('Invalid data format:', data);
             }
         })
         .catch(error => {
-            showError(error.message || 'An error occurred while processing the file');
+            showError(error.message || window.gettext('An error occurred while processing the file'));
             console.error('Error:', error);
         });
     });
@@ -480,7 +480,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 uploadForm.dispatchEvent(new Event('submit'));
             })
             .catch(error => {
-                showError('Could not load the specified file');
+                showError(window.gettext('Could not load the specified file'));
                 console.error('Error:', error);
             });
     }

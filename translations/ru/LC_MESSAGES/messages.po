@@ -752,3 +752,162 @@ msgstr "Отмена"
 
 msgid "Title must be between 1 and 200 characters"
 msgstr "Заголовок должен быть от 1 до 200 символов"
+
+# Analytics page
+msgid "Analytics"
+msgstr "Аналитика"
+
+msgid "EUC Data Analytics"
+msgstr "Аналитика данных моноколеса"
+
+msgid "Upload a CSV file from DarknessBot or WheelLog to visualize and analyze your ride data."
+msgstr "Загрузите CSV файл из DarknessBot или WheelLog для визуализации и анализа данных поездки."
+
+msgid "Upload your data"
+msgstr "Загрузите ваши данные"
+
+msgid "Upload a CSV file exported from DarknessBot or WheelLog."
+msgstr "Загрузите CSV файл, экспортированный из DarknessBot или WheelLog."
+
+msgid "Upload and Analyze"
+msgstr "Загрузить и анализировать"
+
+msgid "Trip Telemetry"
+msgstr "Телеметрия поездки"
+
+msgid "Adaptive Chart"
+msgstr "Адаптивный график"
+
+msgid "(normalizes values for better visualization)"
+msgstr "(нормализует значения для лучшей визуализации)"
+
+msgid "Reset Zoom"
+msgstr "Сбросить масштаб"
+
+msgid "Click on legend items to show or hide each chart"
+msgstr "Нажмите на элементы легенды, чтобы показать или скрыть каждый график"
+
+msgid "On PC: mouse wheel for zooming, left mouse button for panning. On touch devices: two fingers for zooming, one finger for panning"
+msgstr "На ПК: колесо мыши для масштабирования, левая кнопка мыши для перемещения. На сенсорных устройствах: два пальца для масштабирования, один палец для перемещения"
+
+msgid "Loading..."
+msgstr "Загрузка..."
+
+msgid "Processing data..."
+msgstr "Обработка данных..."
+
+# JavaScript analytics strings
+msgid "Time"
+msgstr "Время"
+
+msgid "Values"
+msgstr "Значения"
+
+msgid "Unknown"
+msgstr "Неизвестно"
+
+msgid "Invalid time"
+msgstr "Неверное время"
+
+msgid "Please select a CSV file"
+msgstr "Пожалуйста, выберите CSV файл"
+
+msgid "Error parsing CSV data: "
+msgstr "Ошибка при разборе данных CSV: "
+
+msgid "Received invalid data format from server"
+msgstr "Получен неверный формат данных от сервера"
+
+msgid "An error occurred while processing the file"
+msgstr "Произошла ошибка при обработке файла"
+
+msgid "Could not load the specified file"
+msgstr "Не удалось загрузить указанный файл"
+
+msgid "No file provided"
+msgstr "Файл не предоставлен"
+
+msgid "No file selected"
+msgstr "Файл не выбран"
+
+msgid "File is too large. Please upload a CSV file smaller than 50MB."
+msgstr "Файл слишком большой. Пожалуйста, загрузите CSV файл размером менее 50МБ."
+# Analytics page
+msgid "Analytics"
+msgstr "Аналитика"
+
+msgid "EUC Data Analytics"
+msgstr "Аналитика данных моноколеса"
+
+msgid "Upload a CSV file from DarknessBot or WheelLog to visualize and analyze your ride data."
+msgstr "Загрузите CSV файл из DarknessBot или WheelLog для визуализации и анализа данных поездки."
+
+msgid "Upload your data"
+msgstr "Загрузите ваши данные"
+
+msgid "Upload a CSV file exported from DarknessBot or WheelLog."
+msgstr "Загрузите CSV файл, экспортированный из DarknessBot или WheelLog."
+
+msgid "Upload and Analyze"
+msgstr "Загрузить и анализировать"
+
+msgid "Trip Telemetry"
+msgstr "Телеметрия поездки"
+
+msgid "Adaptive Chart"
+msgstr "Адаптивный график"
+
+msgid "(normalizes values for better visualization)"
+msgstr "(нормализует значения для лучшей визуализации)"
+
+msgid "Reset Zoom"
+msgstr "Сбросить масштаб"
+
+msgid "Click on legend items to show or hide each chart"
+msgstr "Нажмите на элементы легенды, чтобы показать или скрыть каждый график"
+
+msgid "On PC: mouse wheel for zooming, left mouse button for panning. On touch devices: two fingers for zooming, one finger for panning"
+msgstr "На ПК: колесо мыши для масштабирования, левая кнопка мыши для перемещения. На сенсорных устройствах: два пальца для масштабирования, один палец для перемещения"
+
+msgid "Loading..."
+msgstr "Загрузка..."
+
+msgid "Processing data..."
+msgstr "Обработка данных..."
+
+# JavaScript analytics strings
+msgid "Time"
+msgstr "Время"
+
+msgid "Values"
+msgstr "Значения"
+
+msgid "Unknown"
+msgstr "Неизвестно"
+
+msgid "Invalid time"
+msgstr "Неверное время"
+
+msgid "Please select a CSV file"
+msgstr "Пожалуйста, выберите CSV файл"
+
+msgid "Error parsing CSV data: "
+msgstr "Ошибка при разборе данных CSV: "
+
+msgid "Received invalid data format from server"
+msgstr "Получен неверный формат данных от сервера"
+
+msgid "An error occurred while processing the file"
+msgstr "Произошла ошибка при обработке файла"
+
+msgid "Could not load the specified file"
+msgstr "Не удалось загрузить указанный файл"
+
+msgid "No file provided"
+msgstr "Файл не предоставлен"
+
+msgid "No file selected"
+msgstr "Файл не выбран"
+
+msgid "File is too large. Please upload a CSV file smaller than 50MB."
+msgstr "Файл слишком большой. Пожалуйста, загрузите CSV файл размером менее 50МБ."
