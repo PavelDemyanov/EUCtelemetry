@@ -143,7 +143,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         pointRadius: 0, // Point radius (0 - not visible)
                         pointHoverRadius: 3, // Point radius on hover
                         originalData: ds.originalData, // Original data for tooltips
-                        pointStyle: 'rectRounded' // Rounded corners for markers in tooltip
+                        pointStyle: 'rectRounded', // Rounded corners for markers in tooltip
+                        originalColumn: ds.originalColumn // Store original technical column name
                     };
                 })
             },
