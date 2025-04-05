@@ -50,9 +50,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Плагин для отображения перекрестия при наведении на график
     const crosshairPlugin = {
-    
-    // Плагин для отображения перекрестия при наведении на график
-    const crosshairPlugin = {
         id: 'crosshair',
         afterDraw: (chart, args, options) => {
             if (!chart.tooltip._active || !chart.tooltip._active.length) return;
@@ -161,8 +158,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
     
-    // Get current locale from HTML lang attribute
-    const currentLocale = document.documentElement.lang || 'en';
     function createMultiChart(labels, datasets) {
         if (chartInstance) chartInstance.destroy(); // Уничтожаем старый график, если он существует
         const ctx = dataChart.getContext('2d');
@@ -305,48 +300,37 @@ document.addEventListener('DOMContentLoaded', function() {
                 interaction: { mode: 'index', intersect: false } // Режим взаимодействия для тултипов
             }
         });
-    }
 
-    // Функция для построения графика на основе всех столбцов данных
-    function plotAllColumns(data) {
-        if (!data) return;
-        const timestamps = data.map(row => row.timestamp); // Извлекаем временные метки
-        const columns = Object.keys(data[0]).filter(col => col.toLowerCase() !== 'timestamp' && data.some(row => !isNaN(parseFloat(row[col]))));
-        const datasets = columns.map((column) => {
-            const originalValues = data.map(row => parseFloat(row[column]) || 0); // Исходные значения
-            const normalizedValues = originalValues.map(value => normalizeValueForAdaptiveScale(value, column)); // Нормализованные значения
-            return {
-                label: column,
-                data: isAdaptiveChart ? normalizedValues : originalValues, // Выбираем данные в зависимости от режима
-                originalData: originalValues // Сохраняем исходные данные для тултипов
-            };
-        });
-        createMultiChart(timestamps, datasets); // Создаем график
-        setupManualPanning(); // Настраиваем ручное панорамирование
-    }
+        // Сохраняем начальные границы графика для сброса масштаба
+        chartStartMin = minTimestamp;
+        chartStartMax = maxTimestamp;
 
-    // Настройка ручного панорамирования графика
-    function setupManualPanning() {
-        const canvas = dataChart;
-        if (!canvas) return;
-        canvas.style.cursor = 'grab'; // Курсор в виде руки
+        // Настраиваем ручное перетаскивание графика (для устройств без колеса мыши)
+        const canvas = document.getElementById('dataChart');
+        canvas.style.cursor = 'grab'; // Курсор в виде руки для перетаскивания
+
         canvas.addEventListener('mousedown', (e) => {
-            if (!chartInstance) return;
             isDragging = true;
             dragStartX = e.clientX;
-            chartStartMin = chartInstance.scales.x.min;
-            chartStartMax = chartInstance.scales.x.max;
-            canvas.style.cursor = 'grabbing'; // Курсор при перетаскивании
-            e.preventDefault();
+            canvas.style.cursor = 'grabbing'; // Курсор в виде сжатой руки при перетаскивании
+            if (chartInstance.options.scales.x.min && chartInstance.options.scales.x.max) {
+                chartStartMin = chartInstance.options.scales.x.min;
+                chartStartMax = chartInstance.options.scales.x.max;
+            } else {
+                chartStartMin = minTimestamp;
+                chartStartMax = maxTimestamp;
+            }
         });
+
         window.addEventListener('mousemove', (e) => {
-            if (!isDragging || !chartInstance) return;
-            const deltaX = e.clientX - dragStartX; // Смещение по X
-            const rangeX = chartStartMax - chartStartMin; // Диапазон оси X
-            const pixelPerValue = canvas.width / rangeX; // Пикселей на единицу значения
-            const valueShift = -deltaX / pixelPerValue; // Смещение значений
-            chartInstance.options.scales.x.min = chartStartMin + valueShift;
-            chartInstance.options.scales.x.max = chartStartMax + valueShift;
+            if (!isDragging) return;
+            e.preventDefault();
+            const deltaX = e.clientX - dragStartX;
+            const range = chartStartMax - chartStartMin;
+            const pixelRatio = canvas.width / range;
+            const moveAmount = deltaX / pixelRatio;
+            chartInstance.options.scales.x.min = Math.max(minTimestamp, chartStartMin - moveAmount);
+            chartInstance.options.scales.x.max = Math.min(maxTimestamp, chartStartMax - moveAmount);
             chartInstance.update('none'); // Обновляем график без анимации
         });
         window.addEventListener('mouseup', () => {
@@ -414,12 +398,46 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Обработка переключателя адаптивного графика
+    // Обработка переключения адаптивного масштаба
     if (adaptiveChartToggle) {
-        adaptiveChartToggle.checked = isAdaptiveChart;
         adaptiveChartToggle.addEventListener('change', () => {
-            isAdaptiveChart = adaptiveChartToggle.checked; // Обновляем флаг
-            if (csvData) plotAllColumns(csvData); // Перестраиваем график
+            isAdaptiveChart = adaptiveChartToggle.checked;
+            if (csvData) {
+                plotAllColumns(csvData); // Перестраиваем график с новыми настройками
+            }
         });
+    }
+
+    // Построение графика по данным CSV
+    function plotAllColumns(data) {
+        // Группировка и обработка данных для построения графика
+        const excludeColumns = ['timestamp', 'date', 'time']; // Колонки, которые не отображаем на графике
+        const datasets = [];
+        const labels = data.map(row => parseFloat(row.timestamp)); // Используем timestamp как метки оси X
+
+        // Определяем имена столбцов для графика
+        const columnNames = Object.keys(data[0]).filter(col => !excludeColumns.includes(col.toLowerCase()));
+        
+        // Создаем наборы данных для каждого столбца
+        for (const columnName of columnNames) {
+            const originalData = data.map(row => row[columnName]);
+            // Создаем набор данных с нормализованными значениями для адаптивного масштаба
+            datasets.push({
+                label: columnName,
+                data: originalData.map((value, index) => normalizeValueForAdaptiveScale(value, columnName)),
+                originalData: originalData // Сохраняем оригинальные данные для отображения в тултипах
+            });
+        }
+
+        // Создаем мультилинейный график с настроенными осями
+        createMultiChart(labels, datasets);
+    }
+
+    // Если в URL есть параметр file, пытаемся автоматически загрузить данные
+    const urlParams = new URLSearchParams(window.location.search);
+    const fileParam = urlParams.get('file');
+    if (fileParam) {
+        // В будущем здесь может быть реализована автоматическая загрузка через Ajax
+        console.log(`Auto-loading file: ${fileParam}`);
     }
 });

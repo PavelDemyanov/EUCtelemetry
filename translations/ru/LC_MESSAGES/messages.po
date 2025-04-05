@@ -438,63 +438,63 @@ msgstr "Аналитика"
 
 #: templates/analytics.html:8
 msgid "EUC Data Analytics"
-msgstr ""
+msgstr "Аналитика данных моноколеса"
 
 #: templates/analytics.html:9
 msgid ""
 "Upload a CSV file from DarknessBot or WheelLog to visualize and analyze "
 "your ride data."
-msgstr ""
+msgstr "Загрузите CSV-файл из DarknessBot или WheelLog для визуализации и анализа данных вашей поездки."
 
 #: templates/analytics.html:17
 msgid "Upload your data"
-msgstr ""
+msgstr "Загрузите ваши данные"
 
 #: templates/analytics.html:22 templates/index.html:22
 msgid "CSV File"
-msgstr ""
+msgstr "CSV-файл"
 
 #: templates/analytics.html:24
 msgid "Upload a CSV file exported from DarknessBot or WheelLog."
-msgstr ""
+msgstr "Загрузите CSV-файл, экспортированный из DarknessBot или WheelLog."
 
 #: templates/analytics.html:28
 msgid "Upload and Analyze"
-msgstr ""
+msgstr "Загрузить и анализировать"
 
 #: templates/analytics.html:42
 msgid "Ride Telemetry"
-msgstr ""
+msgstr "Телеметрия поездки"
 
 #: templates/analytics.html:52
 msgid "Adaptive Chart"
-msgstr ""
+msgstr "Адаптивный график"
 
 #: templates/analytics.html:53
 msgid "(normalizes values for better visualization)"
-msgstr ""
+msgstr "(нормализует значения для лучшей визуализации)"
 
 #: templates/analytics.html:55
 msgid "Reset Zoom"
-msgstr ""
+msgstr "Сбросить масштаб"
 
 #: templates/analytics.html:58
 msgid "Click on legend items to show or hide each chart"
-msgstr ""
+msgstr "Нажмите на элементы легенды, чтобы показать или скрыть каждый график"
 
 #: templates/analytics.html:59
 msgid ""
 "On PC: mouse wheel - zoom, left mouse button - move. On touch devices: "
 "two fingers - zoom, one finger - move"
-msgstr ""
+msgstr "На ПК: колесо мыши - масштабирование, левая кнопка мыши - перемещение. На сенсорных устройствах: два пальца - масштабирование, один палец - перемещение"
 
 #: templates/analytics.html:71
 msgid "Loading..."
-msgstr ""
+msgstr "Загрузка..."
 
 #: templates/analytics.html:73
 msgid "Processing data..."
-msgstr ""
+msgstr "Обработка данных..."
 
 #: templates/base.html:6 templates/base.html:58 templates/base.html:164
 #: templates/home.html:14
