@@ -1,26 +1,26 @@
-// Ожидаем полной загрузки DOM перед выполнением скрипта
+// Wait for DOM to fully load before executing the script
 document.addEventListener('DOMContentLoaded', function() {
-    // Получаем элементы интерфейса из HTML
-    const uploadForm = document.getElementById('uploadForm'); // Форма загрузки файла
-    const csvFileInput = document.getElementById('csvFile'); // Поле ввода для CSV-файла
-    const uploadButton = document.getElementById('uploadButton'); // Кнопка загрузки
-    const loadingIndicator = document.getElementById('loadingIndicator'); // Индикатор загрузки
-    const errorMessage = document.getElementById('errorMessage'); // Сообщение об ошибке
-    const analysisResults = document.getElementById('analysisResults'); // Блок результатов анализа
-    const dataChart = document.getElementById('dataChart'); // Канвас для графика
-    const adaptiveChartToggle = document.getElementById('adaptiveChartToggle'); // Переключатель адаптивного масштаба
-    const resetZoomButton = document.getElementById('resetZoomButton'); // Кнопка сброса масштаба
+    // Get UI elements from HTML
+    const uploadForm = document.getElementById('uploadForm'); // Upload form
+    const csvFileInput = document.getElementById('csvFile'); // CSV file input
+    const uploadButton = document.getElementById('uploadButton'); // Upload button
+    const loadingIndicator = document.getElementById('loadingIndicator'); // Loading indicator
+    const errorMessage = document.getElementById('errorMessage'); // Error message
+    const analysisResults = document.getElementById('analysisResults'); // Analysis results block
+    const dataChart = document.getElementById('dataChart'); // Chart canvas
+    const adaptiveChartToggle = document.getElementById('adaptiveChartToggle'); // Adaptive scale toggle
+    const resetZoomButton = document.getElementById('resetZoomButton'); // Reset zoom button
 
-    // Инициализируем глобальные переменные
-    let chartInstance = null; // Экземпляр графика Chart.js
-    let csvData = null; // Данные из CSV-файла
-    let isAdaptiveChart = true; // Флаг адаптивного масштабирования
-    let isDragging = false; // Флаг состояния перетаскивания
-    let dragStartX = 0; // Начальная позиция X при перетаскивании
-    let chartStartMin = 0; // Начальное минимальное значение оси X
-    let chartStartMax = 0; // Начальное максимальное значение оси X
+    // Initialize global variables
+    let chartInstance = null; // Chart.js instance
+    let csvData = null; // CSV file data
+    let isAdaptiveChart = true; // Adaptive scaling flag
+    let isDragging = false; // Dragging state flag
+    let dragStartX = 0; // Initial X position when dragging
+    let chartStartMin = 0; // Initial minimum X-axis value
+    let chartStartMax = 0; // Initial maximum X-axis value
 
-    // Регистрируем плагин crosshair для отображения вертикальной линии при наведении
+    // Register crosshair plugin to display vertical line on hover
     const crosshairPlugin = {
         id: 'crosshair',
         afterDraw: (chart, args, options) => {
@@ -43,19 +43,19 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     Chart.register(crosshairPlugin);
 
-    // Функция для отображения сообщения об ошибке
+    // Function to display error message
     function showError(message) {
         errorMessage.textContent = message;
         errorMessage.style.display = 'block';
         loadingIndicator.style.display = 'none';
     }
 
-    // Функция для скрытия сообщения об ошибке
+    // Function to hide error message
     function hideError() {
         errorMessage.style.display = 'none';
     }
 
-    // Форматирование меток оси X в виде времени (часы:минуты:секунды)
+    // Format X-axis labels as time (hours:minutes:seconds)
     function formatXAxisLabel(value) {
         if (value === undefined || value === null) return '';
         const date = new Date(value * 1000);
@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return `${hours}:${minutes}:${secs}`;
     }
 
-    // Форматирование времени для тултипа с миллисекундами и датой в формате DD.MM.YYYY
+    // Format time for tooltip with milliseconds and date in DD.MM.YYYY format
     function formatTooltipTimestamp(timestamp) {
         if (timestamp === undefined || timestamp === null) return 'Unknown';
         const date = new Date(timestamp * 1000);
@@ -81,17 +81,17 @@ document.addEventListener('DOMContentLoaded', function() {
         return `${day}.${month}.${year} ${hours}:${minutes}:${secs}.${ms}`;
     }
 
-    // Нормализация значений для адаптивного масштаба
+    // Normalize values for adaptive scale
     function normalizeValueForAdaptiveScale(value, columnName) {
         if (!isAdaptiveChart) return value;
         columnName = columnName.toLowerCase();
-        if (columnName === 'power') return ((value + 6000) / 12000) * 100; // Нормализация мощности
-        if (columnName === 'current') return ((value + 100) / 200) * 100; // Нормализация тока
-        if (columnName === 'voltage') return ((value - 50) / (150 - 50)) * 100; // Нормализация напряжения
+        if (columnName === 'power') return ((value + 6000) / 12000) * 100; // Normalize power
+        if (columnName === 'current') return ((value + 100) / 200) * 100; // Normalize current
+        if (columnName === 'voltage') return ((value - 50) / (150 - 50)) * 100; // Normalize voltage
         return value;
     }
 
-    // Палитра цветов для различных типов данных
+    // Color palette for different data types
     const colorPalette = {
         speed: { borderColor: '#0000FF', backgroundColor: 'rgba(0, 0, 255, 0.2)' },
         gps: { borderColor: '#00daff', backgroundColor: 'rgba(255, 165, 0, 0.2)' },
@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', function() {
         power: { borderColor: '#ed5165', backgroundColor: 'rgba(199, 21, 133, 0.2)' }
     };
 
-    // Единицы измерения для тултипов
+    // Units for tooltips
     const units = {
         speed: 'km/h',
         gps: 'km/h',
@@ -117,70 +117,70 @@ document.addEventListener('DOMContentLoaded', function() {
         power: 'W'
     };
 
-    // Функция для создания линейного графика с несколькими наборами данных
+    // Function to create a linear chart with multiple datasets
     function createMultiChart(labels, datasets) {
-        if (chartInstance) chartInstance.destroy(); // Уничтожаем старый график, если он существует
+        if (chartInstance) chartInstance.destroy(); // Destroy old chart if it exists
         const ctx = dataChart.getContext('2d');
-        const minTimestamp = Math.min(...labels); // Минимальное значение оси X
-        const maxTimestamp = Math.max(...labels); // Максимальное значение оси X
-        const fullRange = maxTimestamp - minTimestamp; // Полная длина оси X
+        const minTimestamp = Math.min(...labels); // Minimum X-axis value
+        const maxTimestamp = Math.max(...labels); // Maximum X-axis value
+        const fullRange = maxTimestamp - minTimestamp; // Full X-axis length
 
         chartInstance = new Chart(ctx, {
-            type: 'line', // Тип графика - линейный
+            type: 'line', // Chart type - linear
             data: {
-                labels: labels, // Метки оси X (временные метки)
+                labels: labels, // X-axis labels (timestamps)
                 datasets: datasets.map((ds) => {
                     const columnName = ds.label.toLowerCase();
                     const color = colorPalette[columnName] || { borderColor: '#808080', backgroundColor: 'rgba(128, 128, 128, 0.2)' };
                     return {
-                        label: ds.label, // Название набора данных
-                        data: ds.data, // Нормализованные или исходные данные
-                        borderColor: color.borderColor, // Цвет линии
-                        backgroundColor: color.backgroundColor, // Цвет заливки
-                        borderWidth: 2, // Толщина линии
-                        fill: false, // Без заливки под линией
-                        tension: 0.1, // Плавность линий
-                        pointRadius: 0, // Радиус точек (0 - не видны)
-                        pointHoverRadius: 3, // Радиус точек при наведении
-                        originalData: ds.originalData, // Исходные данные для тултипов
-                        pointStyle: 'rectRounded' // Скругленные края для маркеров в тултипе
+                        label: ds.label, // Dataset name
+                        data: ds.data, // Normalized or original data
+                        borderColor: color.borderColor, // Line color
+                        backgroundColor: color.backgroundColor, // Fill color
+                        borderWidth: 2, // Line thickness
+                        fill: false, // No fill under the line
+                        tension: 0.1, // Line smoothness
+                        pointRadius: 0, // Point radius (0 - not visible)
+                        pointHoverRadius: 3, // Point radius on hover
+                        originalData: ds.originalData, // Original data for tooltips
+                        pointStyle: 'rectRounded' // Rounded corners for markers in tooltip
                     };
                 })
             },
             options: {
-                responsive: true, // График адаптируется к размеру контейнера
-                maintainAspectRatio: false, // Отключаем фиксированное соотношение сторон
+                responsive: true, // Chart adapts to container size
+                maintainAspectRatio: false, // Disable fixed aspect ratio
                 scales: {
                     x: {
-                        type: 'linear', // Линейная шкала для оси X
-                        min: minTimestamp, // Начало оси X
-                        max: maxTimestamp, // Конец оси X
-                        title: { display: true, text: 'Время', color: '#fff' }, // Заголовок оси
+                        type: 'linear', // Linear scale for X-axis
+                        min: minTimestamp, // X-axis start
+                        max: maxTimestamp, // X-axis end
+                        title: { display: true, text: 'Time', color: '#fff' }, // Axis title
                         ticks: { 
-                            callback: formatXAxisLabel, // Форматирование меток
-                            color: '#fff', // Цвет текста
-                            maxTicksLimit: 20, // Максимальное количество меток
-                            autoSkip: true // Автоматический пропуск меток
+                            callback: formatXAxisLabel, // Label formatting
+                            color: '#fff', // Text color
+                            maxTicksLimit: 20, // Maximum number of labels
+                            autoSkip: true // Automatic label skipping
                         },
-                        grid: { display: false } // Отключаем сетку
+                        grid: { display: false } // Disable grid
                     },
                     y: {
-                        title: { display: true, text: 'Значения', color: '#fff' }, // Заголовок оси Y
-                        ticks: { color: '#fff' }, // Цвет текста меток
-                        grid: { display: false }, // Отключаем сетку
-                        beginAtZero: false // Не начинаем ось с нуля
+                        title: { display: true, text: 'Values', color: '#fff' }, // Y-axis title
+                        ticks: { color: '#fff' }, // Label text color
+                        grid: { display: false }, // Disable grid
+                        beginAtZero: false // Don't start axis at zero
                     }
                 },
                 plugins: {
                     tooltip: {
-                        enabled: true, // Включаем тултипы
-                        mode: 'index', // Показываем данные для всех линий по текущей позиции
-                        intersect: false, // Тултип показывается без пересечения с точкой
-                        usePointStyle: true, // Используем стиль точек для маркеров
+                        enabled: true, // Enable tooltips
+                        mode: 'index', // Show data for all lines at current position
+                        intersect: false, // Tooltip shown without intersection with point
+                        usePointStyle: true, // Use point style for markers
                         callbacks: {
-                            // Форматируем заголовок тултипа (время)
+                            // Format tooltip title (time)
                             title: (tooltipItems) => tooltipItems.length > 0 ? formatTooltipTimestamp(tooltipItems[0].parsed.x) : '',
-                            // Форматируем текст тултипа (значение и единицы измерения)
+                            // Format tooltip text (value and units)
                             label: (context) => {
                                 const dataset = context.dataset;
                                 const index = context.dataIndex;
@@ -189,28 +189,28 @@ document.addEventListener('DOMContentLoaded', function() {
                                 const unit = units[dataset.label.toLowerCase()] || '';
                                 return `${dataset.label}: \u200B${value} ${unit}`;
                             },
-                            // Настраиваем цвет маркера в тултипе
+                            // Configure marker color in tooltip
                             labelColor: (tooltipItem) => {
                                 const dataset = chartInstance.data.datasets[tooltipItem.datasetIndex];
                                 return {
                                     borderColor: dataset.borderColor,
-                                    backgroundColor: dataset.borderColor // Сплошной цвет без обводки
+                                    backgroundColor: dataset.borderColor // Solid color without outline
                                 };
                             }
                         },
-                        backgroundColor: 'rgba(0, 0, 0, 0.9)', // Цвет фона тултипа
-                        titleFont: { size: 14, weight: 'bold' }, // Шрифт заголовка
-                        bodyFont: { size: 14, weight: 'bold' }, // Шрифт текста
-                        padding: 12 // Отступ внутри тултипа
+                        backgroundColor: 'rgba(0, 0, 0, 0.9)', // Tooltip background color
+                        titleFont: { size: 14, weight: 'bold' }, // Title font
+                        bodyFont: { size: 14, weight: 'bold' }, // Text font
+                        padding: 12 // Padding inside tooltip
                     },
                     crosshair: {
-                        line: { color: 'rgba(255, 255, 255, 0.5)', width: 1, dashPattern: [5, 5] } // Настройки линии перекрестия
+                        line: { color: 'rgba(255, 255, 255, 0.5)', width: 1, dashPattern: [5, 5] } // Crosshair line settings
                     },
                     legend: {
-                        display: true, // Включаем легенду
-                        position: 'top', // Расположение легенды
+                        display: true, // Enable legend
+                        position: 'top', // Legend position
                         labels: {
-                            color: '#fff', // Цвет текста
+                            color: '#fff', // Text color
                             generateLabels: (chart) => {
                                 const datasets = chart.data.datasets;
                                 return datasets.map((dataset, i) => {
@@ -229,7 +229,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             }
                         },
                         onClick: (e, legendItem) => {
-                            // Переключение видимости наборов данных при клике на легенду
+                            // Toggle dataset visibility when clicking on legend
                             const index = legendItem.index;
                             const meta = chartInstance.getDatasetMeta(index);
                             meta.hidden = !meta.hidden;
@@ -238,143 +238,176 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     zoom: {
                         pan: {
-                            enabled: true, // Включаем панорамирование
-                            mode: 'x', // Панорамирование по оси X
-                            rangeMin: { x: minTimestamp }, // Ограничение панорамирования
+                            enabled: true, // Enable panning
+                            mode: 'x', // Panning on X-axis
+                            rangeMin: { x: minTimestamp }, // Panning limits
                             rangeMax: { x: maxTimestamp }
                         },
                         zoom: {
-                            wheel: { enabled: true }, // Масштабирование колесиком мыши
-                            pinch: { enabled: true }, // Масштабирование жестами
-                            mode: 'x', // Масштабирование по оси X
+                            wheel: { enabled: true }, // Zoom with mouse wheel
+                            pinch: { enabled: true }, // Zoom with gestures
+                            mode: 'x', // Zoom on X-axis
                             limits: {
                                 x: {
-                                    min: minTimestamp, // Минимальный предел оси X
-                                    max: maxTimestamp, // Максимальный предел оси X
-                                    minRange: fullRange // Минимальный видимый диапазон (не меньше полной оси X)
+                                    min: minTimestamp, // Minimum X-axis limit
+                                    max: maxTimestamp, // Maximum X-axis limit
+                                    minRange: fullRange // Minimum visible range (not less than full X-axis)
                                 }
                             }
                         }
                     }
                 },
-                interaction: { mode: 'index', intersect: false } // Режим взаимодействия для тултипов
+                interaction: { mode: 'index', intersect: false } // Interaction mode for tooltips
             }
         });
     }
 
-    // Функция для построения графика на основе всех столбцов данных
+    // Function to plot chart based on all data columns
     function plotAllColumns(data) {
         if (!data) return;
-        const timestamps = data.map(row => row.timestamp); // Извлекаем временные метки
+        const timestamps = data.map(row => row.timestamp); // Extract timestamps
         const columns = Object.keys(data[0]).filter(col => col.toLowerCase() !== 'timestamp' && data.some(row => !isNaN(parseFloat(row[col]))));
         const datasets = columns.map((column) => {
-            const originalValues = data.map(row => parseFloat(row[column]) || 0); // Исходные значения
-            const normalizedValues = originalValues.map(value => normalizeValueForAdaptiveScale(value, column)); // Нормализованные значения
+            const originalValues = data.map(row => parseFloat(row[column]) || 0); // Original values
+            const normalizedValues = originalValues.map(value => normalizeValueForAdaptiveScale(value, column)); // Normalized values
             return {
                 label: column,
-                data: isAdaptiveChart ? normalizedValues : originalValues, // Выбираем данные в зависимости от режима
-                originalData: originalValues // Сохраняем исходные данные для тултипов
+                data: isAdaptiveChart ? normalizedValues : originalValues, // Select data based on mode
+                originalData: originalValues // Save original data for tooltips
             };
         });
-        createMultiChart(timestamps, datasets); // Создаем график
-        setupManualPanning(); // Настраиваем ручное панорамирование
+        createMultiChart(timestamps, datasets); // Create chart
+        setupManualPanning(); // Setup manual panning
     }
 
-    // Настройка ручного панорамирования графика
+    // Setup manual chart panning
     function setupManualPanning() {
         const canvas = dataChart;
         if (!canvas) return;
-        canvas.style.cursor = 'grab'; // Курсор в виде руки
+        canvas.style.cursor = 'grab'; // Hand cursor
         canvas.addEventListener('mousedown', (e) => {
             if (!chartInstance) return;
             isDragging = true;
             dragStartX = e.clientX;
             chartStartMin = chartInstance.scales.x.min;
             chartStartMax = chartInstance.scales.x.max;
-            canvas.style.cursor = 'grabbing'; // Курсор при перетаскивании
+            canvas.style.cursor = 'grabbing'; // Grabbing cursor during dragging
             e.preventDefault();
         });
-        window.addEventListener('mousemove', (e) => {
+
+        document.addEventListener('mousemove', (e) => {
             if (!isDragging || !chartInstance) return;
-            const deltaX = e.clientX - dragStartX; // Смещение по X
-            const rangeX = chartStartMax - chartStartMin; // Диапазон оси X
-            const pixelPerValue = canvas.width / rangeX; // Пикселей на единицу значения
-            const valueShift = -deltaX / pixelPerValue; // Смещение значений
-            chartInstance.options.scales.x.min = chartStartMin + valueShift;
-            chartInstance.options.scales.x.max = chartStartMax + valueShift;
-            chartInstance.update('none'); // Обновляем график без анимации
+            const deltaX = e.clientX - dragStartX;
+            const chartWidth = canvas.width;
+            const rangeWidth = chartStartMax - chartStartMin;
+            const deltaPercent = (deltaX / chartWidth) * rangeWidth;
+            
+            chartInstance.scales.x.options.min = chartStartMin - deltaPercent;
+            chartInstance.scales.x.options.max = chartStartMax - deltaPercent;
+            chartInstance.update();
         });
-        window.addEventListener('mouseup', () => {
-            if (isDragging) {
-                isDragging = false;
-                canvas.style.cursor = 'grab';
-            }
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+            if (canvas) canvas.style.cursor = 'grab';
         });
-        window.addEventListener('mouseleave', () => {
-            if (isDragging) {
-                isDragging = false;
-                canvas.style.cursor = 'grab';
-            }
+
+        document.addEventListener('mouseleave', () => {
+            isDragging = false;
+            if (canvas) canvas.style.cursor = 'grab';
         });
     }
 
-    // Обработка отправки формы с CSV-файлом
+    // Handle form submission
     uploadForm.addEventListener('submit', function(e) {
         e.preventDefault();
-        if (!csvFileInput.files || csvFileInput.files.length === 0) {
-            showError('Пожалуйста, выберите CSV-файл для загрузки.');
-            return;
-        }
-        const file = csvFileInput.files[0];
-        if (!file.name.toLowerCase().endsWith('.csv')) {
-            showError('Пожалуйста, загрузите действительный CSV-файл.');
-            return;
-        }
         hideError();
-        loadingIndicator.style.display = 'block'; // Показываем индикатор загрузки
-        analysisResults.style.display = 'none'; // Скрываем результаты
+        
         const formData = new FormData();
+        const file = csvFileInput.files[0];
+        
+        if (!file) {
+            showError('Please select a CSV file');
+            return;
+        }
+        
         formData.append('file', file);
-        fetch('/analyze_csv', { // Отправляем файл на сервер
+        
+        // Show loading indicator
+        loadingIndicator.style.display = 'block';
+        analysisResults.style.display = 'none';
+        
+        // Send request to the server
+        fetch('/analyze_csv', {
             method: 'POST',
             body: formData
         })
         .then(response => {
-            // Check if response is JSON
-            const contentType = response.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                throw new Error('Сервер вернул некорректный ответ. Возможно, файл слишком большой для обработки.');
+            if (!response.ok) {
+                return response.json().then(err => {
+                    throw new Error(err.error || 'Server error');
+                });
             }
             return response.json();
         })
         .then(data => {
-            if (!data.success) throw new Error(data.error || 'Ошибка обработки CSV');
-            csvData = JSON.parse(data.csv_data); // Парсим данные из ответа сервера
-            window.csvType = data.csv_type;
-            plotAllColumns(csvData); // Строим график
-            loadingIndicator.style.display = 'none'; // Скрываем индикатор
-            analysisResults.style.display = 'block'; // Показываем результаты
+            csvData = data;
+            
+            // Hide loading, show results
+            loadingIndicator.style.display = 'none';
+            analysisResults.style.display = 'block';
+            
+            // Plot the data
+            plotAllColumns(csvData);
         })
-        .catch(error => showError(error.message)); // Обрабатываем ошибки
+        .catch(error => {
+            showError(error.message || 'An error occurred while processing the file');
+            console.error('Error:', error);
+        });
     });
 
-    // Обработка кнопки сброса масштаба
-    if (resetZoomButton) {
-        resetZoomButton.addEventListener('click', () => {
-            if (chartInstance) {
-                delete chartInstance.options.scales.x.min; // Удаляем пользовательские пределы
-                delete chartInstance.options.scales.x.max;
-                chartInstance.update(); // Обновляем график
-            }
-        });
-    }
+    // Handle adaptive chart toggle
+    adaptiveChartToggle.addEventListener('change', function() {
+        isAdaptiveChart = this.checked;
+        if (csvData) {
+            plotAllColumns(csvData);
+        }
+    });
 
-    // Обработка переключателя адаптивного графика
-    if (adaptiveChartToggle) {
-        adaptiveChartToggle.checked = isAdaptiveChart;
-        adaptiveChartToggle.addEventListener('change', () => {
-            isAdaptiveChart = adaptiveChartToggle.checked; // Обновляем флаг
-            if (csvData) plotAllColumns(csvData); // Перестраиваем график
-        });
+    // Handle zoom reset button
+    resetZoomButton.addEventListener('click', function() {
+        if (chartInstance) {
+            chartInstance.resetZoom();
+        }
+    });
+
+    // Check if URL contains file parameter and load it
+    const urlParams = new URLSearchParams(window.location.search);
+    const fileParam = urlParams.get('file');
+    
+    if (fileParam) {
+        // Simulate file selection and form submission
+        const dataTransfer = new DataTransfer();
+        
+        // Create a file object with the name from URL
+        fetch(`/uploads/${fileParam}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('File not found');
+                }
+                return response.blob();
+            })
+            .then(blob => {
+                const file = new File([blob], fileParam, { type: 'text/csv' });
+                dataTransfer.items.add(file);
+                csvFileInput.files = dataTransfer.files;
+                
+                // Submit the form
+                uploadForm.dispatchEvent(new Event('submit'));
+            })
+            .catch(error => {
+                showError('Could not load the specified file');
+                console.error('Error:', error);
+            });
     }
 });
