@@ -289,8 +289,35 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
             return csv_type, processed_data
 
         # If file doesn't exist, process the CSV
-        df = pd.read_csv(file_path)
-        logging.info(f"Processing new CSV file: {file_path}")
+        # Get file size in MB before reading
+        file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
+        logging.info(f"CSV file size: {file_size_mb:.2f} MB")
+        
+        # For analytics, if the file is very large, use sampling to reduce load
+        # Check if this is being called from the analytics function or for frame generation
+        is_analytics = folder_number is None
+        sample_rate = 1
+        
+        # If file is large and this is for analytics, use sampling
+        if is_analytics and file_size_mb > 20:  # If file is larger than 20MB
+            # Calculate sample rate based on file size
+            sample_rate = max(1, int(file_size_mb / 20))
+            logging.info(f"Large CSV file detected. Using sample rate of 1:{sample_rate}")
+            
+            # Use pandas chunksize parameter to process file in chunks for large files
+            if file_size_mb > 100:  # Over 100MB, process in chunks
+                chunks = []
+                for chunk in pd.read_csv(file_path, chunksize=100000):  # Process 100K rows at a time
+                    chunks.append(chunk.iloc[::sample_rate])  # Sample every Nth row
+                df = pd.concat(chunks)
+            else:
+                # Sample every Nth row for medium-sized files
+                df = pd.read_csv(file_path).iloc[::sample_rate]
+        else:
+            # Normal processing for smaller files or frame generation
+            df = pd.read_csv(file_path)
+        
+        logging.info(f"Processing CSV file: {file_path}, rows after sampling: {len(df)}")
         logging.info(f"CSV columns: {df.columns.tolist()}")
 
         # Use existing type if provided, otherwise detect

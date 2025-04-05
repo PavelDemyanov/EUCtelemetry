@@ -1567,6 +1567,16 @@ def analyze_csv():
     file = request.files['file']
     if file.filename == '':
         return jsonify({'error': gettext('No file selected')}), 400
+    
+    # Check file size - limit to 50MB to prevent memory issues
+    # Read only beginning of the file to get size
+    file.seek(0, os.SEEK_END)
+    file_size = file.tell()
+    file.seek(0)  # Reset file pointer to beginning
+    
+    # 50MB = 50 * 1024 * 1024 bytes
+    if file_size > 50 * 1024 * 1024:
+        return jsonify({'error': gettext('File is too large. Please upload a CSV file smaller than 50MB.')}), 400
         
     temp_dir = None
     temp_file_path = None
@@ -1576,6 +1586,10 @@ def analyze_csv():
         temp_dir = tempfile.mkdtemp()
         temp_file_path = os.path.join(temp_dir, secure_filename(file.filename))
         file.save(temp_file_path)
+        
+        # Log file size for debugging
+        file_size_mb = os.path.getsize(temp_file_path) / (1024 * 1024)
+        logging.info(f"Saved CSV file for analytics, size: {file_size_mb:.2f} MB")
         
         # Read and validate CSV file
         try:
@@ -1668,8 +1682,16 @@ def analyze_csv():
                 'csv_data': json.dumps(serializable_data)
             })
             
+        except MemoryError:
+            # Special handling for memory errors
+            logging.error("Memory error while processing CSV file - file may be too large")
+            return jsonify({'error': gettext('Memory error while processing CSV file. The file is too large or contains too much data. Try uploading a smaller file or reducing the data points.')}), 400
         except Exception as e:
             logging.error(f"Error processing CSV file: {str(e)}")
+            # Check if error message suggests memory issues
+            error_str = str(e).lower()
+            if 'memory' in error_str or 'allocation' in error_str or 'buffer' in error_str:
+                return jsonify({'error': gettext('The CSV file appears to be too large for processing. Please try a smaller file or contact support.')}), 400
             return jsonify({'error': gettext('Error processing CSV file: ') + str(e)}), 400
             
     except Exception as e:

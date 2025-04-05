@@ -336,7 +336,14 @@ document.addEventListener('DOMContentLoaded', function() {
             method: 'POST',
             body: formData
         })
-        .then(response => response.ok ? response.json() : response.json().then(data => { throw new Error(data.error || 'Ошибка обработки CSV'); }))
+        .then(response => {
+            // Check if response is JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Сервер вернул некорректный ответ. Возможно, файл слишком большой для обработки.');
+            }
+            return response.json();
+        })
         .then(data => {
             if (!data.success) throw new Error(data.error || 'Ошибка обработки CSV');
             csvData = JSON.parse(data.csv_data); // Парсим данные из ответа сервера
