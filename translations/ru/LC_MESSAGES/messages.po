@@ -964,3 +964,102 @@ msgstr "км"
 msgid "W"
 msgstr "Вт"
 
+
+# Analytics units
+msgid "km/h"
+msgstr "км/ч"
+
+msgid "V"
+msgstr "В"
+
+msgid "°C"
+msgstr "°C"
+
+msgid "A"
+msgstr "А"
+
+msgid "km"
+msgstr "км"
+
+msgid "W"
+msgstr "Вт"
+
+msgid "%"
+msgstr "%"
+
+# Analytics page
+msgid "speed"
+msgstr "скорость"
+
+msgid "gps"
+msgstr "gps"
+
+msgid "voltage"
+msgstr "напряжение"
+
+msgid "temperature"
+msgstr "температура"
+
+msgid "current"
+msgstr "ток"
+
+msgid "battery"
+msgstr "батарея"
+
+msgid "mileage"
+msgstr "пробег"
+
+msgid "pwm"
+msgstr "шим"
+
+msgid "power"
+msgstr "мощность"
+
+msgid "Time"
+msgstr "Время"
+
+msgid "Values"
+msgstr "Значения"
+
+msgid "Analytics"
+msgstr "Аналитика"
+
+msgid "EUC Data Analytics"
+msgstr "Аналитика данных моноколеса"
+
+msgid "Upload a CSV file from DarknessBot or WheelLog to visualize and analyze your ride data."
+msgstr "Загрузите файл CSV из DarknessBot или WheelLog, чтобы визуализировать и проанализировать данные вашей поездки."
+
+msgid "Upload your data"
+msgstr "Загрузите ваши данные"
+
+msgid "Upload a CSV file exported from DarknessBot or WheelLog."
+msgstr "Загрузите файл CSV, экспортированный из DarknessBot или WheelLog."
+
+msgid "Upload and Analyze"
+msgstr "Загрузить и проанализировать"
+
+msgid "Trip Telemetry"
+msgstr "Телеметрия поездки"
+
+msgid "Adaptive Chart"
+msgstr "Адаптивный график"
+
+msgid "(normalizes values for better visualization)"
+msgstr "(нормализует значения для лучшей визуализации)"
+
+msgid "Reset Zoom"
+msgstr "Сбросить масштаб"
+
+msgid "Click on legend items to show or hide each chart"
+msgstr "Нажмите на элементы легенды, чтобы показать или скрыть каждый график"
+
+msgid "On PC: mouse wheel for zooming, left mouse button for panning. On touch devices: two fingers for zooming, one finger for panning"
+msgstr "На ПК: колесо мыши для масштабирования, левая кнопка мыши для панорамирования. На сенсорных устройствах: два пальца для масштабирования, один палец для панорамирования"
+
+msgid "Loading..."
+msgstr "Загрузка..."
+
+msgid "Processing data..."
+msgstr "Обработка данных..."
+

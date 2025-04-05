@@ -196,8 +196,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                 const index = context.dataIndex;
                                 let value = dataset.originalData[index];
                                 value = (typeof value === 'number' && !isNaN(value)) ? Math.round(value).toString() : '—';
-                                const unit = units[dataset.label.toLowerCase()] || '';
-                                return `${window.gettext(dataset.label.toLowerCase())}: \u200B${value} ${unit}`;
+                                const unit = units[dataset.originalColumn.toLowerCase()] || '';
+                                return `${window.gettext(dataset.originalColumn.toLowerCase())}: \u200B${value} ${unit}`;
                             },
                             // Configure marker color in tooltip
                             labelColor: (tooltipItem) => {
@@ -227,7 +227,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     const meta = chart.getDatasetMeta(i);
                                     const isHidden = meta.hidden;
                                     return {
-                                        text: window.gettext(dataset.label.toLowerCase()),
+                                        text: window.gettext(dataset.originalColumn.toLowerCase()),
                                         fillStyle: isHidden ? '#555555' : dataset.borderColor,
                                         strokeStyle: isHidden ? '#555555' : dataset.borderColor,
                                         lineWidth: 2,
