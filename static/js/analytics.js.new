@@ -1,0 +1,151 @@
+// Ожидаем полной загрузки DOM перед выполнением скрипта
+document.addEventListener('DOMContentLoaded', function() {
+    // Получаем элементы интерфейса из HTML
+    const uploadForm = document.getElementById('uploadForm'); // Форма загрузки файла
+    const csvFileInput = document.getElementById('csvFile'); // Поле ввода для CSV-файла
+    const uploadButton = document.getElementById('uploadButton'); // Кнопка загрузки
+    const loadingIndicator = document.getElementById('loadingIndicator'); // Индикатор загрузки
+    const errorMessage = document.getElementById('errorMessage'); // Сообщение об ошибке
+    const analysisResults = document.getElementById('analysisResults'); // Блок результатов анализа
+    const dataChart = document.getElementById('dataChart'); // Канвас для графика
+    const adaptiveChartToggle = document.getElementById('adaptiveChartToggle'); // Переключатель адаптивного масштаба
+    const resetZoomButton = document.getElementById('resetZoomButton'); // Кнопка сброса масштаба
+
+    // Инициализируем глобальные переменные
+    let chartInstance = null; // Экземпляр графика Chart.js
+    let csvData = null; // Данные из CSV-файла
+    let isAdaptiveChart = true; // Флаг адаптивного масштабирования
+    let isDragging = false; // Флаг состояния перетаскивания
+    let dragStartX = 0; // Начальная позиция X при перетаскивании
+    let chartStartMin = 0; // Начальное минимальное значение оси X
+    let chartStartMax = 0; // Начальное максимальное значение оси X
+
+    // Локализованные строки
+    const translations = {
+        en: {
+            time: 'Time',
+            values: 'Values'
+        },
+        ru: {
+            time: 'Время',
+            values: 'Значения'
+        }
+    };
+    
+    // Get current locale from HTML lang attribute
+    const currentLocale = document.documentElement.lang || 'en';
+    
+    // Получение локализованного текста
+    function getLocalizedText(key) {
+        return translations[currentLocale]?.[key] || translations['en'][key];
+    }
+
+    // Регистрируем плагин crosshair для отображения вертикальной линии при наведении
+    const crosshairPlugin = {
+        id: 'crosshair',
+        afterDraw: (chart, args, options) => {
+            if (!chart.tooltip._active || !chart.tooltip._active.length) return;
+            const activePoint = chart.tooltip._active[0];
+            const ctx = chart.ctx;
+            const x = activePoint.element.x;
+            const topY = chart.scales.y.top;
+            const bottomY = chart.scales.y.bottom;
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(x, topY);
+            ctx.lineTo(x, bottomY);
+            ctx.lineWidth = options.line?.width || 1;
+            ctx.strokeStyle = options.line?.color || 'rgba(255, 255, 255, 0.5)';
+            if (options.line?.dashPattern) ctx.setLineDash(options.line.dashPattern);
+            ctx.stroke();
+            ctx.restore();
+        }
+    };
+    Chart.register(crosshairPlugin);
+
+    // Функция для отображения сообщения об ошибке
+    function showError(message) {
+        errorMessage.textContent = message;
+        errorMessage.style.display = 'block';
+        loadingIndicator.style.display = 'none';
+    }
+
+    // Функция для скрытия сообщения об ошибке
+    function hideError() {
+        errorMessage.style.display = 'none';
+    }
+
+    // Форматирование меток оси X в виде времени (часы:минуты:секунды)
+    function formatXAxisLabel(value) {
+        if (value === undefined || value === null) return '';
+        const date = new Date(value * 1000);
+        if (isNaN(date.getTime())) return '';
+        const hours = date.getUTCHours().toString().padStart(2, '0');
+        const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+        const secs = date.getUTCSeconds().toString().padStart(2, '0');
+        return `${hours}:${minutes}:${secs}`;
+    }
+
+    // Форматирование времени для тултипа с миллисекундами и датой в формате DD.MM.YYYY
+    function formatTooltipTimestamp(timestamp) {
+        if (timestamp === undefined || timestamp === null) return 'Unknown';
+        const date = new Date(timestamp * 1000);
+        if (isNaN(date.getTime())) return 'Invalid time';
+        const day = date.getUTCDate().toString().padStart(2, '0');
+        const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
+        const year = date.getUTCFullYear();
+        const hours = date.getUTCHours().toString().padStart(2, '0');
+        const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+        const secs = date.getUTCSeconds().toString().padStart(2, '0');
+        const ms = date.getUTCMilliseconds().toString().padStart(3, '0');
+        return `${day}.${month}.${year} ${hours}:${minutes}:${secs}.${ms}`;
+    }
+
+    // Нормализация значений для адаптивного масштаба
+    function normalizeValueForAdaptiveScale(value, columnName) {
+        if (!isAdaptiveChart) return value;
+        columnName = columnName.toLowerCase();
+        if (columnName === 'power') return ((value + 6000) / 12000) * 100; // Нормализация мощности
+        if (columnName === 'current') return ((value + 100) / 200) * 100; // Нормализация тока
+        if (columnName === 'voltage') return ((value - 50) / (150 - 50)) * 100; // Нормализация напряжения
+        return value;
+    }
+
+    // Палитра цветов для различных типов данных
+    const colorPalette = {
+        speed: { borderColor: '#0000FF', backgroundColor: 'rgba(0, 0, 255, 0.2)' },
+        gps: { borderColor: '#00daff', backgroundColor: 'rgba(255, 165, 0, 0.2)' },
+        voltage: { borderColor: '#800080', backgroundColor: 'rgba(128, 0, 128, 0.2)' },
+        temperature: { borderColor: '#FF00FF', backgroundColor: 'rgba(255, 0, 255, 0.2)' },
+        current: { borderColor: '#FFFF00', backgroundColor: 'rgba(255, 255, 0, 0.2)' },
+        battery: { borderColor: '#008000', backgroundColor: 'rgba(0, 128, 0, 0.2)' },
+        mileage: { borderColor: '#FF8C00', backgroundColor: 'rgba(255, 140, 0, 0.2)' },
+        pwm: { borderColor: '#FF0000', backgroundColor: 'rgba(255, 0, 0, 0.2)' },
+        power: { borderColor: '#ed5165', backgroundColor: 'rgba(199, 21, 133, 0.2)' }
+    };
+
+    // Единицы измерения для тултипов
+    const units = {
+        en: {
+            speed: 'km/h',
+            gps: 'km/h',
+            voltage: 'V',
+            temperature: '°C',
+            current: 'A',
+            battery: '%',
+            mileage: 'km',
+            pwm: '%',
+            power: 'W'
+        },
+        ru: {
+            speed: 'км/ч',
+            gps: 'км/ч',
+            voltage: 'В',
+            temperature: '°C',
+            current: 'А',
+            battery: '%',
+            mileage: 'км',
+            pwm: '%',
+            power: 'Вт'
+        }
+    };

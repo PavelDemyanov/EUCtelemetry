@@ -20,9 +20,33 @@ document.addEventListener('DOMContentLoaded', function() {
     let chartStartMin = 0; // Начальное минимальное значение оси X
     let chartStartMax = 0; // Начальное максимальное значение оси X
 
-    // Регистрируем плагин crosshair для отображения вертикальной линии при наведении
-    const crosshairPlugin = {
-        id: 'crosshair',
+    // Локализованные строки
+    const translations = {
+        en: {
+            pleaseSelectCSV: "Please select a CSV file to upload.",
+            pleaseUploadValidCSV: "Please upload a valid CSV file.",
+            serverInvalidResponse: "Server returned an invalid response. The file might be too large to process.",
+            csvProcessingError: "Error processing CSV",
+            time: 'Time',
+            values: 'Values'
+        },
+        ru: {
+            pleaseSelectCSV: "Пожалуйста, выберите CSV-файл для загрузки.",
+            pleaseUploadValidCSV: "Пожалуйста, загрузите действительный CSV-файл.",
+            serverInvalidResponse: "Сервер вернул некорректный ответ. Возможно, файл слишком большой для обработки.",
+            csvProcessingError: "Ошибка обработки CSV",
+            time: 'Время',
+            values: 'Значения'
+        }
+    };
+    
+    // Get current locale from HTML lang attribute
+    const currentLocale = document.documentElement.lang || 'en';
+    
+    // Получение локализованного текста
+    function getLocalizedText(key) {
+        return translations[currentLocale]?.[key] || translations['en'][key];
+    }
         afterDraw: (chart, args, options) => {
             if (!chart.tooltip._active || !chart.tooltip._active.length) return;
             const activePoint = chart.tooltip._active[0];
@@ -104,20 +128,34 @@ document.addEventListener('DOMContentLoaded', function() {
         power: { borderColor: '#ed5165', backgroundColor: 'rgba(199, 21, 133, 0.2)' }
     };
 
-    // Единицы измерения для тултипов
+    // Единицы измерения для тултипов (локализованные)
     const units = {
-        speed: 'km/h',
-        gps: 'km/h',
-        voltage: 'V',
-        temperature: '°C',
-        current: 'A',
-        battery: '%',
-        mileage: 'km',
-        pwm: '%',
-        power: 'W'
+        en: {
+            speed: 'km/h',
+            gps: 'km/h',
+            voltage: 'V',
+            temperature: '°C',
+            current: 'A',
+            battery: '%',
+            mileage: 'km',
+            pwm: '%',
+            power: 'W'
+        },
+        ru: {
+            speed: 'км/ч',
+            gps: 'км/ч',
+            voltage: 'В',
+            temperature: '°C',
+            current: 'А',
+            battery: '%',
+            mileage: 'км',
+            pwm: '%',
+            power: 'Вт'
+        }
     };
-
-    // Функция для создания линейного графика с несколькими наборами данных
+    
+    // Get current locale from HTML lang attribute
+    const currentLocale = document.documentElement.lang || 'en';
     function createMultiChart(labels, datasets) {
         if (chartInstance) chartInstance.destroy(); // Уничтожаем старый график, если он существует
         const ctx = dataChart.getContext('2d');
@@ -155,7 +193,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         type: 'linear', // Линейная шкала для оси X
                         min: minTimestamp, // Начало оси X
                         max: maxTimestamp, // Конец оси X
-                        title: { display: true, text: 'Время', color: '#fff' }, // Заголовок оси
+                        title: { display: true, text: getLocalizedText('time'), color: '#fff' }, // Заголовок оси
                         ticks: { 
                             callback: formatXAxisLabel, // Форматирование меток
                             color: '#fff', // Цвет текста
@@ -165,7 +203,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         grid: { display: false } // Отключаем сетку
                     },
                     y: {
-                        title: { display: true, text: 'Значения', color: '#fff' }, // Заголовок оси Y
+                        title: { display: true, text: getLocalizedText('values'), color: '#fff' }, // Заголовок оси Y
                         ticks: { color: '#fff' }, // Цвет текста меток
                         grid: { display: false }, // Отключаем сетку
                         beginAtZero: false // Не начинаем ось с нуля
@@ -186,7 +224,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 const index = context.dataIndex;
                                 let value = dataset.originalData[index];
                                 value = (typeof value === 'number' && !isNaN(value)) ? Math.round(value).toString() : '—';
-                                const unit = units[dataset.label.toLowerCase()] || '';
+                                const unit = units[currentLocale]?.[dataset.label.toLowerCase()] || '';
                                 return `${dataset.label}: \u200B${value} ${unit}`;
                             },
                             // Настраиваем цвет маркера в тултипе
@@ -322,12 +360,12 @@ document.addEventListener('DOMContentLoaded', function() {
     uploadForm.addEventListener('submit', function(e) {
         e.preventDefault();
         if (!csvFileInput.files || csvFileInput.files.length === 0) {
-            showError('Пожалуйста, выберите CSV-файл для загрузки.');
+            showError(getLocalizedText('pleaseSelectCSV'));
             return;
         }
         const file = csvFileInput.files[0];
         if (!file.name.toLowerCase().endsWith('.csv')) {
-            showError('Пожалуйста, загрузите действительный CSV-файл.');
+            showError(getLocalizedText('pleaseUploadValidCSV'));
             return;
         }
         hideError();
@@ -343,12 +381,12 @@ document.addEventListener('DOMContentLoaded', function() {
             // Check if response is JSON
             const contentType = response.headers.get('content-type');
             if (!contentType || !contentType.includes('application/json')) {
-                throw new Error('Сервер вернул некорректный ответ. Возможно, файл слишком большой для обработки.');
+                throw new Error(getLocalizedText('serverInvalidResponse'));
             }
             return response.json();
         })
         .then(data => {
-            if (!data.success) throw new Error(data.error || 'Ошибка обработки CSV');
+            if (!data.success) throw new Error(data.error || getLocalizedText('csvProcessingError'));
             csvData = JSON.parse(data.csv_data); // Парсим данные из ответа сервера
             window.csvType = data.csv_type;
             plotAllColumns(csvData); // Строим график
