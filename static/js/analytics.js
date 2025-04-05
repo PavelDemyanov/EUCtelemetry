@@ -19,8 +19,6 @@ document.addEventListener('DOMContentLoaded', function() {
     let dragStartX = 0; // Initial X position when dragging
     let chartStartMin = 0; // Initial minimum X-axis value
     let chartStartMax = 0; // Initial maximum X-axis value
-    let originalMinTimestamp = null; // Original minimum timestamp for X-axis
-    let originalMaxTimestamp = null; // Original maximum timestamp for X-axis
 
     // Register crosshair plugin to display vertical line on hover
     const crosshairPlugin = {
@@ -126,10 +124,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const minTimestamp = Math.min(...labels); // Minimum X-axis value
         const maxTimestamp = Math.max(...labels); // Maximum X-axis value
         const fullRange = maxTimestamp - minTimestamp; // Full X-axis length
-        
-        // Store original timestamp range for reset functionality
-        originalMinTimestamp = minTimestamp;
-        originalMaxTimestamp = maxTimestamp;
 
         chartInstance = new Chart(ctx, {
             type: 'line', // Chart type - linear
@@ -291,43 +285,104 @@ document.addEventListener('DOMContentLoaded', function() {
                 originalColumn: column, // Store original technical column name
                 label: window.gettext(column),
                 originalColumn: column, // Store original technical column name
-                data: isAdaptiveChart ? normalizedValues : originalValues, // Use normalized or original values based on toggle
-                originalData: originalValues // Always store original values for tooltips
+                data: isAdaptiveChart ? normalizedValues : originalValues, // Select data based on mode
+                originalData: originalValues // Save original data for tooltips
             };
         });
-        createMultiChart(timestamps, datasets);
+        createMultiChart(timestamps, datasets); // Create chart
+        setupManualPanning(); // Setup manual panning
     }
 
-    // Handle custom drag to zoom
-    dataChart.addEventListener('mousedown', function(e) {
-        if (!chartInstance) return;
-        isDragging = true;
-        dragStartX = e.offsetX;
-        chartStartMin = chartInstance.options.scales.x.min;
-        chartStartMax = chartInstance.options.scales.x.max;
-    });
+    // Setup manual chart panning with optimization
+    function setupManualPanning() {
+        const canvas = dataChart;
+        if (!canvas) return;
+        canvas.style.cursor = 'grab'; // Hand cursor
 
-    dataChart.addEventListener('mousemove', function(e) {
-        if (!isDragging || !chartInstance) return;
-        const currentX = e.offsetX;
-        const chartWidth = dataChart.offsetWidth;
-        const valueRange = chartStartMax - chartStartMin;
-        const pixelToValueRatio = valueRange / chartWidth;
-        const deltaX = (currentX - dragStartX) * pixelToValueRatio;
-        
-        // Apply panning to chart
-        chartInstance.options.scales.x.min = chartStartMin - deltaX;
-        chartInstance.options.scales.x.max = chartStartMax - deltaX;
-        chartInstance.update();
-    });
+        // Variables for animation/throttling
+        let animationFrameId = null;
+        let lastDeltaX = 0;
+        let updateRequired = false;
 
-    dataChart.addEventListener('mouseup', function() {
-        isDragging = false;
-    });
+        // Handle mouse down - start dragging
+        canvas.addEventListener('mousedown', (e) => {
+            if (!chartInstance) return;
+            
+            // Cancel any pending animation
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+            
+            isDragging = true;
+            dragStartX = e.clientX;
+            chartStartMin = chartInstance.scales.x.min;
+            chartStartMax = chartInstance.scales.x.max;
+            canvas.style.cursor = 'grabbing'; // Grabbing cursor during dragging
+            e.preventDefault();
+        });
 
-    dataChart.addEventListener('mouseleave', function() {
-        isDragging = false;
-    });
+        // Throttled update function using requestAnimationFrame
+        function updateChartAnimated() {
+            if (!updateRequired) return;
+            
+            const chartWidth = canvas.width;
+            const rangeWidth = chartStartMax - chartStartMin;
+            const deltaPercent = (lastDeltaX / chartWidth) * rangeWidth;
+            
+            // Update chart viewport
+            chartInstance.scales.x.options.min = chartStartMin - deltaPercent;
+            chartInstance.scales.x.options.max = chartStartMax - deltaPercent;
+            
+            // Use lower animation performance mode for smoother panning
+            chartInstance.update('none'); // 'none' skips animation
+            
+            updateRequired = false;
+            animationFrameId = null;
+        }
+
+        // Handle mouse move
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging || !chartInstance) return;
+            
+            // Calculate delta since last movement
+            lastDeltaX = e.clientX - dragStartX;
+            
+            // Request animation frame if not already pending
+            updateRequired = true;
+            if (!animationFrameId) {
+                animationFrameId = requestAnimationFrame(updateChartAnimated);
+            }
+        });
+
+        // Handle mouse up - stop dragging and do final update
+        document.addEventListener('mouseup', () => {
+            if (isDragging && chartInstance) {
+                // Make sure we do a final update to settle the chart
+                if (updateRequired) {
+                    cancelAnimationFrame(animationFrameId);
+                    updateChartAnimated();
+                }
+            }
+            
+            isDragging = false;
+            if (canvas) canvas.style.cursor = 'grab';
+        });
+
+        // Handle mouse leave - same as mouse up
+        document.addEventListener('mouseleave', () => {
+            if (isDragging && chartInstance) {
+                // Make sure we do a final update to settle the chart
+                if (updateRequired) {
+                    cancelAnimationFrame(animationFrameId);
+                    updateChartAnimated();
+                }
+            }
+            
+            isDragging = false;
+            if (canvas) canvas.style.cursor = 'grab';
+        });
+    }
 
     // Handle form submission
     uploadForm.addEventListener('submit', function(e) {
@@ -348,35 +403,34 @@ document.addEventListener('DOMContentLoaded', function() {
         loadingIndicator.style.display = 'block';
         analysisResults.style.display = 'none';
         
-        // Send file to server for processing
+        // Send request to the server
         fetch('/analyze_csv', {
             method: 'POST',
             body: formData
         })
         .then(response => {
             if (!response.ok) {
-                throw new Error(window.gettext('Failed to process file'));
+                return response.json().then(err => {
+                    throw new Error(err.error || 'Server error');
+                });
             }
             return response.json();
         })
         .then(data => {
-            // Hide loading indicator and show results
-            loadingIndicator.style.display = 'none';
-            analysisResults.style.display = 'block';
-            
-            // Handle response data
-            if (data && data.rows && data.rows.length > 0) {
-                // Store data for later use
-                csvData = data.rows;
-                
-                // Plot charts with all data columns
-                plotAllColumns(csvData);
-                
-                // If there's any message from server, display it
-                if (data.message) {
-                    showError(data.message);
-                } else {
-                    hideError();
+            // Parse JSON data from the server
+            if (data && data.success && data.csv_data) {
+                try {
+                    csvData = JSON.parse(data.csv_data);
+                    
+                    // Hide loading, show results
+                    loadingIndicator.style.display = 'none';
+                    analysisResults.style.display = 'block';
+                    
+                    // Plot the data
+                    plotAllColumns(csvData);
+                } catch (e) {
+                    showError(window.gettext('Error parsing CSV data: ') + e.message);
+                    console.error('JSON Parse Error:', e);
                 }
             } else {
                 showError(window.gettext('Received invalid data format from server'));
@@ -398,17 +452,9 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Handle zoom reset button
-    resetZoomButton.addEventListener("click", function() {
+    resetZoomButton.addEventListener('click', function() {
         if (chartInstance) {
-            // Reset zoom using the Chart.js method
             chartInstance.resetZoom();
-            
-            // Then explicitly set the X-axis limits to ensure we are displaying the original range
-            if (originalMinTimestamp !== null && originalMaxTimestamp !== null) {
-                chartInstance.options.scales.x.min = originalMinTimestamp;
-                chartInstance.options.scales.x.max = originalMaxTimestamp;
-                chartInstance.update();
-            }
         }
     });
 
