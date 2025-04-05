@@ -130,7 +130,7 @@ document.addEventListener('DOMContentLoaded', function() {
             data: {
                 labels: labels, // X-axis labels (timestamps)
                 datasets: datasets.map((ds) => {
-                    const columnName = ds.label.toLowerCase();
+                    const columnName = ds.originalColumn.toLowerCase();
                     const color = colorPalette[columnName] || { borderColor: '#808080', backgroundColor: 'rgba(128, 128, 128, 0.2)' };
                     return {
                         label: ds.label, // Dataset name
@@ -281,7 +281,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const originalValues = data.map(row => parseFloat(row[column]) || 0); // Original values
             const normalizedValues = originalValues.map(value => normalizeValueForAdaptiveScale(value, column)); // Normalized values
             return {
+                originalColumn: column, // Store original technical column name
                 label: window.gettext(column),
+                originalColumn: column, // Store original technical column name
                 data: isAdaptiveChart ? normalizedValues : originalValues, // Select data based on mode
                 originalData: originalValues // Save original data for tooltips
             };
