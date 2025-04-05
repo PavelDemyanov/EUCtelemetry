@@ -19,6 +19,8 @@ document.addEventListener('DOMContentLoaded', function() {
     let dragStartX = 0; // Initial X position when dragging
     let chartStartMin = 0; // Initial minimum X-axis value
     let chartStartMax = 0; // Initial maximum X-axis value
+    let originalMinTimestamp = null; // Original minimum timestamp for X-axis
+    let originalMaxTimestamp = null; // Original maximum timestamp for X-axis
 
     // Register crosshair plugin to display vertical line on hover
     const crosshairPlugin = {
@@ -124,6 +126,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const minTimestamp = Math.min(...labels); // Minimum X-axis value
         const maxTimestamp = Math.max(...labels); // Maximum X-axis value
         const fullRange = maxTimestamp - minTimestamp; // Full X-axis length
+        
+        // Store original timestamp range for reset functionality
+        originalMinTimestamp = minTimestamp;
+        originalMaxTimestamp = maxTimestamp;
 
         chartInstance = new Chart(ctx, {
             type: 'line', // Chart type - linear
@@ -452,9 +458,23 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Handle zoom reset button
+    // Global variables to store the original chart axis limits
+    let originalMinTimestamp = null;
+    let originalMaxTimestamp = null;
+    
     resetZoomButton.addEventListener('click', function() {
         if (chartInstance) {
+            // First set the explicit X-axis limits to ensure we're resetting to the original values
+            if (originalMinTimestamp !== null && originalMaxTimestamp !== null) {
+                chartInstance.options.scales.x.min = originalMinTimestamp;
+                chartInstance.options.scales.x.max = originalMaxTimestamp;
+            }
+            
+            // Then reset the zoom using Chart.js method
             chartInstance.resetZoom();
+            
+            // Force another update to ensure the chart reflects the original range
+            chartInstance.update('none'); // Update without animation for immediate effect
         }
     });
 
