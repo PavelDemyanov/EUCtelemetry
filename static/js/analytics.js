@@ -66,16 +66,19 @@ document.addEventListener('DOMContentLoaded', function() {
         return `${hours}:${minutes}:${secs}`;
     }
 
-    // Форматирование времени для тултипа с миллисекундами
+    // Форматирование времени для тултипа с миллисекундами и датой в формате DD.MM.YYYY
     function formatTooltipTimestamp(timestamp) {
         if (timestamp === undefined || timestamp === null) return 'Unknown';
         const date = new Date(timestamp * 1000);
         if (isNaN(date.getTime())) return 'Invalid time';
+        const day = date.getUTCDate().toString().padStart(2, '0');
+        const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
+        const year = date.getUTCFullYear();
         const hours = date.getUTCHours().toString().padStart(2, '0');
         const minutes = date.getUTCMinutes().toString().padStart(2, '0');
         const secs = date.getUTCSeconds().toString().padStart(2, '0');
         const ms = date.getUTCMilliseconds().toString().padStart(3, '0');
-        return `${hours}:${minutes}:${secs}.${ms}`;
+        return `${day}.${month}.${year} ${hours}:${minutes}:${secs}.${ms}`;
     }
 
     // Нормализация значений для адаптивного масштаба
