@@ -47,6 +47,13 @@ document.addEventListener('DOMContentLoaded', function() {
     function getLocalizedText(key) {
         return translations[currentLocale]?.[key] || translations['en'][key];
     }
+    
+    // Плагин для отображения перекрестия при наведении на график
+    const crosshairPlugin = {
+    
+    // Плагин для отображения перекрестия при наведении на график
+    const crosshairPlugin = {
+        id: 'crosshair',
         afterDraw: (chart, args, options) => {
             if (!chart.tooltip._active || !chart.tooltip._active.length) return;
             const activePoint = chart.tooltip._active[0];
