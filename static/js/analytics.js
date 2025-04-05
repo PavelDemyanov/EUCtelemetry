@@ -458,10 +458,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Handle zoom reset button
-    // Global variables to store the original chart axis limits
-    let originalMinTimestamp = null;
-    let originalMaxTimestamp = null;
-    
     resetZoomButton.addEventListener("click", function() {
         if (chartInstance) {
             // Reset zoom using the Chart.js method
@@ -475,8 +471,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
-            // Force another update to ensure the chart reflects the original range
-            chartInstance.update('none'); // Update without animation for immediate effect
+            }
+        }
+    });
         }
     });
 
