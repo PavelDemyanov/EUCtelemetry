@@ -108,8 +108,26 @@ document.addEventListener('DOMContentLoaded', function() {
             return normalizedValue * (maxPwm / 100);
         }
         
-        if (columnName === 'current') return ((value + 100) / 200) * 100; // Normalize current
-        if (columnName === 'voltage') return ((value - 50) / (150 - 50)) * 100; // Normalize voltage
+        if (columnName === 'current') {
+            // Для тока используем ту же логику нормализации, что и для мощности
+            if (!csvData) return value; // Нет данных
+            
+            // Находим минимальное значение тока и максимальное значение PWM
+            const currentValues = csvData.map(row => parseFloat(row.current) || 0);
+            const pwmValues = csvData.map(row => parseFloat(row.pwm) || 0);
+            const minCurrent = Math.min(...currentValues);
+            const maxCurrent = Math.max(...currentValues);
+            const maxPwm = Math.max(...pwmValues);
+            
+            // Нормализуем от минимального до максимального, но ограничиваем максимальным PWM
+            if (maxCurrent === minCurrent) return 50; // Предотвращаем деление на ноль
+            
+            // Сначала нормализуем ток в диапазоне 0-100
+            const normalizedValue = ((value - minCurrent) / (maxCurrent - minCurrent)) * 100;
+            
+            // Затем масштабируем, чтобы соответствовать максимальному PWM
+            return normalizedValue * (maxPwm / 100);
+        }
         return value;
     }
 
