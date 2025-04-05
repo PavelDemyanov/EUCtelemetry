@@ -462,17 +462,19 @@ document.addEventListener('DOMContentLoaded', function() {
     let originalMinTimestamp = null;
     let originalMaxTimestamp = null;
     
-    resetZoomButton.addEventListener('click', function() {
+    resetZoomButton.addEventListener("click", function() {
         if (chartInstance) {
-            // First set the explicit X-axis limits to ensure we're resetting to the original values
+            // Reset zoom using the Chart.js method
+            chartInstance.resetZoom();
+            
+            // Then explicitly set the X-axis limits to ensure we are displaying the original range
             if (originalMinTimestamp !== null && originalMaxTimestamp !== null) {
                 chartInstance.options.scales.x.min = originalMinTimestamp;
                 chartInstance.options.scales.x.max = originalMaxTimestamp;
+                chartInstance.update();
             }
-            
-            // Then reset the zoom using Chart.js method
-            chartInstance.resetZoom();
-            
+        }
+    });
             // Force another update to ensure the chart reflects the original range
             chartInstance.update('none'); // Update without animation for immediate effect
         }
