@@ -280,13 +280,27 @@ document.addEventListener('DOMContentLoaded', function() {
         setupManualPanning(); // Setup manual panning
     }
 
-    // Setup manual chart panning
+    // Setup manual chart panning with optimization
     function setupManualPanning() {
         const canvas = dataChart;
         if (!canvas) return;
         canvas.style.cursor = 'grab'; // Hand cursor
+
+        // Variables for animation/throttling
+        let animationFrameId = null;
+        let lastDeltaX = 0;
+        let updateRequired = false;
+
+        // Handle mouse down - start dragging
         canvas.addEventListener('mousedown', (e) => {
             if (!chartInstance) return;
+            
+            // Cancel any pending animation
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+            
             isDragging = true;
             dragStartX = e.clientX;
             chartStartMin = chartInstance.scales.x.min;
@@ -295,24 +309,63 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
         });
 
-        document.addEventListener('mousemove', (e) => {
-            if (!isDragging || !chartInstance) return;
-            const deltaX = e.clientX - dragStartX;
+        // Throttled update function using requestAnimationFrame
+        function updateChartAnimated() {
+            if (!updateRequired) return;
+            
             const chartWidth = canvas.width;
             const rangeWidth = chartStartMax - chartStartMin;
-            const deltaPercent = (deltaX / chartWidth) * rangeWidth;
+            const deltaPercent = (lastDeltaX / chartWidth) * rangeWidth;
             
+            // Update chart viewport
             chartInstance.scales.x.options.min = chartStartMin - deltaPercent;
             chartInstance.scales.x.options.max = chartStartMax - deltaPercent;
-            chartInstance.update();
+            
+            // Use lower animation performance mode for smoother panning
+            chartInstance.update('none'); // 'none' skips animation
+            
+            updateRequired = false;
+            animationFrameId = null;
+        }
+
+        // Handle mouse move
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging || !chartInstance) return;
+            
+            // Calculate delta since last movement
+            lastDeltaX = e.clientX - dragStartX;
+            
+            // Request animation frame if not already pending
+            updateRequired = true;
+            if (!animationFrameId) {
+                animationFrameId = requestAnimationFrame(updateChartAnimated);
+            }
         });
 
+        // Handle mouse up - stop dragging and do final update
         document.addEventListener('mouseup', () => {
+            if (isDragging && chartInstance) {
+                // Make sure we do a final update to settle the chart
+                if (updateRequired) {
+                    cancelAnimationFrame(animationFrameId);
+                    updateChartAnimated();
+                }
+            }
+            
             isDragging = false;
             if (canvas) canvas.style.cursor = 'grab';
         });
 
+        // Handle mouse leave - same as mouse up
         document.addEventListener('mouseleave', () => {
+            if (isDragging && chartInstance) {
+                // Make sure we do a final update to settle the chart
+                if (updateRequired) {
+                    cancelAnimationFrame(animationFrameId);
+                    updateChartAnimated();
+                }
+            }
+            
             isDragging = false;
             if (canvas) canvas.style.cursor = 'grab';
         });
