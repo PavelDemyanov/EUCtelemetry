@@ -1675,28 +1675,6 @@ def analyze_csv():
                     # Handle other dictionary formats if needed
                     logging.warning("Unrecognized dictionary data format")
             
-            # Optimize data for visualization if it has too many points
-            if len(serializable_data) > 5000:
-                # Downsample the data to reduce network load and improve browser performance
-                # We'll use a simple algorithm that keeps points from beginning, middle, and end
-                step = len(serializable_data) // 5000 + 1
-                downsampled_data = serializable_data[::step]
-                
-                # Make sure we keep some important start/end points
-                if step > 1:
-                    # Always include the first and last 100 points for detail at the edges
-                    start_points = serializable_data[:100]
-                    end_points = serializable_data[-100:]
-                    
-                    # Filter out duplicates from the downsampled data (might be duplicated with start/end)
-                    middle_points = [p for p in downsampled_data 
-                                   if p not in start_points and p not in end_points]
-                    
-                    # Combine the sets
-                    optimized_data = start_points + middle_points + end_points
-                    logging.info(f"Downsampled data from {len(serializable_data)} to {len(optimized_data)} points")
-                    serializable_data = optimized_data
-            
             # Return the processed data for chart visualization
             return jsonify({
                 'success': True,
