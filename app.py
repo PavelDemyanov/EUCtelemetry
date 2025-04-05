@@ -1679,7 +1679,7 @@ def analyze_csv():
             return jsonify({
                 'success': True,
                 'csv_type': csv_type,
-                'csv_data': json.dumps(serializable_data)
+                'rows': serializable_data
             })
             
         except MemoryError:
