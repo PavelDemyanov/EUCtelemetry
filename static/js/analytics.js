@@ -389,6 +389,9 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         hideError();
         
+        // Debug alert
+        alert('Submit event triggered');
+        
         const formData = new FormData();
         const file = csvFileInput.files[0];
         
@@ -396,6 +399,8 @@ document.addEventListener('DOMContentLoaded', function() {
             showError(window.gettext('Please select a CSV file'));
             return;
         }
+        
+        alert('File selected: ' + file.name);
         
         formData.append('file', file);
         
