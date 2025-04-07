@@ -179,6 +179,7 @@ document.addEventListener('DOMContentLoaded', function() {
         pwm: window.gettext('%'),
         power: window.gettext('W')
     };
+
     // Function to create a linear chart with multiple datasets
     function createMultiChart(labels, datasets) {
         if (chartInstance) chartInstance.destroy(); // Destroy old chart if it exists
@@ -408,6 +409,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Show achievements section
         achievementsSection.style.display = 'block';
     }
+
     // Event listener for form submission
     uploadForm.addEventListener('submit', function(e) {
         e.preventDefault();
@@ -467,6 +469,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     // Parse returned data
                     const parsedData = JSON.parse(data.csv_data);
+                    
+                    // Debug data structure
+                    console.log('Parsed data keys:', Object.keys(parsedData));
+                    if (parsedData.timestamp) {
+                        console.log('Timestamp data type:', typeof parsedData.timestamp);
+                        console.log('Timestamp length:', parsedData.timestamp.length);
+                        console.log('First timestamp value:', parsedData.timestamp[0]);
+                    } else {
+                        console.log('No timestamp data found');
+                    }
                     
                     // Ensure we have timestamp data
                     if (!parsedData.timestamp || parsedData.timestamp.length === 0) {
