@@ -321,6 +321,12 @@ def admin_lists():
         .order_by(User.created_at.desc())\
         .paginate(page=user_page, per_page=20, error_out=False)
 
+    # Calculate completed projects count for each user
+    user_completed_projects = {}
+    for user_id in [u.id for u in users.items]:
+        completed_count = Project.query.filter_by(user_id=user_id, status='completed').count()
+        user_completed_projects[user_id] = completed_count
+
     # Format users data with additional fields
     users_data = [{
         'id': u.id,
@@ -329,7 +335,8 @@ def admin_lists():
         'created_at': u.created_at.strftime('%Y-%m-%d %H:%M'),
         'is_email_confirmed': u.is_email_confirmed,
         'is_new': u.created_at.date() == today,
-        'is_admin': u.is_admin
+        'is_admin': u.is_admin,
+        'completed_projects': user_completed_projects.get(u.id, 0)
     } for u in users.items]
 
     # Format projects data with additional fields
