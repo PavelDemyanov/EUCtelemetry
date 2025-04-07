@@ -1010,10 +1010,9 @@ document.getElementById('startProcessButton').addEventListener('click', function
     
     // Check if CSV file is longer than 2 hours (7200 seconds)
     if (csvTimeRange.end - csvTimeRange.start > 7200) {
-        // Show warning popup
-        if (!confirm(gettext("You are trying to create a video longer than 2 hours. This will heavily load the server. Please upload a different file or trim the file length in the \"Trim CSV Data\" section before starting the video creation process."))) {
-            return; // User canceled the operation
-        }
+        // Show error message and prevent processing
+        alert(gettext("Error: Cannot process files longer than 2 hours. Please upload a different file or trim the file length in the \"Trim CSV Data\" section before starting the video creation process."));
+        return; // Prevent processing long files completely
     }
 
     // Show progress bar and processing info
