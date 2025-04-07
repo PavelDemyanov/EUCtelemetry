@@ -294,58 +294,81 @@ document.addEventListener('DOMContentLoaded', function() {
                                         text: window.gettext(dataset.originalColumn.toLowerCase()),
                                         fillStyle: dataset.borderColor,
                                         strokeStyle: dataset.borderColor,
-                                        lineWidth: 2,
+                                        lineWidth: 0,
                                         hidden: isHidden,
-                                        index: i,
-                                        datasetIndex: i
+                                        index: i
                                     };
                                 });
                             },
-                            boxWidth: 20, // Legend marker width
-                            padding: 10, // Padding between legend items
-                            font: { size: 12 } // Legend font size
+                            padding: 10 // Padding around legend items
                         },
                         onClick: (e, legendItem, legend) => {
-                            const index = legendItem.datasetIndex;
-                            const ci = legend.chart;
-                            const meta = ci.getDatasetMeta(index);
-                            meta.hidden = meta.hidden === null ? !ci.data.datasets[index].hidden : null;
-                            ci.update(); // Update chart
+                            // Toggle visibility of clicked dataset
+                            const index = legendItem.index;
+                            const chart = legend.chart;
+                            const meta = chart.getDatasetMeta(index);
+                            meta.hidden = meta.hidden === null ? !chart.data.datasets[index].hidden : null;
+                            chart.update();
                         }
                     },
                     zoom: {
-                        zoom: {
-                            wheel: { enabled: true }, // Enable zoom with mouse wheel
-                            pinch: { enabled: true }, // Enable zoom with pinch
-                            mode: 'x', // Zoom only along X-axis
-                            speed: 100, // Zoom speed
-                            threshold: 2, // Zoom threshold
-                            sensitivity: 3 // Zoom sensitivity
+                        limits: {
+                            x: { min: minTimestamp, max: maxTimestamp }, // Set zoom limits to data range
+                            y: { min: 'original', max: 'original' } // Automatic Y-axis limits
                         },
                         pan: {
                             enabled: true, // Enable panning
-                            mode: 'x', // Pan only along X-axis
-                            threshold: 10, // Minimum drag distance
-                            speed: 10, // Panning speed
-                            onPanStart: ({ chart }) => {
-                                isDragging = true;
-                                const scales = chart.scales;
-                                dragStartX = scales.x.min;
-                                chartStartMin = scales.x.min;
-                                chartStartMax = scales.x.max;
-                                return true; // Allow panning
-                            }
+                            mode: 'x', // Pan only in X direction
+                            modifierKey: 'shift' // Hold shift key for panning instead of zooming
                         },
-                        limits: {
-                            x: { min: minTimestamp, max: maxTimestamp, minRange: fullRange * 0.01 } // Limits for X-axis
+                        zoom: {
+                            wheel: { enabled: true }, // Enable mouse wheel zooming
+                            mode: 'x', // Zoom only in X direction
+                            drag: { enabled: true, borderColor: 'rgba(255,255,255,0.3)', borderWidth: 1, backgroundColor: 'rgba(255,255,255,0.1)' }
                         }
                     }
                 },
-                interaction: {
-                    mode: 'index', // Show tooltip for all datasets at current X position
-                    intersect: false, // No need for direct intersection with point
-                }
+                onHover: (event, chartElements) => {
+                    // Change cursor to grab if hovering over chart area (for panning)
+                    event.native.target.style.cursor = chartElements.length ? 'pointer' : 'grab';
+                },
+                animation: false // Disable animations for better performance
             },
+        });
+
+        // Store initial X-axis range for zoom reset
+        chartStartMin = minTimestamp;
+        chartStartMax = maxTimestamp;
+
+        // Setup mouse drag events for chart panning
+        dataChart.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            dragStartX = e.offsetX;
+            dataChart.style.cursor = 'grabbing';
+        });
+
+        dataChart.addEventListener('mousemove', (e) => {
+            if (!isDragging || !chartInstance) return;
+            const deltaX = e.offsetX - dragStartX;
+            const chart = chartInstance;
+            const dx = (chart.scales.x.max - chart.scales.x.min) * (deltaX / chart.width);
+            chart.scales.x.min -= dx;
+            chart.scales.x.max -= dx;
+            chart.update();
+            dragStartX = e.offsetX;
+        });
+
+        // Use window events to catch mouse release even outside chart
+        window.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                dataChart.style.cursor = 'grab';
+            }
+        });
+
+        // Update chart on window resize
+        window.addEventListener('resize', () => {
+            if (chartInstance) chartInstance.resize();
         });
     }
 
@@ -365,88 +388,106 @@ document.addEventListener('DOMContentLoaded', function() {
         row.className = 'row';
         achievementsContainer.appendChild(row);
         
-        // Create achievement cards
+        // Add each achievement
         achievements.forEach(achievement => {
             // Create column container - 4 columns on desktop (3 achievements per row), 12 on mobile (1 per row)
+            const colDiv = document.createElement('div');
+            colDiv.className = 'col-12 col-md-4 mb-3';
+            
+            // Create achievement container
             const achievementDiv = document.createElement('div');
-            achievementDiv.className = 'col-md-4 col-12 mb-3';
+            achievementDiv.className = 'achievement-card';
+            achievementDiv.dataset.achievementId = achievement.id;
             
-            // Create card container
-            const card = document.createElement('div');
-            card.className = 'achievement-card';
+            // Create card layout for achievement
+            const cardLayout = document.createElement('div');
+            cardLayout.className = 'achievement-layout';
             
-            // Create achievement icon
-            const icon = document.createElement('img');
-            icon.src = `/static/icons/euc_man_pack/${achievement.icon}`;
-            icon.alt = achievement.title;
-            icon.className = 'achievement-icon';
+            // Create icon container
+            const iconContainer = document.createElement('div');
+            iconContainer.className = 'achievement-icon';
+            
+            // Create icon image
+            const iconImg = document.createElement('img');
+            iconImg.src = `/static/icons/euc_man_pack/${achievement.icon}`;
+            iconImg.alt = achievement.title;
+            iconImg.className = 'img-fluid'; // Responsive image
+            iconContainer.appendChild(iconImg);
             
             // Create content container
-            const content = document.createElement('div');
-            content.className = 'achievement-content';
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'achievement-content';
             
-            // Create achievement title
-            const title = document.createElement('h5');
-            title.className = 'achievement-title';
-            title.textContent = achievement.title;
+            // Create title
+            const titleElem = document.createElement('h5');
+            titleElem.textContent = achievement.title;
+            titleElem.className = 'achievement-title';
             
-            // Create achievement description
-            const description = document.createElement('p');
-            description.className = 'achievement-description';
-            description.textContent = achievement.description;
+            // Create description
+            const descElem = document.createElement('p');
+            descElem.textContent = achievement.description;
+            descElem.className = 'achievement-description';
             
-            // Assemble the card
-            content.appendChild(title);
-            content.appendChild(description);
-            card.appendChild(icon);
-            card.appendChild(content);
-            achievementDiv.appendChild(card);
+            // Assemble the achievement card
+            contentDiv.appendChild(titleElem);
+            contentDiv.appendChild(descElem);
             
-            // Add to row
-            row.appendChild(achievementDiv);
+            cardLayout.appendChild(iconContainer);
+            cardLayout.appendChild(contentDiv);
+            achievementDiv.appendChild(cardLayout);
+            
+            colDiv.appendChild(achievementDiv);
+            row.appendChild(colDiv);
         });
         
         // Show achievements section
         achievementsSection.style.display = 'block';
     }
 
-    // Event listener for form submission
-    uploadForm.addEventListener('submit', function(e) {
-        e.preventDefault();
+    // Initialize with empty state
+    function resetUI() {
+        // Clear data and reset UI
+        if (chartInstance) chartInstance.destroy();
+        chartInstance = null;
+        csvData = null;
         
-        // Get the selected file
-        const file = csvFileInput.files[0];
-        if (!file) {
+        // Hide elements
+        analysisResults.style.display = 'none';
+        achievementsSection.style.display = 'none';
+        errorMessage.style.display = 'none';
+        
+        // Reset form elements
+        uploadForm.reset();
+    }
+
+    // Handle file upload
+    uploadForm.addEventListener('submit', function(e) {
+        e.preventDefault(); // Prevent form submission
+        hideError(); // Hide previous errors
+        
+        // Validate file input
+        if (!csvFileInput.files || csvFileInput.files.length === 0) {
             showError(window.gettext('Please select a CSV file to upload'));
             return;
         }
         
-        // Check file size (warn if over 20MB)
-        const maxSizeMB = 20;
-        if (file.size > maxSizeMB * 1024 * 1024) {
-            if (!confirm(window.gettext('The file is larger than {0}MB, which may take a long time to process. Do you want to continue?').replace('{0}', maxSizeMB))) {
-                return;
-            }
-        }
+        const file = csvFileInput.files[0];
         
-        // Check file type (must be CSV)
-        if (file.type && !file.type.includes('csv') && !file.name.toLowerCase().endsWith('.csv')) {
-            showError(window.gettext('Please upload a CSV file'));
+        // Validate file type
+        if (!file.name.toLowerCase().endsWith('.csv')) {
+            showError(window.gettext('Please upload a valid CSV file'));
             return;
         }
         
-        // UI updates for loading state
+        // Set UI state to loading
         uploadButton.disabled = true;
-        hideError();
-        achievementsSection.style.display = 'none';
-        analysisResults.style.display = 'none';
         loadingIndicator.style.display = 'block';
         
-        // Create form data and send request
+        // Prepare form data for upload
         const formData = new FormData();
         formData.append('file', file);
         
-        // Send AJAX request
+        // Send file to server for processing
         fetch('/analyze_csv', {
             method: 'POST',
             body: formData
@@ -467,41 +508,68 @@ document.addEventListener('DOMContentLoaded', function() {
                         return;
                     }
                     
-                    // Parse returned data
-                    const parsedData = JSON.parse(data.csv_data);
+                    // Debug data structure
+                    console.log('Data type received:', typeof data.csv_data);
+                    
+                    // Use data as is since the server already sent it in the correct format
+                    const parsedData = data.csv_data;
                     
                     // Debug data structure
-                    console.log('Parsed data keys:', Object.keys(parsedData));
-                    if (parsedData.timestamp) {
-                        console.log('Timestamp data type:', typeof parsedData.timestamp);
-                        console.log('Timestamp length:', parsedData.timestamp.length);
-                        console.log('First timestamp value:', parsedData.timestamp[0]);
-                    } else {
-                        console.log('No timestamp data found');
-                    }
+                    console.log('Data structure:', parsedData.length > 0 ? 'Array of objects' : 'Unknown format');
+                    console.log('First record keys:', parsedData.length > 0 ? Object.keys(parsedData[0]) : 'No data');
                     
-                    // Ensure we have timestamp data
-                    if (!parsedData.timestamp || parsedData.timestamp.length === 0) {
+                    // Check if we have data with timestamp
+                    if (!parsedData || parsedData.length === 0 || !parsedData[0].timestamp) {
                         showError(window.gettext('No valid timestamp data found in the CSV file'));
                         return;
                     }
                     
                     // Store the data for future use (adaptive scaling)
-                    csvData = [];
-                    for (let i = 0; i < parsedData.timestamp.length; i++) {
-                        const row = {};
-                        Object.keys(parsedData).forEach(key => {
-                            if (parsedData[key][i] !== null && parsedData[key][i] !== undefined) {
-                                row[key] = parsedData[key][i];
-                            } else {
-                                row[key] = null;
-                            }
-                        });
-                        csvData.push(row);
-                    }
+                    csvData = parsedData;
                     
-                    // Prepare data for chart
-                    updateChart(parsedData);
+                    // Extract data for chart
+                    const timestamps = csvData.map(row => parseFloat(row.timestamp));
+                    
+                    // Create datasets
+                    const datasets = [];
+                    const columns = ['speed', 'gps', 'voltage', 'temperature', 'current', 'battery', 'mileage', 'pwm', 'power'];
+                    
+                    columns.forEach(column => {
+                        // Skip columns that don't exist in data
+                        if (!csvData.some(row => column in row)) return;
+                        
+                        const values = csvData.map(row => {
+                            const value = parseFloat(row[column]);
+                            return isNaN(value) ? null : value;
+                        });
+                        
+                        // Skip columns with no valid data
+                        if (values.every(v => v === null)) return;
+                        
+                        // Create two datasets - one with original values for tooltips, one with normalized values for display
+                        if (isAdaptiveChart) {
+                            const normalizedValues = values.map((value, i) => 
+                                value === null ? null : normalizeValueForAdaptiveScale(value, column)
+                            );
+                            
+                            datasets.push({
+                                label: window.gettext(column),
+                                data: normalizedValues,
+                                originalData: values,
+                                originalColumn: column
+                            });
+                        } else {
+                            datasets.push({
+                                label: window.gettext(column),
+                                data: values,
+                                originalData: values,
+                                originalColumn: column
+                            });
+                        }
+                    });
+                    
+                    // Create chart
+                    createMultiChart(timestamps, datasets);
                     
                     // Display achievements if available
                     if (data.achievements) {
@@ -510,74 +578,80 @@ document.addEventListener('DOMContentLoaded', function() {
                         achievementsSection.style.display = 'none';
                     }
                     
-                    // Show results
+                    // Show results section
                     analysisResults.style.display = 'block';
-                } catch (e) {
-                    console.error('Error processing data:', e);
-                    showError(window.gettext('Error processing data: ') + e.message);
+                    
+                } catch (error) {
+                    console.error('Error processing data:', error);
+                    showError(window.gettext('Error processing data:') + ' ' + error.message);
                 }
             })
             .catch(error => {
-                console.error('Request error:', error);
+                console.error('Fetch error:', error);
                 uploadButton.disabled = false;
                 loadingIndicator.style.display = 'none';
-                showError(window.gettext('Error sending request: ') + error.message);
+                showError(window.gettext('Error uploading file:') + ' ' + error.message);
             });
     });
-    
-    // Event listener for adaptive chart toggle
+
+    // Handle adaptive toggle change
     adaptiveChartToggle.addEventListener('change', function() {
         isAdaptiveChart = this.checked;
-        if (csvData) {
-            const parsedData = {};
+        
+        // Re-process data with current settings if we have data
+        if (csvData && csvData.length > 0) {
+            // Extract timestamps again
+            const timestamps = csvData.map(row => parseFloat(row.timestamp));
             
-            // Convert from array of objects to object of arrays (for chart)
-            Object.keys(csvData[0]).forEach(key => {
-                parsedData[key] = csvData.map(row => row[key]);
+            // Create datasets with updated normalization
+            const datasets = [];
+            const columns = ['speed', 'gps', 'voltage', 'temperature', 'current', 'battery', 'mileage', 'pwm', 'power'];
+            
+            columns.forEach(column => {
+                // Skip columns that don't exist
+                if (!csvData.some(row => column in row)) return;
+                
+                const values = csvData.map(row => {
+                    const value = parseFloat(row[column]);
+                    return isNaN(value) ? null : value;
+                });
+                
+                // Skip columns with no valid data
+                if (values.every(v => v === null)) return;
+                
+                if (isAdaptiveChart) {
+                    const normalizedValues = values.map((value, i) => 
+                        value === null ? null : normalizeValueForAdaptiveScale(value, column)
+                    );
+                    
+                    datasets.push({
+                        label: window.gettext(column),
+                        data: normalizedValues,
+                        originalData: values,
+                        originalColumn: column
+                    });
+                } else {
+                    datasets.push({
+                        label: window.gettext(column),
+                        data: values,
+                        originalData: values,
+                        originalColumn: column
+                    });
+                }
             });
             
-            updateChart(parsedData);
+            // Recreate chart with updated data
+            createMultiChart(timestamps, datasets);
         }
     });
-    
-    // Event listener for reset zoom button
+
+    // Handle reset zoom button click
     resetZoomButton.addEventListener('click', function() {
         if (chartInstance) {
-            chartInstance.resetZoom();
+            // Reset to initial range
+            chartInstance.scales.x.min = chartStartMin;
+            chartInstance.scales.x.max = chartStartMax;
+            chartInstance.update();
         }
     });
-    
-    // Function to update chart with new data
-    function updateChart(data) {
-        if (!data.timestamp || data.timestamp.length === 0) return;
-        
-        const labels = data.timestamp;
-        const datasets = [];
-        
-        // Add datasets in specific order
-        const order = ['speed', 'gps', 'battery', 'voltage', 'current', 'power', 'pwm', 'temperature', 'mileage'];
-        
-        // Add available datasets in preferred order
-        order.forEach(key => {
-            if (data[key] && data[key].length > 0) {
-                const originalData = data[key];
-                
-                // Process data for chart (normalize if adaptive)
-                const chartData = originalData.map((value, i) => {
-                    if (value === null || value === undefined || isNaN(value)) return null;
-                    return normalizeValueForAdaptiveScale(parseFloat(value), key);
-                });
-                
-                datasets.push({
-                    label: window.gettext(key),
-                    data: chartData,
-                    originalData: originalData,
-                    originalColumn: key
-                });
-            }
-        });
-        
-        // Create multi-line chart with all datasets
-        createMultiChart(labels, datasets);
-    }
 });
