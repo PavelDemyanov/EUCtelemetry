@@ -22,6 +22,22 @@ document.addEventListener('DOMContentLoaded', function() {
     let chartStartMin = 0; // Initial minimum X-axis value
     let chartStartMax = 0; // Initial maximum X-axis value
 
+    // Добавим отладочную функцию, чтобы посмотреть данные
+    function processResponse(data) {
+        console.log("Received data from server:", data);
+        console.log("CSV Type:", data.csv_type);
+        console.log("Achievements:", data.achievements);
+        try {
+            const parsedData = JSON.parse(data.csv_data);
+            console.log("Parsed data:", parsedData);
+            console.log("Timestamp length:", parsedData.timestamp ? parsedData.timestamp.length : 'No timestamps');
+            console.log("Speed data:", parsedData.speed ? parsedData.speed.slice(0, 5) : 'No speed data');
+        } catch (e) {
+            console.error("Error parsing data:", e);
+        }
+        return data;
+    }
+
     // Register crosshair plugin to display vertical line on hover
     const crosshairPlugin = {
         id: 'crosshair',
@@ -397,6 +413,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(data => {
             // Process successful response
+            data = processResponse(data);
             loadingIndicator.style.display = 'none';
             
             if (data.csv_type && data.csv_data) {
@@ -461,6 +478,13 @@ document.addEventListener('DOMContentLoaded', function() {
                             createMultiChart(timestamps, chartDatasets);
                             analysisResults.style.display = 'block';
                             
+                            // Display achievements if available
+                            if (data.achievements) {
+                                displayAchievements(data.achievements);
+                            } else {
+                                achievementsSection.style.display = 'none';
+                            }
+                            
                             // Setup adaptive chart toggle
                             adaptiveChartToggle.addEventListener('change', function() {
                                 isAdaptiveChart = this.checked;
@@ -494,13 +518,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             dataChart.setAttribute('aria-label', window.gettext('Trip telemetry chart'));
                         } else {
                             showError(window.gettext('No valid data found in the CSV file.'));
-                        }
-                        
-                        // Display achievements if available
-                        if (data.achievements) {
-                            displayAchievements(data.achievements);
-                        } else {
-                            achievementsSection.style.display = 'none';
                         }
                     } else {
                         showError(window.gettext('Invalid data format received from server.'));
