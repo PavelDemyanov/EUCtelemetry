@@ -1864,6 +1864,67 @@ def analyze_csv():
                             'icon': 'clown.svg'
                         })
             
+            # Check for "Sleep" achievement - max speed never reached 50 km/h
+            if isinstance(processed_data, dict) and 'speed' in processed_data:
+                # Get all speed values
+                speed_values = [float(val) for val in processed_data['speed'] if not pd.isna(val)]
+                
+                # Check if max speed is less than 50 km/h
+                if speed_values and max(speed_values) < 50:
+                    achievements.append({
+                        'id': 'sleep',
+                        'title': 'Sleep',
+                        'description': "Your speed has not reached 50 km/h!",
+                        'icon': 'sleep.svg'
+                    })
+            
+            # Check for "Suicidal madman" achievement - hit 100% PWM and maintained speed > 5 km/h for 10 seconds
+            if isinstance(processed_data, dict) and 'pwm' in processed_data and 'speed' in processed_data and 'timestamp' in processed_data:
+                # Check if we have timestamps and data values
+                if (len(processed_data['pwm']) > 0 and 
+                    len(processed_data['speed']) > 0 and 
+                    len(processed_data['timestamp']) > 0):
+                    
+                    # Find all instances of 100% PWM
+                    max_pwm_indices = []
+                    for i in range(len(processed_data['pwm'])):
+                        if (not pd.isna(processed_data['pwm'][i]) and 
+                            float(processed_data['pwm'][i]) >= 100):
+                            max_pwm_indices.append(i)
+                    
+                    # If we found any 100% PWM instances
+                    if max_pwm_indices:
+                        # Get the last occurrence
+                        last_max_pwm_index = max_pwm_indices[-1]
+                        last_max_pwm_timestamp = float(processed_data['timestamp'][last_max_pwm_index])
+                        
+                        # Check all speed values in the 10 seconds after last 100% PWM
+                        suicidal = True
+                        for i in range(len(processed_data['timestamp'])):
+                            if (not pd.isna(processed_data['timestamp'][i]) and 
+                                not pd.isna(processed_data['speed'][i])):
+                                
+                                timestamp = float(processed_data['timestamp'][i])
+                                speed = float(processed_data['speed'][i])
+                                
+                                # Check if this datapoint is within 10 seconds after the last 100% PWM
+                                if (timestamp > last_max_pwm_timestamp and 
+                                    timestamp <= last_max_pwm_timestamp + 10):
+                                    
+                                    # If speed dropped below 5 km/h, not suicidal
+                                    if speed < 5:
+                                        suicidal = False
+                                        break
+                        
+                        # If we maintained speed after 100% PWM, add the achievement
+                        if suicidal:
+                            achievements.append({
+                                'id': 'suicidalmadman',
+                                'title': 'Suicidal madman',
+                                'description': "You're a suicidal madman hit 100% PWM and still didn't kiss the asphalt!",
+                                'icon': 'skeleton.svg'
+                            })
+            
             # Return the processed data with achievements for visualization
             return jsonify({
                 'success': True,
