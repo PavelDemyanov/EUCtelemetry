@@ -1830,18 +1830,27 @@ def analyze_csv():
                             'icon': 'supertourist.svg'
                         })
             
-            # Check for "Strong rider" achievement - power value below -15000
+            # Check for "Strong rider" achievement - power value above 20000 or below -20000
             if isinstance(processed_data, dict) and 'power' in processed_data:
                 # Get all power values
                 power_values = [float(val) for val in processed_data['power'] if not pd.isna(val)]
                 
-                # Check if any power value is below -15000
-                if power_values and min(power_values) < -15000:
+                # Check if any power value is above 20000 or below -20000
+                if power_values and (max(power_values) >= 20000 or min(power_values) <= -20000):
                     achievements.append({
                         'id': 'strongrider',
                         'title': 'Strong rider',
                         'description': "You're a heavy, powerful rider — you managed to load the hub motor with 20,000 watts!",
                         'icon': 'fat.svg'
+                    })
+                
+                # Check for "Godlike power" achievement - power value above 30000 or below -30000
+                if power_values and (max(power_values) >= 30000 or min(power_values) <= -30000):
+                    achievements.append({
+                        'id': 'godlikepower',
+                        'title': 'Godlike power',
+                        'description': "You're a godlike-force rider — you managed to load the hub motor with 30,000 watts!",
+                        'icon': 'superfat.svg'
                     })
             
             # Check for "Clown" achievement - average difference between speed and GPS speed > 5 km/h
