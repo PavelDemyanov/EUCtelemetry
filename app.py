@@ -1812,21 +1812,22 @@ def analyze_csv():
                     # Get the maximum daily distance
                     max_daily_distance = mileage_by_date['mileage'].max()
                     
-                    # Check if any day had more than 150 km
+                    # Check if any day had more than 90 km (Tourist achievement)
+                    if max_daily_distance >= 90:
+                        achievements.append({
+                            'id': 'tourist',
+                            'title': 'Tourist',
+                            'description': "You're a true tourist — you traveled over 90 km in a single day!",
+                            'icon': 'tourist.svg'
+                        })
+                    
+                    # Check if any day had more than 150 km (Nomad achievement)
                     if max_daily_distance >= 150:
                         achievements.append({
                             'id': 'nomad',
                             'title': 'Nomad',
                             'description': "You're a true nomad — you traveled over 150 kilometers in a single day!",
                             'icon': 'supertourist.svg'
-                        })
-                    # Check if any day had more than 90 km but less than 150 km
-                    elif max_daily_distance >= 90:
-                        achievements.append({
-                            'id': 'tourist',
-                            'title': 'Tourist',
-                            'description': "You're a true tourist — you traveled over 90 km in a single day!",
-                            'icon': 'tourist.svg'
                         })
             
             # Check for "Strong rider" achievement - power value below -15000
