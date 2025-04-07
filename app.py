@@ -1829,7 +1829,7 @@ def analyze_csv():
                     achievements.append({
                         'id': 'strongrider',
                         'title': 'Strong rider',
-                        'description': "You're a real clown — your EUC is off by more than 5 km/h in speed!",
+                        'description': "You're a heavy, powerful rider — you managed to load the hub motor with 20,000 watts!",
                         'icon': 'fat.svg'
                     })
             
