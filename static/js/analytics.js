@@ -510,7 +510,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     csvData = JSON.parse(data.csv_data);
                     
                     // Hide loading, show results
-                    // Hide loading, show results
                     loadingIndicator.style.display = "none";
                     analysisResults.style.display = "block";
                     
@@ -520,6 +519,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     } else {
                         achievementsSection.style.display = "none";
                     }
+                    
+                    // Plot the data
+                    plotAllColumns(csvData);
+                    // Plot the data
+                    plotAllColumns(csvData);
                     
                     // Add file parameter to URL without reloading
                     const url = new URL(window.location);
