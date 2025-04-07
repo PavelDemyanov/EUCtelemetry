@@ -718,26 +718,6 @@ def generate_project_frames(project_id):
         codec = data.get('codec', 'h264')
         interpolate_values = data.get('interpolate_values', True)
 
-        # Check CSV duration before proceeding
-        # Get processed file path
-        processed_csv_path = os.path.join('processed_data', f'project_{project.folder_number}_{os.path.basename(project.csv_file)}')
-        
-        if os.path.exists(processed_csv_path):
-            # Load the data and get min/max timestamps
-            import pandas as pd
-            df = pd.read_csv(processed_csv_path)
-            min_timestamp = float(df['timestamp'].min())
-            max_timestamp = float(df['timestamp'].max())
-            
-            # Calculate duration in seconds
-            duration_seconds = max_timestamp - min_timestamp
-            
-            # If duration is longer than 2 hours (7200 seconds), return error
-            if duration_seconds > 7200:
-                return jsonify({
-                    'error': 'You are trying to create a video longer than 2 hours. This will heavily load the server. Please upload a different file or trim the file length in the "Trim CSV Data" section before starting the video creation process.'
-                }), 400
-
         # Get text display settings with explicit defaults
         text_settings = {
             'vertical_position': int(data.get('vertical_position', 50)),
