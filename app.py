@@ -1433,6 +1433,85 @@ def news_delete(id):
     flash(_('News deleted successfully'))
     return redirect(url_for('news_list'))
 
+@app.route('/news/<int:id>/send-campaign', methods=['POST'])
+@login_required
+@admin_required
+def news_send_campaign(id):
+    """Send news as an email campaign to all subscribed users"""
+    news = News.query.get_or_404(id)
+    
+    try:
+        # Get all subscribed users
+        subscribed_users = User.query.filter_by(subscribed_to_emails=True).all()
+        if not subscribed_users:
+            flash(_('No subscribed users found.'))
+            return redirect(url_for('news_list'))
+            
+        # Create campaign record
+        campaign = EmailCampaign(
+            subject=news.title,
+            html_content=news.content,  # Using original markdown content
+            sender_id=current_user.id,
+            recipients_count=len(subscribed_users)
+        )
+        db.session.add(campaign)
+        db.session.commit()
+        
+        # Convert markdown to HTML for email
+        html_content = markdown_filter(news.content)
+        
+        # Send emails to all subscribed users
+        success_count = 0
+        for user in subscribed_users:
+            # Generate unsubscribe token for this user
+            unsubscribe_token = user.generate_unsubscribe_token()
+            user.email_confirmation_token = unsubscribe_token
+            db.session.commit()
+            
+            # Add unsubscribe link to email content
+            unsubscribe_url = url_for('unsubscribe', token=unsubscribe_token, _external=True)
+            
+            # Get user's preferred language
+            user_locale = user.locale or 'en'
+            
+            # Add localized unsubscribe text
+            if user_locale == 'ru':
+                footer = f"""
+                <hr>
+                <p style="font-size: 12px; color: #666;">
+                    Чтобы отписаться от рассылки, <a href="{unsubscribe_url}">нажмите здесь</a>.
+                </p>
+                """
+            else:
+                footer = f"""
+                <hr>
+                <p style="font-size: 12px; color: #666;">
+                    To unsubscribe from these emails, <a href="{unsubscribe_url}">click here</a>.
+                </p>
+                """
+                
+            # Combine HTML content with footer
+            full_content = html_content + footer
+            
+            # Send email
+            if send_email(user.email, news.title, full_content):
+                success_count += 1
+        
+        # Update flash message based on results
+        if success_count == len(subscribed_users):
+            flash(_('Campaign sent successfully to %(count)d users.', count=success_count))
+        else:
+            flash(_('Campaign sent to %(success)d out of %(total)d users.', 
+                    success=success_count, total=len(subscribed_users)))
+            
+        return redirect(url_for('news_list'))
+            
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Error sending news campaign: {str(e)}")
+        flash(_('Error sending campaign: %(error)s', error=str(e)), 'error')
+        return redirect(url_for('news_list'))
+
 #Adding new routes for preview
 @app.route('/previews/<path:filename>')
 def serve_preview(filename):
