@@ -1788,7 +1788,7 @@ def analyze_csv():
                     'icon': 'devil.svg'
                 })
             
-            # Check for "Nomad" achievement - traveled over 150 kilometers in a single day
+            # Check for "Nomad" and "Tourist" achievements - related to daily travel distance
             if isinstance(processed_data, dict) and 'timestamp' in processed_data and 'mileage' in processed_data:
                 # Convert timestamps to date strings
                 dates = [datetime.utcfromtimestamp(float(ts)).strftime('%Y-%m-%d') 
@@ -1809,14 +1809,24 @@ def analyze_csv():
                         'mileage': lambda x: max(x) - min(x)
                     })
                     
-                    # Check if any day had more than 150 km
+                    # Get the maximum daily distance
                     max_daily_distance = mileage_by_date['mileage'].max()
+                    
+                    # Check if any day had more than 150 km
                     if max_daily_distance >= 150:
                         achievements.append({
                             'id': 'nomad',
                             'title': 'Nomad',
                             'description': "You're a true nomad — you traveled over 150 kilometers in a single day!",
                             'icon': 'supertourist.svg'
+                        })
+                    # Check if any day had more than 90 km but less than 150 km
+                    elif max_daily_distance >= 90:
+                        achievements.append({
+                            'id': 'tourist',
+                            'title': 'Tourist',
+                            'description': "You're a true tourist — you traveled over 90 km in a single day!",
+                            'icon': 'tourist.svg'
                         })
             
             # Check for "Strong rider" achievement - power value below -15000
@@ -1877,8 +1887,17 @@ def analyze_csv():
                         'description': "Your speed has not reached 50 km/h!",
                         'icon': 'sleep.svg'
                     })
+                
+                # Check for "Fast" achievement - speed reached 90 km/h
+                if speed_values and max(speed_values) >= 90:
+                    achievements.append({
+                        'id': 'fast',
+                        'title': 'Fast',
+                        'description': "You're very fast — you reached a speed of 90 km/h!",
+                        'icon': 'speed.svg'
+                    })
             
-            # Check for "Suicidal madman" achievement - hit 100% PWM and maintained speed > 5 km/h for 10 seconds
+            # Check for "Suicidal madman" and "Dead" achievements - related to 100% PWM
             if isinstance(processed_data, dict) and 'pwm' in processed_data and 'speed' in processed_data and 'timestamp' in processed_data:
                 # Check if we have timestamps and data values
                 if (len(processed_data['pwm']) > 0 and 
@@ -1900,6 +1919,8 @@ def analyze_csv():
                         
                         # Check all speed values in the 10 seconds after last 100% PWM
                         suicidal = True
+                        dead = False
+                        
                         for i in range(len(processed_data['timestamp'])):
                             if (not pd.isna(processed_data['timestamp'][i]) and 
                                 not pd.isna(processed_data['speed'][i])):
@@ -1914,15 +1935,26 @@ def analyze_csv():
                                     # If speed dropped below 5 km/h, not suicidal
                                     if speed < 5:
                                         suicidal = False
-                                        break
+                                        
+                                    # If speed dropped below 2 km/h, consider "dead"
+                                    if speed < 2:
+                                        dead = True
                         
-                        # If we maintained speed after 100% PWM, add the achievement
+                        # Add appropriate achievements based on conditions
                         if suicidal:
                             achievements.append({
                                 'id': 'suicidalmadman',
                                 'title': 'Suicidal madman',
                                 'description': "You're a suicidal madman hit 100% PWM and still didn't kiss the asphalt!",
                                 'icon': 'skeleton.svg'
+                            })
+                        
+                        if dead:
+                            achievements.append({
+                                'id': 'dead',
+                                'title': 'Dead',
+                                'description': "You weren't lucky — you either died or got seriously injured!",
+                                'icon': 'dead.svg'
                             })
             
             # Return the processed data with achievements for visualization
