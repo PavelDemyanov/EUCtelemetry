@@ -1000,7 +1000,7 @@ visibilitySettings.forEach(setting => {
 });
 
 // Handle start processing button click
-document.getElementById('startProcessButton').addEventListener('click', function() {
+document.getElementById('startProcessButton').addEventListener('click', async function() {
     const projectId = this.dataset.projectId;
     const progressDiv = document.getElementById('progress');
     const progressBar = progressDiv.querySelector('.progress-bar');
@@ -1013,6 +1013,23 @@ document.getElementById('startProcessButton').addEventListener('click', function
         // Show error message and prevent processing
         alert(gettext("Error: Cannot process files longer than 2 hours. Please upload a different file or trim the file length in the \"Trim CSV Data\" section before starting the video creation process."));
         return; // Prevent processing long files completely
+    }
+
+    // Check if user already has 2 or more projects in processing state
+    try {
+        const response = await fetch('/check_processing_projects');
+        if (!response.ok) {
+            throw new Error('Error checking processing projects status');
+        }
+        
+        const data = await response.json();
+        if (!data.can_process_more) {
+            // Show error message and prevent processing
+            alert(gettext("Error: You already have 2 videos being processed. Please wait for them to complete before starting a new processing job."));
+            return; // Prevent processing more than 2 videos at a time
+        }
+    } catch (error) {
+        console.error('Error checking processing projects:', error);
     }
 
     // Show progress bar and processing info

@@ -782,6 +782,24 @@ def project_status(project_id):
         'processing_time': project.get_processing_time_str()
     })
 
+@app.route('/check_processing_projects', methods=['GET'])
+@login_required
+def check_processing_projects():
+    """Check the number of projects currently in 'processing' status for the user"""
+    try:
+        processing_count = Project.query.filter_by(
+            user_id=current_user.id,
+            status='processing'
+        ).count()
+        
+        return jsonify({
+            'count': processing_count,
+            'can_process_more': processing_count < 2  # Limit is 2 processing projects
+        })
+    except Exception as e:
+        logging.error(f"Error in check_processing_projects: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/projects')
 @login_required
 def list_projects():
