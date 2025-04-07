@@ -292,209 +292,165 @@ document.addEventListener('DOMContentLoaded', function() {
                                     const isHidden = meta.hidden;
                                     return {
                                         text: window.gettext(dataset.originalColumn.toLowerCase()),
-                                        fillStyle: dataset.borderColor,
-                                        strokeStyle: '#fff',
+                                        fillStyle: isHidden ? '#555555' : dataset.borderColor,
+                                        strokeStyle: isHidden ? '#555555' : dataset.borderColor,
                                         lineWidth: 2,
                                         hidden: isHidden,
                                         index: i,
-                                        fontColor: '#fff'
+                                        fontColor: isHidden ? '#555555' : '#fff'
                                     };
                                 });
-                            },
-                            boxWidth: 20,
-                            padding: 10
+                            }
                         },
-                        onClick: (e, legendItem, legend) => {
-                            // Toggle visibility when clicking legend
+                        onClick: (e, legendItem) => {
+                            // Toggle dataset visibility when clicking on legend
                             const index = legendItem.index;
-                            const ci = legend.chart;
-                            const meta = ci.getDatasetMeta(index);
-                            meta.hidden = meta.hidden === null ? !ci.data.datasets[index].hidden : null;
-                            ci.update();
+                            const meta = chartInstance.getDatasetMeta(index);
+                            meta.hidden = !meta.hidden;
+                            chartInstance.update();
                         }
                     },
                     zoom: {
-                        zoom: {
-                            wheel: { enabled: true }, // Enable mouse wheel zoom
-                            pinch: { enabled: true }, // Enable pinch zoom
-                            mode: 'x', // Zoom along X-axis
-                            speed: 100 // Zoom speed
-                        },
                         pan: {
                             enabled: true, // Enable panning
-                            mode: 'x', // Pan along X-axis
-                            modifierKey: '' // No modifier key required
+                            mode: 'x', // Panning on X-axis
+                            rangeMin: { x: minTimestamp }, // Panning limits
+                            rangeMax: { x: maxTimestamp }
                         },
-                        limits: {
-                            x: {
-                                min: minTimestamp, // Minimum X-axis value for zoom limit
-                                max: maxTimestamp, // Maximum X-axis value for zoom limit
-                                minRange: fullRange * 0.01 // Minimum range for zoom
+                        zoom: {
+                            wheel: { enabled: true }, // Zoom with mouse wheel
+                            pinch: { enabled: true }, // Zoom with gestures
+                            mode: 'x', // Zoom on X-axis
+                            limits: {
+                                x: {
+                                    min: minTimestamp, // Minimum X-axis limit
+                                    max: maxTimestamp, // Maximum X-axis limit
+                                    minRange: fullRange // Minimum visible range (not less than full X-axis)
+                                }
                             }
                         }
                     }
                 },
-                animation: false, // Disable animations
-                interaction: {
-                    mode: 'index', // Interaction mode
-                    intersect: false // Don't require intersection
-                },
-                elements: {
-                    line: {
-                        tension: 0.1 // Line smoothness
-                    },
-                    point: {
-                        radius: 0 // Don't show points
-                    }
-                }
+                interaction: { mode: 'index', intersect: false } // Interaction mode for tooltips
             }
         });
-
-        // Store initial axis limits for reset function
-        chartStartMin = minTimestamp;
-        chartStartMax = maxTimestamp;
     }
 
-    // Handle form submission
-    uploadForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        // Check if file is selected
-        const file = csvFileInput.files[0];
-        if (!file) {
-            showError(window.gettext('Please select a CSV file to upload.'));
-            return;
-        }
-        
-        // Check file extension
-        if (!file.name.toLowerCase().endsWith('.csv')) {
-            showError(window.gettext('Selected file is not a CSV file. Please upload a CSV file.'));
-            return;
-        }
+    // Function to plot chart based on all data columns
+    function plotAllColumns(data) {
+        if (!data) return;
+        const timestamps = data.map(row => row.timestamp); // Extract timestamps
+        const columns = Object.keys(data[0]).filter(col => col.toLowerCase() !== 'timestamp' && data.some(row => !isNaN(parseFloat(row[col]))));
+        const datasets = columns.map((column) => {
+            const originalValues = data.map(row => parseFloat(row[column]) || 0); // Original values
+            const normalizedValues = originalValues.map(value => normalizeValueForAdaptiveScale(value, column)); // Normalized values
+            return {
+                originalColumn: column, // Store original technical column name
+                label: window.gettext(column),
+                originalColumn: column, // Store original technical column name
+                data: isAdaptiveChart ? normalizedValues : originalValues, // Select data based on mode
+                originalData: originalValues // Save original data for tooltips
+            };
+        });
+        createMultiChart(timestamps, datasets); // Create chart
+        setupManualPanning(); // Setup manual panning
+    }
 
-        // Hide previous error message and show loading indicator
-        hideError();
-        loadingIndicator.style.display = 'block';
-        analysisResults.style.display = 'none';
+    // Setup manual panning with mouse dragging
+    function setupManualPanning() {
+        const canvas = dataChart;
         
-        // Create form data for upload
-        const formData = new FormData();
-        formData.append('file', file);
-
-        // Send file to server
-        fetch('/analyze_csv', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => {
-            // Parse JSON response
-            return response.json().then(data => {
-                if (!response.ok) {
-                    throw new Error(data.error || window.gettext('Error processing CSV file'));
-                }
-                return data;
-            });
-        })
-        .then(data => {
-            // Process successful response
-            loadingIndicator.style.display = 'none';
+        // Handle mouse down event to start dragging
+        canvas.addEventListener('mousedown', function(e) {
+            if (e.button !== 0) return; // Only handle left button
+            isDragging = true;
+            dragStartX = e.offsetX;
+            chartStartMin = chartInstance.options.scales.x.min;
+            chartStartMax = chartInstance.options.scales.x.max;
+            canvas.style.cursor = 'grabbing';
+        });
+        
+        // Handle mouse move to pan the chart
+        canvas.addEventListener('mousemove', function(e) {
+            if (!isDragging) return;
             
-            if (data.csv_type && data.csv_data) {
-                try {
-                    // Parse CSV data
-                    const parsedData = JSON.parse(data.csv_data);
-                    
-                    if (parsedData && typeof parsedData === 'object') {
-                        // Store data for adaptive scaling
-                        csvData = [];
+            // Calculate drag distance
+            const diffX = e.offsetX - dragStartX;
+            const fullWidth = canvas.width;
+            const fullRange = chartStartMax - chartStartMin;
+            const shiftAmount = (diffX / fullWidth) * fullRange;
+            
+            // Apply pan if chart exists
+            if (chartInstance) {
+                chartInstance.options.scales.x.min = chartStartMin - shiftAmount;
+                chartInstance.options.scales.x.max = chartStartMax - shiftAmount;
+                chartInstance.update('none'); // Update without animation
+            }
+        });
+        
+        // End dragging on mouse up or mouse leave
+        const endDrag = function() {
+            if (isDragging) {
+                isDragging = false;
+                canvas.style.cursor = 'grab';
+            }
+        };
+        
+        canvas.addEventListener('mouseup', endDrag);
+        canvas.addEventListener('mouseleave', endDrag);
+    }
+
+    // Toggle between adaptive and original scale
+    if (adaptiveChartToggle) {
+        adaptiveChartToggle.addEventListener('change', function() {
+            isAdaptiveChart = this.checked;
+            if (csvData) {
+                plotAllColumns(csvData);
+            }
+        });
+    }
+
+    // Reset zoom button click handler
+    if (resetZoomButton) {
+        resetZoomButton.addEventListener('click', function() {
+            if (chartInstance) {
+                // Get original minimum and maximum timestamps
+                const minTimestamp = Math.min(...chartInstance.data.labels);
+                const maxTimestamp = Math.max(...chartInstance.data.labels);
+                
+                // Reset chart boundaries
+                chartInstance.options.scales.x.min = minTimestamp;
+                chartInstance.options.scales.x.max = maxTimestamp;
+                chartInstance.update();
+            }
+        });
+    }
+
+    // Process URL parameters
+    function processUrlParams() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const fileParam = urlParams.get('file');
+        if (fileParam) {
+            // Show loading indicator
+            loadingIndicator.style.display = 'block';
+            
+            // Fetch CSV data
+            fetch(`/analyze_csv?file=${encodeURIComponent(fileParam)}`)
+                .then(response => {
+                    if (!response.ok) {
+                        showError(window.gettext('Could not load the specified file'));
+                        return null;
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data && data.success && data.csv_data) {
+                        // Hide loading, show results
+                        loadingIndicator.style.display = 'none';
+                        analysisResults.style.display = 'block';
                         
-                        // Create arrays for chart datasets
-                        const timestamps = parsedData.timestamp || [];
-                        const chartDatasets = [];
-                        
-                        // Process each data column
-                        for (const key in parsedData) {
-                            if (key === 'timestamp') continue; // Skip timestamp column
-                            
-                            const values = parsedData[key] || [];
-                            const normalizedValues = [];
-                            const originalValues = [];
-                            
-                            // Process data points
-                            for (let i = 0; i < timestamps.length; i++) {
-                                const timestamp = timestamps[i];
-                                const value = values[i];
-                                
-                                if (timestamp !== null && value !== null && 
-                                    !isNaN(parseFloat(timestamp)) && !isNaN(parseFloat(value))) {
-                                    const floatValue = parseFloat(value);
-                                    
-                                    // Store original and normalized values
-                                    normalizedValues.push({
-                                        x: parseFloat(timestamp),
-                                        y: normalizeValueForAdaptiveScale(floatValue, key)
-                                    });
-                                    
-                                    originalValues.push(floatValue);
-                                    
-                                    // Populate csvData array for adaptive scaling
-                                    if (i >= csvData.length) {
-                                        csvData.push({});
-                                    }
-                                    csvData[i][key] = floatValue;
-                                }
-                            }
-                            
-                            // Add dataset if it has data
-                            if (normalizedValues.length > 0) {
-                                chartDatasets.push({
-                                    label: window.gettext(key.toLowerCase()),
-                                    data: normalizedValues,
-                                    originalData: originalValues,
-                                    originalColumn: key
-                                });
-                            }
-                        }
-                        
-                        // Create chart if we have data
-                        if (chartDatasets.length > 0 && timestamps.length > 0) {
-                            createMultiChart(timestamps, chartDatasets);
-                            analysisResults.style.display = 'block';
-                            
-                            // Setup adaptive chart toggle
-                            adaptiveChartToggle.addEventListener('change', function() {
-                                isAdaptiveChart = this.checked;
-                                
-                                // Update chart with new normalized values
-                                chartInstance.data.datasets.forEach((dataset, i) => {
-                                    const columnName = dataset.originalColumn;
-                                    const originalData = dataset.originalData;
-                                    
-                                    for (let j = 0; j < originalData.length; j++) {
-                                        const originalValue = originalData[j];
-                                        dataset.data[j].y = isAdaptiveChart 
-                                            ? normalizeValueForAdaptiveScale(originalValue, columnName)
-                                            : originalValue;
-                                    }
-                                });
-                                
-                                chartInstance.update();
-                            });
-                            
-                            // Setup reset zoom button
-                            resetZoomButton.addEventListener('click', function() {
-                                if (chartInstance) {
-                                    chartInstance.resetZoom();
-                                }
-                            });
-                            
-                            // Accessibility: Add keyboard navigation for chart
-                            dataChart.tabIndex = 0;
-                            dataChart.setAttribute('role', 'img');
-                            dataChart.setAttribute('aria-label', window.gettext('Trip telemetry chart'));
-                        } else {
-                            showError(window.gettext('No valid data found in the CSV file.'));
-                        }
+                        // Parse data and create chart
+                        csvData = JSON.parse(data.csv_data);
                         
                         // Display achievements if available
                         if (data.achievements) {
@@ -502,61 +458,104 @@ document.addEventListener('DOMContentLoaded', function() {
                         } else {
                             achievementsSection.style.display = 'none';
                         }
-                    } else {
-                        showError(window.gettext('Invalid data format received from server.'));
+                        
+                        plotAllColumns(csvData);
+                    } else if (data && data.error) {
+                        showError(data.error);
                     }
-                } catch (error) {
-                    console.error('Error parsing chart data:', error);
-                    showError(window.gettext('Error parsing data for visualization.'));
+                })
+                .catch(error => {
+                    showError(window.gettext('An error occurred while processing the file'));
+                    console.error(error);
+                });
+        }
+    }
+
+    // Form submission handler for CSV upload
+    uploadForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        hideError();
+        
+        const formData = new FormData();
+        const file = csvFileInput.files[0];
+        
+        if (!file) {
+            showError(window.gettext('Please select a CSV file'));
+            return;
+        }
+        
+        formData.append('file', file);
+        
+        // Show loading indicator
+        loadingIndicator.style.display = 'block';
+        analysisResults.style.display = 'none';
+        
+        // Send request to the server
+        fetch('/analyze_csv', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    throw new Error(err.error || 'Server error');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Parse JSON data from the server
+            if (data && data.success && data.csv_data) {
+                try {
+                    csvData = JSON.parse(data.csv_data);
+                    
+                    // Hide loading, show results
+                    loadingIndicator.style.display = "none";
+                    analysisResults.style.display = "block";
+                    
+                    // Display achievements if available
+                    if (data.achievements) {
+                        displayAchievements(data.achievements);
+                    } else {
+                        achievementsSection.style.display = "none";
+                    }
+                    
+                    // Plot the data
+                    plotAllColumns(csvData);
+                    // Plot the data
+                    plotAllColumns(csvData);
+                    
+                    // Add file parameter to URL without reloading
+                    const url = new URL(window.location);
+                    url.searchParams.set('file', data.file_id || 'uploaded');
+                    window.history.pushState({}, '', url);
+                    
+                } catch (e) {
+                    showError(window.gettext('Error parsing CSV data: ') + e.message);
+                    console.error('Error parsing CSV data:', e);
                 }
+            } else if (data && data.error) {
+                showError(data.error);
             } else {
-                showError(window.gettext('No data received from server.'));
+                showError(window.gettext('Received invalid data format from server'));
             }
         })
         .catch(error => {
-            // Handle errors
+            showError(error.message || window.gettext('An error occurred while processing the file'));
             console.error('Error:', error);
-            loadingIndicator.style.display = 'none';
-            showError(error.message || window.gettext('An error occurred while processing the file.'));
+        })
+        .finally(() => {
+            // Ensure loading indicator is hidden
+            if (analysisResults.style.display === 'none') {
+                loadingIndicator.style.display = 'none';
+            }
         });
     });
 
-    // Function to handle drag operations on the chart
-    function setupDragHandling() {
-        // Mouse events
-        dataChart.addEventListener('mousedown', function(e) {
-            isDragging = true;
-            dragStartX = e.clientX;
-            dataChart.style.cursor = 'grabbing';
-        });
-        
-        window.addEventListener('mousemove', function(e) {
-            if (!isDragging || !chartInstance) return;
-            
-            const dx = e.clientX - dragStartX;
-            const rangePerPixel = (chartInstance.scales.x.max - chartInstance.scales.x.min) / dataChart.width;
-            const offsetX = dx * rangePerPixel;
-            
-            chartInstance.scales.x.min -= offsetX;
-            chartInstance.scales.x.max -= offsetX;
-            chartInstance.update();
-            
-            dragStartX = e.clientX;
-        });
-        
-        window.addEventListener('mouseup', function() {
-            if (isDragging) {
-                isDragging = false;
-                dataChart.style.cursor = 'grab';
-            }
-        });
-        
-        dataChart.style.cursor = 'grab';
-    }
-    
-    // Set up drag handling
-    setupDragHandling();
-    
+    // Process URL parameters on page load
+    processUrlParams();
+});
+
     // Function to display achievements
     function displayAchievements(achievements) {
         // Hide achievements section if no achievements to display
@@ -571,37 +570,38 @@ document.addEventListener('DOMContentLoaded', function() {
         // Create achievement cards
         achievements.forEach(achievement => {
             const achievementDiv = document.createElement('div');
-            achievementDiv.className = 'col-md-6 col-lg-4 mb-3';
+            achievementDiv.className = 'col-md-4 col-lg-3 mb-3';
             
-            // Create a new achievement card with the custom style
             const card = document.createElement('div');
-            card.className = 'achievement-card';
+            card.className = 'card h-100 text-center border-primary';
+            
+            const cardBody = document.createElement('div');
+            cardBody.className = 'card-body';
             
             // Create achievement icon
+            const iconDiv = document.createElement('div');
+            iconDiv.className = 'mb-3';
             const icon = document.createElement('img');
             icon.src = `/static/icons/euc_man_pack/${achievement.icon}`;
             icon.alt = achievement.title;
-            icon.className = 'achievement-icon';
-            
-            // Create content container
-            const contentDiv = document.createElement('div');
-            contentDiv.className = 'achievement-content';
+            icon.style.height = '100px';
+            iconDiv.appendChild(icon);
             
             // Create achievement title
             const title = document.createElement('h5');
-            title.className = 'achievement-title';
+            title.className = 'card-title';
             title.textContent = achievement.title;
             
             // Create achievement description
             const description = document.createElement('p');
-            description.className = 'achievement-description';
+            description.className = 'card-text';
             description.textContent = achievement.description;
             
             // Assemble the card
-            contentDiv.appendChild(title);
-            contentDiv.appendChild(description);
-            card.appendChild(icon);
-            card.appendChild(contentDiv);
+            cardBody.appendChild(iconDiv);
+            cardBody.appendChild(title);
+            cardBody.appendChild(description);
+            card.appendChild(cardBody);
             achievementDiv.appendChild(card);
             
             // Add to container
@@ -611,9 +611,3 @@ document.addEventListener('DOMContentLoaded', function() {
         // Show achievements section
         achievementsSection.style.display = 'block';
     }
-    
-    // Check for file input when the page loads
-    if (csvFileInput.files.length > 0) {
-        uploadButton.click();
-    }
-});
