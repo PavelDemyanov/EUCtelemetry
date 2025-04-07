@@ -89,8 +89,6 @@
                             <th>Registration Date</th>
                             <th>Email Status</th>
                             <th>Admin Status</th>
-                            <th>Completed Projects</th>
-                            <th>Completed Projects</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -111,11 +109,6 @@
                                 {% else %}
                                 <span class="badge bg-warning muted text-dark">Pending</span>
                                 {% endif %}
-                                <td>
-                                    <span class="badge {% if user.projects|selectattr("status", "equalto", "completed")|list|length > 0 %}bg-success{% else %}bg-secondary{% endif %} muted text-white">
-                                        {{ user.projects|selectattr("status", "equalto", "completed")|list|length }}
-                                    </span>
-                                </td>
                             </td>
                             <td>
                                 {% if user.is_admin %}
@@ -599,38 +592,8 @@ function updateUsersTable(users) {
             </td>
             <td>
                 ${user.is_admin ?
-            <td>
-                <span class="badge ${user.completed_projects > 0 ? 'bg-success' : 'bg-secondary'} muted text-white">
-                    ${user.completed_projects}
-                </span>
-            </td>
                 '<span class="badge bg-info muted text-white">Admin</span>' :
-            <td>
-                <span class="badge ${user.completed_projects > 0 ? 'bg-success' : 'bg-secondary'} muted text-white">
-                    ${user.completed_projects}
-                </span>
-            </td>
                 '<span class="badge bg-secondary muted text-white">User</span>'}
-            <td>
-                <span class="badge ${user.completed_projects > 0 ? 'bg-success' : 'bg-secondary'} muted text-white">
-                    ${user.completed_projects}
-                </span>
-            </td>
-            </td>
-            <td>
-                <span class="badge ${user.completed_projects > 0 ? 'bg-success' : 'bg-secondary'} muted text-white">
-                    ${user.completed_projects}
-                </span>
-            </td>
-            <td>
-            <td>
-                <span class="badge ${user.completed_projects > 0 ? 'bg-success' : 'bg-secondary'} muted text-white">
-                    ${user.completed_projects}
-                </span>
-            </td>
-                <span class="badge ${user.completed_projects > 0 ? 'bg-success' : 'bg-secondary'} muted text-white">
-                    ${user.completed_projects}
-                </span>
             </td>
             <td>
                 <button class="btn btn-sm btn-primary" onclick="editUser(${user.id}, '${user.name}', '${user.email}', ${user.is_admin})">
