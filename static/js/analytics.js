@@ -7,6 +7,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const loadingIndicator = document.getElementById('loadingIndicator'); // Loading indicator
     const errorMessage = document.getElementById('errorMessage'); // Error message
     const analysisResults = document.getElementById('analysisResults'); // Analysis results block
+    const achievementsSection = document.getElementById('achievementsSection'); // Achievements section
+    const achievementsContainer = document.getElementById('achievementsContainer'); // Achievements container
     const dataChart = document.getElementById('dataChart'); // Chart canvas
     const adaptiveChartToggle = document.getElementById('adaptiveChartToggle'); // Adaptive scale toggle
     const resetZoomButton = document.getElementById('resetZoomButton'); // Reset zoom button
@@ -449,6 +451,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         // Parse data and create chart
                         csvData = JSON.parse(data.csv_data);
+                        
+                        // Display achievements if available
+                        if (data.achievements) {
+                            displayAchievements(data.achievements);
+                        } else {
+                            achievementsSection.style.display = 'none';
+                        }
+                        
                         plotAllColumns(csvData);
                     } else if (data && data.error) {
                         showError(data.error);
@@ -500,11 +510,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     csvData = JSON.parse(data.csv_data);
                     
                     // Hide loading, show results
-                    loadingIndicator.style.display = 'none';
-                    analysisResults.style.display = 'block';
+                    // Hide loading, show results
+                    loadingIndicator.style.display = "none";
+                    analysisResults.style.display = "block";
                     
-                    // Plot the data
-                    plotAllColumns(csvData);
+                    // Display achievements if available
+                    if (data.achievements) {
+                        displayAchievements(data.achievements);
+                    } else {
+                        achievementsSection.style.display = "none";
+                    }
                     
                     // Add file parameter to URL without reloading
                     const url = new URL(window.location);
@@ -536,3 +551,59 @@ document.addEventListener('DOMContentLoaded', function() {
     // Process URL parameters on page load
     processUrlParams();
 });
+
+    // Function to display achievements
+    function displayAchievements(achievements) {
+        // Hide achievements section if no achievements to display
+        if (!achievements || achievements.length === 0) {
+            achievementsSection.style.display = 'none';
+            return;
+        }
+        
+        // Clear previous achievements
+        achievementsContainer.innerHTML = '';
+        
+        // Create achievement cards
+        achievements.forEach(achievement => {
+            const achievementDiv = document.createElement('div');
+            achievementDiv.className = 'col-md-4 col-lg-3 mb-3';
+            
+            const card = document.createElement('div');
+            card.className = 'card h-100 text-center border-primary';
+            
+            const cardBody = document.createElement('div');
+            cardBody.className = 'card-body';
+            
+            // Create achievement icon
+            const iconDiv = document.createElement('div');
+            iconDiv.className = 'mb-3';
+            const icon = document.createElement('img');
+            icon.src = `/static/icons/euc_man_pack/${achievement.icon}`;
+            icon.alt = achievement.title;
+            icon.style.height = '100px';
+            iconDiv.appendChild(icon);
+            
+            // Create achievement title
+            const title = document.createElement('h5');
+            title.className = 'card-title';
+            title.textContent = achievement.title;
+            
+            // Create achievement description
+            const description = document.createElement('p');
+            description.className = 'card-text';
+            description.textContent = achievement.description;
+            
+            // Assemble the card
+            cardBody.appendChild(iconDiv);
+            cardBody.appendChild(title);
+            cardBody.appendChild(description);
+            card.appendChild(cardBody);
+            achievementDiv.appendChild(card);
+            
+            // Add to container
+            achievementsContainer.appendChild(achievementDiv);
+        });
+        
+        // Show achievements section
+        achievementsSection.style.display = 'block';
+    }

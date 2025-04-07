@@ -1770,11 +1770,61 @@ def analyze_csv():
                     # Handle other dictionary formats if needed
                     logging.warning("Unrecognized dictionary data format")
             
-            # Return the processed data for chart visualization
+            # Calculate achievements
+            achievements = []
+            
+            # Check for "Devil" achievement - max speed over 130 km/h
+            max_speed = 0
+            if isinstance(processed_data, dict) and 'speed' in processed_data:
+                max_speed = max([float(val) for val in processed_data['speed'] if not pd.isna(val)], default=0)
+            elif isinstance(processed_data, pd.DataFrame):
+                max_speed = processed_data['speed'].max()
+            
+            if max_speed >= 130:
+                achievements.append({
+                    'id': 'devil',
+                    'title': 'Devil',
+                    'description': "You're a true Devil of the road — you hit 130 km/h!",
+                    'icon': 'devil.svg'
+                })
+            
+            # Check for "Nomad" achievement - traveled over 150 kilometers in a single day
+            if isinstance(processed_data, dict) and 'timestamp' in processed_data and 'mileage' in processed_data:
+                # Convert timestamps to date strings
+                dates = [datetime.utcfromtimestamp(float(ts)).strftime('%Y-%m-%d') 
+                      for ts in processed_data['timestamp'] if not pd.isna(ts)]
+                
+                # Get mileage values
+                mileage_values = [float(val) for val in processed_data['mileage'] if not pd.isna(val)]
+                
+                # Create a DataFrame to group by date
+                if len(dates) == len(mileage_values) and len(dates) > 0:
+                    mileage_df = pd.DataFrame({
+                        'date': dates,
+                        'mileage': mileage_values
+                    })
+                    
+                    # Calculate mileage difference by date
+                    mileage_by_date = mileage_df.groupby('date').agg({
+                        'mileage': lambda x: max(x) - min(x)
+                    })
+                    
+                    # Check if any day had more than 150 km
+                    max_daily_distance = mileage_by_date['mileage'].max()
+                    if max_daily_distance >= 150:
+                        achievements.append({
+                            'id': 'nomad',
+                            'title': 'Nomad',
+                            'description': "You're a true nomad — you traveled over 150 kilometers in a single day!",
+                            'icon': 'supertourist.svg'
+                        })
+            
+            # Return the processed data with achievements for visualization
             return jsonify({
                 'success': True,
                 'csv_type': csv_type,
-                'csv_data': json.dumps(serializable_data)
+                'csv_data': json.dumps(serializable_data),
+                'achievements': achievements
             })
             
         except MemoryError:
