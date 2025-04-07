@@ -9,6 +9,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const analysisResults = document.getElementById('analysisResults'); // Analysis results block
     const achievementsSection = document.getElementById('achievementsSection'); // Achievements section
     const achievementsContainer = document.getElementById('achievementsContainer'); // Achievements container
+    const achievementsCardBody = document.getElementById('achievementsCardBody'); // Achievements card body
+    const toggleAchievements = document.getElementById('toggleAchievements'); // Toggle achievements button
+    const achievementsToggleIcon = document.getElementById('achievementsToggleIcon'); // Toggle icon
     const dataChart = document.getElementById('dataChart'); // Chart canvas
     const adaptiveChartToggle = document.getElementById('adaptiveChartToggle'); // Adaptive scale toggle
     const resetZoomButton = document.getElementById('resetZoomButton'); // Reset zoom button
@@ -292,269 +295,282 @@ document.addEventListener('DOMContentLoaded', function() {
                                     const isHidden = meta.hidden;
                                     return {
                                         text: window.gettext(dataset.originalColumn.toLowerCase()),
-                                        fillStyle: isHidden ? '#555555' : dataset.borderColor,
-                                        strokeStyle: isHidden ? '#555555' : dataset.borderColor,
-                                        lineWidth: 2,
+                                        fillStyle: dataset.borderColor,
+                                        strokeStyle: '#fff',
+                                        lineWidth: 1,
                                         hidden: isHidden,
                                         index: i,
-                                        fontColor: isHidden ? '#555555' : '#fff'
+                                        fontColor: '#fff'
                                     };
                                 });
                             }
                         },
-                        onClick: (e, legendItem) => {
-                            // Toggle dataset visibility when clicking on legend
+                        onClick: (e, legendItem, legend) => {
+                            // Toggle dataset visibility on legend click
                             const index = legendItem.index;
                             const meta = chartInstance.getDatasetMeta(index);
-                            meta.hidden = !meta.hidden;
+                            meta.hidden = meta.hidden ? false : true;
                             chartInstance.update();
                         }
                     },
                     zoom: {
                         pan: {
-                            enabled: true, // Enable panning
-                            mode: 'x', // Panning on X-axis
-                            rangeMin: { x: minTimestamp }, // Panning limits
-                            rangeMax: { x: maxTimestamp }
+                            enabled: true,
+                            mode: 'x',
+                            modifierKey: 'shift',
+                            onPanStart: () => {
+                                dataChart.style.cursor = 'grabbing';
+                            },
+                            onPanComplete: () => {
+                                dataChart.style.cursor = 'grab';
+                            }
                         },
                         zoom: {
-                            wheel: { enabled: true }, // Zoom with mouse wheel
-                            pinch: { enabled: true }, // Zoom with gestures
-                            mode: 'x', // Zoom on X-axis
-                            limits: {
-                                x: {
-                                    min: minTimestamp, // Minimum X-axis limit
-                                    max: maxTimestamp, // Maximum X-axis limit
-                                    minRange: fullRange // Minimum visible range (not less than full X-axis)
-                                }
+                            wheel: { enabled: true },
+                            pinch: { enabled: true },
+                            mode: 'x',
+                            onZoomComplete: (context) => {
+                                // Update zoom status
+                                isZoomed = context.chart.isZoomed = true;
+                            }
+                        },
+                        limits: {
+                            x: {
+                                min: minTimestamp - fullRange * 0.05,
+                                max: maxTimestamp + fullRange * 0.05,
+                                minRange: fullRange * 0.01 // Minimum zoom level is 1% of the total range
                             }
                         }
                     }
                 },
-                interaction: { mode: 'index', intersect: false } // Interaction mode for tooltips
+                animation: false, // Disable animations
+                onResize: (chart, size) => {
+                    // Update chart when container size changes
+                }
             }
         });
+
+        // Store initial X-axis range for reset functionality
+        chartStartMin = minTimestamp;
+        chartStartMax = maxTimestamp;
     }
 
-    // Function to plot chart based on all data columns
-    function plotAllColumns(data) {
-        if (!data) return;
-        const timestamps = data.map(row => row.timestamp); // Extract timestamps
-        const columns = Object.keys(data[0]).filter(col => col.toLowerCase() !== 'timestamp' && data.some(row => !isNaN(parseFloat(row[col]))));
-        const datasets = columns.map((column) => {
-            const originalValues = data.map(row => parseFloat(row[column]) || 0); // Original values
-            const normalizedValues = originalValues.map(value => normalizeValueForAdaptiveScale(value, column)); // Normalized values
+    // Function to parse CSV data from response and prepare for plotting
+    function prepareDataForPlot(csvData, type) {
+        if (!csvData || !Array.isArray(csvData) || csvData.length === 0) {
             return {
-                originalColumn: column, // Store original technical column name
-                label: window.gettext(column),
-                originalColumn: column, // Store original technical column name
-                data: isAdaptiveChart ? normalizedValues : originalValues, // Select data based on mode
-                originalData: originalValues // Save original data for tooltips
+                labels: [],
+                datasets: []
             };
-        });
-        createMultiChart(timestamps, datasets); // Create chart
-        setupManualPanning(); // Setup manual panning
-    }
-
-    // Setup manual panning with mouse dragging
-    function setupManualPanning() {
-        const canvas = dataChart;
-        
-        // Handle mouse down event to start dragging
-        canvas.addEventListener('mousedown', function(e) {
-            if (e.button !== 0) return; // Only handle left button
-            isDragging = true;
-            dragStartX = e.offsetX;
-            chartStartMin = chartInstance.options.scales.x.min;
-            chartStartMax = chartInstance.options.scales.x.max;
-            canvas.style.cursor = 'grabbing';
-        });
-        
-        // Handle mouse move to pan the chart
-        canvas.addEventListener('mousemove', function(e) {
-            if (!isDragging) return;
-            
-            // Calculate drag distance
-            const diffX = e.offsetX - dragStartX;
-            const fullWidth = canvas.width;
-            const fullRange = chartStartMax - chartStartMin;
-            const shiftAmount = (diffX / fullWidth) * fullRange;
-            
-            // Apply pan if chart exists
-            if (chartInstance) {
-                chartInstance.options.scales.x.min = chartStartMin - shiftAmount;
-                chartInstance.options.scales.x.max = chartStartMax - shiftAmount;
-                chartInstance.update('none'); // Update without animation
-            }
-        });
-        
-        // End dragging on mouse up or mouse leave
-        const endDrag = function() {
-            if (isDragging) {
-                isDragging = false;
-                canvas.style.cursor = 'grab';
-            }
-        };
-        
-        canvas.addEventListener('mouseup', endDrag);
-        canvas.addEventListener('mouseleave', endDrag);
-    }
-
-    // Toggle between adaptive and original scale
-    if (adaptiveChartToggle) {
-        adaptiveChartToggle.addEventListener('change', function() {
-            isAdaptiveChart = this.checked;
-            if (csvData) {
-                plotAllColumns(csvData);
-            }
-        });
-    }
-
-    // Reset zoom button click handler
-    if (resetZoomButton) {
-        resetZoomButton.addEventListener('click', function() {
-            if (chartInstance) {
-                // Get original minimum and maximum timestamps
-                const minTimestamp = Math.min(...chartInstance.data.labels);
-                const maxTimestamp = Math.max(...chartInstance.data.labels);
-                
-                // Reset chart boundaries
-                chartInstance.options.scales.x.min = minTimestamp;
-                chartInstance.options.scales.x.max = maxTimestamp;
-                chartInstance.update();
-            }
-        });
-    }
-
-    // Process URL parameters
-    function processUrlParams() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const fileParam = urlParams.get('file');
-        if (fileParam) {
-            // Show loading indicator
-            loadingIndicator.style.display = 'block';
-            
-            // Fetch CSV data
-            fetch(`/analyze_csv?file=${encodeURIComponent(fileParam)}`)
-                .then(response => {
-                    if (!response.ok) {
-                        showError(window.gettext('Could not load the specified file'));
-                        return null;
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data && data.success && data.csv_data) {
-                        // Hide loading, show results
-                        loadingIndicator.style.display = 'none';
-                        analysisResults.style.display = 'block';
-                        
-                        // Parse data and create chart
-                        csvData = JSON.parse(data.csv_data);
-                        
-                        // Display achievements if available
-                        if (data.achievements) {
-                            displayAchievements(data.achievements);
-                        } else {
-                            achievementsSection.style.display = 'none';
-                        }
-                        
-                        plotAllColumns(csvData);
-                    } else if (data && data.error) {
-                        showError(data.error);
-                    }
-                })
-                .catch(error => {
-                    showError(window.gettext('An error occurred while processing the file'));
-                    console.error(error);
-                });
         }
+
+        // Get timestamp column as X-axis labels
+        const labels = csvData.map(row => parseFloat(row.timestamp));
+
+        // Prepare datasets for plotting
+        const datasets = [];
+        const columns = [
+            { key: 'speed', label: window.gettext('Speed') },
+            { key: 'gps', label: window.gettext('GPS') },
+            { key: 'voltage', label: window.gettext('Voltage') },
+            { key: 'temperature', label: window.gettext('Temperature') },
+            { key: 'current', label: window.gettext('Current') },
+            { key: 'battery', label: window.gettext('Battery') },
+            { key: 'mileage', label: window.gettext('Mileage') },
+            { key: 'pwm', label: window.gettext('PWM') },
+            { key: 'power', label: window.gettext('Power') }
+        ];
+
+        columns.forEach(column => {
+            const key = column.key;
+            
+            // Skip columns that don't exist in the data
+            if (!csvData.some(row => key in row)) return;
+            
+            // Get original data for the column
+            const originalData = csvData.map(row => {
+                const value = row[key];
+                return typeof value === 'string' ? parseFloat(value) : value;
+            });
+            
+            // For adaptive chart, normalize values
+            const data = originalData.map((value, index) => {
+                return normalizeValueForAdaptiveScale(value, key);
+            });
+            
+            datasets.push({
+                label: column.label,
+                data: data,
+                originalData: originalData,
+                originalColumn: key
+            });
+        });
+
+        return {
+            labels: labels,
+            datasets: datasets
+        };
     }
 
-    // Form submission handler for CSV upload
+    // Plot all columns from CSV data
+    function plotAllColumns(data) {
+        if (!data || data.length === 0) {
+            console.error('No valid data to plot');
+            return;
+        }
+        
+        // Prepare data for plotting
+        const chartData = prepareDataForPlot(data);
+        
+        // Create chart
+        createMultiChart(chartData.labels, chartData.datasets);
+    }
+
+    // Toggle between original and adaptive scale
+    adaptiveChartToggle.addEventListener('change', function() {
+        isAdaptiveChart = this.checked;
+        if (csvData) {
+            plotAllColumns(csvData);
+        }
+    });
+
+    // Reset zoom to original chart scale
+    resetZoomButton.addEventListener('click', function() {
+        if (chartInstance) {
+            chartInstance.resetZoom();
+        }
+    });
+
+    // Handle form submission for CSV upload
     uploadForm.addEventListener('submit', function(e) {
         e.preventDefault();
-        hideError();
         
-        const formData = new FormData();
         const file = csvFileInput.files[0];
-        
         if (!file) {
             showError(window.gettext('Please select a CSV file'));
             return;
         }
         
-        formData.append('file', file);
+        // Check file extension
+        const fileExt = file.name.split('.').pop().toLowerCase();
+        if (fileExt !== 'csv') {
+            showError(window.gettext('Please select a valid CSV file'));
+            return;
+        }
+        
+        // Check file size (limit to 50 MB)
+        const maxSize = 50 * 1024 * 1024; // 50 MB in bytes
+        if (file.size > maxSize) {
+            showError(window.gettext('File size exceeds 50 MB limit. Please select a smaller file.'));
+            return;
+        }
+        
+        // Hide previous errors
+        hideError();
         
         // Show loading indicator
         loadingIndicator.style.display = 'block';
+        
+        // Hide results while loading
         analysisResults.style.display = 'none';
         
-        // Send request to the server
+        // Create form data for sending file
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        // Send file to server for processing
         fetch('/analyze_csv', {
             method: 'POST',
             body: formData
         })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(err => {
-                    throw new Error(err.error || 'Server error');
-                });
-            }
-            return response.json();
-        })
-        .then(data => {
-            // Parse JSON data from the server
-            if (data && data.success && data.csv_data) {
-                try {
+            .then(response => response.json())
+            .then(data => {
+                // Hide loading indicator
+                loadingIndicator.style.display = 'none';
+                
+                if (data && data.success) {
+                    // Parse CSV data
                     csvData = JSON.parse(data.csv_data);
                     
-                    // Hide loading, show results
-                    loadingIndicator.style.display = "none";
-                    analysisResults.style.display = "block";
+                    // Show results
+                    analysisResults.style.display = 'block';
                     
                     // Display achievements if available
                     if (data.achievements) {
                         displayAchievements(data.achievements);
                     } else {
-                        achievementsSection.style.display = "none";
+                        achievementsSection.style.display = 'none';
                     }
                     
-                    // Plot the data
                     plotAllColumns(csvData);
-                    // Plot the data
-                    plotAllColumns(csvData);
-                    
-                    // Add file parameter to URL without reloading
-                    const url = new URL(window.location);
-                    url.searchParams.set('file', data.file_id || 'uploaded');
-                    window.history.pushState({}, '', url);
-                    
-                } catch (e) {
-                    showError(window.gettext('Error parsing CSV data: ') + e.message);
-                    console.error('Error parsing CSV data:', e);
+                } else if (data && data.error) {
+                    showError(data.error);
                 }
-            } else if (data && data.error) {
-                showError(data.error);
-            } else {
-                showError(window.gettext('Received invalid data format from server'));
-            }
-        })
-        .catch(error => {
-            showError(error.message || window.gettext('An error occurred while processing the file'));
-            console.error('Error:', error);
-        })
-        .finally(() => {
-            // Ensure loading indicator is hidden
-            if (analysisResults.style.display === 'none') {
-                loadingIndicator.style.display = 'none';
-            }
-        });
+            })
+            .catch(error => {
+                showError(window.gettext('An error occurred while processing the file'));
+                console.error(error);
+            });
     });
 
-    // Process URL parameters on page load
-    processUrlParams();
-});
+    // Check URL for file parameter
+    function checkUrlForFileParameter() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const fileId = urlParams.get('file');
+        
+        if (fileId) {
+            // We have a file ID in URL, try to load it
+            loadingIndicator.style.display = 'block';
+            
+            fetch('/analyze_csv', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ file_id: fileId })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    loadingIndicator.style.display = 'none';
+                    
+                    if (data && data.success) {
+                        try {
+                            // Parse CSV data
+                            csvData = JSON.parse(data.csv_data);
+                            
+                            // Show results
+                            analysisResults.style.display = 'block';
+                            
+                            // Display achievements if available
+                            if (data.achievements) {
+                                displayAchievements(data.achievements);
+                            } else {
+                                achievementsSection.style.display = "none";
+                            }
+                            
+                            // Plot the data
+                            plotAllColumns(csvData);
+                            
+                            // Add file parameter to URL without reloading
+                            const url = new URL(window.location);
+                            url.searchParams.set('file', data.file_id || 'uploaded');
+                            window.history.pushState({}, '', url);
+                            
+                        } catch (e) {
+                            console.error('Error parsing JSON data:', e);
+                            showError(window.gettext('Error parsing data. Please try uploading the file again.'));
+                        }
+                    } else if (data && data.error) {
+                        showError(data.error);
+                    }
+                })
+                .catch(error => {
+                    loadingIndicator.style.display = 'none';
+                    showError(window.gettext('An error occurred while loading the file'));
+                    console.error(error);
+                });
+        }
+    }
 
     // Function to display achievements
     function displayAchievements(achievements) {
@@ -573,41 +589,49 @@ document.addEventListener('DOMContentLoaded', function() {
             achievementDiv.className = 'col-md-4 col-lg-3 mb-3';
             
             const card = document.createElement('div');
-            card.className = 'card h-100 text-center border-primary';
+            card.className = 'card h-100 border-0 shadow-sm achievement-card';
+            card.style.borderRadius = '12px';
+            card.style.overflow = 'hidden';
             
-            const cardBody = document.createElement('div');
-            cardBody.className = 'card-body';
+            // Use icon if available, otherwise use a placeholder
+            const iconPath = achievement.icon ? 
+                `/static/icons/euc_man_pack/${achievement.icon}` : 
+                '/static/icons/achievement-placeholder.svg';
             
-            // Create achievement icon
-            const iconDiv = document.createElement('div');
-            iconDiv.className = 'mb-3';
-            const icon = document.createElement('img');
-            icon.src = `/static/icons/euc_man_pack/${achievement.icon}`;
-            icon.alt = achievement.title;
-            icon.style.height = '100px';
-            iconDiv.appendChild(icon);
+            // Create card content
+            card.innerHTML = `
+                <div class="d-flex justify-content-center align-items-center p-3" style="height: 120px; background-color: #f8f9fa;">
+                    <img src="${iconPath}" alt="${achievement.title}" style="height: 100px; width: auto;">
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">${achievement.title}</h5>
+                    <p class="card-text">${achievement.description}</p>
+                </div>
+            `;
             
-            // Create achievement title
-            const title = document.createElement('h5');
-            title.className = 'card-title';
-            title.textContent = achievement.title;
-            
-            // Create achievement description
-            const description = document.createElement('p');
-            description.className = 'card-text';
-            description.textContent = achievement.description;
-            
-            // Assemble the card
-            cardBody.appendChild(iconDiv);
-            cardBody.appendChild(title);
-            cardBody.appendChild(description);
-            card.appendChild(cardBody);
             achievementDiv.appendChild(card);
-            
-            // Add to container
             achievementsContainer.appendChild(achievementDiv);
         });
         
         // Show achievements section
         achievementsSection.style.display = 'block';
+        
+        // Setup toggle functionality for achievements section
+        if (toggleAchievements) {
+            toggleAchievements.addEventListener('click', function() {
+                if (achievementsCardBody.style.display === 'none') {
+                    achievementsCardBody.style.display = 'block';
+                    achievementsToggleIcon.classList.remove('bi-chevron-down');
+                    achievementsToggleIcon.classList.add('bi-chevron-up');
+                } else {
+                    achievementsCardBody.style.display = 'none';
+                    achievementsToggleIcon.classList.remove('bi-chevron-up');
+                    achievementsToggleIcon.classList.add('bi-chevron-down');
+                }
+            });
+        }
     }
+
+    // Check for file parameter in URL when page loads
+    checkUrlForFileParameter();
+});
