@@ -51,316 +51,262 @@
                             </label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="fps" id="fps15" value="15">
-                            <label class="form-check-label" for="fps15">
-                                15
-                                <span class="badge text-bg-success">{{ _('Fast') }}</span>
-                            </label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="fps" id="fps2997" value="29.97">
-                            <label class="form-check-label" for="fps2997">
-                                29.97 (insta360, GoPro)
+                            <input class="form-check-input" type="radio" name="fps" id="fps23976" value="23.976">
+                            <label class="form-check-label" for="fps23976">
+                                23.976
                                 <span class="badge text-bg-warning">{{ _('Medium') }}</span>
                             </label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="fps" id="fps30" value="30">
-                            <label class="form-check-label" for="fps30">
-                                30
-                                <span class="badge text-bg-warning">{{ _('Medium') }}</span>
-                            </label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="fps" id="fps5994" value="59.94">
-                            <label class="form-check-label" for="fps5994">
-                                59.94 (insta360, GoPro)
-                                <span class="badge text-bg-danger">{{ _('Slow') }}</span>
-                            </label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="fps" id="fps60" value="60">
-                            <label class="form-check-label" for="fps60">
-                                60
+                            <input class="form-check-input" type="radio" name="fps" id="fps29970" value="29.97">
+                            <label class="form-check-label" for="fps29970">
+                                29.97
                                 <span class="badge text-bg-danger">{{ _('Slow') }}</span>
                             </label>
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">{{ _('Video Codec') }}</label>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="codec" id="h264" value="h264" checked>
-                            <label class="form-check-label" for="h264">
-                                H.264
-                                <span class="badge text-bg-success">{{ _('Fast') }}</span>
-                            </label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="codec" id="h265" value="h265">
-                            <label class="form-check-label" for="h265">
-                                H.265
-                                <span class="badge text-bg-warning">{{ _('Medium') }}</span>
-                            </label>
-                        </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="interpolateValues" name="interpolate_values" checked>
+                        <label class="form-check-label" for="interpolateValues">
+                            {{ _('Interpolate data values (smooths the display of telemetry)') }}
+                        </label>
                     </div>
 
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="interpolate_values" id="interpolateValues" checked>
-                            <label class="form-check-label" for="interpolateValues">
-                                {{ _('Interpolate Missing Values') }}
-                                <span class="badge text-bg-info">{{ _('Two-way interpolation') }}</span>
-                            </label>
-                            <div class="form-text">{{ _('Automatically fill missing values using two-way interpolation') }}</div>
-                        </div>
+                    <div class="d-grid mt-4">
+                        <button type="submit" id="uploadButton" class="btn btn-primary">{{ _('Upload CSV') }}</button>
                     </div>
-
-                    <button type="submit" class="btn btn-primary" id="uploadButton">{{ _('Upload and Show Preview') }}</button>
                 </form>
+            </div>
+        </div>
+    </div>
+</div>
 
-                <div id="previewSection" class="mt-4 d-none">
-                    <h4>{{ _('Preview') }}</h4>
-
-                    <!-- Preset Controls - moved above preview and made collapsible -->
-                    <div class="card mb-3">
-                        <div class="card-header" role="button" data-bs-toggle="collapse" data-bs-target="#presetControls" aria-expanded="false" aria-controls="presetControls">
-                            <h5 class="mb-0 d-flex justify-content-between align-items-center">
-                                <div>
-                                    {{ _('Preset Controls') }} <span class="badge text-bg-info ms-2">BETA</span>
-                                </div>
-                                <i class="fas fa-chevron-down"></i>
-                            </h5>
-                        </div>
-                        <div id="presetControls" class="collapse">
+<div class="row mt-4" id="previewSection" style="display: none;">
+    <div class="col-md-10 offset-md-1">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">{{ _('Preview') }}</h2>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-6 mb-4">
+                        <img id="previewImage" src="" alt="Preview" class="img-fluid shadow-sm">
+                    </div>
+                    <div class="col-lg-6 mb-4">
+                        <!-- Preset Management -->
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h5 class="mb-0">{{ _('Preset Management') }}</h5>
+                            </div>
                             <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <button type="button" class="btn btn-secondary mb-2 w-100" id="resetDefaultsButton">
-                                            {{ _('Reset to Defaults') }}
-                                        </button>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <button type="button" class="btn btn-primary mb-2 w-100" id="savePresetButton" data-bs-toggle="modal" data-bs-target="#savePresetModal">
-                                            {{ _('Save as Preset') }}
-                                        </button>
-                                    </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <select class="form-select me-2" id="presetSelect">
+                                        <option value="">{{ _('Select a preset...') }}</option>
+                                    </select>
+                                    <button type="button" class="btn btn-sm btn-danger" id="deletePresetButton" disabled>
+                                        <i class="fas fa-trash"></i>
+                                    </button>
                                 </div>
-                                <div class="row mt-2">
-                                    <div class="col-md-6">
-                                        <select class="form-select mb-2" id="presetSelect">
-                                            <option value="">{{ _('Select a Preset') }}</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <button type="button" class="btn btn-danger mb-2 w-100" id="deletePresetButton" disabled>
-                                            {{ _('Delete Preset') }}
-                                        </button>
-                                    </div>
+                                <div class="btn-group w-100">
+                                    <button type="button" class="btn btn-warning" id="resetDefaultsButton">{{ _('Reset to defaults') }}</button>
+                                    <button type="button" class="btn btn-primary" id="savePresetButton" data-bs-toggle="modal" data-bs-target="#savePresetModal">{{ _('Save current settings') }}</button>
                                 </div>
                             </div>
                         </div>
-                    </div>
-
-                    <!-- Add CSV trim control -->
-                    <div id="csvTrimmerCard" class="card mb-3 d-none">
-                        <div class="card-header" role="button" data-bs-toggle="collapse" data-bs-target="#csvTrimmerContent" aria-expanded="false" aria-controls="csvTrimmerContent">
-                            <h5 class="mb-0 d-flex justify-content-between align-items-center">
-                                <div>
-                                    {{ _('Trim CSV Data') }} <span class="badge text-bg-info ms-2">BETA</span>
-                                </div>
-                                <i class="fas fa-chevron-down"></i>
-                            </h5>
-                        </div>
-                        <div id="csvTrimmerContent" class="collapse">
+                        
+                        <!-- Trim CSV Data section -->
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h5 class="mb-0">{{ _('Trim CSV Data') }}</h5>
+                            </div>
                             <div class="card-body">
-                                <div class="form-text mb-2">
-                                    {{ _('Drag the blue and orange markers on the chart below to trim your CSV data. This will reduce file size and video length.') }}
-                                </div>
-                                <div id="trimRangeContainer" class="d-none">
-                                    <!-- Скрытый контейнер с элементами для поддержки работы JavaScript -->
-                                    <div id="timelineBackground"></div>
-                                    <div id="timelineSelected"></div>
-                                    <div id="startHandle"></div>
-                                    <div id="endHandle"></div>
-                                </div>
-                                <div class="mb-3">
-                                    <!-- Speed Chart -->
-                                    <div class="chart-container mt-3 mb-3" style="position: relative; height: 200px;">
-                                        <canvas id="speed-chart"></canvas>
+                                <div id="loadingTrimData" class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">{{ _('Loading...') }}</span>
                                     </div>
+                                    <p>{{ _('Loading data...') }}</p>
                                 </div>
-                                <div class="row mb-2">
-                                    <div class="col-md-7">
+                                
+                                <div id="trimDataContent" style="display: none;">
+                                    <div class="mb-3">
+                                        <div id="dataChart" style="height: 120px;"></div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="trimRangeSlider" class="form-label">{{ _('Select Time Range') }}</label>
                                         <div class="d-flex align-items-center mb-2">
-                                            <span class="me-2">{{ _('Total Records:') }}</span>
-                                            <span id="totalRecordsInfo" class="badge bg-info"></span>
+                                            <input type="text" id="startTimeDisplay" class="form-control form-control-sm me-2" readonly>
+                                            <span class="mx-2">-</span>
+                                            <input type="text" id="endTimeDisplay" class="form-control form-control-sm ms-2" readonly>
                                         </div>
-                                        <!-- Скрытые элементы для отображения времени в JavaScript -->
-                                        <span id="startTimeDisplay" class="d-none"></span>
-                                        <span id="endTimeDisplay" class="d-none"></span>
+                                        <div id="trimRangeSlider"></div>
                                     </div>
-                                    <div class="col-md-5">
-                                        <div class="d-flex justify-content-end h-100 align-items-center">
-                                            <button type="button" id="trimCsvButton" class="btn btn-success">
-                                                <i class="fas fa-cut me-1"></i> {{ _('Trim Data') }}
-                                            </button>
+                                    
+                                    <div class="d-flex justify-content-between mb-3">
+                                        <span>{{ _('Total records:') }} <span id="totalRecords">0</span></span>
+                                        <span>{{ _('Selected:') }} <span id="selectedRecords">0</span></span>
+                                    </div>
+                                    
+                                    <div class="d-grid">
+                                        <button type="button" class="btn btn-primary" id="trimDataButton">{{ _('Apply Trim') }}</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Accordion control settings -->
+                <div class="accordion mb-4" id="settingsAccordion">
+                    <!-- Position Settings -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="positionSettingsHeading">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#positionSettingsCollapse" aria-expanded="true" aria-controls="positionSettingsCollapse">
+                                {{ _('Position Settings') }}
+                            </button>
+                        </h2>
+                        <div id="positionSettingsCollapse" class="accordion-collapse collapse show" aria-labelledby="positionSettingsHeading">
+                            <div class="accordion-body">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="verticalPosition" class="form-label">{{ _('Vertical Position') }}</label>
+                                        <input type="range" class="form-range" id="verticalPosition" min="0" max="100" value="50">
+                                        <div class="d-flex justify-content-between">
+                                            <span>{{ _('Top') }}</span>
+                                            <span>{{ _('Bottom') }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="topPadding" class="form-label">{{ _('Top Padding') }}</label>
+                                        <input type="range" class="form-range" id="topPadding" min="0" max="50" value="10">
+                                        <div class="d-flex justify-content-between">
+                                            <span>0px</span>
+                                            <span>50px</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="bottomPadding" class="form-label">{{ _('Bottom Padding') }}</label>
+                                        <input type="range" class="form-range" id="bottomPadding" min="0" max="50" value="30">
+                                        <div class="d-flex justify-content-between">
+                                            <span>0px</span>
+                                            <span>50px</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="spacing" class="form-label">{{ _('Item Spacing') }}</label>
+                                        <input type="range" class="form-range" id="spacing" min="5" max="50" value="20">
+                                        <div class="d-flex justify-content-between">
+                                            <span>5px</span>
+                                            <span>50px</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Скрытые элементы для переводов в JavaScript -->
-                    <div class="d-none">
-                        <span id="js-translation-trim-data">{{ _('Trim Data') }}</span>
-                        <span id="js-translation-trimming">{{ _('Trimming...') }}</span>
-                        <span id="js-translation-error-trimming">{{ _('Error trimming CSV: ') }}</span>
-                    </div>
-
-                    <div class="preview-image-container mb-3">
-                        <img id="previewImage" class="img-fluid" alt="{{ _('Preview frame') }}">
-                    </div>
-
-                    <div class="card mb-3">
-                        <div class="card-header" role="button" data-bs-toggle="collapse" data-bs-target="#textDisplaySettings" aria-expanded="false" aria-controls="textDisplaySettings">
-                            <h5 class="mb-0 d-flex justify-content-between align-items-center">
-                                {{ _('Text Display Settings') }}
-                                <i class="fas fa-chevron-down"></i>
-                            </h5>
-                        </div>
-                        <div id="textDisplaySettings" class="collapse">
-                            <div class="card-body">
-                                <div class="row">
+                    
+                    <!-- Design Settings -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="designSettingsHeading">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#designSettingsCollapse" aria-expanded="false" aria-controls="designSettingsCollapse">
+                                {{ _('Design Settings') }}
+                            </button>
+                        </h2>
+                        <div id="designSettingsCollapse" class="accordion-collapse collapse" aria-labelledby="designSettingsHeading">
+                            <div class="accordion-body">
+                                <div class="row g-3">
                                     <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="verticalPosition" class="form-label">{{ _('Vertical Position') }}</label>
-                                            <input type="range" class="form-range" id="verticalPosition" name="vertical_position" 
-                                                   min="0" max="100" value="1" step="1">
-                                            <div class="text-muted small">{{ _('Current:') }} <span id="verticalPositionValue">1</span>%</div>
+                                        <label for="fontSize" class="form-label">{{ _('Font Size') }}</label>
+                                        <input type="range" class="form-range" id="fontSize" min="12" max="48" value="26">
+                                        <div class="d-flex justify-content-between">
+                                            <span>12px</span>
+                                            <span>48px</span>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="borderRadius" class="form-label">{{ _('Corner Radius') }}</label>
-                                            <input type="range" class="form-range" id="borderRadius" name="border_radius" 
-                                                   min="0" max="50" value="13" step="1">
-                                            <div class="text-muted small">{{ _('Current:') }} <span id="borderRadiusValue">13</span>{{ _('px') }}</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="topPadding" class="form-label">{{ _('Box Width') }}</label>
-                                            <input type="range" class="form-range" id="topPadding" name="top_padding" 
-                                                   min="0" max="50" value="14" step="1">
-                                            <div class="text-muted small">{{ _('Current:') }} <span id="topPaddingValue">14</span>{{ _('px') }}</div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="bottomPadding" class="form-label">{{ _('Box Height') }}</label>
-                                            <input type="range" class="form-range" id="bottomPadding" name="bottom_padding" 
-                                                   min="0" max="100" value="45" step="1">
-                                            <div class="text-muted small">{{ _('Current:') }} <span id="bottomPaddingValue">45</span>{{ _('px') }}</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="spacing" class="form-label">{{ _('Spacing Between Items') }}</label>
-                                            <input type="range" class="form-range" id="spacing" name="spacing" 
-                                                   min="0" max="100" value="10" step="1">
-                                            <div class="text-muted small">{{ _('Current:') }} <span id="spacingValue">10</span>{{ _('px') }}</div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="fontSize" class="form-label">{{ _('Font Size') }}</label>
-                                            <input type="range" class="form-range" id="fontSize" name="font_size" 
-                                                   min="12" max="72" value="23" step="1">
-                                            <div class="text-muted small">{{ _('Current:') }} <span id="fontSizeValue">23</span>{{ _('px') }}</div>
+                                        <label for="borderRadius" class="form-label">{{ _('Border Radius') }}</label>
+                                        <input type="range" class="form-range" id="borderRadius" min="0" max="25" value="13">
+                                        <div class="d-flex justify-content-between">
+                                            <span>0px</span>
+                                            <span>25px</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-
-                    <div class="card mb-3">
-                        <div class="card-header" role="button" data-bs-toggle="collapse" data-bs-target="#speedIndicatorSettings" aria-expanded="false" aria-controls="speedIndicatorSettings">
-                            <h5 class="mb-0 d-flex justify-content-between align-items-center">
-                                {{ _('Speed Indicator Display Settings') }}
-                                <i class="fas fa-chevron-down"></i>
-                            </h5>
-                        </div>
-                        <div id="speedIndicatorSettings" class="collapse">
-                            <div class="card-body">
-                                <div class="row">
+                    
+                    <!-- Speed Indicator Settings -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="speedIndicatorHeading">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#speedIndicatorCollapse" aria-expanded="false" aria-controls="speedIndicatorCollapse">
+                                {{ _('Speed Indicator Settings') }}
+                            </button>
+                        </h2>
+                        <div id="speedIndicatorCollapse" class="accordion-collapse collapse" aria-labelledby="speedIndicatorHeading">
+                            <div class="accordion-body">
+                                <div class="row g-3">
                                     <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="indicatorScale" class="form-label">{{ _('Indicator Scale') }}</label>
-                                            <input type="range" class="form-range" id="indicatorScale" name="indicator_scale" 
-                                                   min="10" max="100" value="50" step="5">
-                                            <div class="text-muted small">{{ _('Current:') }} <span id="indicatorScaleValue">50</span>%</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="indicatorX" class="form-label">{{ _('Indicator Horizontal Position') }}</label>
-                                            <input type="range" class="form-range" id="indicatorX" name="indicator_x" 
-                                                   min="-20" max="120" value="50" step="1">
-                                            <div class="text-muted small">{{ _('Current:') }} <span id="indicatorXValue">50</span>%</div>
+                                        <label for="indicatorX" class="form-label">{{ _('Horizontal Position') }}</label>
+                                        <input type="range" class="form-range" id="indicatorX" min="0" max="100" value="50">
+                                        <div class="d-flex justify-content-between">
+                                            <span>{{ _('Left') }}</span>
+                                            <span>{{ _('Right') }}</span>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="indicatorY" class="form-label">{{ _('Indicator Vertical Position') }}</label>
-                                            <input type="range" class="form-range" id="indicatorY" name="indicator_y" 
-                                                   min="-50" max="150" value="126" step="1">
-                                            <div class="text-muted small">{{ _('Current:') }} <span id="indicatorYValue">126</span>%</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="speedSize" class="form-label">{{ _('Speed Value Size') }}</label>
-                                            <input type="range" class="form-range" id="speedSize" name="speed_size" 
-                                                   min="50" max="200" value="75" step="5">
-                                            <div class="text-muted small">{{ _('Current:') }} <span id="speedSizeValue">75</span>%</div>
+                                        <label for="indicatorY" class="form-label">{{ _('Vertical Position') }}</label>
+                                        <input type="range" class="form-range" id="indicatorY" min="0" max="100" value="80">
+                                        <div class="d-flex justify-content-between">
+                                            <span>{{ _('Top') }}</span>
+                                            <span>{{ _('Bottom') }}</span>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="speedY" class="form-label">{{ _('Speed Text Vertical Offset') }}</label>
-                                            <input type="range" class="form-range" id="speedY" name="speed_y" 
-                                                   min="-100" max="100" value="-28" step="1">
-                                            <div class="text-muted small">{{ _('Current:') }} <span id="speedYValue">-28</span>{{ _('px') }}</div>
+                                        <label for="speedY" class="form-label">{{ _('Speed Vertical Offset') }}</label>
+                                        <input type="range" class="form-range" id="speedY" min="-50" max="50" value="0">
+                                        <div class="d-flex justify-content-between">
+                                            <span>-50px</span>
+                                            <span>+50px</span>
                                         </div>
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="unitSize" class="form-label">{{ _('Unit Text Size') }}</label>
-                                            <input type="range" class="form-range" id="unitSize" name="unit_size" 
-                                                   min="10" max="200" value="40" step="5">
-                                            <div class="text-muted small">{{ _('Current:') }} <span id="unitSizeValue">40</span>%</div>
-                                        </div>
+                                        <div class="text-muted small">{{ _('Current:') }} <span id="speedYValue">0</span>{{ _('px') }}</div>
                                     </div>
                                     <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="unitY" class="form-label">{{ _('Unit Text Vertical Offset') }}</label>
-                                            <input type="range" class="form-range" id="unitY" name="unit_y" 
-                                                   min="-100" max="100" value="36" step="1">
-                                            <div class="text-muted small">{{ _('Current:') }} <span id="unitYValue">36</span>{{ _('px') }}</div>
+                                        <label for="unitY" class="form-label">{{ _('Unit Vertical Offset') }}</label>
+                                        <input type="range" class="form-range" id="unitY" min="-50" max="50" value="0">
+                                        <div class="d-flex justify-content-between">
+                                            <span>-50px</span>
+                                            <span>+50px</span>
                                         </div>
+                                        <div class="text-muted small">{{ _('Current:') }} <span id="unitYValue">0</span>{{ _('px') }}</div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="speedSize" class="form-label">{{ _('Speed Size') }}</label>
+                                        <input type="range" class="form-range" id="speedSize" min="50" max="200" value="100">
+                                        <div class="d-flex justify-content-between">
+                                            <span>50%</span>
+                                            <span>200%</span>
+                                        </div>
+                                        <div class="text-muted small">{{ _('Current:') }} <span id="speedSizeValue">100</span>%</div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="unitSize" class="form-label">{{ _('Unit Size') }}</label>
+                                        <input type="range" class="form-range" id="unitSize" min="50" max="200" value="100">
+                                        <div class="d-flex justify-content-between">
+                                            <span>50%</span>
+                                            <span>200%</span>
+                                        </div>
+                                        <div class="text-muted small">{{ _('Current:') }} <span id="unitSizeValue">100</span>%</div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="indicatorScale" class="form-label">{{ _('Scale') }}</label>
+                                        <input type="range" class="form-range" id="indicatorScale" min="50" max="150" value="100">
+                                        <div class="d-flex justify-content-between">
+                                            <span>50%</span>
+                                            <span>150%</span>
+                                        </div>
+                                        <div class="text-muted small">{{ _('Current:') }} <span id="indicatorScaleValue">100</span>%</div>
                                     </div>
                                 </div>
                             </div>
@@ -368,20 +314,19 @@
                     </div>
 
                     <!-- New Telemetry Elements Visibility Settings -->
-                    <div class="card mb-3">
-                        <div class="card-header" role="button" data-bs-toggle="collapse" data-bs-target="#telemetryElementsSettings" aria-expanded="false" aria-controls="telemetryElementsSettings">
-                            <h5 class="mb-0 d-flex justify-content-between align-items-center">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="telemetryElementsHeading">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#telemetryElementsCollapse" aria-expanded="false" aria-controls="telemetryElementsCollapse">
                                 {{ _('Telemetry Elements Visibility') }}
-                                <i class="fas fa-chevron-down"></i>
-                            </h5>
-                        </div>
-                        <div id="telemetryElementsSettings" class="collapse">
-                            <div class="card-body">
+                            </button>
+                        </h2>
+                        <div id="telemetryElementsCollapse" class="accordion-collapse collapse" aria-labelledby="telemetryElementsHeading">
+                            <div class="accordion-body">
                                 <div class="row">
                                     <div class="col-md-6">
                                         <div class="mb-3">
                                             <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" id="showSpeed">
+                                                <input class="form-check-input" type="checkbox" id="showSpeed" checked>
                                                 <label class="form-check-label" for="showSpeed">
                                                     {{ _('Speed') }}
                                                 </label>
@@ -411,15 +356,9 @@
                                                 </label>
                                             </div>
                                             <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" id="showGPS" checked>
+                                                <input class="form-check-input" type="checkbox" id="showGPS">
                                                 <label class="form-check-label" for="showGPS">
                                                     {{ _('GPS') }}
-                                                </label>
-                                            </div>
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" id="showCurrent" checked>
-                                                <label class="form-check-label" for="showCurrent">
-                                                    {{ _('Current') }}
                                                 </label>
                                             </div>
                                         </div>
@@ -444,13 +383,16 @@
                                                     {{ _('Power') }}
                                                 </label>
                                             </div>
-                                        </div>
-                                        <hr>
-                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="showCurrent" checked>
+                                                <label class="form-check-label" for="showCurrent">
+                                                    {{ _('Current') }}
+                                                </label>
+                                            </div>
                                             <div class="form-check">
                                                 <input class="form-check-input" type="checkbox" id="showBottomElements" checked>
                                                 <label class="form-check-label" for="showBottomElements">
-                                                    {{ _('Bottom Elements (Arc and Speed)') }}
+                                                    {{ _('Bottom Elements') }}
                                                 </label>
                                             </div>
                                         </div>
@@ -459,23 +401,36 @@
                             </div>
                         </div>
                     </div>
-
-                    <button type="button" class="btn btn-success" id="startProcessButton">{{ _('Start Processing') }}</button>
                 </div>
 
-                <div id="progress" class="mt-4 d-none">
-                    <h4 id="progressTitle">{{ _('Processing...') }}</h4>
-                    <div class="progress">
-                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
-                             role="progressbar" style="width: 0%">0%</div>
+                <div class="row align-items-end">
+                    <div class="col-md-4 mb-3">
+                        <label for="codec" class="form-label">{{ _('Video Codec') }}</label>
+                        <select class="form-select" id="codec">
+                            <option value="h264" selected>{{ _('H.264 (Fast, Compatible)') }}</option>
+                            <option value="h265">{{ _('H.265 (Better quality, Slower)') }}</option>
+                        </select>
+                    </div>
+                    <div class="col-md-8 mb-3 d-grid">
+                        <button type="button" class="btn btn-success" id="startProcessButton">{{ _('Start Processing') }}</button>
                     </div>
                 </div>
 
-                <div id="videoProcessingInfo" class="mt-3 d-none">
-                    <p class="text-muted">
-                        {{ _('You can close your browser and come back later - the video processing will continue in the background.') }}
-                        {{ _('Alternatively, you can go to the Projects section to monitor the progress there.') }}
-                    </p>
+                <div id="processingProgress" style="display: none;" class="mt-4">
+                    <div class="d-flex justify-content-between mb-2">
+                        <h5 id="progressTitle">{{ _('Processing...') }}</h5>
+                        <button type="button" class="btn btn-sm btn-danger" id="stopProcessingButton">{{ _('Stop Processing') }}</button>
+                    </div>
+                    <div class="progress mb-2">
+                        <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <div id="progressDetails" class="small text-muted mb-2">
+                        <span id="framesProcessed">0</span> {{ _('frames of') }} <span id="totalFrames">0</span> (0%)
+                    </div>
+                    <div id="processingTime" class="small text-muted mb-2">
+                        {{ _('Processing time:') }} <span id="elapsedTime">0</span>
+                    </div>
+                    <div id="videoProcessingInfo" class="small text-muted"></div>
                 </div>
             </div>
         </div>
@@ -504,8 +459,27 @@
     </div>
 </div>
 
+<!-- Error Modal for CSV files that are too long -->
+<div class="modal fade" id="csvTooLongModal" tabindex="-1" aria-labelledby="csvTooLongModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="csvTooLongModalLabel">{{ _('Warning: CSV File Too Long') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="csvTooLongModalBody">
+                <!-- Error message will be inserted here by JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">{{ _('OK') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0"></script>
 <script src="{{ url_for('static', filename='js/upload.js') }}"></script>
 {% endblock %}
