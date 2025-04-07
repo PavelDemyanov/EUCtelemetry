@@ -1819,6 +1819,51 @@ def analyze_csv():
                             'icon': 'supertourist.svg'
                         })
             
+            # Check for "Strong rider" achievement - power value below -15000
+            if isinstance(processed_data, dict) and 'power' in processed_data:
+                # Get all power values
+                power_values = [float(val) for val in processed_data['power'] if not pd.isna(val)]
+                
+                # Check if any power value is below -15000
+                if power_values and min(power_values) < -15000:
+                    achievements.append({
+                        'id': 'strongrider',
+                        'title': 'Strong rider',
+                        'description': "You're a real clown — your EUC is off by more than 5 km/h in speed!",
+                        'icon': 'fat.svg'
+                    })
+            
+            # Check for "Clown" achievement - average difference between speed and GPS speed > 5 km/h
+            if isinstance(processed_data, dict) and 'speed' in processed_data and 'gps' in processed_data:
+                # Get speed and GPS speed values as pairs
+                speed_pairs = []
+                for i in range(len(processed_data['speed'])):
+                    if (i < len(processed_data['gps']) and 
+                        not pd.isna(processed_data['speed'][i]) and 
+                        not pd.isna(processed_data['gps'][i])):
+                        
+                        speed = float(processed_data['speed'][i])
+                        gps_speed = float(processed_data['gps'][i])
+                        
+                        # Only include if GPS speed is not zero
+                        if gps_speed > 0:
+                            speed_pairs.append((speed, gps_speed))
+                
+                # Check if we have valid pairs and not all GPS speeds are zero
+                if speed_pairs:
+                    # Calculate average difference
+                    differences = [abs(pair[0] - pair[1]) for pair in speed_pairs]
+                    avg_difference = sum(differences) / len(differences)
+                    
+                    # If average difference is greater than 5 km/h, add the achievement
+                    if avg_difference > 5:
+                        achievements.append({
+                            'id': 'clown',
+                            'title': 'Clown',
+                            'description': "You're a real clown — your EUC lies about the speed by more than 5 km/h!",
+                            'icon': 'clown.svg'
+                        })
+            
             # Return the processed data with achievements for visualization
             return jsonify({
                 'success': True,
