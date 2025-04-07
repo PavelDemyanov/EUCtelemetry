@@ -179,7 +179,6 @@ document.addEventListener('DOMContentLoaded', function() {
         pwm: window.gettext('%'),
         power: window.gettext('W')
     };
-
     // Function to create a linear chart with multiple datasets
     function createMultiChart(labels, datasets) {
         if (chartInstance) chartInstance.destroy(); // Destroy old chart if it exists
@@ -292,269 +291,62 @@ document.addEventListener('DOMContentLoaded', function() {
                                     const isHidden = meta.hidden;
                                     return {
                                         text: window.gettext(dataset.originalColumn.toLowerCase()),
-                                        fillStyle: isHidden ? '#555555' : dataset.borderColor,
-                                        strokeStyle: isHidden ? '#555555' : dataset.borderColor,
+                                        fillStyle: dataset.borderColor,
+                                        strokeStyle: dataset.borderColor,
                                         lineWidth: 2,
                                         hidden: isHidden,
                                         index: i,
-                                        fontColor: isHidden ? '#555555' : '#fff'
+                                        datasetIndex: i
                                     };
                                 });
-                            }
+                            },
+                            boxWidth: 20, // Legend marker width
+                            padding: 10, // Padding between legend items
+                            font: { size: 12 } // Legend font size
                         },
-                        onClick: (e, legendItem) => {
-                            // Toggle dataset visibility when clicking on legend
-                            const index = legendItem.index;
-                            const meta = chartInstance.getDatasetMeta(index);
-                            meta.hidden = !meta.hidden;
-                            chartInstance.update();
+                        onClick: (e, legendItem, legend) => {
+                            const index = legendItem.datasetIndex;
+                            const ci = legend.chart;
+                            const meta = ci.getDatasetMeta(index);
+                            meta.hidden = meta.hidden === null ? !ci.data.datasets[index].hidden : null;
+                            ci.update(); // Update chart
                         }
                     },
                     zoom: {
+                        zoom: {
+                            wheel: { enabled: true }, // Enable zoom with mouse wheel
+                            pinch: { enabled: true }, // Enable zoom with pinch
+                            mode: 'x', // Zoom only along X-axis
+                            speed: 100, // Zoom speed
+                            threshold: 2, // Zoom threshold
+                            sensitivity: 3 // Zoom sensitivity
+                        },
                         pan: {
                             enabled: true, // Enable panning
-                            mode: 'x', // Panning on X-axis
-                            rangeMin: { x: minTimestamp }, // Panning limits
-                            rangeMax: { x: maxTimestamp }
-                        },
-                        zoom: {
-                            wheel: { enabled: true }, // Zoom with mouse wheel
-                            pinch: { enabled: true }, // Zoom with gestures
-                            mode: 'x', // Zoom on X-axis
-                            limits: {
-                                x: {
-                                    min: minTimestamp, // Minimum X-axis limit
-                                    max: maxTimestamp, // Maximum X-axis limit
-                                    minRange: fullRange // Minimum visible range (not less than full X-axis)
-                                }
+                            mode: 'x', // Pan only along X-axis
+                            threshold: 10, // Minimum drag distance
+                            speed: 10, // Panning speed
+                            onPanStart: ({ chart }) => {
+                                isDragging = true;
+                                const scales = chart.scales;
+                                dragStartX = scales.x.min;
+                                chartStartMin = scales.x.min;
+                                chartStartMax = scales.x.max;
+                                return true; // Allow panning
                             }
+                        },
+                        limits: {
+                            x: { min: minTimestamp, max: maxTimestamp, minRange: fullRange * 0.01 } // Limits for X-axis
                         }
                     }
                 },
-                interaction: { mode: 'index', intersect: false } // Interaction mode for tooltips
-            }
-        });
-    }
-
-    // Function to plot chart based on all data columns
-    function plotAllColumns(data) {
-        if (!data) return;
-        const timestamps = data.map(row => row.timestamp); // Extract timestamps
-        const columns = Object.keys(data[0]).filter(col => col.toLowerCase() !== 'timestamp' && data.some(row => !isNaN(parseFloat(row[col]))));
-        const datasets = columns.map((column) => {
-            const originalValues = data.map(row => parseFloat(row[column]) || 0); // Original values
-            const normalizedValues = originalValues.map(value => normalizeValueForAdaptiveScale(value, column)); // Normalized values
-            return {
-                originalColumn: column, // Store original technical column name
-                label: window.gettext(column),
-                originalColumn: column, // Store original technical column name
-                data: isAdaptiveChart ? normalizedValues : originalValues, // Select data based on mode
-                originalData: originalValues // Save original data for tooltips
-            };
-        });
-        createMultiChart(timestamps, datasets); // Create chart
-        setupManualPanning(); // Setup manual panning
-    }
-
-    // Setup manual panning with mouse dragging
-    function setupManualPanning() {
-        const canvas = dataChart;
-        
-        // Handle mouse down event to start dragging
-        canvas.addEventListener('mousedown', function(e) {
-            if (e.button !== 0) return; // Only handle left button
-            isDragging = true;
-            dragStartX = e.offsetX;
-            chartStartMin = chartInstance.options.scales.x.min;
-            chartStartMax = chartInstance.options.scales.x.max;
-            canvas.style.cursor = 'grabbing';
-        });
-        
-        // Handle mouse move to pan the chart
-        canvas.addEventListener('mousemove', function(e) {
-            if (!isDragging) return;
-            
-            // Calculate drag distance
-            const diffX = e.offsetX - dragStartX;
-            const fullWidth = canvas.width;
-            const fullRange = chartStartMax - chartStartMin;
-            const shiftAmount = (diffX / fullWidth) * fullRange;
-            
-            // Apply pan if chart exists
-            if (chartInstance) {
-                chartInstance.options.scales.x.min = chartStartMin - shiftAmount;
-                chartInstance.options.scales.x.max = chartStartMax - shiftAmount;
-                chartInstance.update('none'); // Update without animation
-            }
-        });
-        
-        // End dragging on mouse up or mouse leave
-        const endDrag = function() {
-            if (isDragging) {
-                isDragging = false;
-                canvas.style.cursor = 'grab';
-            }
-        };
-        
-        canvas.addEventListener('mouseup', endDrag);
-        canvas.addEventListener('mouseleave', endDrag);
-    }
-
-    // Toggle between adaptive and original scale
-    if (adaptiveChartToggle) {
-        adaptiveChartToggle.addEventListener('change', function() {
-            isAdaptiveChart = this.checked;
-            if (csvData) {
-                plotAllColumns(csvData);
-            }
-        });
-    }
-
-    // Reset zoom button click handler
-    if (resetZoomButton) {
-        resetZoomButton.addEventListener('click', function() {
-            if (chartInstance) {
-                // Get original minimum and maximum timestamps
-                const minTimestamp = Math.min(...chartInstance.data.labels);
-                const maxTimestamp = Math.max(...chartInstance.data.labels);
-                
-                // Reset chart boundaries
-                chartInstance.options.scales.x.min = minTimestamp;
-                chartInstance.options.scales.x.max = maxTimestamp;
-                chartInstance.update();
-            }
-        });
-    }
-
-    // Process URL parameters
-    function processUrlParams() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const fileParam = urlParams.get('file');
-        if (fileParam) {
-            // Show loading indicator
-            loadingIndicator.style.display = 'block';
-            
-            // Fetch CSV data
-            fetch(`/analyze_csv?file=${encodeURIComponent(fileParam)}`)
-                .then(response => {
-                    if (!response.ok) {
-                        showError(window.gettext('Could not load the specified file'));
-                        return null;
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data && data.success && data.csv_data) {
-                        // Hide loading, show results
-                        loadingIndicator.style.display = 'none';
-                        analysisResults.style.display = 'block';
-                        
-                        // Parse data and create chart
-                        csvData = JSON.parse(data.csv_data);
-                        
-                        // Display achievements if available
-                        if (data.achievements) {
-                            displayAchievements(data.achievements);
-                        } else {
-                            achievementsSection.style.display = 'none';
-                        }
-                        
-                        plotAllColumns(csvData);
-                    } else if (data && data.error) {
-                        showError(data.error);
-                    }
-                })
-                .catch(error => {
-                    showError(window.gettext('An error occurred while processing the file'));
-                    console.error(error);
-                });
-        }
-    }
-
-    // Form submission handler for CSV upload
-    uploadForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        hideError();
-        
-        const formData = new FormData();
-        const file = csvFileInput.files[0];
-        
-        if (!file) {
-            showError(window.gettext('Please select a CSV file'));
-            return;
-        }
-        
-        formData.append('file', file);
-        
-        // Show loading indicator
-        loadingIndicator.style.display = 'block';
-        analysisResults.style.display = 'none';
-        
-        // Send request to the server
-        fetch('/analyze_csv', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(err => {
-                    throw new Error(err.error || 'Server error');
-                });
-            }
-            return response.json();
-        })
-        .then(data => {
-            // Parse JSON data from the server
-            if (data && data.success && data.csv_data) {
-                try {
-                    csvData = JSON.parse(data.csv_data);
-                    
-                    // Hide loading, show results
-                    loadingIndicator.style.display = "none";
-                    analysisResults.style.display = "block";
-                    
-                    // Display achievements if available
-                    if (data.achievements) {
-                        displayAchievements(data.achievements);
-                    } else {
-                        achievementsSection.style.display = "none";
-                    }
-                    
-                    // Plot the data
-                    plotAllColumns(csvData);
-                    // Plot the data
-                    plotAllColumns(csvData);
-                    
-                    // Add file parameter to URL without reloading
-                    const url = new URL(window.location);
-                    url.searchParams.set('file', data.file_id || 'uploaded');
-                    window.history.pushState({}, '', url);
-                    
-                } catch (e) {
-                    showError(window.gettext('Error parsing CSV data: ') + e.message);
-                    console.error('Error parsing CSV data:', e);
+                interaction: {
+                    mode: 'index', // Show tooltip for all datasets at current X position
+                    intersect: false, // No need for direct intersection with point
                 }
-            } else if (data && data.error) {
-                showError(data.error);
-            } else {
-                showError(window.gettext('Received invalid data format from server'));
-            }
-        })
-        .catch(error => {
-            showError(error.message || window.gettext('An error occurred while processing the file'));
-            console.error('Error:', error);
-        })
-        .finally(() => {
-            // Ensure loading indicator is hidden
-            if (analysisResults.style.display === 'none') {
-                loadingIndicator.style.display = 'none';
-            }
+            },
         });
-    });
-
-    // Process URL parameters on page load
-    processUrlParams();
-});
+    }
 
     // Function to display achievements
     function displayAchievements(achievements) {
@@ -567,47 +359,213 @@ document.addEventListener('DOMContentLoaded', function() {
         // Clear previous achievements
         achievementsContainer.innerHTML = '';
         
+        // Create a row for the achievements
+        const row = document.createElement('div');
+        row.className = 'row';
+        achievementsContainer.appendChild(row);
+        
         // Create achievement cards
         achievements.forEach(achievement => {
+            // Create column container - 4 columns on desktop (3 achievements per row), 12 on mobile (1 per row)
             const achievementDiv = document.createElement('div');
-            achievementDiv.className = 'col-md-4 col-lg-3 mb-3';
+            achievementDiv.className = 'col-md-4 col-12 mb-3';
             
+            // Create card container
             const card = document.createElement('div');
-            card.className = 'card h-100 text-center border-primary';
-            
-            const cardBody = document.createElement('div');
-            cardBody.className = 'card-body';
+            card.className = 'achievement-card';
             
             // Create achievement icon
-            const iconDiv = document.createElement('div');
-            iconDiv.className = 'mb-3';
             const icon = document.createElement('img');
             icon.src = `/static/icons/euc_man_pack/${achievement.icon}`;
             icon.alt = achievement.title;
-            icon.style.height = '100px';
-            iconDiv.appendChild(icon);
+            icon.className = 'achievement-icon';
+            
+            // Create content container
+            const content = document.createElement('div');
+            content.className = 'achievement-content';
             
             // Create achievement title
             const title = document.createElement('h5');
-            title.className = 'card-title';
+            title.className = 'achievement-title';
             title.textContent = achievement.title;
             
             // Create achievement description
             const description = document.createElement('p');
-            description.className = 'card-text';
+            description.className = 'achievement-description';
             description.textContent = achievement.description;
             
             // Assemble the card
-            cardBody.appendChild(iconDiv);
-            cardBody.appendChild(title);
-            cardBody.appendChild(description);
-            card.appendChild(cardBody);
+            content.appendChild(title);
+            content.appendChild(description);
+            card.appendChild(icon);
+            card.appendChild(content);
             achievementDiv.appendChild(card);
             
-            // Add to container
-            achievementsContainer.appendChild(achievementDiv);
+            // Add to row
+            row.appendChild(achievementDiv);
         });
         
         // Show achievements section
         achievementsSection.style.display = 'block';
     }
+    // Event listener for form submission
+    uploadForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Get the selected file
+        const file = csvFileInput.files[0];
+        if (!file) {
+            showError(window.gettext('Please select a CSV file to upload'));
+            return;
+        }
+        
+        // Check file size (warn if over 20MB)
+        const maxSizeMB = 20;
+        if (file.size > maxSizeMB * 1024 * 1024) {
+            if (!confirm(window.gettext('The file is larger than {0}MB, which may take a long time to process. Do you want to continue?').replace('{0}', maxSizeMB))) {
+                return;
+            }
+        }
+        
+        // Check file type (must be CSV)
+        if (file.type && !file.type.includes('csv') && !file.name.toLowerCase().endsWith('.csv')) {
+            showError(window.gettext('Please upload a CSV file'));
+            return;
+        }
+        
+        // UI updates for loading state
+        uploadButton.disabled = true;
+        hideError();
+        achievementsSection.style.display = 'none';
+        analysisResults.style.display = 'none';
+        loadingIndicator.style.display = 'block';
+        
+        // Create form data and send request
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        // Send AJAX request
+        fetch('/analyze_csv', {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => response.json())
+            .then(data => {
+                uploadButton.disabled = false;
+                loadingIndicator.style.display = 'none';
+                
+                if (data.error) {
+                    showError(data.error);
+                    return;
+                }
+                
+                try {
+                    if (!data.csv_data) {
+                        showError(window.gettext('No data returned from server'));
+                        return;
+                    }
+                    
+                    // Parse returned data
+                    const parsedData = JSON.parse(data.csv_data);
+                    
+                    // Ensure we have timestamp data
+                    if (!parsedData.timestamp || parsedData.timestamp.length === 0) {
+                        showError(window.gettext('No valid timestamp data found in the CSV file'));
+                        return;
+                    }
+                    
+                    // Store the data for future use (adaptive scaling)
+                    csvData = [];
+                    for (let i = 0; i < parsedData.timestamp.length; i++) {
+                        const row = {};
+                        Object.keys(parsedData).forEach(key => {
+                            if (parsedData[key][i] !== null && parsedData[key][i] !== undefined) {
+                                row[key] = parsedData[key][i];
+                            } else {
+                                row[key] = null;
+                            }
+                        });
+                        csvData.push(row);
+                    }
+                    
+                    // Prepare data for chart
+                    updateChart(parsedData);
+                    
+                    // Display achievements if available
+                    if (data.achievements) {
+                        displayAchievements(data.achievements);
+                    } else {
+                        achievementsSection.style.display = 'none';
+                    }
+                    
+                    // Show results
+                    analysisResults.style.display = 'block';
+                } catch (e) {
+                    console.error('Error processing data:', e);
+                    showError(window.gettext('Error processing data: ') + e.message);
+                }
+            })
+            .catch(error => {
+                console.error('Request error:', error);
+                uploadButton.disabled = false;
+                loadingIndicator.style.display = 'none';
+                showError(window.gettext('Error sending request: ') + error.message);
+            });
+    });
+    
+    // Event listener for adaptive chart toggle
+    adaptiveChartToggle.addEventListener('change', function() {
+        isAdaptiveChart = this.checked;
+        if (csvData) {
+            const parsedData = {};
+            
+            // Convert from array of objects to object of arrays (for chart)
+            Object.keys(csvData[0]).forEach(key => {
+                parsedData[key] = csvData.map(row => row[key]);
+            });
+            
+            updateChart(parsedData);
+        }
+    });
+    
+    // Event listener for reset zoom button
+    resetZoomButton.addEventListener('click', function() {
+        if (chartInstance) {
+            chartInstance.resetZoom();
+        }
+    });
+    
+    // Function to update chart with new data
+    function updateChart(data) {
+        if (!data.timestamp || data.timestamp.length === 0) return;
+        
+        const labels = data.timestamp;
+        const datasets = [];
+        
+        // Add datasets in specific order
+        const order = ['speed', 'gps', 'battery', 'voltage', 'current', 'power', 'pwm', 'temperature', 'mileage'];
+        
+        // Add available datasets in preferred order
+        order.forEach(key => {
+            if (data[key] && data[key].length > 0) {
+                const originalData = data[key];
+                
+                // Process data for chart (normalize if adaptive)
+                const chartData = originalData.map((value, i) => {
+                    if (value === null || value === undefined || isNaN(value)) return null;
+                    return normalizeValueForAdaptiveScale(parseFloat(value), key);
+                });
+                
+                datasets.push({
+                    label: window.gettext(key),
+                    data: chartData,
+                    originalData: originalData,
+                    originalColumn: key
+                });
+            }
+        });
+        
+        // Create multi-line chart with all datasets
+        createMultiChart(labels, datasets);
+    }
+});
