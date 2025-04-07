@@ -1355,10 +1355,12 @@ def email_campaigns():
 def view_campaign(campaign_id):
     """API endpoint to get campaign details for viewing"""
     campaign = EmailCampaign.query.get_or_404(campaign_id)
+    # Convert markdown to HTML for display
+    html_content = markdown_filter(campaign.html_content)
     return jsonify({
         'id': campaign.id,
         'subject': campaign.subject,
-        'html_content': campaign.html_content,
+        'html_content': html_content,
         'created_at': campaign.created_at.strftime('%Y-%m-%d %H:%M'),
         'recipients_count': campaign.recipients_count
     })
@@ -1720,3 +1722,22 @@ def analyze_csv():
                 os.rmdir(temp_dir)
         except Exception as e:
             logging.error(f"Error cleaning up temporary files: {str(e)}")
+# Add markdown preview route
+@app.route('/markdown-preview', methods=['POST'])
+def markdown_preview():
+    """Convert markdown to HTML for preview"""
+    try:
+        data = request.get_json()
+        if not data or 'markdown' not in data:
+            return jsonify({'error': 'No markdown content provided'}), 400
+            
+        markdown_text = data['markdown']
+        html_content = markdown_filter(markdown_text)
+        
+        return jsonify({
+            'success': True,
+            'html': html_content
+        })
+    except Exception as e:
+        logging.error(f"Error in markdown preview: {str(e)}")
+        return jsonify({'error': str(e)}), 500

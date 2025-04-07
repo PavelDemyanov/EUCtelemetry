@@ -156,7 +156,7 @@
         // Show preview section
         previewSection.classList.remove('d-none');
         
-        // Convert markdown to HTML
+        // Convert markdown to HTML using fetch
         fetch('/markdown-preview', {
             method: 'POST',
             headers: {
