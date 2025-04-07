@@ -157,7 +157,7 @@ document.addEventListener('DOMContentLoaded', function() {
         speed: { borderColor: '#0000FF', backgroundColor: 'rgba(0, 0, 255, 0.2)' },
         gps: { borderColor: '#00daff', backgroundColor: 'rgba(255, 165, 0, 0.2)' },
         voltage: { borderColor: '#800080', backgroundColor: 'rgba(128, 0, 128, 0.2)' },
-        temperature: { borderColor: '#FF00FF', backgroundColor: 'rgba(255, 0, 255, 0.2)' },
+        temperature: { borderColor: '#ffa8ff', backgroundColor: 'rgba(255, 0, 255, 0.2)' },
         current: { borderColor: '#FFFF00', backgroundColor: 'rgba(255, 255, 0, 0.2)' },
         battery: { borderColor: '#008000', backgroundColor: 'rgba(0, 128, 0, 0.2)' },
         mileage: { borderColor: '#FF8C00', backgroundColor: 'rgba(255, 140, 0, 0.2)' },
