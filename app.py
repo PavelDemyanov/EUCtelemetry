@@ -1897,6 +1897,15 @@ def analyze_csv():
                         'description': "You're very fast — you reached a speed of 90 km/h!",
                         'icon': 'speed.svg'
                     })
+                
+                # Check for "Super Fast" achievement - speed reached 100 km/h
+                if speed_values and max(speed_values) >= 100:
+                    achievements.append({
+                        'id': 'superfast',
+                        'title': 'Super Fast',
+                        'description': "You're super fast — you reached a speed of 100 km/h!",
+                        'icon': 'superspeed.svg'
+                    })
             
             # Check for "Suicidal madman" and "Dead" achievements - related to 100% PWM
             if isinstance(processed_data, dict) and 'pwm' in processed_data and 'speed' in processed_data and 'timestamp' in processed_data:
