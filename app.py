@@ -1349,6 +1349,20 @@ def email_campaigns():
     campaigns = EmailCampaign.query.order_by(EmailCampaign.created_at.desc()).all()
     return render_template('admin/email_campaigns.html', form=form, campaigns=campaigns)
 
+@app.route('/admin/campaign/<int:campaign_id>')
+@login_required
+@admin_required
+def view_campaign(campaign_id):
+    """API endpoint to get campaign details for viewing"""
+    campaign = EmailCampaign.query.get_or_404(campaign_id)
+    return jsonify({
+        'id': campaign.id,
+        'subject': campaign.subject,
+        'html_content': campaign.html_content,
+        'created_at': campaign.created_at.strftime('%Y-%m-%d %H:%M'),
+        'recipients_count': campaign.recipients_count
+    })
+
 with app.app_context():
     db.create_all()
 
