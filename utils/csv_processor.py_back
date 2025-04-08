@@ -316,43 +316,30 @@ def trim_csv_data(file_path, folder_number, start_timestamp, end_timestamp):
         raise
 
 
-
 def process_csv_file(file_path, folder_number=None, existing_csv_type=None, interpolate_values=True):
-    """Обрабатывает CSV-файл и сохраняет обработанные данные с уникальным идентификатором проекта.
-
-    Args:
-        file_path (str): Путь к исходному CSV-файлу.
-        folder_number (int, optional): Номер папки для создания уникального имени обработанного файла.
-        existing_csv_type (str, optional): Заданный тип CSV-файла, если известен.
-        interpolate_values (bool): Флаг для выполнения интерполяции числовых данных.
-
-    Returns:
-        tuple: (csv_type, processed_data) - тип CSV и словарь с обработанными данными.
-
-    Raises:
-        Exception: Если произошла ошибка при обработке файла.
-    """
+    """Process CSV file and save processed data with unique project identifier"""
     try:
-        # Создаем директорию для обработанных данных, если она не существует
+        # Create processed data directory if it doesn't exist
         os.makedirs('processed_data', exist_ok=True)
 
-        # Определяем путь для сохранения обработанного файла
+        # Define processed file path
         processed_csv_path = None
         if folder_number is not None:
             processed_csv_path = os.path.join('processed_data', f'project_{folder_number}_{os.path.basename(file_path)}')
 
-        # Проверяем, существует ли обработанный файл
+        # Check if processed file already exists
         if processed_csv_path and os.path.exists(processed_csv_path):
-            logging.info(f"Загружаем существующий обработанный CSV из {processed_csv_path}")
+            # Load existing processed data
+            logging.info(f"Loading existing processed CSV from {processed_csv_path}")
             df = pd.read_csv(processed_csv_path)
             csv_type = existing_csv_type or detect_csv_type(df)
-
-            # Для обработанных файлов устанавливаем тип по умолчанию
+            
+            # Для обработанных файлов установим тип по умолчанию
             if csv_type == 'processed':
-                csv_type = 'darnkessbot'  # Значение по умолчанию
-                logging.info("Используем 'darnkessbot' как тип по умолчанию для обработанного файла")
+                csv_type = 'darnkessbot'  # Используем как значение по умолчанию
+                logging.info("Using 'darnkessbot' as default type for processed file")
 
-            # Преобразуем DataFrame в словарь
+            # Convert DataFrame to dictionary format
             processed_data = {
                 'timestamp': df['timestamp'].tolist(),
                 'speed': df['speed'].tolist(),
@@ -366,65 +353,74 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
                 'power': df['power'].tolist()
             }
 
-            # Применяем интерполяцию, если требуется
+            # Apply interpolation if requested
             if interpolate_values:
                 columns_to_interpolate = ['speed', 'gps', 'voltage', 'temperature', 'current', 
-                                         'battery', 'mileage', 'pwm', 'power']
+                                      'battery', 'mileage', 'pwm', 'power']
                 processed_data = interpolate_numeric_data(processed_data, columns_to_interpolate)
 
-            # Удаляем последовательные дубликаты
+            # Remove consecutive duplicates
             processed_data = remove_consecutive_duplicates(processed_data)
             return csv_type, processed_data
 
-        # Если файла нет, обрабатываем CSV
+        # If file doesn't exist, process the CSV
+        # Get file size in MB before reading
         file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
-        logging.info(f"Размер CSV-файла: {file_size_mb:.2f} МБ")
-
-        # Определяем, используется ли функция для аналитики или генерации кадров
+        logging.info(f"CSV file size: {file_size_mb:.2f} MB")
+        
+        # For analytics, if the file is very large, use sampling to reduce load
+        # Check if this is being called from the analytics function or for frame generation
         is_analytics = folder_number is None
         sample_rate = 1
-
-        # Для больших файлов в аналитике используем выборку
-        if is_analytics and file_size_mb > 20:
+        
+        # If file is large and this is for analytics, use sampling
+        if is_analytics and file_size_mb > 20:  # If file is larger than 20MB
+            # Calculate sample rate based on file size
             sample_rate = max(1, int(file_size_mb / 20))
-            logging.info(f"Обнаружен большой CSV-файл. Используем выборку 1:{sample_rate}")
-
-            if file_size_mb > 100:  # Для файлов > 100 МБ используем обработку по частям
+            logging.info(f"Large CSV file detected. Using sample rate of 1:{sample_rate}")
+            
+            # Use pandas chunksize parameter to process file in chunks for large files
+            if file_size_mb > 100:  # Over 100MB, process in chunks
                 chunks = []
                 try:
-                    for chunk in pd.read_csv(file_path, chunksize=100000, encoding='utf-8'):
-                        chunks.append(chunk.iloc[::sample_rate])
+                    # Try UTF-8 encoding first
+                    for chunk in pd.read_csv(file_path, chunksize=100000, encoding='utf-8'):  # Process 100K rows at a time
+                        chunks.append(chunk.iloc[::sample_rate])  # Sample every Nth row
                 except UnicodeDecodeError:
-                    chunks = []
-                    for chunk in pd.read_csv(file_path, chunksize=100000, encoding='latin1'):
-                        chunks.append(chunk.iloc[::sample_rate])
-
+                    # Try latin1 encoding if UTF-8 fails
+                    chunks = []  # Reset chunks
+                    for chunk in pd.read_csv(file_path, chunksize=100000, encoding='latin1'):  # Process 100K rows at a time
+                        chunks.append(chunk.iloc[::sample_rate])  # Sample every Nth row
+                
+                # Combine chunks if any were processed
                 if chunks:
                     df = pd.concat(chunks)
                 else:
-                    raise ValueError("Не удалось прочитать CSV-файл с любой кодировкой")
+                    raise ValueError("Could not read CSV file with any encoding")
             else:
+                # Sample every Nth row for medium-sized files
                 try:
                     df = pd.read_csv(file_path, encoding='utf-8').iloc[::sample_rate]
                 except UnicodeDecodeError:
                     df = pd.read_csv(file_path, encoding='latin1').iloc[::sample_rate]
         else:
-            # Обычная обработка для небольших файлов или генерации кадров
+            # Normal processing for smaller files or frame generation
             try:
                 df = pd.read_csv(file_path, encoding='utf-8')
             except UnicodeDecodeError:
                 df = pd.read_csv(file_path, encoding='latin1')
+        
+        logging.info(f"Processing CSV file: {file_path}, rows after sampling: {len(df)}")
+        logging.info(f"CSV columns: {df.columns.tolist()}")
 
-        logging.info(f"Обработка CSV-файла: {file_path}, строк после выборки: {len(df)}")
-        logging.info(f"Столбцы CSV: {df.columns.tolist()}")
-
-        # Используем заданный тип или определяем автоматически
+        # Use existing type if provided, otherwise detect
         csv_type = existing_csv_type
         if csv_type is None:
             csv_type = detect_csv_type(df)
-            logging.info(f"Определённый тип CSV: {csv_type}")
+            logging.info(f"Detected CSV type: {csv_type}")
 
         if csv_type == 'processed':
+            # Данные уже в нужном формате, просто преобразуем их
             raw_data = {
                 'timestamp': df['timestamp'],
                 'speed': df['speed'],
@@ -437,24 +433,27 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
                 'pwm': df['pwm'],
                 'power': df['power']
             }
+            
+            # Для уже обработанных данных просто возвращаем их как есть
             processed_data = raw_data
+            # Устанавливаем дефолтный тип CSV
             csv_type = 'darnkessbot'
-
+            
         elif csv_type == 'darnkessbot':
-            # Для больших файлов используем векторизованный парсинг
-            if file_size_mb > 20:
-                df['timestamp'] = pd.to_datetime(
-                    df['Date'], 
-                    format='%d.%m.%Y %H:%M:%S.%f', 
-                    errors='coerce'
-                ).astype('int64') // 10**9
-                invalid_dates = df[df['timestamp'].isna()]['Date']
-                if not invalid_dates.empty:
-                    logging.warning(f"Найдено {len(invalid_dates)} некорректных дат, например: {invalid_dates.iloc[0]}")
+            # For large files, use vectorized operation instead of apply for better performance
+            file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
+            if file_size_mb > 20:  # Large file optimization
+                # Vectorized operation for timestamp conversion - much faster for large files
+                try:
+                    df['timestamp'] = pd.to_datetime(df['Date'], format='%d.%m.%Y %H:%M:%S.%f').astype('int64') // 10**9
+                except Exception as e:
+                    logging.warning(f"Vectorized timestamp conversion failed, falling back to apply method: {e}")
+                    df['timestamp'] = df['Date'].apply(parse_timestamp_darnkessbot)
             else:
+                # For smaller files, use the original method
                 df['timestamp'] = df['Date'].apply(parse_timestamp_darnkessbot)
-
-            # Фильтруем строки с некорректными временными метками
+                
+            # Filter out rows with invalid timestamps
             valid_timestamp_mask = df['timestamp'].notna()
             df = df[valid_timestamp_mask]
 
@@ -471,11 +470,13 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
                 'power': pd.to_numeric(df['Power'], errors='coerce')
             }
 
+            # Apply interpolation before cleaning if requested
             if interpolate_values:
                 columns_to_interpolate = ['speed', 'gps', 'voltage', 'temperature', 'current', 
-                                         'battery', 'mileage', 'pwm', 'power']
+                                      'battery', 'mileage', 'pwm', 'power']
                 raw_data = interpolate_numeric_data(raw_data, columns_to_interpolate)
 
+            # Clean and process the data
             processed_data = {
                 'timestamp': raw_data['timestamp'],
                 'speed': clean_numeric_column(pd.Series(raw_data['speed'])),
@@ -490,16 +491,23 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
             }
 
         else:  # wheellog
-            if file_size_mb > 20:
+            # For large files, use a more efficient method of timestamp conversion
+            file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
+            if file_size_mb > 20:  # Large file optimization
+                # Vectorized operation for timestamp conversion - much faster for large files
                 try:
+                    # Combine date and time columns
                     df['datetime_str'] = df['date'] + ' ' + df['time']
+                    # Use vectorized operation
                     df['timestamp'] = pd.to_datetime(df['datetime_str'], format='%Y-%m-%d %H:%M:%S.%f').astype('int64') // 10**9
                 except Exception as e:
-                    logging.warning(f"Ошибка векторизованного преобразования для wheellog, используем apply: {e}")
+                    logging.warning(f"Vectorized timestamp conversion failed for wheellog, falling back to apply method: {e}")
                     df['timestamp'] = df.apply(lambda x: parse_timestamp_wheellog(x['date'], x['time']), axis=1)
             else:
+                # For smaller files, use the original method
                 df['timestamp'] = df.apply(lambda x: parse_timestamp_wheellog(x['date'], x['time']), axis=1)
-
+                
+            # Filter out rows with invalid timestamps
             valid_timestamp_mask = df['timestamp'].notna()
             df = df[valid_timestamp_mask]
 
@@ -516,11 +524,13 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
                 'power': pd.to_numeric(df['power'], errors='coerce')
             }
 
+            # Apply interpolation before cleaning if requested
             if interpolate_values:
                 columns_to_interpolate = ['speed', 'gps', 'voltage', 'temperature', 'current', 
-                                         'battery', 'mileage', 'pwm', 'power']
+                                      'battery', 'mileage', 'pwm', 'power']
                 raw_data = interpolate_numeric_data(raw_data, columns_to_interpolate)
 
+            # Clean and process the data
             processed_data = {
                 'timestamp': raw_data['timestamp'],
                 'speed': clean_numeric_column(pd.Series(raw_data['speed'])),
@@ -534,17 +544,17 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
                 'power': clean_numeric_column(pd.Series(raw_data['power']))
             }
 
-        # Удаляем последовательные дубликаты
+        # Remove consecutive duplicates
         processed_data = remove_consecutive_duplicates(processed_data)
 
-        # Сохраняем обработанные данные, если указан folder_number
+        # Save processed data if folder_number is provided
         if processed_csv_path:
             processed_df = pd.DataFrame(processed_data)
             processed_df.to_csv(processed_csv_path, index=False)
-            logging.info(f"Сохранён обработанный CSV в {processed_csv_path}")
+            logging.info(f"Saved processed CSV to {processed_csv_path}")
 
         return csv_type, processed_data
 
     except Exception as e:
-        logging.error(f"Ошибка обработки CSV-файла: {e}")
+        logging.error(f"Error processing CSV file: {e}")
         raise
