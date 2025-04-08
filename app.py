@@ -603,22 +603,41 @@ def upload_file():
         project_name = generate_project_name()
 
     try:
+        # Защищаем имя файла и сохраняем
         filename = secure_filename(file.filename)
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(file_path)
+        
+        # Проверяем размер файла
+        file_size = os.path.getsize(file_path)
+        file_size_mb = file_size / (1024 * 1024)
+        logging.info(f"Uploaded CSV file size: {file_size_mb:.2f} MB")
+        
+        # Если файл слишком большой, выдаем предупреждение
+        if file_size_mb > 40:
+            logging.warning(f"Large file uploaded: {file_size_mb:.2f} MB")
 
         # Try to detect CSV type and validate format
         try:
             import pandas as pd
             # Try reading with different encodings
             try:
-                df = pd.read_csv(file_path, encoding='utf-8')
+                # Для больших файлов читаем только первые 1000 строк для валидации
+                if file_size_mb > 20:
+                    df = pd.read_csv(file_path, encoding='utf-8', nrows=1000)
+                else:
+                    df = pd.read_csv(file_path, encoding='utf-8')
             except UnicodeDecodeError:
                 try:
-                    df = pd.read_csv(file_path, encoding='latin1')
-                except:
+                    # Для больших файлов читаем только первые 1000 строк для валидации
+                    if file_size_mb > 20:
+                        df = pd.read_csv(file_path, encoding='latin1', nrows=1000)
+                    else:
+                        df = pd.read_csv(file_path, encoding='latin1')
+                except Exception as e:
+                    logging.error(f"Error reading file with latin1 encoding: {e}")
                     os.remove(file_path)
-                    return jsonify({'error': 'Invalid file encoding. Please ensure your CSV file is properly encoded.'}), 400
+                    return jsonify({'error': _('Invalid file encoding. Please ensure your CSV file is properly encoded.')}), 400
 
             # Check for DarknessBot format
             darkness_bot_columns = {'Date', 'Speed', 'GPS Speed', 'Voltage', 'Temperature', 
@@ -633,14 +652,15 @@ def upload_file():
 
             if not (is_darkness_bot or is_wheellog):
                 os.remove(file_path)
-                return jsonify({'error': 'Invalid CSV format. Please upload a CSV file from DarknessBot or WheelLog.'}), 400
+                return jsonify({'error': _('Invalid CSV format. Please upload a CSV file from DarknessBot or WheelLog.')}), 400
 
             csv_type = 'darnkessbot' if is_darkness_bot else 'wheellog'
+            logging.info(f"Detected CSV type: {csv_type}")
 
         except Exception as e:
             logging.error(f"Error validating CSV format: {str(e)}")
             os.remove(file_path)
-            return jsonify({'error': 'Invalid CSV file. Please upload a CSV file from DarknessBot or WheelLog.'}), 400
+            return jsonify({'error': _('Invalid CSV file. Please upload a CSV file from DarknessBot or WheelLog.')}), 400
 
         # Create project with detected type and user_id
         project = Project(
@@ -1737,22 +1757,26 @@ def analyze_csv():
                 csv_type = 'darnkessbot' if is_darkness_bot else 'wheellog'
             
             # Process the CSV file to get standardized data
-            csv_type, processed_data = process_csv_file(temp_file_path, interpolate_values=True)
-            
-            # Log the type of processed_data for debugging
-            logging.info(f"Processed data type: {type(processed_data)}")
-            if isinstance(processed_data, dict):
-                logging.info(f"Dict keys: {list(processed_data.keys())}")
-                if 'timestamp' in processed_data:
-                    logging.info(f"Timestamp data type: {type(processed_data['timestamp'])}")
-                    logging.info(f"Number of timestamps: {len(processed_data['timestamp'])}")
-                    
-                    # Thin out data for large datasets to prevent browser performance issues
-                    # Only thin out data for analytics (not for video generation)
-                    if len(processed_data['timestamp']) > 20000:
-                        from utils.csv_processor import thin_out_data
-                        processed_data = thin_out_data(processed_data, max_rows=20000)
-                        logging.info(f"Data thinned out for better performance, now {len(processed_data['timestamp'])} points")
+            try:
+                csv_type, processed_data = process_csv_file(temp_file_path, interpolate_values=True)
+                
+                # Log the type of processed_data for debugging
+                logging.info(f"Processed data type: {type(processed_data)}")
+                if isinstance(processed_data, dict):
+                    logging.info(f"Dict keys: {list(processed_data.keys())}")
+                    if 'timestamp' in processed_data:
+                        logging.info(f"Timestamp data type: {type(processed_data['timestamp'])}")
+                        logging.info(f"Number of timestamps: {len(processed_data['timestamp'])}")
+                        
+                        # Thin out data for large datasets to prevent browser performance issues
+                        # Only thin out data for analytics (not for video generation)
+                        if len(processed_data['timestamp']) > 20000:
+                            from utils.csv_processor import thin_out_data
+                            processed_data = thin_out_data(processed_data, max_rows=20000)
+                            logging.info(f"Data thinned out for better performance, now {len(processed_data['timestamp'])} points")
+            except FileNotFoundError as e:
+                logging.error(f"File not found error during CSV processing: {e}")
+                return jsonify({'error': gettext('File not found. The uploaded file may have been deleted or corrupted.')}), 404
             
             # Convert processed data to a list of dictionaries for JSON serialization
             serializable_data = []

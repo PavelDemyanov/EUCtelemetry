@@ -365,6 +365,10 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
     Raises:
         Exception: Если произошла ошибка при обработке файла.
     """
+    # Проверяем существование файла вначале
+    if not os.path.exists(file_path):
+        logging.error(f"CSV file not found: {file_path}")
+        raise FileNotFoundError(f"CSV file not found: {file_path}")
     try:
         # Создаем директорию для обработанных данных, если она не существует
         os.makedirs('processed_data', exist_ok=True)
