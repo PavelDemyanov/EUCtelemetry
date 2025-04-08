@@ -532,9 +532,23 @@ def register():
 
 @app.route('/confirm/<token>')
 def confirm_email(token):
+    # Добавляем логирование для отладки
+    logging.debug(f"Attempting to confirm email with token: {token}")
+    
     user = User.query.filter_by(email_confirmation_token=token).first()
-
+    
+    # Проверяем, найден ли пользователь с этим токеном
     if not user:
+        logging.debug(f"No user found with token: {token}")
+        # Попробуем найти любого пользователя с ожидающим подтверждением
+        users_waiting_confirmation = User.query.filter(
+            User.email_confirmation_token.isnot(None)
+        ).all()
+        logging.debug(f"Users waiting for confirmation: {len(users_waiting_confirmation)}")
+        if users_waiting_confirmation:
+            for u in users_waiting_confirmation:
+                logging.debug(f"User {u.email} has token: {u.email_confirmation_token}")
+        
         flash(_('Invalid confirmation link.'))
         return redirect(url_for('login'))
 
