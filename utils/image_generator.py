@@ -440,16 +440,6 @@ def generate_frames(csv_file,
 
 def find_nearest_values(df, timestamp, interpolate=True):
     """Find nearest or interpolated values for the given timestamp"""
-    # Сначала проверим, что у нас есть данные
-    if len(df) == 0:
-        return {
-            key: 0
-            for key in [
-                'speed', 'max_speed', 'gps', 'voltage', 'temperature',
-                'current', 'battery', 'mileage', 'pwm', 'power'
-            ]
-        }
-        
     # If timestamp is before the first data point, return zeros
     if timestamp < df['timestamp'].iloc[0]:
         return {
@@ -495,12 +485,6 @@ def find_nearest_values(df, timestamp, interpolate=True):
     after_idx = df[after_mask].index[0]
     before_idx = df[before_mask].index[-1]
 
-    # Безопасно получаем значения с заменой NaN на 0
-    def safe_int(value):
-        if pd.isna(value):
-            return 0
-        return int(value)
-
     # If exact match found or interpolation is disabled, return nearest values
     if before_idx == after_idx or not interpolate:
         use_idx = before_idx
@@ -509,6 +493,12 @@ def find_nearest_values(df, timestamp, interpolate=True):
                                                   'timestamp'] - timestamp:
             use_idx = after_idx
 
+        # Безопасная функция для преобразования в int
+        def safe_int(value):
+            if pd.isna(value):
+                return 0
+            return int(value)
+            
         # Безопасно получаем максимальную скорость
         speed_max = df.loc[:use_idx, 'speed'].max()
         if pd.isna(speed_max):
@@ -523,24 +513,15 @@ def find_nearest_values(df, timestamp, interpolate=True):
             'battery': safe_int(df.loc[use_idx, 'battery']),
             'mileage': safe_int(df.loc[use_idx, 'mileage']),
             'pwm': safe_int(df.loc[use_idx, 'pwm']),
-            'power': safe_int(df.loc[use_idx, 'power']),
-            'max_speed': int(speed_max)
+            'power': safe_int(df.loc[use_idx, 'power'])
         }
+        result['max_speed'] = int(speed_max)
         return result
 
     # Calculate interpolation factor
     t0 = df.loc[before_idx, 'timestamp']
     t1 = df.loc[after_idx, 'timestamp']
-    
-    # Защита от деления на ноль или очень маленькое число
-    time_diff = t1 - t0
-    if abs(time_diff) < 1e-6:  # Очень маленькая разница, избегаем деления на близкие к нулю значения
-        factor = 0.5  # Используем среднее значение
-    else:
-        factor = (timestamp - t0) / time_diff
-    
-    # Ограничиваем фактор интерполяции диапазоном [0, 1]
-    factor = max(0.0, min(1.0, factor))
+    factor = (timestamp - t0) / (t1 - t0)
 
     # Interpolate all numeric values
     result = {}
@@ -548,7 +529,7 @@ def find_nearest_values(df, timestamp, interpolate=True):
             'speed', 'gps', 'voltage', 'temperature', 'current', 'battery',
             'mileage', 'pwm', 'power'
     ]:
-        # Безопасно получаем значения для интерполяции
+        # Безопасно получаем значения для интерполяции 
         v0 = df.loc[before_idx, key]
         v1 = df.loc[after_idx, key]
         
