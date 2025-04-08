@@ -1122,6 +1122,11 @@ def update_user(user_id):
             user.email = data['email']
         if 'is_admin' in data:
             user.is_admin = bool(data['is_admin'])
+        if 'is_email_confirmed' in data:
+            user.is_email_confirmed = bool(data['is_email_confirmed'])
+            # If email confirmation is manually set by admin, clear token
+            if user.is_email_confirmed:
+                user.email_confirmation_token = None
 
         db.session.commit()
         return jsonify({

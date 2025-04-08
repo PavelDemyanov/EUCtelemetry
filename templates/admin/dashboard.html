@@ -118,7 +118,7 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <button class="btn btn-sm btn-primary" onclick="editUser({{ user.id }}, '{{ user.name }}', '{{ user.email }}', {{ user.is_admin|tojson }})">
+                                <button class="btn btn-sm btn-primary" onclick="editUser({{ user.id }}, '{{ user.name }}', '{{ user.email }}', {{ user.is_admin|tojson }}, {{ user.is_email_confirmed|tojson }})">
                                     <i class="fas fa-edit"></i> Edit
                                 </button>
                                 <button class="btn btn-sm btn-danger" onclick="confirmDeleteUser({{ user.id }}, '{{ user.email }}')">
@@ -261,6 +261,10 @@
                         <div class="mb-3 form-check">
                             <input type="checkbox" class="form-check-input" id="editUserIsAdmin">
                             <label class="form-check-label" for="editUserIsAdmin">Admin Access</label>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="editUserIsEmailConfirmed">
+                            <label class="form-check-label" for="editUserIsEmailConfirmed">Confirm Email Registration</label>
                         </div>
                     </form>
                 </div>
@@ -596,7 +600,7 @@ function updateUsersTable(users) {
                 '<span class="badge bg-secondary muted text-white">User</span>'}
             </td>
             <td>
-                <button class="btn btn-sm btn-primary" onclick="editUser(${user.id}, '${user.name}', '${user.email}', ${user.is_admin})">
+                <button class="btn btn-sm btn-primary" onclick="editUser(${user.id}, '${user.name}', '${user.email}', ${user.is_admin}, ${user.is_email_confirmed})">
                     <i class="fas fa-edit"></i> Edit
                 </button>
                 <button class="btn btn-sm btn-danger" onclick="confirmDeleteUser(${user.id}, '${user.email}')">
@@ -741,11 +745,12 @@ function updateData() {
 
 let userToDelete = null;
 
-function editUser(userId, name, email, isAdmin) {
+function editUser(userId, name, email, isAdmin, isEmailConfirmed) {
     document.getElementById('editUserId').value = userId;
     document.getElementById('editUserName').value = name;
     document.getElementById('editUserEmail').value = email;
     document.getElementById('editUserIsAdmin').checked = isAdmin;
+    document.getElementById('editUserIsEmailConfirmed').checked = isEmailConfirmed;
     new bootstrap.Modal(document.getElementById('editUserModal')).show();
 }
 
@@ -760,7 +765,8 @@ function saveUserChanges() {
     const data = {
         name: document.getElementById('editUserName').value,
         email: document.getElementById('editUserEmail').value,
-        is_admin: document.getElementById('editUserIsAdmin').checked
+        is_admin: document.getElementById('editUserIsAdmin').checked,
+        is_email_confirmed: document.getElementById('editUserIsEmailConfirmed').checked
     };
 
     fetch(`/admin/user/${userId}`, {
