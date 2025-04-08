@@ -6,36 +6,58 @@ import numpy as np
 
 def parse_timestamp_darnkessbot(date_str):
     try:
-        # Check if input is float
-        if isinstance(date_str, float):
+        # Check if input is float or None
+        if date_str is None or isinstance(date_str, float):
             return None
 
         # Convert to string if needed
         date_str = str(date_str).strip()
+        
+        # Быстрая проверка на пустую строку
+        if not date_str:
+            return None
+            
+        # Проверка на корректный формат без вызова datetime.strptime
+        # Ожидаемый формат: DD.MM.YYYY HH:MM:SS.fff
+        if len(date_str) < 10 or '.' not in date_str or ':' not in date_str:
+            return None
 
         # Try to parse the date string
         dt = datetime.strptime(date_str, '%d.%m.%Y %H:%M:%S.%f')
         return dt.timestamp()
     except (ValueError, TypeError) as e:
-        logging.error(f"Error parsing darnkessbot timestamp: {e}")
+        # Сокращаем количество повторяющихся логов ошибок
+        if "does not match format" not in str(e):
+            logging.error(f"Error parsing darnkessbot timestamp: {e}")
         return None
 
 def parse_timestamp_wheellog(date_str, time_str):
     try:
-        # Check if either input is float
-        if isinstance(date_str, float) or isinstance(time_str, float):
+        # Check if either input is None or float
+        if date_str is None or time_str is None or isinstance(date_str, float) or isinstance(time_str, float):
             return None
 
         # Convert to strings if needed
         date_str = str(date_str).strip()
         time_str = str(time_str).strip()
+        
+        # Быстрая проверка на пустые строки
+        if not date_str or not time_str:
+            return None
+            
+        # Предварительная проверка на корректный формат
+        # Ожидаемый формат: YYYY-MM-DD HH:MM:SS.fff
+        if len(date_str) < 10 or '-' not in date_str or len(time_str) < 8 or ':' not in time_str:
+            return None
 
         # Try to parse the date
         dt_str = f"{date_str} {time_str}"
         dt = datetime.strptime(dt_str, '%Y-%m-%d %H:%M:%S.%f')
         return dt.timestamp()
     except (ValueError, TypeError) as e:
-        logging.error(f"Error parsing wheellog timestamp: {e}")
+        # Сокращаем количество повторяющихся логов ошибок
+        if "does not match format" not in str(e):
+            logging.error(f"Error parsing wheellog timestamp: {e}")
         return None
 
 def detect_csv_type(df):
@@ -347,12 +369,34 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
             csv_type = 'darnkessbot'
             
         elif csv_type == 'darnkessbot':
-            # Parse timestamps and create a mask for valid timestamps
-            df['timestamp'] = df['Date'].apply(parse_timestamp_darnkessbot)
-            valid_timestamp_mask = df['timestamp'].notna()
-
-            # Filter out rows with invalid timestamps
-            df = df[valid_timestamp_mask]
+            # Parse timestamps using vectorized operations where possible
+            try:
+                # Предварительная фильтрация: отбрасываем строки с невалидными датами
+                # без использования apply к каждой строке
+                df = df[df['Date'].notna()]  # Отбрасываем None/NaN
+                
+                # Проверяем формат даты с помощью регулярных выражений (быстрее)
+                import re
+                date_pattern = re.compile(r'^\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}\.\d+$')
+                valid_format = df['Date'].astype(str).str.match(date_pattern)
+                df = df[valid_format]
+                
+                # Тогда применяем parse_timestamp_darnkessbot только к отфильтрованным строкам
+                # Это уменьшит количество строк для обработки
+                logging.info(f"Parsing timestamps for {len(df)} rows after filtering")
+                df['timestamp'] = df['Date'].apply(parse_timestamp_darnkessbot)
+                valid_timestamp_mask = df['timestamp'].notna()
+                
+                # Финальная фильтрация только тех строк, где timestamp был успешно создан
+                df = df[valid_timestamp_mask]
+                
+                logging.info(f"Successfully parsed {len(df)} timestamps")
+            except Exception as e:
+                logging.error(f"Error during timestamp parsing: {e}")
+                # Если что-то пошло не так, вернемся к старому методу
+                df['timestamp'] = df['Date'].apply(parse_timestamp_darnkessbot)
+                valid_timestamp_mask = df['timestamp'].notna()
+                df = df[valid_timestamp_mask]
 
             raw_data = {
                 'timestamp': df['timestamp'],
@@ -388,12 +432,36 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
             }
 
         else:  # wheellog
-            # Parse timestamps and create a mask for valid timestamps
-            df['timestamp'] = df.apply(lambda x: parse_timestamp_wheellog(x['date'], x['time']), axis=1)
-            valid_timestamp_mask = df['timestamp'].notna()
-
-            # Filter out rows with invalid timestamps
-            df = df[valid_timestamp_mask]
+            # Parse timestamps using vectorized operations where possible
+            try:
+                # Предварительная фильтрация: отбрасываем строки с невалидными датами
+                df = df[(df['date'].notna()) & (df['time'].notna())]  # Отбрасываем None/NaN
+                
+                # Проверяем формат даты и времени с помощью регулярных выражений (быстрее)
+                import re
+                date_pattern = re.compile(r'^\d{4}-\d{2}-\d{2}$')
+                time_pattern = re.compile(r'^\d{2}:\d{2}:\d{2}\.\d+$')
+                
+                valid_date_format = df['date'].astype(str).str.match(date_pattern)
+                valid_time_format = df['time'].astype(str).str.match(time_pattern)
+                
+                df = df[valid_date_format & valid_time_format]
+                
+                # Применяем parse_timestamp_wheellog только к отфильтрованным строкам
+                logging.info(f"Parsing timestamps for {len(df)} rows after filtering")
+                df['timestamp'] = df.apply(lambda x: parse_timestamp_wheellog(x['date'], x['time']), axis=1)
+                valid_timestamp_mask = df['timestamp'].notna()
+                
+                # Финальная фильтрация только тех строк, где timestamp был успешно создан
+                df = df[valid_timestamp_mask]
+                
+                logging.info(f"Successfully parsed {len(df)} timestamps")
+            except Exception as e:
+                logging.error(f"Error during wheellog timestamp parsing: {e}")
+                # Если что-то пошло не так, вернемся к старому методу
+                df['timestamp'] = df.apply(lambda x: parse_timestamp_wheellog(x['date'], x['time']), axis=1)
+                valid_timestamp_mask = df['timestamp'].notna()
+                df = df[valid_timestamp_mask]
 
             raw_data = {
                 'timestamp': df['timestamp'],

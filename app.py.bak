@@ -1788,14 +1788,13 @@ def analyze_csv():
             else:
                 return jsonify({'error': gettext('Error processing file: ') + str(error)}), 500
         
-        try:
-            csv_type, processed_data = result
-            
-            # Convert processed data to a list of dictionaries for JSON serialization
-            serializable_data = []
-            
-            # Check if processed_data is a dict or DataFrame and handle accordingly
-            if isinstance(processed_data, pd.DataFrame):
+        csv_type, processed_data = result
+        
+        # Convert processed data to a list of dictionaries for JSON serialization
+        serializable_data = []
+        
+        # Check if processed_data is a dict or DataFrame and handle accordingly
+        if isinstance(processed_data, pd.DataFrame):
                 # For DataFrame format
                 for _, row in processed_data.iterrows():
                     row_dict = {}
