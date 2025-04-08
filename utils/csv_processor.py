@@ -301,11 +301,11 @@ def interpolate_numeric_data(data, columns_to_interpolate):
                 # Replace infinite values with NaN
                 df[col] = df[col].replace([float('inf'), float('-inf')], np.nan)
 
-                # Fill NaN with 0 before interpolation
-                df[col] = df[col].fillna(0)
-
-                # Apply two-way interpolation
+                # Apply two-way interpolation (без предварительного заполнения нулями)
                 df[col] = df[col].interpolate(method='linear', limit_direction='both')
+                
+                # Заполняем оставшиеся NaN только после интерполяции
+                df[col] = df[col].fillna(0)
 
                 # Ensure all values are finite after interpolation
                 df[col] = df[col].replace([float('inf'), float('-inf')], 0)
