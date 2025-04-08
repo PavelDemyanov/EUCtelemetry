@@ -533,35 +533,51 @@ def register():
 @app.route('/confirm/<token>')
 def confirm_email(token):
     # Добавляем логирование для отладки
-    logging.debug(f"Attempting to confirm email with token: {token}")
+    logging.info(f"Attempting to confirm email with token: {token}")
     
+    # Проверим наличие пользователя с таким токеном
     user = User.query.filter_by(email_confirmation_token=token).first()
     
     # Проверяем, найден ли пользователь с этим токеном
     if not user:
-        logging.debug(f"No user found with token: {token}")
+        logging.info(f"No user found with token: {token}")
         # Попробуем найти любого пользователя с ожидающим подтверждением
         users_waiting_confirmation = User.query.filter(
             User.email_confirmation_token.isnot(None)
         ).all()
-        logging.debug(f"Users waiting for confirmation: {len(users_waiting_confirmation)}")
+        logging.info(f"Users waiting for confirmation: {len(users_waiting_confirmation)}")
         if users_waiting_confirmation:
             for u in users_waiting_confirmation:
-                logging.debug(f"User {u.email} has token: {u.email_confirmation_token}")
+                logging.info(f"User {u.email} has token: {u.email_confirmation_token}")
+                # Проверим, был ли проблемный токен URLEncoded
+                from urllib.parse import quote, unquote
+                quoted_token = quote(u.email_confirmation_token)
+                unquoted_token = unquote(token)
+                if quoted_token == token or unquoted_token == u.email_confirmation_token:
+                    logging.info(f"Match found with encoding differences: {u.email}")
+                    user = u
+                    break
         
-        flash(_('Invalid confirmation link.'))
-        return redirect(url_for('login'))
+        if not user:
+            flash(_('Invalid confirmation link.'))
+            return redirect(url_for('login'))
+    
+    logging.info(f"Found user: {user.email} with token: {user.email_confirmation_token}")
 
+    # Проверяем, не истек ли срок действия ссылки
     if user.email_confirmation_sent_at < datetime.utcnow() - timedelta(days=1):
+        logging.info(f"Token expired for user: {user.email}")
         flash(_('This confirmation link has expired. Please request a new confirmation email.'))
         # Вместо удаления пользователя, обнуляем токен подтверждения
         user.email_confirmation_token = None
         db.session.commit()
         return redirect(url_for('resend_confirmation'))
 
+    # Подтверждаем email пользователя
     user.is_email_confirmed = True
     user.email_confirmation_token = None
     db.session.commit()
+    logging.info(f"Email confirmed successfully for user: {user.email}")
 
     flash(_('Your email has been confirmed! You can now log in.'))
     return redirect(url_for('login'))
