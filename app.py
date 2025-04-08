@@ -391,6 +391,11 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
     form = LoginForm()
+    show_resend_option = False  # По умолчанию не показываем опцию повторной отправки
+    
+    # Проверяем, был ли передан запрос на отображение опции повторной отправки
+    email_needs_confirmation = request.args.get('email_needs_confirmation')
+    
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
         if user is None or not user.check_password(form.password.data) or not user.is_active:
@@ -398,10 +403,16 @@ def login():
             return redirect(url_for('login'))
         if not user.is_email_confirmed:
             flash(_('Please confirm your email address before logging in.'))
-            return redirect(url_for('login'))
+            # Добавляем параметр для показа опции повторной отправки
+            return redirect(url_for('login', email_needs_confirmation=1))
         login_user(user, remember=True)  # Remember user session for 6 months
         return redirect(url_for('index'))
-    return render_template('login.html', form=form)
+        
+    # Если пользователь ввел верные данные, но email не подтвержден - показать опцию
+    if email_needs_confirmation:
+        show_resend_option = True
+        
+    return render_template('login.html', form=form, show_resend_option=show_resend_option)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -460,12 +471,13 @@ def register():
                     
                     if send_email(existing_user.email, "Confirm Your Email Address", confirmation_html):
                         flash(_('Please check your email to complete registration.'))
+                        # Перенаправляем с параметром, чтобы показать опцию повторной отправки
+                        return redirect(url_for('login', email_needs_confirmation=1))
                     else:
                         flash(_('Error sending confirmation email. Please try registering again.'))
                         existing_user.is_active = False
                         db.session.commit()
-                    
-                    return redirect(url_for('login'))
+                        return redirect(url_for('login'))
                     
                 except Exception as e:
                     db.session.rollback()
@@ -522,13 +534,14 @@ def register():
 
             if send_email(user.email, "Confirm Your Email Address", confirmation_html):
                 flash(_('Please check your email to complete registration.'))
+                # Перенаправляем с параметром, чтобы показать опцию повторной отправки
+                return redirect(url_for('login', email_needs_confirmation=1))
             else:
                 flash(_('Error sending confirmation email. Please try registering again.'))
                 # Деактивировать пользователя вместо удаления 
                 user.is_active = False
                 db.session.commit()
-
-            return redirect(url_for('login'))
+                return redirect(url_for('login'))
 
         except Exception as e:
             db.session.rollback()

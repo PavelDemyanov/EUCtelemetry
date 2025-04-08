@@ -33,12 +33,14 @@
                     <p>{{ _("Don't have an account?") }} <a href="{{ url_for('register') }}">{{ _('Register') }}</a></p>
                 </div>
                 
+                {% if show_resend_option %}
                 <div class="alert alert-info">
                     <p class="mb-1"><i class="fas fa-envelope"></i> {{ _("Haven't received confirmation email or link expired?") }}</p>
                     <a href="{{ url_for('resend_confirmation') }}" class="btn btn-sm btn-primary mt-2">
                         <i class="fas fa-paper-plane"></i> {{ _('Resend confirmation email') }}
                     </a>
                 </div>
+                {% endif %}
             </div>
         </div>
     </div>
