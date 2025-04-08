@@ -603,41 +603,22 @@ def upload_file():
         project_name = generate_project_name()
 
     try:
-        # Защищаем имя файла и сохраняем
         filename = secure_filename(file.filename)
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(file_path)
-        
-        # Проверяем размер файла
-        file_size = os.path.getsize(file_path)
-        file_size_mb = file_size / (1024 * 1024)
-        logging.info(f"Uploaded CSV file size: {file_size_mb:.2f} MB")
-        
-        # Если файл слишком большой, выдаем предупреждение
-        if file_size_mb > 40:
-            logging.warning(f"Large file uploaded: {file_size_mb:.2f} MB")
 
         # Try to detect CSV type and validate format
         try:
             import pandas as pd
             # Try reading with different encodings
             try:
-                # Для больших файлов читаем только первые 1000 строк для валидации
-                if file_size_mb > 20:
-                    df = pd.read_csv(file_path, encoding='utf-8', nrows=1000)
-                else:
-                    df = pd.read_csv(file_path, encoding='utf-8')
+                df = pd.read_csv(file_path, encoding='utf-8')
             except UnicodeDecodeError:
                 try:
-                    # Для больших файлов читаем только первые 1000 строк для валидации
-                    if file_size_mb > 20:
-                        df = pd.read_csv(file_path, encoding='latin1', nrows=1000)
-                    else:
-                        df = pd.read_csv(file_path, encoding='latin1')
-                except Exception as e:
-                    logging.error(f"Error reading file with latin1 encoding: {e}")
+                    df = pd.read_csv(file_path, encoding='latin1')
+                except:
                     os.remove(file_path)
-                    return jsonify({'error': _('Invalid file encoding. Please ensure your CSV file is properly encoded.')}), 400
+                    return jsonify({'error': 'Invalid file encoding. Please ensure your CSV file is properly encoded.'}), 400
 
             # Check for DarknessBot format
             darkness_bot_columns = {'Date', 'Speed', 'GPS Speed', 'Voltage', 'Temperature', 
@@ -652,15 +633,14 @@ def upload_file():
 
             if not (is_darkness_bot or is_wheellog):
                 os.remove(file_path)
-                return jsonify({'error': _('Invalid CSV format. Please upload a CSV file from DarknessBot or WheelLog.')}), 400
+                return jsonify({'error': 'Invalid CSV format. Please upload a CSV file from DarknessBot or WheelLog.'}), 400
 
             csv_type = 'darnkessbot' if is_darkness_bot else 'wheellog'
-            logging.info(f"Detected CSV type: {csv_type}")
 
         except Exception as e:
             logging.error(f"Error validating CSV format: {str(e)}")
             os.remove(file_path)
-            return jsonify({'error': _('Invalid CSV file. Please upload a CSV file from DarknessBot or WheelLog.')}), 400
+            return jsonify({'error': 'Invalid CSV file. Please upload a CSV file from DarknessBot or WheelLog.'}), 400
 
         # Create project with detected type and user_id
         project = Project(
@@ -1757,26 +1737,15 @@ def analyze_csv():
                 csv_type = 'darnkessbot' if is_darkness_bot else 'wheellog'
             
             # Process the CSV file to get standardized data
-            try:
-                csv_type, processed_data = process_csv_file(temp_file_path, interpolate_values=True)
-                
-                # Log the type of processed_data for debugging
-                logging.info(f"Processed data type: {type(processed_data)}")
-                if isinstance(processed_data, dict):
-                    logging.info(f"Dict keys: {list(processed_data.keys())}")
-                    if 'timestamp' in processed_data:
-                        logging.info(f"Timestamp data type: {type(processed_data['timestamp'])}")
-                        logging.info(f"Number of timestamps: {len(processed_data['timestamp'])}")
-                        
-                        # Thin out data for large datasets to prevent browser performance issues
-                        # Only thin out data for analytics (not for video generation)
-                        if len(processed_data['timestamp']) > 20000:
-                            from utils.csv_processor import thin_out_data
-                            processed_data = thin_out_data(processed_data, max_rows=20000)
-                            logging.info(f"Data thinned out for better performance, now {len(processed_data['timestamp'])} points")
-            except FileNotFoundError as e:
-                logging.error(f"File not found error during CSV processing: {e}")
-                return jsonify({'error': gettext('File not found. The uploaded file may have been deleted or corrupted.')}), 404
+            csv_type, processed_data = process_csv_file(temp_file_path, interpolate_values=True)
+            
+            # Log the type of processed_data for debugging
+            logging.info(f"Processed data type: {type(processed_data)}")
+            if isinstance(processed_data, dict):
+                logging.info(f"Dict keys: {list(processed_data.keys())}")
+                if 'timestamp' in processed_data:
+                    logging.info(f"Timestamp data type: {type(processed_data['timestamp'])}")
+                    logging.info(f"Number of timestamps: {len(processed_data['timestamp'])}")
             
             # Convert processed data to a list of dictionaries for JSON serialization
             serializable_data = []
@@ -1824,25 +1793,10 @@ def analyze_csv():
             
             # Check for "Devil" achievement - max speed over 130 km/h
             max_speed = 0
-            try:
-                if isinstance(processed_data, dict) and 'speed' in processed_data:
-                    # Use an optimized approach for large datasets
-                    if len(processed_data['speed']) > 100000:
-                        # Process in chunks to reduce memory usage
-                        chunk_size = 20000
-                        chunks = [processed_data['speed'][i:i + chunk_size] for i in range(0, len(processed_data['speed']), chunk_size)]
-                        
-                        for chunk in chunks:
-                            chunk_max = max([float(val) for val in chunk if not pd.isna(val)], default=0)
-                            max_speed = max(max_speed, chunk_max)
-                    else:
-                        # For smaller datasets, use the original approach
-                        max_speed = max([float(val) for val in processed_data['speed'] if not pd.isna(val)], default=0)
-                elif isinstance(processed_data, pd.DataFrame):
-                    max_speed = processed_data['speed'].max()
-            except Exception as e:
-                logging.error(f"Error calculating max speed: {e}")
-                # Continue execution even if max speed calculation fails
+            if isinstance(processed_data, dict) and 'speed' in processed_data:
+                max_speed = max([float(val) for val in processed_data['speed'] if not pd.isna(val)], default=0)
+            elif isinstance(processed_data, pd.DataFrame):
+                max_speed = processed_data['speed'].max()
             
             if max_speed >= 130:
                 achievements.append({
@@ -1896,53 +1850,26 @@ def analyze_csv():
             
             # Check for "Strong rider" achievement - power value above 20000 or below -20000
             if isinstance(processed_data, dict) and 'power' in processed_data:
-                try:
-                    # Variables to track extreme values
-                    max_power = -float('inf')
-                    min_power = float('inf')
-                    
-                    # For large datasets, process in chunks to reduce memory usage
-                    if len(processed_data['power']) > 100000:
-                        # Process in chunks to reduce memory usage
-                        chunk_size = 20000
-                        chunks = [processed_data['power'][i:i + chunk_size] for i in range(0, len(processed_data['power']), chunk_size)]
-                        
-                        # Find max and min in each chunk
-                        for chunk in chunks:
-                            # Skip NaN values
-                            valid_values = [float(val) for val in chunk if not pd.isna(val)]
-                            if valid_values:
-                                max_power = max(max_power, max(valid_values))
-                                min_power = min(min_power, min(valid_values))
-                    else:
-                        # For smaller datasets, use the original approach
-                        power_values = [float(val) for val in processed_data['power'] if not pd.isna(val)]
-                        if power_values:
-                            max_power = max(power_values)
-                            min_power = min(power_values)
-                    
-                    # Only proceed if we found valid values (max_power was updated from -inf)
-                    if max_power > -float('inf'):
-                        # Check for "Strong rider" achievement - power value above 20000 or below -20000
-                        if max_power >= 20000 or min_power <= -20000:
-                            achievements.append({
-                                'id': 'strongrider',
-                                'title': 'Strong rider',
-                                'description': "You're a heavy, powerful rider — you managed to load the hub motor with 20,000 watts!",
-                                'icon': 'fat.svg'
-                            })
-                        
-                        # Check for "Godlike power" achievement - power value above 30000 or below -30000
-                        if max_power >= 30000 or min_power <= -30000:
-                            achievements.append({
-                                'id': 'godlikepower',
-                                'title': 'Godlike power',
-                                'description': "You're a godlike-force rider — you managed to load the hub motor with 30,000 watts!",
-                                'icon': 'superfat.svg'
-                            })
-                except Exception as e:
-                    logging.error(f"Error calculating power achievements: {e}")
-                    # Continue execution even if power calculation fails
+                # Get all power values
+                power_values = [float(val) for val in processed_data['power'] if not pd.isna(val)]
+                
+                # Check if any power value is above 20000 or below -20000
+                if power_values and (max(power_values) >= 20000 or min(power_values) <= -20000):
+                    achievements.append({
+                        'id': 'strongrider',
+                        'title': 'Strong rider',
+                        'description': "You're a heavy, powerful rider — you managed to load the hub motor with 20,000 watts!",
+                        'icon': 'fat.svg'
+                    })
+                
+                # Check for "Godlike power" achievement - power value above 30000 or below -30000
+                if power_values and (max(power_values) >= 30000 or min(power_values) <= -30000):
+                    achievements.append({
+                        'id': 'godlikepower',
+                        'title': 'Godlike power',
+                        'description': "You're a godlike-force rider — you managed to load the hub motor with 30,000 watts!",
+                        'icon': 'superfat.svg'
+                    })
             
             # Check for "Clown" achievement - average difference between speed and GPS speed > 5 km/h
             if isinstance(processed_data, dict) and 'speed' in processed_data and 'gps' in processed_data:

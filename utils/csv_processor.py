@@ -4,37 +4,6 @@ import logging
 import os
 import numpy as np
 
-def thin_out_data(data, max_rows=20000):
-    """Reduce the number of data points in the dataset to prevent client-side performance issues.
-    
-    Args:
-        data (dict): Dictionary with data columns
-        max_rows (int): Maximum number of rows to keep
-        
-    Returns:
-        dict: Thinned out data with approximately max_rows rows
-    """
-    if not data or 'timestamp' not in data:
-        return data
-    
-    # Get the current number of rows
-    current_rows = len(data['timestamp'])
-    
-    # Return original data if already below max_rows
-    if current_rows <= max_rows:
-        return data
-    
-    # Calculate sample rate to reduce to approximately max_rows
-    sample_rate = int(current_rows / max_rows) + 1
-    logging.info(f"Reducing data points from {current_rows} to approximately {current_rows/sample_rate} (sample rate 1:{sample_rate})")
-    
-    # Create new data with reduced points
-    result = {}
-    for k in data.keys():
-        result[k] = [data[k][i] for i in range(0, current_rows, sample_rate)]
-    
-    return result
-
 def parse_timestamp_darnkessbot(date_str):
     try:
         # Check if input is float
@@ -348,7 +317,7 @@ def trim_csv_data(file_path, folder_number, start_timestamp, end_timestamp):
 
 
 
-def process_csv_file(file_path, folder_number=None, existing_csv_type=None, interpolate_values=True, max_rows=None):
+def process_csv_file(file_path, folder_number=None, existing_csv_type=None, interpolate_values=True):
     """Обрабатывает CSV-файл и сохраняет обработанные данные с уникальным идентификатором проекта.
 
     Args:
@@ -356,8 +325,6 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
         folder_number (int, optional): Номер папки для создания уникального имени обработанного файла.
         existing_csv_type (str, optional): Заданный тип CSV-файла, если известен.
         interpolate_values (bool): Флаг для выполнения интерполяции числовых данных.
-        max_rows (int, optional): Максимальное количество строк для обработки. Если больше, данные будут
-                                прореживаться. По умолчанию None (без ограничений).
 
     Returns:
         tuple: (csv_type, processed_data) - тип CSV и словарь с обработанными данными.
@@ -365,10 +332,6 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
     Raises:
         Exception: Если произошла ошибка при обработке файла.
     """
-    # Проверяем существование файла вначале
-    if not os.path.exists(file_path):
-        logging.error(f"CSV file not found: {file_path}")
-        raise FileNotFoundError(f"CSV file not found: {file_path}")
     try:
         # Создаем директорию для обработанных данных, если она не существует
         os.makedirs('processed_data', exist_ok=True)
