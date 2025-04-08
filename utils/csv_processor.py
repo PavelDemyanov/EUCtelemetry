@@ -31,6 +31,61 @@ def parse_timestamp_darnkessbot(date_str):
             logging.error(f"Error parsing darnkessbot timestamp: {e}")
         return None
 
+# Векторизированная версия parse_timestamp_darnkessbot для обработки всей колонки сразу
+def parse_timestamps_darnkessbot_vectorized(date_series):
+    """
+    Векторизированная версия парсинга временных меток DarknessBot
+    Работает со всей серией дат вместо построковой обработки
+    """
+    try:
+        logging.info(f"Using vectorized timestamp parsing for {len(date_series)} rows")
+        
+        # Конвертируем в строки и удаляем пробелы
+        date_series = date_series.astype(str).str.strip()
+        
+        # Создаем маску для отбора только строк с корректным форматом
+        # Вместо проверки каждой строки отдельно, мы используем операции над всей серией
+        mask = (date_series.str.len() >= 10) & \
+               (date_series.str.contains('\.')) & \
+               (date_series.str.contains(':'))
+        
+        # Временная серия с NaT для невалидных форматов
+        timestamps = pd.Series([None] * len(date_series), index=date_series.index)
+        
+        # Выбираем только потенциально валидные строки для дальнейшей обработки
+        valid_dates = date_series[mask]
+        
+        if len(valid_dates) == 0:
+            logging.warning("No valid date strings found after filtering")
+            return timestamps
+            
+        logging.info(f"Parsing {len(valid_dates)} timestamps after initial filtering")
+        
+        # Конвертируем валидные строки в datetime объекты
+        try:
+            # Используем pd.to_datetime вместо поэлементного применения datetime.strptime
+            parsed_dates = pd.to_datetime(valid_dates, format='%d.%m.%Y %H:%M:%S.%f', errors='coerce')
+            
+            # Конвертируем datetime в unix timestamp (float)
+            valid_timestamps = parsed_dates.values.astype('datetime64[s]').astype(np.float64)
+            
+            # Обновляем только валидные строки в исходной серии
+            timestamps[mask] = valid_timestamps
+            
+            logging.info(f"Successfully parsed {(~timestamps.isna()).sum()} timestamps")
+            
+        except Exception as e:
+            logging.error(f"Error in vectorized timestamp parsing: {e}")
+            # Возвращаемся к построковой обработке в случае ошибок
+            return date_series.apply(parse_timestamp_darnkessbot)
+            
+        return timestamps
+    
+    except Exception as e:
+        logging.error(f"Unexpected error in vectorized timestamp parsing: {e}")
+        # В случае критической ошибки возвращаемся к обычному методу
+        return date_series.apply(parse_timestamp_darnkessbot)
+
 def parse_timestamp_wheellog(date_str, time_str):
     try:
         # Check if either input is None or float
@@ -59,6 +114,72 @@ def parse_timestamp_wheellog(date_str, time_str):
         if "does not match format" not in str(e):
             logging.error(f"Error parsing wheellog timestamp: {e}")
         return None
+
+# Векторизованная версия разбора временных меток WheelLog
+def parse_timestamps_wheellog_vectorized(date_series, time_series):
+    """
+    Векторизованная версия парсинга временных меток WheelLog
+    Работает со всей серией дат и времени вместо построковой обработки
+    """
+    try:
+        logging.info(f"Using vectorized wheellog timestamp parsing for {len(date_series)} rows")
+        
+        # Проверяем, что размеры совпадают
+        if len(date_series) != len(time_series):
+            logging.error(f"Date and time series lengths don't match: {len(date_series)} vs {len(time_series)}")
+            # Возвращаемся к построковой обработке
+            return pd.Series([parse_timestamp_wheellog(d, t) for d, t in zip(date_series, time_series)])
+        
+        # Конвертируем в строки и удаляем пробелы
+        date_series = date_series.astype(str).str.strip()
+        time_series = time_series.astype(str).str.strip()
+        
+        # Создаем маску для отбора только строк с корректным форматом
+        date_mask = (date_series.str.len() >= 10) & (date_series.str.contains('-'))
+        time_mask = (time_series.str.len() >= 8) & (time_series.str.contains(':'))
+        
+        # Общая маска для валидных дат и времени
+        mask = date_mask & time_mask
+        
+        # Временная серия с None для невалидных форматов
+        timestamps = pd.Series([None] * len(date_series), index=date_series.index)
+        
+        # Выбираем только потенциально валидные строки для дальнейшей обработки
+        valid_dates = date_series[mask]
+        valid_times = time_series[mask]
+        
+        if len(valid_dates) == 0:
+            logging.warning("No valid date/time strings found after filtering")
+            return timestamps
+            
+        logging.info(f"Parsing {len(valid_dates)} wheellog timestamps after initial filtering")
+        
+        # Создаем комбинированные строки даты-времени
+        combined_dt_strings = valid_dates + ' ' + valid_times
+        
+        try:
+            # Используем pd.to_datetime вместо поэлементного применения datetime.strptime
+            parsed_dates = pd.to_datetime(combined_dt_strings, format='%Y-%m-%d %H:%M:%S.%f', errors='coerce')
+            
+            # Конвертируем datetime в unix timestamp (float)
+            valid_timestamps = parsed_dates.values.astype('datetime64[s]').astype(np.float64)
+            
+            # Обновляем только валидные строки в исходной серии
+            timestamps.loc[mask] = valid_timestamps
+            
+            logging.info(f"Successfully parsed {(~timestamps.isna()).sum()} wheellog timestamps")
+            
+        except Exception as e:
+            logging.error(f"Error in vectorized wheellog timestamp parsing: {e}")
+            # Возвращаемся к построковой обработке в случае ошибок
+            return pd.Series([parse_timestamp_wheellog(d, t) for d, t in zip(date_series, time_series)])
+            
+        return timestamps
+    
+    except Exception as e:
+        logging.error(f"Unexpected error in vectorized wheellog timestamp parsing: {e}")
+        # В случае критической ошибки возвращаемся к обычному методу
+        return pd.Series([parse_timestamp_wheellog(d, t) for d, t in zip(date_series, time_series)])
 
 def detect_csv_type(df):
     """Detect CSV type based on column names"""
@@ -381,10 +502,12 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
                 valid_format = df['Date'].astype(str).str.match(date_pattern)
                 df = df[valid_format]
                 
-                # Тогда применяем parse_timestamp_darnkessbot только к отфильтрованным строкам
-                # Это уменьшит количество строк для обработки
+                # Тогда применяем векторизованную версию parse_timestamp_darnkessbot
+                # Это значительно быстрее для больших CSV-файлов
                 logging.info(f"Parsing timestamps for {len(df)} rows after filtering")
-                df['timestamp'] = df['Date'].apply(parse_timestamp_darnkessbot)
+                
+                # Используем векторизованную функцию вместо apply
+                df['timestamp'] = parse_timestamps_darnkessbot_vectorized(df['Date'])
                 valid_timestamp_mask = df['timestamp'].notna()
                 
                 # Финальная фильтрация только тех строк, где timestamp был успешно создан
@@ -447,9 +570,11 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
                 
                 df = df[valid_date_format & valid_time_format]
                 
-                # Применяем parse_timestamp_wheellog только к отфильтрованным строкам
+                # Применяем векторизованную функцию parse_timestamps_wheellog_vectorized
                 logging.info(f"Parsing timestamps for {len(df)} rows after filtering")
-                df['timestamp'] = df.apply(lambda x: parse_timestamp_wheellog(x['date'], x['time']), axis=1)
+                
+                # Используем векторизованную функцию вместо построчного apply
+                df['timestamp'] = parse_timestamps_wheellog_vectorized(df['date'], df['time'])
                 valid_timestamp_mask = df['timestamp'].notna()
                 
                 # Финальная фильтрация только тех строк, где timestamp был успешно создан

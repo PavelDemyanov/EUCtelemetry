@@ -1673,27 +1673,40 @@ def analyze_csv():
     """Process a CSV file for analytics and return data for charts"""
     # Import gettext function directly instead of using _ alias
     from flask_babel import gettext
-    import signal
+    import threading
     from functools import wraps
     
-    # Функция для установки таймаута выполнения
-    def timeout_handler(signum, frame):
-        raise TimeoutError("Processing timed out - file is too large or complex")
+    # Альтернативный механизм таймаута через потоки
+    class TimeoutError(Exception):
+        pass
         
     # Декоратор для функций с таймаутом
     def with_timeout(seconds=60):
         def decorator(func):
             @wraps(func)
             def wrapper(*args, **kwargs):
-                # Установка обработчика сигнала только на UNIX-системах (не Windows)
-                if os.name != 'nt':  # Если не Windows
-                    signal.signal(signal.SIGALRM, timeout_handler)
-                    signal.alarm(seconds)
-                try:
-                    return func(*args, **kwargs)
-                finally:
-                    if os.name != 'nt':  # Если не Windows
-                        signal.alarm(0)  # Отключаем сигнал
+                result = [None]
+                error = [None]
+                
+                def worker():
+                    try:
+                        result[0] = func(*args, **kwargs)
+                    except Exception as e:
+                        error[0] = e
+                
+                thread = threading.Thread(target=worker)
+                thread.daemon = True
+                thread.start()
+                thread.join(seconds)
+                
+                if thread.is_alive():
+                    # Таймаут истек, но поток все еще работает
+                    raise TimeoutError("Обработка прервана из-за превышения времени ожидания. Файл слишком большой или сложный.")
+                
+                if error[0] is not None:
+                    raise error[0]
+                    
+                return result[0]
             return wrapper
         return decorator
     
