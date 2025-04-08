@@ -518,13 +518,13 @@ def find_nearest_values(df, timestamp, interpolate=True):
         result['max_speed'] = int(speed_max)
         return result
 
-    # Calculate interpolation factor
+    # Calculate interpolation factor (восстанавливаем исходную логику)
     t0 = df.loc[before_idx, 'timestamp']
     t1 = df.loc[after_idx, 'timestamp']
     
-    # Проверка на NaN и защита от деления на ноль
-    if pd.isna(t0) or pd.isna(t1) or abs(t1 - t0) < 1e-6:
-        factor = 0.5  # Используем среднее значение
+    # Тут нужна только минимальная проверка для редких случаев деления на ноль
+    if t1 == t0:
+        factor = 0.5
     else:
         factor = (timestamp - t0) / (t1 - t0)
 
@@ -534,23 +534,26 @@ def find_nearest_values(df, timestamp, interpolate=True):
             'speed', 'gps', 'voltage', 'temperature', 'current', 'battery',
             'mileage', 'pwm', 'power'
     ]:
-        # Безопасно получаем значения для интерполяции 
+        # Получаем исходные значения
         v0 = df.loc[before_idx, key]
         v1 = df.loc[after_idx, key]
         
-        # Обрабатываем NaN значения
-        if pd.isna(v0):
-            v0 = 0.0
-        else:
-            v0 = float(v0)
-            
-        if pd.isna(v1):
-            v1 = 0.0
-        else:
-            v1 = float(v1)
-            
-        interpolated_value = v0 + factor * (v1 - v0)
-        result[key] = int(round(interpolated_value))
+        # Исходный код логики интерполяции с защитой от ошибок
+        try:
+            if pd.isna(v0) and pd.isna(v1):
+                result[key] = 0
+            elif pd.isna(v0):
+                result[key] = int(v1)
+            elif pd.isna(v1):
+                result[key] = int(v0)
+            else:
+                # Стандартная интерполяция для нормальных значений
+                interpolated_value = float(v0) + factor * (float(v1) - float(v0))
+                result[key] = int(round(interpolated_value))
+        except Exception as e:
+            # Безопасность последнего уровня
+            logging.warning(f"Interpolation error for {key}: {e}, using 0")
+            result[key] = 0
 
     # Безопасно вычисляем максимальную скорость
     speed_max = df.loc[:before_idx, 'speed'].max()
