@@ -393,11 +393,11 @@ def login():
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
-        if user is None or not user.check_password(form.password.data):
-            flash('Invalid email or password')
+        if user is None or not user.check_password(form.password.data) or not user.is_active:
+            flash(_('Invalid email or password'))
             return redirect(url_for('login'))
         if not user.is_email_confirmed:
-            flash('Please confirm your email address before logging in.')
+            flash(_('Please confirm your email address before logging in.'))
             return redirect(url_for('login'))
         login_user(user, remember=True)  # Remember user session for 6 months
         return redirect(url_for('index'))
@@ -409,8 +409,10 @@ def register():
         return redirect(url_for('index'))
     form = RegistrationForm()
     if form.validate_on_submit():
-        if User.query.filter_by(email=form.email.data).first():
-            flash('This email is already registered')
+        # Проверяем, существует ли активный пользователь с таким email
+        existing_user = User.query.filter_by(email=form.email.data).first()
+        if existing_user and existing_user.is_active:
+            flash(_('This email is already registered'))
             return redirect(url_for('register'))
 
         # Check if this is the first user
@@ -1065,10 +1067,12 @@ def resend_confirmation():
     form = ResendConfirmationForm()
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
-        if user and not user.is_email_confirmed:
+        if user and not user.is_email_confirmed and user.is_active:
             # Generate a new confirmation token
             confirmation_token = user.generate_email_confirmation_token()
-            user_locale = 'en'  # Default to English
+            
+            # Get user's preferred language or detect from browser
+            user_locale = user.locale or request.accept_languages.best_match(['en', 'ru']) or 'en'
             
             # Prepare email content based on locale
             confirmation_link = url_for('confirm_email', token=confirmation_token, _external=True)
@@ -1081,6 +1085,7 @@ def resend_confirmation():
                 <p>Эта ссылка будет действительна в течение 24 часов.</p>
                 <p>С наилучшими пожеланиями,<br>Команда EUCTelemetry</p>
                 """
+                subject = _("Подтвердите ваш адрес электронной почты")
             else:
                 confirmation_html = f"""
                 <h2>Confirm Your Registration</h2>
@@ -1090,8 +1095,9 @@ def resend_confirmation():
                 <p>This link will expire in 24 hours.</p>
                 <p>Best regards,<br>EUCTelemetry Team</p>
                 """
+                subject = _("Confirm Your Email Address")
 
-            if send_email(user.email, _("Confirm Your Email Address"), confirmation_html):
+            if send_email(user.email, subject, confirmation_html):
                 flash(_('New confirmation email sent. Please check your inbox.'))
             else:
                 flash(_('Error sending confirmation email. Please try again later.'))
@@ -1203,15 +1209,19 @@ def delete_admin_user(user_id):
                 return jsonify({'error': f'Failed to clean up files for project {project.id}'}), 500
             db.session.delete(project)
 
-        # Delete the user
-        db.session.delete(user)
+        # Instead of deleting the user, deactivate them
+        user.is_active = False
+        # Clear sensitive and authentication-related data
+        user.password_hash = None
+        user.email_confirmation_token = None
+        user.is_email_confirmed = False
         db.session.commit()
 
         return jsonify({'success': True})
 
     except Exception as e:
         db.session.rollback()
-        logging.error(f"Error deleting user: {str(e)}")
+        logging.error(f"Error deactivating user: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 import os
