@@ -521,7 +521,12 @@ def find_nearest_values(df, timestamp, interpolate=True):
     # Calculate interpolation factor
     t0 = df.loc[before_idx, 'timestamp']
     t1 = df.loc[after_idx, 'timestamp']
-    factor = (timestamp - t0) / (t1 - t0)
+    
+    # Проверка на NaN и защита от деления на ноль
+    if pd.isna(t0) or pd.isna(t1) or abs(t1 - t0) < 1e-6:
+        factor = 0.5  # Используем среднее значение
+    else:
+        factor = (timestamp - t0) / (t1 - t0)
 
     # Interpolate all numeric values
     result = {}
