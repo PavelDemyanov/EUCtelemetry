@@ -518,11 +518,11 @@ def find_nearest_values(df, timestamp, interpolate=True):
         result['max_speed'] = int(speed_max)
         return result
 
-    # Calculate interpolation factor (восстанавливаем исходную логику)
+    # Calculate interpolation factor
     t0 = df.loc[before_idx, 'timestamp']
     t1 = df.loc[after_idx, 'timestamp']
     
-    # Тут нужна только минимальная проверка для редких случаев деления на ноль
+    # Только защита от деления на ноль (редкий случай)
     if t1 == t0:
         factor = 0.5
     else:
@@ -534,26 +534,20 @@ def find_nearest_values(df, timestamp, interpolate=True):
             'speed', 'gps', 'voltage', 'temperature', 'current', 'battery',
             'mileage', 'pwm', 'power'
     ]:
-        # Получаем исходные значения
         v0 = df.loc[before_idx, key]
         v1 = df.loc[after_idx, key]
         
-        # Исходный код логики интерполяции с защитой от ошибок
-        try:
-            if pd.isna(v0) and pd.isna(v1):
-                result[key] = 0
-            elif pd.isna(v0):
-                result[key] = int(v1)
-            elif pd.isna(v1):
-                result[key] = int(v0)
-            else:
-                # Стандартная интерполяция для нормальных значений
-                interpolated_value = float(v0) + factor * (float(v1) - float(v0))
-                result[key] = int(round(interpolated_value))
-        except Exception as e:
-            # Безопасность последнего уровня
-            logging.warning(f"Interpolation error for {key}: {e}, using 0")
+        # Простая защита только для NaN значений, но не влияющая на интерполяцию
+        if pd.isna(v0) and pd.isna(v1):
             result[key] = 0
+        elif pd.isna(v0):
+            result[key] = int(v1)
+        elif pd.isna(v1):
+            result[key] = int(v0)
+        else:
+            # Оригинальная интерполяция без изменений
+            interpolated_value = v0 + factor * (v1 - v0)
+            result[key] = int(round(interpolated_value))
 
     # Безопасно вычисляем максимальную скорость
     speed_max = df.loc[:before_idx, 'speed'].max()
