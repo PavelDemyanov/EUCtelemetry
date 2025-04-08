@@ -292,54 +292,51 @@ document.addEventListener('DOMContentLoaded', function() {
                                     const isHidden = meta.hidden;
                                     return {
                                         text: window.gettext(dataset.originalColumn.toLowerCase()),
-                                        fillStyle: dataset.borderColor,
-                                        strokeStyle: dataset.borderColor,
+                                        fillStyle: isHidden ? '#555555' : dataset.borderColor,
+                                        strokeStyle: isHidden ? '#555555' : dataset.borderColor,
                                         lineWidth: 2,
                                         hidden: isHidden,
                                         index: i,
-                                        datasetIndex: i
+                                        fontColor: isHidden ? '#555555' : '#fff'
                                     };
                                 });
-                            },
-                            usePointStyle: true, // Use point style in legend
-                            padding: 15 // Space between legend items
+                            }
                         },
-                        onClick: (e, legendItem, legend) => {
-                            // Toggle dataset visibility on legend click
-                            const index = legendItem.datasetIndex;
+                        onClick: (e, legendItem) => {
+                            // Toggle dataset visibility when clicking on legend
+                            const index = legendItem.index;
                             const meta = chartInstance.getDatasetMeta(index);
-                            meta.hidden = meta.hidden === null ? !chartInstance.data.datasets[index].hidden : null;
+                            meta.hidden = !meta.hidden;
                             chartInstance.update();
                         }
                     },
                     zoom: {
                         pan: {
                             enabled: true, // Enable panning
-                            mode: 'x', // Only X-axis
-                            threshold: 10 // Minimum distance to start panning
+                            mode: 'x', // Panning on X-axis
+                            rangeMin: { x: minTimestamp }, // Panning limits
+                            rangeMax: { x: maxTimestamp }
                         },
                         zoom: {
-                            wheel: { enabled: true, speed: 0.1 }, // Enable zoom with mouse wheel
-                            pinch: { enabled: true }, // Enable zoom with touch pinch
-                            mode: 'x', // Only X-axis
-                            onZoomComplete: () => {
-                                isDragging = false; // Reset dragging state
-                            }
-                        },
-                        limits: {
-                            x: {
-                                min: minTimestamp, // Minimum X-axis value
-                                max: maxTimestamp, // Maximum X-axis value
-                                minRange: (maxTimestamp - minTimestamp) / 100 // Minimum range to prevent zooming too far
+                            wheel: { enabled: true }, // Zoom with mouse wheel
+                            pinch: { enabled: true }, // Zoom with gestures
+                            mode: 'x', // Zoom on X-axis
+                            limits: {
+                                x: {
+                                    min: minTimestamp, // Minimum X-axis limit
+                                    max: maxTimestamp, // Maximum X-axis limit
+                                    minRange: fullRange // Minimum visible range (not less than full X-axis)
+                                }
                             }
                         }
                     }
-                }
+                },
+                interaction: { mode: 'index', intersect: false } // Interaction mode for tooltips
             }
         });
     }
 
-    // Function to plot all columns in the CSV data
+    // Function to plot chart based on all data columns
     function plotAllColumns(data) {
         if (!data) return;
         const timestamps = data.map(row => row.timestamp); // Extract timestamps
@@ -348,8 +345,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const originalValues = data.map(row => parseFloat(row[column]) || 0); // Original values
             const normalizedValues = originalValues.map(value => normalizeValueForAdaptiveScale(value, column)); // Normalized values
             return {
-                originalColumn: column, // Store original technical column name
                 label: window.gettext(column),
+                originalColumn: column, // Store original technical column name
                 data: isAdaptiveChart ? normalizedValues : originalValues, // Select data based on mode
                 originalData: originalValues // Save original data for tooltips
             };
@@ -380,96 +377,100 @@ document.addEventListener('DOMContentLoaded', function() {
             const diffX = e.offsetX - dragStartX;
             const fullWidth = canvas.width;
             const fullRange = chartStartMax - chartStartMin;
+            const shiftAmount = (diffX / fullWidth) * fullRange;
             
-            // Calculate new X-axis limits
-            const pixelsPerUnit = fullWidth / fullRange;
-            const unitsToMove = diffX / pixelsPerUnit;
-            
-            // Update chart X-axis limits
-            const newMin = chartStartMin - unitsToMove;
-            const newMax = chartStartMax - unitsToMove;
-            
-            // Apply new limits
+            // Apply pan if chart exists
             if (chartInstance) {
-                chartInstance.options.scales.x.min = newMin;
-                chartInstance.options.scales.x.max = newMax;
+                chartInstance.options.scales.x.min = chartStartMin - shiftAmount;
+                chartInstance.options.scales.x.max = chartStartMax - shiftAmount;
                 chartInstance.update('none'); // Update without animation
             }
         });
         
-        // Handle mouse up and mouse leave to stop dragging
-        const stopDragging = function() {
-            if (!isDragging) return;
-            isDragging = false;
-            canvas.style.cursor = 'auto';
+        // End dragging on mouse up or mouse leave
+        const endDrag = function() {
+            if (isDragging) {
+                isDragging = false;
+                canvas.style.cursor = 'grab';
+            }
         };
         
-        canvas.addEventListener('mouseup', stopDragging);
-        canvas.addEventListener('mouseleave', stopDragging);
+        canvas.addEventListener('mouseup', endDrag);
+        canvas.addEventListener('mouseleave', endDrag);
     }
-    
-    // Function to toggle adaptive chart scale
-    function toggleAdaptiveChart() {
-        isAdaptiveChart = !isAdaptiveChart; // Toggle flag
-        adaptiveChartToggle.classList.toggle('active', isAdaptiveChart); // Update button appearance
-        if (csvData) {
-            plotAllColumns(csvData); // Redraw chart with new scale
-        }
-    }
-    
-    // Function to reset chart zoom
-    function resetChartZoom() {
-        if (chartInstance) {
-            chartInstance.resetZoom(); // Reset to original view
-        }
-    }
-    
-    // Attach event handlers
-    adaptiveChartToggle.addEventListener('click', toggleAdaptiveChart);
-    resetZoomButton.addEventListener('click', resetChartZoom);
-    
-    // Function to display achievements
-    function displayAchievements(achievements) {
-        if (!achievements || !achievements.length) {
-            achievementsSection.style.display = "none";
-            return;
-        }
-        
-        // Clear existing achievements
-        achievementsContainer.innerHTML = '';
-        
-        // Create achievement cards
-        achievements.forEach(achievement => {
-            const card = document.createElement('div');
-            card.className = 'achievement-card';
-            
-            const icon = document.createElement('img');
-            icon.src = achievement.icon || '/static/icons/euc_man_pack/default.svg';
-            icon.alt = achievement.name;
-            
-            const details = document.createElement('div');
-            details.className = 'achievement-details';
-            
-            const title = document.createElement('h3');
-            title.textContent = achievement.name;
-            
-            const description = document.createElement('p');
-            description.textContent = achievement.description;
-            
-            details.appendChild(title);
-            details.appendChild(description);
-            
-            card.appendChild(icon);
-            card.appendChild(details);
-            
-            achievementsContainer.appendChild(card);
+
+    // Toggle between adaptive and original scale
+    if (adaptiveChartToggle) {
+        adaptiveChartToggle.addEventListener('change', function() {
+            isAdaptiveChart = this.checked;
+            if (csvData) {
+                plotAllColumns(csvData);
+            }
         });
-        
-        // Show achievements section
-        achievementsSection.style.display = "block";
     }
-    
-    // Handle form submission
+
+    // Reset zoom button click handler
+    if (resetZoomButton) {
+        resetZoomButton.addEventListener('click', function() {
+            if (chartInstance) {
+                // Get original minimum and maximum timestamps
+                const minTimestamp = Math.min(...chartInstance.data.labels);
+                const maxTimestamp = Math.max(...chartInstance.data.labels);
+                
+                // Reset chart boundaries
+                chartInstance.options.scales.x.min = minTimestamp;
+                chartInstance.options.scales.x.max = maxTimestamp;
+                chartInstance.update();
+            }
+        });
+    }
+
+    // Process URL parameters
+    function processUrlParams() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const fileParam = urlParams.get('file');
+        if (fileParam) {
+            // Show loading indicator
+            loadingIndicator.style.display = 'block';
+            
+            // Fetch CSV data
+            fetch(`/analyze_csv?file=${encodeURIComponent(fileParam)}`)
+                .then(response => {
+                    if (!response.ok) {
+                        showError(window.gettext('Could not load the specified file'));
+                        return null;
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data && data.success && data.csv_data) {
+                        // Hide loading, show results
+                        loadingIndicator.style.display = 'none';
+                        analysisResults.style.display = 'block';
+                        
+                        // Parse data and create chart
+                        csvData = JSON.parse(data.csv_data);
+                        
+                        // Display achievements if available
+                        if (data.achievements) {
+                            displayAchievements(data.achievements);
+                        } else {
+                            achievementsSection.style.display = 'none';
+                        }
+                        
+                        plotAllColumns(csvData);
+                    } else if (data && data.error) {
+                        showError(data.error);
+                    }
+                })
+                .catch(error => {
+                    showError(window.gettext('An error occurred while processing the file'));
+                    console.error(error);
+                });
+        }
+    }
+
+    // Form submission handler for CSV upload
     uploadForm.addEventListener('submit', function(e) {
         e.preventDefault();
         hideError();
@@ -518,12 +519,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         achievementsSection.style.display = "none";
                     }
                     
-                    // Plot the data (only once)
-                    plotAllColumns(csvData);
-                    
-                    // Add file parameter to URL without reloading
                     const url = new URL(window.location);
                     url.searchParams.set('file', data.file_id || 'uploaded');
+                    // Add file parameter to URL without reloading
                     window.history.pushState({}, '', url);
                     
                 } catch (e) {
@@ -548,11 +546,62 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Initial setup - look for file_id in URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const fileId = urlParams.get('file');
-    
-    if (fileId) {
-        // TODO: Add functionality to load previously analyzed file if needed
-    }
+    // Process URL parameters on page load
+    processUrlParams();
 });
+
+    // Function to display achievements
+    function displayAchievements(achievements) {
+        // Hide achievements section if no achievements to display
+        if (!achievements || achievements.length === 0) {
+            achievementsSection.style.display = 'none';
+            return;
+        }
+        
+        // Clear previous achievements
+        achievementsContainer.innerHTML = '';
+        
+        // Create achievement cards
+        achievements.forEach(achievement => {
+            const achievementDiv = document.createElement('div');
+            achievementDiv.className = 'col-md-4 col-lg-3 mb-3';
+            
+            const card = document.createElement('div');
+            card.className = 'card h-100 text-center border-primary';
+            
+            const cardBody = document.createElement('div');
+            cardBody.className = 'card-body';
+            
+            // Create achievement icon
+            const iconDiv = document.createElement('div');
+            iconDiv.className = 'mb-3';
+            const icon = document.createElement('img');
+            icon.src = `/static/icons/euc_man_pack/${achievement.icon}`;
+            icon.alt = achievement.title;
+            icon.style.height = '100px';
+            iconDiv.appendChild(icon);
+            
+            // Create achievement title
+            const title = document.createElement('h5');
+            title.className = 'card-title';
+            title.textContent = achievement.title;
+            
+            // Create achievement description
+            const description = document.createElement('p');
+            description.className = 'card-text';
+            description.textContent = achievement.description;
+            
+            // Assemble the card
+            cardBody.appendChild(iconDiv);
+            cardBody.appendChild(title);
+            cardBody.appendChild(description);
+            card.appendChild(cardBody);
+            achievementDiv.appendChild(card);
+            
+            // Add to container
+            achievementsContainer.appendChild(achievementDiv);
+        });
+        
+        // Show achievements section
+        achievementsSection.style.display = 'block';
+    }
