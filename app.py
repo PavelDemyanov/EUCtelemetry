@@ -1056,6 +1056,53 @@ def change_password():
             flash('Current password is incorrect')
     return redirect(url_for('profile'))
 
+@app.route('/resend_confirmation', methods=['GET', 'POST'])
+def resend_confirmation():
+    """Handle resending confirmation email for users whose link expired"""
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
+    form = ResendConfirmationForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first()
+        if user and not user.is_email_confirmed:
+            # Generate a new confirmation token
+            confirmation_token = user.generate_email_confirmation_token()
+            user_locale = 'en'  # Default to English
+            
+            # Prepare email content based on locale
+            confirmation_link = url_for('confirm_email', token=confirmation_token, _external=True)
+            if user_locale == 'ru':
+                confirmation_html = f"""
+                <h2>Подтвердите регистрацию</h2>
+                <p>Здравствуйте, {user.name},</p>
+                <p>Спасибо за регистрацию в EUCTelemetry. Пожалуйста, нажмите на ссылку ниже, чтобы подтвердить ваш email:</p>
+                <p><a href="{confirmation_link}">{confirmation_link}</a></p>
+                <p>Эта ссылка будет действительна в течение 24 часов.</p>
+                <p>С наилучшими пожеланиями,<br>Команда EUCTelemetry</p>
+                """
+            else:
+                confirmation_html = f"""
+                <h2>Confirm Your Registration</h2>
+                <p>Hello {user.name},</p>
+                <p>Thank you for registering with EUCTelemetry. Please click the link below to confirm your email address:</p>
+                <p><a href="{confirmation_link}">{confirmation_link}</a></p>
+                <p>This link will expire in 24 hours.</p>
+                <p>Best regards,<br>EUCTelemetry Team</p>
+                """
+
+            if send_email(user.email, _("Confirm Your Email Address"), confirmation_html):
+                flash(_('New confirmation email sent. Please check your inbox.'))
+            else:
+                flash(_('Error sending confirmation email. Please try again later.'))
+        else:
+            # Don't reveal whether the email exists or is already confirmed
+            flash(_('If your email is registered and not confirmed, a new confirmation email has been sent.'))
+        
+        return redirect(url_for('login'))
+    
+    return render_template('resend_confirmation.html', form=form)
+
 @app.route('/forgot_password', methods=['GET', 'POST'])
 def forgot_password():
     if current_user.is_authenticated:
@@ -1178,6 +1225,7 @@ def cleanup_storage():
         # Get all project files from database
         projects = Project.query.all()
         used_files = set()
+        used_folders = set()  # Define used_folders set
 
         # Collect all files that are used by projects
         for project in projects:

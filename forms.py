@@ -40,6 +40,10 @@ class DeleteAccountForm(FlaskForm):
 class ForgotPasswordForm(FlaskForm):
     email = StringField(_l('Email'), validators=[DataRequired(), Email()])
     submit = SubmitField(_l('Send Reset Link'))
+    
+class ResendConfirmationForm(FlaskForm):
+    email = StringField(_l('Email'), validators=[DataRequired(), Email()])
+    submit = SubmitField(_l('Resend Confirmation Email'))
 
 class ResetPasswordForm(FlaskForm):
     password = PasswordField(_l('New Password'), validators=[

@@ -30,6 +30,7 @@
                     </div>
                 </form>
                 <p>{{ _("Don't have an account?") }} <a href="{{ url_for('register') }}">{{ _('Register') }}</a></p>
+                <p>{{ _("Email confirmation expired?") }} <a href="{{ url_for('resend_confirmation') }}">{{ _('Resend confirmation email') }}</a></p>
             </div>
         </div>
     </div>

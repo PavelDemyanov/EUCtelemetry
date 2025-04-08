@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">{{ _('Resend Confirmation Email') }}</h2>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {{ form.csrf_token }}
+                    <div class="mb-3">
+                        {{ form.email.label(class="form-label") }}
+                        {{ form.email(class="form-control") }}
+                        {% for error in form.email.errors %}
+                        <span class="text-danger">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+                <p>{{ _('Already confirmed your email?') }} <a href="{{ url_for('login') }}">{{ _('Sign in') }}</a></p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
