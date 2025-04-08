@@ -31,14 +31,16 @@ class User(UserMixin, db.Model):
         return check_password_hash(self.password_hash, password)
 
     def generate_email_confirmation_token(self):
-        self.email_confirmation_token = secrets.token_urlsafe(32)
+        token = secrets.token_urlsafe(32)
+        self.email_confirmation_token = token
         self.email_confirmation_sent_at = datetime.utcnow()
-        return self.email_confirmation_token
+        return token
 
     def generate_password_reset_token(self):
-        self.password_reset_token = secrets.token_urlsafe(32)
+        token = secrets.token_urlsafe(32)
+        self.password_reset_token = token
         self.password_reset_sent_at = datetime.utcnow()
-        return self.password_reset_token
+        return token
 
     def can_reset_password(self):
         if not self.password_reset_sent_at:

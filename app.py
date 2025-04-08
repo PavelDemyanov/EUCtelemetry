@@ -486,7 +486,15 @@ def register():
         db.session.add(user)
 
         try:
+            # Коммит для сохранения токена в базе данных до отправки письма
             db.session.commit()
+            
+            # Дополнительная проверка токена в базе данных
+            stored_token = User.query.filter_by(email=form.email.data).first().email_confirmation_token
+            if stored_token != confirmation_token:
+                logging.warning(f"Token mismatch: generated={confirmation_token}, stored={stored_token}")
+                # В этом случае используем токен из базы данных
+                confirmation_token = stored_token
 
             # Get user's preferred language
             user_locale = request.accept_languages.best_match(['en', 'ru'])
@@ -1163,6 +1171,15 @@ def resend_confirmation():
         if user and not user.is_email_confirmed and user.is_active:
             # Generate a new confirmation token
             confirmation_token = user.generate_email_confirmation_token()
+            # Сохраняем токен в базе данных немедленно
+            db.session.commit()
+            
+            # Дополнительная проверка токена в базе данных
+            stored_token = User.query.filter_by(email=form.email.data).first().email_confirmation_token
+            if stored_token != confirmation_token:
+                logging.warning(f"Token mismatch in resend: generated={confirmation_token}, stored={stored_token}")
+                # В этом случае используем токен из базы данных
+                confirmation_token = stored_token
             
             # Get user's preferred language or detect from browser
             user_locale = user.locale or request.accept_languages.best_match(['en', 'ru']) or 'en'
@@ -1211,6 +1228,16 @@ def forgot_password():
         user = User.query.filter_by(email=form.email.data).first()
         if user:
             token = user.generate_password_reset_token()
+            # Сохраняем токен в базе данных немедленно
+            db.session.commit()
+            
+            # Дополнительная проверка токена в базе данных
+            stored_token = User.query.filter_by(email=form.email.data).first().password_reset_token
+            if stored_token != token:
+                logging.warning(f"Token mismatch in password reset: generated={token}, stored={stored_token}")
+                # В этом случае используем токен из базы данных
+                token = stored_token
+                
             reset_link = url_for('reset_password', token=token, _external=True)
             reset_html = f"""
             <h2>Password Reset Request</h2>
