@@ -345,8 +345,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const originalValues = data.map(row => parseFloat(row[column]) || 0); // Original values
             const normalizedValues = originalValues.map(value => normalizeValueForAdaptiveScale(value, column)); // Normalized values
             return {
-                label: window.gettext(column),
                 originalColumn: column, // Store original technical column name
+                label: window.gettext(column),
                 data: isAdaptiveChart ? normalizedValues : originalValues, // Select data based on mode
                 originalData: originalValues // Save original data for tooltips
             };
