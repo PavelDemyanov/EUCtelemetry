@@ -55,12 +55,15 @@ def detect_csv_type(df):
     # Define required columns for each type
     darnkessbot_cols = ['Date', 'Temperature', 'GPS Speed', 'Total mileage', 'Battery level', 
                       'Speed', 'PWM', 'Current', 'Voltage', 'Power']
-    wheellog_cols = ['date', 'time', 'speed', 'totaldistance', 'battery_level', 
-                   'pwm', 'voltage', 'current', 'power', 'gps_speed', 'system_temp']
+                      
+    # Core required WheelLog columns (gps_speed is optional)
+    wheellog_core_cols = ['date', 'time', 'speed', 'totaldistance', 'battery_level', 
+                        'pwm', 'voltage', 'current', 'power', 'system_temp']
+    wheellog_all_cols = wheellog_core_cols + ['gps_speed']
 
     # Check if all required columns exist for each type
     is_darnkessbot = all(col in df.columns for col in darnkessbot_cols)
-    is_wheellog = all(col in df.columns for col in wheellog_cols)
+    is_wheellog = all(col in df.columns for col in wheellog_core_cols)
 
     logging.info(f"CSV type detection results - DarknessBot: {is_darnkessbot}, WheelLog: {is_wheellog}")
 
@@ -74,7 +77,7 @@ def detect_csv_type(df):
             missing_darnkessbot = [col for col in darnkessbot_cols if col not in df.columns]
             logging.info(f"Missing DarknessBot columns: {missing_darnkessbot}")
         if not is_wheellog:
-            missing_wheellog = [col for col in wheellog_cols if col not in df.columns]
+            missing_wheellog = [col for col in wheellog_all_cols if col not in df.columns]
             logging.info(f"Missing WheelLog columns: {missing_wheellog}")
         raise ValueError("CSV format not recognized")
 
