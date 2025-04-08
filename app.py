@@ -28,7 +28,8 @@ from utils.background_processor import process_project, stop_project_processing
 from utils.env_setup import setup_env_variables
 from utils.email_sender import send_email
 from forms import (LoginForm, RegistrationForm, ProfileForm, 
-                  ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm, DeleteAccountForm, NewsForm, EmailCampaignForm)
+                  ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm, DeleteAccountForm, 
+                  NewsForm, EmailCampaignForm, ResendConfirmationForm)
 from models import User, Project, EmailCampaign, News, Preset
 import markdown
 from sqlalchemy import desc
