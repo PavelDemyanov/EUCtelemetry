@@ -74,10 +74,14 @@
         </div>
     </div>
 
-    <!-- Recent Users -->
+    <!-- Users Management -->
     <div class="card mb-4">
-        <div class="card-header">
-            <h2 class="h5 mb-0">Recent Users</h2>
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h2 class="h5 mb-0">All Users</h2>
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-sm btn-outline-primary" id="show-all-users">All Users</button>
+                <button type="button" class="btn btn-sm btn-outline-warning" id="show-pending-users">Pending Email Confirmation</button>
+            </div>
         </div>
         <div class="card-body">
             <div class="table-responsive">
@@ -579,9 +583,49 @@ function updateChart(resource, timeRange) {
 }
 
 // User Management Functions
+// Store users data globally to use for filtering
+let allUsers = [];
+let filterMode = 'all';  // 'all' or 'pending'
+
+// Button event handlers for user filters
+document.addEventListener('DOMContentLoaded', function() {
+    // Add event listeners for filter buttons
+    document.getElementById('show-all-users').addEventListener('click', function() {
+        filterMode = 'all';
+        this.classList.add('btn-primary');
+        this.classList.remove('btn-outline-primary');
+        document.getElementById('show-pending-users').classList.add('btn-outline-warning');
+        document.getElementById('show-pending-users').classList.remove('btn-warning');
+        renderUsersTable();
+    });
+    
+    document.getElementById('show-pending-users').addEventListener('click', function() {
+        filterMode = 'pending';
+        this.classList.add('btn-warning');
+        this.classList.remove('btn-outline-warning');
+        document.getElementById('show-all-users').classList.add('btn-outline-primary');
+        document.getElementById('show-all-users').classList.remove('btn-primary');
+        renderUsersTable();
+    });
+});
+
 function updateUsersTable(users) {
+    // Store all users data for filtering
+    allUsers = users.items;
+    renderUsersTable();
+}
+
+function renderUsersTable() {
     const tbody = document.querySelector('#users-table tbody');
-    tbody.innerHTML = users.items.map(user => `
+    
+    // Apply filter
+    let filteredUsers = allUsers;
+    if (filterMode === 'pending') {
+        filteredUsers = allUsers.filter(user => !user.is_email_confirmed);
+    }
+    
+    // Render table
+    tbody.innerHTML = filteredUsers.map(user => `
         <tr>
             <td>
                 ${user.name}

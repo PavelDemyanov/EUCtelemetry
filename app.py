@@ -316,9 +316,8 @@ def admin_lists():
     projects = Project.query.order_by(Project.created_at.desc())\
         .paginate(page=project_page, per_page=20, error_out=False)
 
-    # Get paginated recent users
-    users = User.query.filter(User.created_at >= today - timedelta(days=30))\
-        .order_by(User.created_at.desc())\
+    # Get paginated users (all users, not just recent ones)
+    users = User.query.order_by(User.created_at.desc())\
         .paginate(page=user_page, per_page=20, error_out=False)
 
     # Format users data with additional fields
