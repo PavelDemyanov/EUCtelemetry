@@ -1,4 +1,27 @@
 // Wait for DOM to fully load before executing the script
+// Function to optimize data size for large datasets
+function optimizeDataSize(data) {
+    // If data is not too large, return it as is
+    if (!data || data.length < 50000) {
+        return data;
+    }
+    
+    console.log("Optimizing large dataset with " + data.length + " records");
+    
+    // Calculate how many points to sample (max 20000 points for performance)
+    const maxPoints = 20000;
+    const skipFactor = Math.ceil(data.length / maxPoints);
+    
+    // Sample data evenly
+    const optimized = [];
+    for (let i = 0; i < data.length; i += skipFactor) {
+        optimized.push(data[i]);
+    }
+    
+    console.log("Optimized dataset size: " + optimized.length + " records");
+    return optimized;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     // Get UI elements from HTML
     const uploadForm = document.getElementById('uploadForm'); // Upload form
@@ -330,6 +353,10 @@ document.addEventListener('DOMContentLoaded', function() {
                             }
                         }
                     }
+        } catch (e) {
+            console.error("Error in plotAllColumns:", e);
+            showError(window.gettext("Error plotting data: ") + e.message);
+        }
                 },
                 interaction: { mode: 'index', intersect: false } // Interaction mode for tooltips
             }
@@ -338,6 +365,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Function to plot chart based on all data columns
     function plotAllColumns(data) {
+        try {
         if (!data) return;
         const timestamps = data.map(row => row.timestamp); // Extract timestamps
         const columns = Object.keys(data[0]).filter(col => col.toLowerCase() !== 'timestamp' && data.some(row => !isNaN(parseFloat(row[col]))));
@@ -352,7 +380,15 @@ document.addEventListener('DOMContentLoaded', function() {
             };
         });
         createMultiChart(timestamps, datasets); // Create chart
+        } catch (e) {
+            console.error("Error in plotAllColumns:", e);
+            showError(window.gettext("Error plotting data: ") + e.message);
+        }
+        try {
         setupManualPanning(); // Setup manual panning
+    } catch (e) {
+        console.error("Error in setupManualPanning:", e);
+    }
     }
 
     // Setup manual panning with mouse dragging
@@ -519,9 +555,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         achievementsSection.style.display = "none";
                     }
                     
-                    // Plot the data
-                    // Plot the data
-                    plotAllColumns(csvData);
+                    // Reduce data size for large datasets to prevent stack overflow
+                    const optimizedData = optimizeDataSize(csvData);
+                    
+                    // Plot the optimized data
+                    plotAllColumns(optimizedData);
                     const url = new URL(window.location);
                     url.searchParams.set('file', data.file_id || 'uploaded');
                     window.history.pushState({}, '', url);
