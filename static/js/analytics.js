@@ -347,7 +347,6 @@ document.addEventListener('DOMContentLoaded', function() {
             return {
                 originalColumn: column, // Store original technical column name
                 label: window.gettext(column),
-                originalColumn: column, // Store original technical column name
                 data: isAdaptiveChart ? normalizedValues : originalValues, // Select data based on mode
                 originalData: originalValues // Save original data for tooltips
             };
@@ -521,11 +520,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     
                     // Plot the data
-                    plotAllColumns(csvData);
                     // Plot the data
                     plotAllColumns(csvData);
-                    
-                    // Add file parameter to URL without reloading
                     const url = new URL(window.location);
                     url.searchParams.set('file', data.file_id || 'uploaded');
                     window.history.pushState({}, '', url);
