@@ -6,7 +6,6 @@ import logging
 import shutil
 import concurrent.futures
 import threading
-from datetime import datetime
 from functools import lru_cache
 from utils.hardware_detection import is_apple_silicon
 from utils.image_processor import create_speed_indicator
@@ -457,28 +456,17 @@ def find_nearest_values(df, timestamp, interpolate=True):
     if not after_mask.any() or not before_mask.any():
         # If timestamp is outside the range, use the last available values
         last_idx = df.index[-1]
-        
-        # Безопасно получаем значения с заменой NaN на 0
-        def safe_int(value):
-            if pd.isna(value):
-                return 0
-            return int(value)
-        
-        speed_max = df['speed'].max()
-        if pd.isna(speed_max):
-            speed_max = 0
-            
         return {
-            'speed': safe_int(df.loc[last_idx, 'speed']),
-            'gps': safe_int(df.loc[last_idx, 'gps']),
-            'voltage': safe_int(df.loc[last_idx, 'voltage']),
-            'temperature': safe_int(df.loc[last_idx, 'temperature']),
-            'current': safe_int(df.loc[last_idx, 'current']),
-            'battery': safe_int(df.loc[last_idx, 'battery']),
-            'mileage': safe_int(df.loc[last_idx, 'mileage']),
-            'pwm': safe_int(df.loc[last_idx, 'pwm']),
-            'power': safe_int(df.loc[last_idx, 'power']),
-            'max_speed': int(speed_max)
+            'speed': int(df.loc[last_idx, 'speed']),
+            'gps': int(df.loc[last_idx, 'gps']),
+            'voltage': int(df.loc[last_idx, 'voltage']),
+            'temperature': int(df.loc[last_idx, 'temperature']),
+            'current': int(df.loc[last_idx, 'current']),
+            'battery': int(df.loc[last_idx, 'battery']),
+            'mileage': int(df.loc[last_idx, 'mileage']),
+            'pwm': int(df.loc[last_idx, 'pwm']),
+            'power': int(df.loc[last_idx, 'power']),
+            'max_speed': int(df.loc[:before_mask, 'speed'].max())
         }
 
     # Get indices of surrounding points
@@ -493,40 +481,24 @@ def find_nearest_values(df, timestamp, interpolate=True):
                                                   'timestamp'] - timestamp:
             use_idx = after_idx
 
-        # Безопасная функция для преобразования в int
-        def safe_int(value):
-            if pd.isna(value):
-                return 0
-            return int(value)
-            
-        # Безопасно получаем максимальную скорость
-        speed_max = df.loc[:use_idx, 'speed'].max()
-        if pd.isna(speed_max):
-            speed_max = 0
-
         result = {
-            'speed': safe_int(df.loc[use_idx, 'speed']),
-            'gps': safe_int(df.loc[use_idx, 'gps']),
-            'voltage': safe_int(df.loc[use_idx, 'voltage']),
-            'temperature': safe_int(df.loc[use_idx, 'temperature']),
-            'current': safe_int(df.loc[use_idx, 'current']),
-            'battery': safe_int(df.loc[use_idx, 'battery']),
-            'mileage': safe_int(df.loc[use_idx, 'mileage']),
-            'pwm': safe_int(df.loc[use_idx, 'pwm']),
-            'power': safe_int(df.loc[use_idx, 'power'])
+            'speed': int(df.loc[use_idx, 'speed']),
+            'gps': int(df.loc[use_idx, 'gps']),
+            'voltage': int(df.loc[use_idx, 'voltage']),
+            'temperature': int(df.loc[use_idx, 'temperature']),
+            'current': int(df.loc[use_idx, 'current']),
+            'battery': int(df.loc[use_idx, 'battery']),
+            'mileage': int(df.loc[use_idx, 'mileage']),
+            'pwm': int(df.loc[use_idx, 'pwm']),
+            'power': int(df.loc[use_idx, 'power'])
         }
-        result['max_speed'] = int(speed_max)
+        result['max_speed'] = int(df.loc[:use_idx, 'speed'].max())
         return result
 
     # Calculate interpolation factor
     t0 = df.loc[before_idx, 'timestamp']
     t1 = df.loc[after_idx, 'timestamp']
-    
-    # Только защита от деления на ноль (редкий случай)
-    if t1 == t0:
-        factor = 0.5
-    else:
-        factor = (timestamp - t0) / (t1 - t0)
+    factor = (timestamp - t0) / (t1 - t0)
 
     # Interpolate all numeric values
     result = {}
@@ -534,26 +506,13 @@ def find_nearest_values(df, timestamp, interpolate=True):
             'speed', 'gps', 'voltage', 'temperature', 'current', 'battery',
             'mileage', 'pwm', 'power'
     ]:
-        v0 = df.loc[before_idx, key]
-        v1 = df.loc[after_idx, key]
-        
-        # Простая защита только для NaN значений, но не влияющая на интерполяцию
-        if pd.isna(v0) and pd.isna(v1):
-            result[key] = 0
-        elif pd.isna(v0):
-            result[key] = int(v1)
-        elif pd.isna(v1):
-            result[key] = int(v0)
-        else:
-            # Оригинальная интерполяция без изменений
-            interpolated_value = v0 + factor * (v1 - v0)
-            result[key] = int(round(interpolated_value))
+        v0 = float(df.loc[before_idx, key])
+        v1 = float(df.loc[after_idx, key])
+        interpolated_value = v0 + factor * (v1 - v0)
+        result[key] = int(round(interpolated_value))
 
-    # Безопасно вычисляем максимальную скорость
-    speed_max = df.loc[:before_idx, 'speed'].max()
-    if pd.isna(speed_max):
-        speed_max = 0
-    result['max_speed'] = int(speed_max)
+    # Calculate max speed up to current point
+    result['max_speed'] = int(df.loc[:before_idx, 'speed'].max())
 
     return result
 
@@ -612,26 +571,8 @@ def create_preview_frame(csv_file,
             csv_type, processed_data = process_csv_file(
                 csv_file, project.folder_number)
             df = pd.DataFrame(processed_data)
-            
-            # Защита от пустого датафрейма или все скорости NaN
-            if len(df) == 0 or df['speed'].isna().all():
-                logging.warning("Empty DataFrame or all speeds are NaN, using first row for preview")
-                if len(df) > 0:
-                    # Используем первую строку, если датафрейм не пустой
-                    max_speed_timestamp = df['timestamp'].iloc[0]
-                else:
-                    # Если датафрейм пустой, используем текущее время
-                    max_speed_timestamp = datetime.now().timestamp()
-            else:
-                # Безопасно находим индекс максимальной скорости
-                try:
-                    max_speed_idx = df['speed'].idxmax()
-                    max_speed_timestamp = df.loc[max_speed_idx, 'timestamp']
-                except Exception as e:
-                    logging.warning(f"Error finding max speed index: {e}, using first timestamp")
-                    max_speed_timestamp = df['timestamp'].iloc[0]
-                    
-            # Безопасно находим ближайшие значения
+            max_speed_idx = df['speed'].idxmax()
+            max_speed_timestamp = df.loc[max_speed_idx, 'timestamp']
             values = find_nearest_values(df, max_speed_timestamp)
             os.makedirs('previews', exist_ok=True)
             preview_path = f'previews/{project_id}_preview.png'

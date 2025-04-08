@@ -1673,42 +1673,6 @@ def analyze_csv():
     """Process a CSV file for analytics and return data for charts"""
     # Import gettext function directly instead of using _ alias
     from flask_babel import gettext
-    import threading
-    from functools import wraps
-    
-    # Альтернативный механизм таймаута через потоки
-    class TimeoutError(Exception):
-        pass
-        
-    # Декоратор для функций с таймаутом
-    def with_timeout(seconds=60):
-        def decorator(func):
-            @wraps(func)
-            def wrapper(*args, **kwargs):
-                result = [None]
-                error = [None]
-                
-                def worker():
-                    try:
-                        result[0] = func(*args, **kwargs)
-                    except Exception as e:
-                        error[0] = e
-                
-                thread = threading.Thread(target=worker)
-                thread.daemon = True
-                thread.start()
-                thread.join(seconds)
-                
-                if thread.is_alive():
-                    # Таймаут истек, но поток все еще работает
-                    raise TimeoutError("Обработка прервана из-за превышения времени ожидания. Файл слишком большой или сложный.")
-                
-                if error[0] is not None:
-                    raise error[0]
-                    
-                return result[0]
-            return wrapper
-        return decorator
     
     if 'file' not in request.files:
         return jsonify({'error': gettext('No file provided')}), 400
@@ -1717,15 +1681,15 @@ def analyze_csv():
     if file.filename == '':
         return jsonify({'error': gettext('No file selected')}), 400
     
-    # Check file size - limit to 100MB to prevent memory issues
+    # Check file size - limit to 50MB to prevent memory issues
     # Read only beginning of the file to get size
     file.seek(0, os.SEEK_END)
     file_size = file.tell()
     file.seek(0)  # Reset file pointer to beginning
     
-    # 100MB = 100 * 1024 * 1024 bytes (увеличиваем лимит до 100MB)
-    if file_size > 100 * 1024 * 1024:
-        return jsonify({'error': gettext('File is too large. Please upload a CSV file smaller than 100MB.')}), 400
+    # 50MB = 50 * 1024 * 1024 bytes
+    if file_size > 50 * 1024 * 1024:
+        return jsonify({'error': gettext('File is too large. Please upload a CSV file smaller than 50MB.')}), 400
         
     temp_dir = None
     temp_file_path = None
@@ -1740,69 +1704,48 @@ def analyze_csv():
         file_size_mb = os.path.getsize(temp_file_path) / (1024 * 1024)
         logging.info(f"Saved CSV file for analytics, size: {file_size_mb:.2f} MB")
         
-        # Функция обработки CSV с таймаутом
-        @with_timeout(seconds=300)  # 5 минут таймаут для обработки больших файлов
-        def process_csv_with_timeout(filepath):
-            try:
-                # Try reading with different encodings
-                try:
-                    df = pd.read_csv(filepath, encoding='utf-8')
-                except UnicodeDecodeError:
-                    try:
-                        df = pd.read_csv(filepath, encoding='latin1')
-                    except UnicodeDecodeError:
-                        return None, "encoding_error"
-                
-                # Detect CSV type
-                try:
-                    csv_type = detect_csv_type(df)
-                    logging.info(f"Detected CSV type: {csv_type}")
-                except ValueError:
-                    # Check for DarknessBot format
-                    darkness_bot_columns = {'Date', 'Speed', 'GPS Speed', 'Voltage', 'Temperature', 
-                                        'Current', 'Battery level', 'Total mileage', 'PWM', 'Power'}
-                    # Check for WheelLog format
-                    wheellog_columns = {'date', 'speed', 'gps_speed', 'voltage', 'system_temp',
-                                    'current', 'battery_level', 'totaldistance', 'pwm', 'power'}
-
-                    df_columns = set(df.columns)
-                    is_darkness_bot = len(darkness_bot_columns.intersection(df_columns)) >= len(darkness_bot_columns) * 0.8
-                    is_wheellog = len(wheellog_columns.intersection(df_columns)) >= len(wheellog_columns) * 0.8
-
-                    if not (is_darkness_bot or is_wheellog):
-                        return None, "format_error"
-
-                    csv_type = 'darnkessbot' if is_darkness_bot else 'wheellog'
-                
-                # Process the CSV file to get standardized data
-                csv_type, processed_data = process_csv_file(filepath, interpolate_values=True)
-                
-                # Log the type of processed_data for debugging
-                logging.info(f"Processed data type: {type(processed_data)}")
-                if isinstance(processed_data, dict):
-                    logging.info(f"Dict keys: {list(processed_data.keys())}")
-                    if 'timestamp' in processed_data:
-                        logging.info(f"Timestamp data type: {type(processed_data['timestamp'])}")
-                        logging.info(f"Number of timestamps: {len(processed_data['timestamp'])}")
-                
-                return (csv_type, processed_data), None
-            except Exception as e:
-                logging.error(f"Error processing CSV: {str(e)}")
-                return None, str(e)
-        
-        # Вызываем функцию обработки с таймаутом
-        result, error = process_csv_with_timeout(temp_file_path)
-        
-        if error:
-            if error == "encoding_error":
-                return jsonify({'error': gettext('Invalid file encoding. Please ensure your CSV file is properly encoded.')}), 400
-            elif error == "format_error":
-                return jsonify({'error': gettext('Invalid CSV format. Please upload a CSV file from DarknessBot or WheelLog.')}), 400
-            else:
-                return jsonify({'error': gettext('Error processing file: ') + str(error)}), 500
-        
+        # Read and validate CSV file
         try:
-            csv_type, processed_data = result
+            # Try reading with different encodings
+            try:
+                df = pd.read_csv(temp_file_path, encoding='utf-8')
+            except UnicodeDecodeError:
+                try:
+                    df = pd.read_csv(temp_file_path, encoding='latin1')
+                except UnicodeDecodeError:
+                    return jsonify({'error': gettext('Invalid file encoding. Please ensure your CSV file is properly encoded.')}), 400
+            
+            # Detect CSV type
+            try:
+                csv_type = detect_csv_type(df)
+                logging.info(f"Detected CSV type: {csv_type}")
+            except ValueError:
+                # Check for DarknessBot format
+                darkness_bot_columns = {'Date', 'Speed', 'GPS Speed', 'Voltage', 'Temperature', 
+                                    'Current', 'Battery level', 'Total mileage', 'PWM', 'Power'}
+                # Check for WheelLog format
+                wheellog_columns = {'date', 'speed', 'gps_speed', 'voltage', 'system_temp',
+                                'current', 'battery_level', 'totaldistance', 'pwm', 'power'}
+
+                df_columns = set(df.columns)
+                is_darkness_bot = len(darkness_bot_columns.intersection(df_columns)) >= len(darkness_bot_columns) * 0.8
+                is_wheellog = len(wheellog_columns.intersection(df_columns)) >= len(wheellog_columns) * 0.8
+
+                if not (is_darkness_bot or is_wheellog):
+                    return jsonify({'error': gettext('Invalid CSV format. Please upload a CSV file from DarknessBot or WheelLog.')}), 400
+
+                csv_type = 'darnkessbot' if is_darkness_bot else 'wheellog'
+            
+            # Process the CSV file to get standardized data
+            csv_type, processed_data = process_csv_file(temp_file_path, interpolate_values=True)
+            
+            # Log the type of processed_data for debugging
+            logging.info(f"Processed data type: {type(processed_data)}")
+            if isinstance(processed_data, dict):
+                logging.info(f"Dict keys: {list(processed_data.keys())}")
+                if 'timestamp' in processed_data:
+                    logging.info(f"Timestamp data type: {type(processed_data['timestamp'])}")
+                    logging.info(f"Number of timestamps: {len(processed_data['timestamp'])}")
             
             # Convert processed data to a list of dictionaries for JSON serialization
             serializable_data = []
