@@ -116,12 +116,23 @@ def process_mileage(series, csv_type):
 
 def clean_numeric_column(series):
     """Clean numeric column by handling NA and infinite values"""
-    # Replace infinite values with 0
-    series = series.replace([float('inf'), float('-inf')], 0)
-    # Fill NA/NaN values with 0
-    series = series.fillna(0)
-    # Round and convert to integer
-    return series.round().astype(int)
+    # For Series with more than 100K elements, use a more memory-efficient approach
+    if len(series) > 100000:
+        # Use efficient vectorized operations with int32 type for memory savings
+        # Replace infinite values with 0
+        series = series.replace([float('inf'), float('-inf')], 0)
+        # Fill NA/NaN values with 0
+        series = series.fillna(0)
+        # Round and convert to integer with memory-efficient type
+        return series.round().astype('int32')
+    else:
+        # For smaller series, use the original approach
+        # Replace infinite values with 0
+        series = series.replace([float('inf'), float('-inf')], 0)
+        # Fill NA/NaN values with 0
+        series = series.fillna(0)
+        # Round and convert to integer
+        return series.round().astype(int)
 
 def remove_consecutive_duplicates(data):
     """Remove consecutive duplicate rows based on specified columns"""
@@ -371,15 +382,33 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
             # Use pandas chunksize parameter to process file in chunks for large files
             if file_size_mb > 100:  # Over 100MB, process in chunks
                 chunks = []
-                for chunk in pd.read_csv(file_path, chunksize=100000):  # Process 100K rows at a time
-                    chunks.append(chunk.iloc[::sample_rate])  # Sample every Nth row
-                df = pd.concat(chunks)
+                try:
+                    # Try UTF-8 encoding first
+                    for chunk in pd.read_csv(file_path, chunksize=100000, encoding='utf-8'):  # Process 100K rows at a time
+                        chunks.append(chunk.iloc[::sample_rate])  # Sample every Nth row
+                except UnicodeDecodeError:
+                    # Try latin1 encoding if UTF-8 fails
+                    chunks = []  # Reset chunks
+                    for chunk in pd.read_csv(file_path, chunksize=100000, encoding='latin1'):  # Process 100K rows at a time
+                        chunks.append(chunk.iloc[::sample_rate])  # Sample every Nth row
+                
+                # Combine chunks if any were processed
+                if chunks:
+                    df = pd.concat(chunks)
+                else:
+                    raise ValueError("Could not read CSV file with any encoding")
             else:
                 # Sample every Nth row for medium-sized files
-                df = pd.read_csv(file_path).iloc[::sample_rate]
+                try:
+                    df = pd.read_csv(file_path, encoding='utf-8').iloc[::sample_rate]
+                except UnicodeDecodeError:
+                    df = pd.read_csv(file_path, encoding='latin1').iloc[::sample_rate]
         else:
             # Normal processing for smaller files or frame generation
-            df = pd.read_csv(file_path)
+            try:
+                df = pd.read_csv(file_path, encoding='utf-8')
+            except UnicodeDecodeError:
+                df = pd.read_csv(file_path, encoding='latin1')
         
         logging.info(f"Processing CSV file: {file_path}, rows after sampling: {len(df)}")
         logging.info(f"CSV columns: {df.columns.tolist()}")
