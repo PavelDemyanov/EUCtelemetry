@@ -1,0 +1,30 @@
+function createMultiChart(labels, datasets) {
+    if (chartInstance) chartInstance.destroy(); // Destroy old chart if it exists
+    const ctx = dataChart.getContext('2d');
+    const minTimestamp = Math.min(...labels); // Minimum X-axis value
+    const maxTimestamp = Math.max(...labels); // Maximum X-axis value
+    const fullRange = maxTimestamp - minTimestamp; // Full X-axis length
+
+    chartInstance = new Chart(ctx, {
+        type: 'line', // Chart type - linear
+        data: {
+            labels: labels, // X-axis labels (timestamps)
+            datasets: datasets.map((ds) => {
+                const columnName = ds.originalColumn.toLowerCase();
+                const color = colorPalette[columnName] || { borderColor: '#808080', backgroundColor: 'rgba(128, 128, 128, 0.2)' };
+                return {
+                    label: ds.label, // Dataset name
+                    data: ds.data, // Normalized or original data
+                    borderColor: color.borderColor, // Line color
+                    backgroundColor: color.backgroundColor, // Fill color
+                    borderWidth: 2, // Line thickness
+                    fill: false, // No fill under the line
+                    tension: 0.1, // Line smoothness
+                    pointRadius: 0, // Point radius (0 - not visible)
+                    pointHoverRadius: 3, // Point radius on hover
+                    originalData: ds.originalData, // Original data for tooltips
+                    pointStyle: 'rectRounded', // Rounded corners for markers in tooltip
+                    columnName: columnName // Store column name without creating circular reference
+                };
+            })
+        },
