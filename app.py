@@ -409,11 +409,69 @@ def register():
         return redirect(url_for('index'))
     form = RegistrationForm()
     if form.validate_on_submit():
-        # Проверяем, существует ли активный пользователь с таким email
+        # Проверяем, существует ли пользователь с таким email (активный или неактивный)
         existing_user = User.query.filter_by(email=form.email.data).first()
-        if existing_user and existing_user.is_active:
-            flash(_('This email is already registered'))
-            return redirect(url_for('register'))
+        
+        # Проверяем дополнительно неактивных пользователей с этим же email (может случиться при смене регистра)
+        if not existing_user:
+            existing_user = User.query.filter(User.email.ilike(form.email.data)).first()
+        
+        if existing_user:
+            if existing_user.is_active:
+                # Если пользователь активен, сообщаем что email занят
+                flash(_('This email is already registered'))
+                # Если email не подтвержден, предлагаем запросить подтверждение снова
+                if not existing_user.is_email_confirmed:
+                    flash(_('If you have not received the confirmation email, you can request a new one'))
+                return redirect(url_for('register'))
+            else:
+                # Если пользователь неактивен, активируем и обновляем данные
+                existing_user.is_active = True
+                existing_user.name = form.name.data
+                existing_user.set_password(form.password.data)
+                confirmation_token = existing_user.generate_email_confirmation_token()
+                db.session.commit()
+                
+                # Перенаправляем на отправку подтверждения
+                try:
+                    # Get user's preferred language
+                    user_locale = request.accept_languages.best_match(['en', 'ru'])
+                    
+                    # Prepare email content based on locale
+                    confirmation_link = url_for('confirm_email', token=confirmation_token, _external=True)
+                    if user_locale == 'ru':
+                        confirmation_html = f"""
+                        <h2>Подтвердите регистрацию</h2>
+                        <p>Здравствуйте, {existing_user.name},</p>
+                        <p>Спасибо за регистрацию в EUCTelemetry. Пожалуйста, нажмите на ссылку ниже, чтобы подтвердить ваш email:</p>
+                        <p><a href="{confirmation_link}">{confirmation_link}</a></p>
+                        <p>Эта ссылка будет действительна в течение 24 часов.</p>
+                        <p>С наилучшими пожеланиями,<br>Команда EUCTelemetry</p>
+                        """
+                    else:
+                        confirmation_html = f"""
+                        <h2>Confirm Your Registration</h2>
+                        <p>Hello {existing_user.name},</p>
+                        <p>Thank you for registering with EUCTelemetry. Please click the link below to confirm your email address:</p>
+                        <p><a href="{confirmation_link}">{confirmation_link}</a></p>
+                        <p>This link will expire in 24 hours.</p>
+                        <p>Best regards,<br>EUCTelemetry Team</p>
+                        """
+                    
+                    if send_email(existing_user.email, "Confirm Your Email Address", confirmation_html):
+                        flash(_('Please check your email to complete registration.'))
+                    else:
+                        flash(_('Error sending confirmation email. Please try registering again.'))
+                        existing_user.is_active = False
+                        db.session.commit()
+                    
+                    return redirect(url_for('login'))
+                    
+                except Exception as e:
+                    db.session.rollback()
+                    logging.error(f"Registration error: {str(e)}")
+                    flash(_('An error occurred during registration. Please try again later.'))
+                    return redirect(url_for('register'))
 
         # Check if this is the first user
         is_first_user = User.query.count() == 0
@@ -458,7 +516,8 @@ def register():
                 flash(_('Please check your email to complete registration.'))
             else:
                 flash(_('Error sending confirmation email. Please try registering again.'))
-                db.session.delete(user)
+                # Деактивировать пользователя вместо удаления 
+                user.is_active = False
                 db.session.commit()
 
             return redirect(url_for('login'))
@@ -480,10 +539,11 @@ def confirm_email(token):
         return redirect(url_for('login'))
 
     if user.email_confirmation_sent_at < datetime.utcnow() - timedelta(days=1):
-        flash(_('This confirmation link has expired. Please register again.'))
-        db.session.delete(user)
+        flash(_('This confirmation link has expired. Please request a new confirmation email.'))
+        # Вместо удаления пользователя, обнуляем токен подтверждения
+        user.email_confirmation_token = None
         db.session.commit()
-        return redirect(url_for('register'))
+        return redirect(url_for('resend_confirmation'))
 
     user.is_email_confirmed = True
     user.email_confirmation_token = None
@@ -560,10 +620,13 @@ def delete_account():
             # Delete all projects from database
             Project.query.filter_by(user_id=current_user.id).delete()
 
-            # Delete the user
-            db.session.delete(current_user)
+            # Деактивировать пользователя вместо физического удаления
+            current_user.is_active = False
             db.session.commit()
-
+            
+            # Выход из системы
+            logout_user()
+            
             flash('Your account has been successfully deleted')
             return redirect(url_for('index'))
         else:
