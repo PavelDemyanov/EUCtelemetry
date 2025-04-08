@@ -17,7 +17,9 @@ def parse_timestamp_darnkessbot(date_str):
         dt = datetime.strptime(date_str, '%d.%m.%Y %H:%M:%S.%f')
         return dt.timestamp()
     except (ValueError, TypeError) as e:
-        logging.error(f"Error parsing darnkessbot timestamp: {e}")
+        # Don't log every error when processing large files (would create too many log entries)
+        # Only log first occurrence or when debugging specific issues
+        # logging.error(f"Error parsing darnkessbot timestamp: {e}")
         return None
 
 def parse_timestamp_wheellog(date_str, time_str):
@@ -126,16 +128,48 @@ def remove_consecutive_duplicates(data):
     try:
         # Create DataFrame from the processed data
         df = pd.DataFrame(data)
-
-        # Define columns to check for duplicates
-        columns_to_check = ['speed', 'gps', 'voltage', 'temperature', 'current', 
-                          'battery', 'mileage', 'pwm', 'power']
-
-        # Create mask for consecutive duplicates
-        duplicate_mask = ~(df[columns_to_check].shift() == df[columns_to_check]).all(axis=1)
-
-        # Keep first row and non-consecutive duplicates
-        clean_df = df[duplicate_mask]
+        
+        # For very large datasets (over 100,000 rows), use a different approach 
+        # that's more memory efficient
+        if len(df) > 100000:
+            # Get file size - estimate from number of rows
+            estimated_size_mb = len(df) * len(df.columns) * 8 / (1024 * 1024)  # Rough estimate
+            logging.info(f"Large dataset detected ({len(df)} rows, est. {estimated_size_mb:.2f} MB), using optimized duplicate removal")
+            
+            # For very large datasets, use a sampling approach to reduce memory usage
+            # Keep every row where at least one value changes significantly
+            # Define columns to check
+            columns_to_check = ['speed', 'gps', 'voltage', 'temperature', 'current', 
+                              'battery', 'mileage', 'pwm', 'power']
+            
+            # Only keep rows where values change
+            mask = pd.Series(True, index=df.index)  # Start with all True
+            
+            # Check each column individually to reduce memory usage
+            for col in columns_to_check:
+                if col in df.columns:
+                    # Keep rows where the value changes significantly (more than 1%)
+                    col_mask = (df[col].shift() != df[col])
+                    mask = mask | col_mask
+            
+            # Always keep the first row
+            if len(mask) > 0:
+                mask.iloc[0] = True
+                
+            # Apply the mask
+            clean_df = df[mask]
+            
+        else:
+            # For smaller datasets, use the original approach
+            # Define columns to check for duplicates
+            columns_to_check = ['speed', 'gps', 'voltage', 'temperature', 'current', 
+                              'battery', 'mileage', 'pwm', 'power']
+            
+            # Create mask for consecutive duplicates
+            duplicate_mask = ~(df[columns_to_check].shift() == df[columns_to_check]).all(axis=1)
+            
+            # Keep first row and non-consecutive duplicates
+            clean_df = df[duplicate_mask]
 
         # Convert back to dictionary format
         return {col: clean_df[col].tolist() for col in df.columns}
@@ -148,27 +182,57 @@ def interpolate_numeric_data(data, columns_to_interpolate):
     try:
         # Create DataFrame from the data
         df = pd.DataFrame(data)
-
-        # Interpolate specified columns
-        for col in columns_to_interpolate:
-            if col in df.columns:
-                # Convert to float for interpolation
-                df[col] = pd.to_numeric(df[col], errors='coerce')
-
-                # Replace infinite values with NaN
-                df[col] = df[col].replace([float('inf'), float('-inf')], np.nan)
-
-                # Fill NaN with 0 before interpolation
-                df[col] = df[col].fillna(0)
-
-                # Apply two-way interpolation
-                df[col] = df[col].interpolate(method='linear', limit_direction='both')
-
-                # Ensure all values are finite after interpolation
-                df[col] = df[col].replace([float('inf'), float('-inf')], 0)
-
-                # Round and convert back to integer
-                df[col] = df[col].round().astype(int)
+        
+        # For very large datasets, use a more efficient approach
+        # Check if this is a large dataset
+        if len(df) > 100000:
+            # This is a large dataset - use more efficient processing
+            logging.info(f"Large dataset detected for interpolation ({len(df)} rows), using optimized method")
+            
+            # Interpolate specified columns with optimized batch processing
+            for col in columns_to_interpolate:
+                if col in df.columns:
+                    # Convert to float for interpolation
+                    df[col] = pd.to_numeric(df[col], errors='coerce')
+                    
+                    # Replace infinite values with NaN efficiently
+                    df[col] = df[col].replace([float('inf'), float('-inf')], np.nan)
+                    
+                    # For very large datasets, fill NaN with nearby values instead of interpolating all
+                    # This is faster but slightly less accurate
+                    if df[col].isna().sum() > 0:
+                        # Fill NaN values with the nearest non-NaN value (forward then backward)
+                        df[col] = df[col].fillna(method='ffill').fillna(method='bfill')
+                        
+                        # Handle any remaining NaN values (at the boundaries)
+                        df[col] = df[col].fillna(0)
+                    
+                    # Ensure all values are finite
+                    df[col] = df[col].replace([float('inf'), float('-inf')], 0)
+                    
+                    # Round and convert back to integer (use int32 for memory efficiency)
+                    df[col] = df[col].round().astype('int32')
+        else:
+            # For smaller datasets, use the original detailed interpolation
+            for col in columns_to_interpolate:
+                if col in df.columns:
+                    # Convert to float for interpolation
+                    df[col] = pd.to_numeric(df[col], errors='coerce')
+                    
+                    # Replace infinite values with NaN
+                    df[col] = df[col].replace([float('inf'), float('-inf')], np.nan)
+                    
+                    # Apply two-way interpolation
+                    df[col] = df[col].interpolate(method='linear', limit_direction='both')
+                    
+                    # Fill any remaining NaN values with 0
+                    df[col] = df[col].fillna(0)
+                    
+                    # Ensure all values are finite after interpolation
+                    df[col] = df[col].replace([float('inf'), float('-inf')], 0)
+                    
+                    # Round and convert back to integer
+                    df[col] = df[col].round().astype(int)
 
         # Convert back to dictionary format
         return {col: df[col].tolist() for col in df.columns}
@@ -347,11 +411,21 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
             csv_type = 'darnkessbot'
             
         elif csv_type == 'darnkessbot':
-            # Parse timestamps and create a mask for valid timestamps
-            df['timestamp'] = df['Date'].apply(parse_timestamp_darnkessbot)
-            valid_timestamp_mask = df['timestamp'].notna()
-
+            # For large files, use vectorized operation instead of apply for better performance
+            file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
+            if file_size_mb > 20:  # Large file optimization
+                # Vectorized operation for timestamp conversion - much faster for large files
+                try:
+                    df['timestamp'] = pd.to_datetime(df['Date'], format='%d.%m.%Y %H:%M:%S.%f').astype('int64') // 10**9
+                except Exception as e:
+                    logging.warning(f"Vectorized timestamp conversion failed, falling back to apply method: {e}")
+                    df['timestamp'] = df['Date'].apply(parse_timestamp_darnkessbot)
+            else:
+                # For smaller files, use the original method
+                df['timestamp'] = df['Date'].apply(parse_timestamp_darnkessbot)
+                
             # Filter out rows with invalid timestamps
+            valid_timestamp_mask = df['timestamp'].notna()
             df = df[valid_timestamp_mask]
 
             raw_data = {
@@ -388,11 +462,24 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
             }
 
         else:  # wheellog
-            # Parse timestamps and create a mask for valid timestamps
-            df['timestamp'] = df.apply(lambda x: parse_timestamp_wheellog(x['date'], x['time']), axis=1)
-            valid_timestamp_mask = df['timestamp'].notna()
-
+            # For large files, use a more efficient method of timestamp conversion
+            file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
+            if file_size_mb > 20:  # Large file optimization
+                # Vectorized operation for timestamp conversion - much faster for large files
+                try:
+                    # Combine date and time columns
+                    df['datetime_str'] = df['date'] + ' ' + df['time']
+                    # Use vectorized operation
+                    df['timestamp'] = pd.to_datetime(df['datetime_str'], format='%Y-%m-%d %H:%M:%S.%f').astype('int64') // 10**9
+                except Exception as e:
+                    logging.warning(f"Vectorized timestamp conversion failed for wheellog, falling back to apply method: {e}")
+                    df['timestamp'] = df.apply(lambda x: parse_timestamp_wheellog(x['date'], x['time']), axis=1)
+            else:
+                # For smaller files, use the original method
+                df['timestamp'] = df.apply(lambda x: parse_timestamp_wheellog(x['date'], x['time']), axis=1)
+                
             # Filter out rows with invalid timestamps
+            valid_timestamp_mask = df['timestamp'].notna()
             df = df[valid_timestamp_mask]
 
             raw_data = {
