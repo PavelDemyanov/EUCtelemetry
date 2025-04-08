@@ -52,34 +52,47 @@ def detect_csv_type(df):
         logging.info("Detected already processed CSV file with standardized columns")
         return 'processed'  # Специальный тип для обработанных файлов
         
-    # Define required columns for each type
-    darnkessbot_cols = ['Date', 'Temperature', 'GPS Speed', 'Total mileage', 'Battery level', 
-                      'Speed', 'PWM', 'Current', 'Voltage', 'Power']
-                      
-    # Core required WheelLog columns (gps_speed is optional)
-    wheellog_core_cols = ['date', 'time', 'speed', 'totaldistance', 'battery_level', 
-                        'pwm', 'voltage', 'current', 'power', 'system_temp']
-    wheellog_all_cols = wheellog_core_cols + ['gps_speed']
+    # Define required columns for each type with importance levels
+    darnkessbot_required_cols = ['Date', 'Speed', 'Voltage']  # Minimum required columns
+    darnkessbot_optional_cols = ['Temperature', 'GPS Speed', 'Total mileage', 'Battery level', 
+                               'PWM', 'Current', 'Power']  # Optional columns
+    
+    # Core required WheelLog columns
+    wheellog_required_cols = ['date', 'speed', 'voltage']  # Minimum required columns
+    wheellog_optional_cols = ['time', 'totaldistance', 'battery_level', 'pwm', 
+                           'current', 'power', 'system_temp', 'gps_speed']  # Optional columns
 
-    # Check if all required columns exist for each type
-    is_darnkessbot = all(col in df.columns for col in darnkessbot_cols)
-    is_wheellog = all(col in df.columns for col in wheellog_core_cols)
-
-    logging.info(f"CSV type detection results - DarknessBot: {is_darnkessbot}, WheelLog: {is_wheellog}")
-
-    if is_darnkessbot:
+    # Calculate match percentages
+    darnkessbot_required_match = sum(col in df.columns for col in darnkessbot_required_cols) / len(darnkessbot_required_cols)
+    darnkessbot_optional_match = sum(col in df.columns for col in darnkessbot_optional_cols) / len(darnkessbot_optional_cols)
+    darnkessbot_total_match = (darnkessbot_required_match * 0.7) + (darnkessbot_optional_match * 0.3)  # Weight required columns more
+    
+    wheellog_required_match = sum(col in df.columns for col in wheellog_required_cols) / len(wheellog_required_cols)
+    wheellog_optional_match = sum(col in df.columns for col in wheellog_optional_cols) / len(wheellog_optional_cols)
+    wheellog_total_match = (wheellog_required_match * 0.7) + (wheellog_optional_match * 0.3)  # Weight required columns more
+    
+    logging.info(f"CSV type detection results - DarknessBot: {darnkessbot_total_match:.2f}, WheelLog: {wheellog_total_match:.2f}")
+    
+    # Check for a minimum required match threshold and all required columns
+    is_darnkessbot = darnkessbot_required_match == 1.0 and darnkessbot_total_match >= 0.6
+    is_wheellog = wheellog_required_match == 1.0 and wheellog_total_match >= 0.6
+    
+    if is_darnkessbot and (not is_wheellog or darnkessbot_total_match > wheellog_total_match):
         return 'darnkessbot'
-    elif is_wheellog:
+    elif is_wheellog and (not is_darnkessbot or wheellog_total_match > darnkessbot_total_match):
         return 'wheellog'
     else:
-        # Log which columns are missing for each type
+        # Log which required columns are missing for each type
         if not is_darnkessbot:
-            missing_darnkessbot = [col for col in darnkessbot_cols if col not in df.columns]
-            logging.info(f"Missing DarknessBot columns: {missing_darnkessbot}")
+            missing_darnkessbot = [col for col in darnkessbot_required_cols if col not in df.columns]
+            if missing_darnkessbot:
+                logging.info(f"Missing required DarknessBot columns: {missing_darnkessbot}")
         if not is_wheellog:
-            missing_wheellog = [col for col in wheellog_all_cols if col not in df.columns]
-            logging.info(f"Missing WheelLog columns: {missing_wheellog}")
-        raise ValueError("CSV format not recognized")
+            missing_wheellog = [col for col in wheellog_required_cols if col not in df.columns]
+            if missing_wheellog:
+                logging.info(f"Missing required WheelLog columns: {missing_wheellog}")
+        
+        raise ValueError("CSV format not recognized - missing required columns or insufficient match")
 
 def process_mileage(series, csv_type):
     """Process mileage values based on CSV type"""
@@ -302,7 +315,6 @@ def trim_csv_data(file_path, folder_number, start_timestamp, end_timestamp):
         processed_data = {
             'timestamp': df['timestamp'].tolist(),
             'speed': df['speed'].tolist(),
-            'gps': df['gps'].tolist(),
             'voltage': df['voltage'].tolist(),
             'temperature': df['temperature'].tolist(),
             'current': df['current'].tolist(),
@@ -311,6 +323,12 @@ def trim_csv_data(file_path, folder_number, start_timestamp, end_timestamp):
             'pwm': df['pwm'].tolist(),
             'power': df['power'].tolist()
         }
+        
+        # Add gps data if it exists, otherwise use zeros
+        if 'gps' in df.columns:
+            processed_data['gps'] = df['gps'].tolist()
+        else:
+            processed_data['gps'] = [0] * len(df['timestamp'])
         
         return csv_type, processed_data
         
@@ -355,11 +373,10 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
                 csv_type = 'darnkessbot'  # Значение по умолчанию
                 logging.info("Используем 'darnkessbot' как тип по умолчанию для обработанного файла")
 
-            # Преобразуем DataFrame в словарь
+            # Преобразуем DataFrame в словарь с необходимыми колонками
             processed_data = {
                 'timestamp': df['timestamp'].tolist(),
                 'speed': df['speed'].tolist(),
-                'gps': df['gps'].tolist(),
                 'voltage': df['voltage'].tolist(),
                 'temperature': df['temperature'].tolist(),
                 'current': df['current'].tolist(),
@@ -368,6 +385,12 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
                 'pwm': df['pwm'].tolist(),
                 'power': df['power'].tolist()
             }
+            
+            # Add GPS data if available, otherwise use zeros
+            if 'gps' in df.columns:
+                processed_data['gps'] = df['gps'].tolist()
+            else:
+                processed_data['gps'] = [0] * len(df['timestamp'])
 
             # Применяем интерполяцию, если требуется
             if interpolate_values:
@@ -428,10 +451,10 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
             logging.info(f"Определённый тип CSV: {csv_type}")
 
         if csv_type == 'processed':
+            # Initialize raw_data with required columns
             raw_data = {
                 'timestamp': df['timestamp'],
                 'speed': df['speed'],
-                'gps': df['gps'],
                 'voltage': df['voltage'],
                 'temperature': df['temperature'],
                 'current': df['current'],
@@ -440,6 +463,14 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
                 'pwm': df['pwm'],
                 'power': df['power']
             }
+            
+            # Add GPS if available, otherwise use zeros
+            if 'gps' in df.columns:
+                raw_data['gps'] = df['gps']
+            else:
+                # Create a series of zeros with the same length as timestamp
+                raw_data['gps'] = pd.Series([0] * len(df['timestamp']))
+                
             processed_data = raw_data
             csv_type = 'darnkessbot'
 
@@ -461,10 +492,10 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
             valid_timestamp_mask = df['timestamp'].notna()
             df = df[valid_timestamp_mask]
 
+            # Initialize raw_data with required columns
             raw_data = {
                 'timestamp': df['timestamp'],
                 'speed': pd.to_numeric(df['Speed'], errors='coerce'),
-                'gps': pd.to_numeric(df['GPS Speed'], errors='coerce'),
                 'voltage': pd.to_numeric(df['Voltage'], errors='coerce'),
                 'temperature': pd.to_numeric(df['Temperature'], errors='coerce'),
                 'current': pd.to_numeric(df['Current'], errors='coerce'),
@@ -473,6 +504,13 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
                 'pwm': pd.to_numeric(df['PWM'], errors='coerce'),
                 'power': pd.to_numeric(df['Power'], errors='coerce')
             }
+            
+            # Add GPS speed if available, otherwise use zeros
+            if 'GPS Speed' in df.columns:
+                raw_data['gps'] = pd.to_numeric(df['GPS Speed'], errors='coerce')
+            else:
+                # Create a series of zeros with the same length as timestamp
+                raw_data['gps'] = pd.Series([0] * len(df['timestamp']))
 
             if interpolate_values:
                 columns_to_interpolate = ['speed', 'gps', 'voltage', 'temperature', 'current', 
@@ -506,10 +544,10 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
             valid_timestamp_mask = df['timestamp'].notna()
             df = df[valid_timestamp_mask]
 
+            # Initialize raw_data with required columns
             raw_data = {
                 'timestamp': df['timestamp'],
                 'speed': pd.to_numeric(df['speed'], errors='coerce'),
-                'gps': pd.to_numeric(df['gps_speed'], errors='coerce'),
                 'voltage': pd.to_numeric(df['voltage'], errors='coerce'),
                 'temperature': pd.to_numeric(df['system_temp'], errors='coerce'),
                 'current': pd.to_numeric(df['current'], errors='coerce'),
@@ -518,6 +556,13 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
                 'pwm': pd.to_numeric(df['pwm'], errors='coerce'),
                 'power': pd.to_numeric(df['power'], errors='coerce')
             }
+            
+            # Add GPS speed if available, otherwise use zeros
+            if 'gps_speed' in df.columns:
+                raw_data['gps'] = pd.to_numeric(df['gps_speed'], errors='coerce')
+            else:
+                # Create a series of zeros with the same length as timestamp
+                raw_data['gps'] = pd.Series([0] * len(df['timestamp']))
 
             if interpolate_values:
                 columns_to_interpolate = ['speed', 'gps', 'voltage', 'temperature', 'current', 

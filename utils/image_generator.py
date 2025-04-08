@@ -439,15 +439,24 @@ def generate_frames(csv_file,
 
 def find_nearest_values(df, timestamp, interpolate=True):
     """Find nearest or interpolated values for the given timestamp"""
+    # Define the default set of columns to search for
+    standard_columns = [
+        'speed', 'voltage', 'temperature', 'current', 
+        'battery', 'mileage', 'pwm', 'power'
+    ]
+    
+    # Check if 'gps' column exists in the DataFrame
+    has_gps = 'gps' in df.columns
+    if has_gps:
+        all_columns = standard_columns + ['gps']
+    else:
+        all_columns = standard_columns
+    
     # If timestamp is before the first data point, return zeros
     if timestamp < df['timestamp'].iloc[0]:
-        return {
-            key: 0
-            for key in [
-                'speed', 'max_speed', 'gps', 'voltage', 'temperature',
-                'current', 'battery', 'mileage', 'pwm', 'power'
-            ]
-        }
+        result = {key: 0 for key in all_columns}
+        result['max_speed'] = 0
+        return result
 
     # Find the indices of the surrounding data points
     after_mask = df['timestamp'] >= timestamp
@@ -456,9 +465,8 @@ def find_nearest_values(df, timestamp, interpolate=True):
     if not after_mask.any() or not before_mask.any():
         # If timestamp is outside the range, use the last available values
         last_idx = df.index[-1]
-        return {
+        result = {
             'speed': int(df.loc[last_idx, 'speed']),
-            'gps': int(df.loc[last_idx, 'gps']),
             'voltage': int(df.loc[last_idx, 'voltage']),
             'temperature': int(df.loc[last_idx, 'temperature']),
             'current': int(df.loc[last_idx, 'current']),
@@ -468,6 +476,12 @@ def find_nearest_values(df, timestamp, interpolate=True):
             'power': int(df.loc[last_idx, 'power']),
             'max_speed': int(df.loc[:before_mask, 'speed'].max())
         }
+        
+        # Add GPS data if it exists
+        if has_gps:
+            result['gps'] = int(df.loc[last_idx, 'gps'])
+            
+        return result
 
     # Get indices of surrounding points
     after_idx = df[after_mask].index[0]
@@ -483,7 +497,6 @@ def find_nearest_values(df, timestamp, interpolate=True):
 
         result = {
             'speed': int(df.loc[use_idx, 'speed']),
-            'gps': int(df.loc[use_idx, 'gps']),
             'voltage': int(df.loc[use_idx, 'voltage']),
             'temperature': int(df.loc[use_idx, 'temperature']),
             'current': int(df.loc[use_idx, 'current']),
@@ -492,6 +505,11 @@ def find_nearest_values(df, timestamp, interpolate=True):
             'pwm': int(df.loc[use_idx, 'pwm']),
             'power': int(df.loc[use_idx, 'power'])
         }
+        
+        # Add GPS data if it exists
+        if has_gps:
+            result['gps'] = int(df.loc[use_idx, 'gps'])
+            
         result['max_speed'] = int(df.loc[:use_idx, 'speed'].max())
         return result
 
@@ -502,10 +520,16 @@ def find_nearest_values(df, timestamp, interpolate=True):
 
     # Interpolate all numeric values
     result = {}
-    for key in [
-            'speed', 'gps', 'voltage', 'temperature', 'current', 'battery',
-            'mileage', 'pwm', 'power'
-    ]:
+    # Define the standard columns to interpolate
+    standard_columns = [
+        'speed', 'voltage', 'temperature', 'current', 'battery',
+        'mileage', 'pwm', 'power'
+    ]
+    
+    # Add GPS if available
+    columns_to_interpolate = standard_columns + (['gps'] if has_gps else [])
+    
+    for key in columns_to_interpolate:
         v0 = float(df.loc[before_idx, key])
         v1 = float(df.loc[after_idx, key])
         interpolated_value = v0 + factor * (v1 - v0)

@@ -1723,13 +1723,15 @@ def analyze_csv():
                 # Check for DarknessBot format
                 darkness_bot_columns = {'Date', 'Speed', 'GPS Speed', 'Voltage', 'Temperature', 
                                     'Current', 'Battery level', 'Total mileage', 'PWM', 'Power'}
-                # Check for WheelLog format
-                wheellog_columns = {'date', 'speed', 'gps_speed', 'voltage', 'system_temp',
+                
+                # Check for WheelLog format - core columns (gps_speed is optional)
+                wheellog_core_columns = {'date', 'speed', 'voltage', 'system_temp',
                                 'current', 'battery_level', 'totaldistance', 'pwm', 'power'}
+                wheellog_all_columns = wheellog_core_columns.union({'gps_speed'})
 
                 df_columns = set(df.columns)
                 is_darkness_bot = len(darkness_bot_columns.intersection(df_columns)) >= len(darkness_bot_columns) * 0.8
-                is_wheellog = len(wheellog_columns.intersection(df_columns)) >= len(wheellog_columns) * 0.8
+                is_wheellog = len(wheellog_core_columns.intersection(df_columns)) >= len(wheellog_core_columns) * 0.9
 
                 if not (is_darkness_bot or is_wheellog):
                     return jsonify({'error': gettext('Invalid CSV format. Please upload a CSV file from DarknessBot or WheelLog.')}), 400
