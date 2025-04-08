@@ -207,7 +207,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         pointHoverRadius: 3, // Point radius on hover
                         originalData: ds.originalData, // Original data for tooltips
                         pointStyle: 'rectRounded', // Rounded corners for markers in tooltip
-                        columnName: columnName // Store column name without creating circular reference
+                        originalColumn: ds.originalColumn // Store original technical column name
                     };
                 })
             },
@@ -260,8 +260,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                 const index = context.dataIndex;
                                 let value = dataset.originalData[index];
                                 value = (typeof value === 'number' && !isNaN(value)) ? Math.round(value).toString() : '—';
-                                const unit = units[dataset.columnName] || '';
-                                return `${window.gettext(dataset.columnName)}: \u200B${value} ${unit}`;
+                                const unit = units[dataset.originalColumn.toLowerCase()] || '';
+                                return `${window.gettext(dataset.originalColumn.toLowerCase())}: \u200B${value} ${unit}`;
                             },
                             // Configure marker color in tooltip
                             labelColor: (tooltipItem) => {
@@ -291,7 +291,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     const meta = chart.getDatasetMeta(i);
                                     const isHidden = meta.hidden;
                                     return {
-                                        text: window.gettext(dataset.columnName),
+                                        text: window.gettext(dataset.originalColumn.toLowerCase()),
                                         fillStyle: isHidden ? '#555555' : dataset.borderColor,
                                         strokeStyle: isHidden ? '#555555' : dataset.borderColor,
                                         lineWidth: 2,
@@ -347,6 +347,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return {
                 originalColumn: column, // Store original technical column name
                 label: window.gettext(column),
+                originalColumn: column, // Store original technical column name
                 data: isAdaptiveChart ? normalizedValues : originalValues, // Select data based on mode
                 originalData: originalValues // Save original data for tooltips
             };
@@ -519,9 +520,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         achievementsSection.style.display = "none";
                     }
                     
+                    // Plot the data
+                    plotAllColumns(csvData);
+                    // Plot the data
+                    plotAllColumns(csvData);
+                    
+                    // Add file parameter to URL without reloading
                     const url = new URL(window.location);
                     url.searchParams.set('file', data.file_id || 'uploaded');
-                    // Add file parameter to URL without reloading
                     window.history.pushState({}, '', url);
                     
                 } catch (e) {

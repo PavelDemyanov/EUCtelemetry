@@ -17,9 +17,7 @@ def parse_timestamp_darnkessbot(date_str):
         dt = datetime.strptime(date_str, '%d.%m.%Y %H:%M:%S.%f')
         return dt.timestamp()
     except (ValueError, TypeError) as e:
-        # Don't log every error when processing large files (would create too many log entries)
-        # Only log first occurrence or when debugging specific issues
-        # logging.error(f"Error parsing darnkessbot timestamp: {e}")
+        logging.error(f"Error parsing darnkessbot timestamp: {e}")
         return None
 
 def parse_timestamp_wheellog(date_str, time_str):
@@ -116,71 +114,28 @@ def process_mileage(series, csv_type):
 
 def clean_numeric_column(series):
     """Clean numeric column by handling NA and infinite values"""
-    # For Series with more than 100K elements, use a more memory-efficient approach
-    if len(series) > 100000:
-        # Use efficient vectorized operations with int32 type for memory savings
-        # Replace infinite values with 0
-        series = series.replace([float('inf'), float('-inf')], 0)
-        # Fill NA/NaN values with 0
-        series = series.fillna(0)
-        # Round and convert to integer with memory-efficient type
-        return series.round().astype('int32')
-    else:
-        # For smaller series, use the original approach
-        # Replace infinite values with 0
-        series = series.replace([float('inf'), float('-inf')], 0)
-        # Fill NA/NaN values with 0
-        series = series.fillna(0)
-        # Round and convert to integer
-        return series.round().astype(int)
+    # Replace infinite values with 0
+    series = series.replace([float('inf'), float('-inf')], 0)
+    # Fill NA/NaN values with 0
+    series = series.fillna(0)
+    # Round and convert to integer
+    return series.round().astype(int)
 
 def remove_consecutive_duplicates(data):
     """Remove consecutive duplicate rows based on specified columns"""
     try:
         # Create DataFrame from the processed data
         df = pd.DataFrame(data)
-        
-        # For very large datasets (over 100,000 rows), use a different approach 
-        # that's more memory efficient
-        if len(df) > 100000:
-            # Get file size - estimate from number of rows
-            estimated_size_mb = len(df) * len(df.columns) * 8 / (1024 * 1024)  # Rough estimate
-            logging.info(f"Large dataset detected ({len(df)} rows, est. {estimated_size_mb:.2f} MB), using optimized duplicate removal")
-            
-            # For very large datasets, use a sampling approach to reduce memory usage
-            # Keep every row where at least one value changes significantly
-            # Define columns to check
-            columns_to_check = ['speed', 'gps', 'voltage', 'temperature', 'current', 
-                              'battery', 'mileage', 'pwm', 'power']
-            
-            # Only keep rows where values change
-            mask = pd.Series(True, index=df.index)  # Start with all True
-            
-            # Check each column individually to reduce memory usage
-            for col in columns_to_check:
-                if col in df.columns:
-                    # Keep rows where the value changes significantly (more than 1%)
-                    col_mask = (df[col].shift() != df[col])
-                    mask = mask | col_mask
-            
-            # Always keep the first row
-            if len(mask) > 0:
-                mask.iloc[0] = True
-                
-            # Apply the mask
-            clean_df = df[mask]
-            
-        else:
-            # For smaller datasets, use the original approach
-            # Define columns to check for duplicates
-            columns_to_check = ['speed', 'gps', 'voltage', 'temperature', 'current', 
-                              'battery', 'mileage', 'pwm', 'power']
-            
-            # Create mask for consecutive duplicates
-            duplicate_mask = ~(df[columns_to_check].shift() == df[columns_to_check]).all(axis=1)
-            
-            # Keep first row and non-consecutive duplicates
-            clean_df = df[duplicate_mask]
+
+        # Define columns to check for duplicates
+        columns_to_check = ['speed', 'gps', 'voltage', 'temperature', 'current', 
+                          'battery', 'mileage', 'pwm', 'power']
+
+        # Create mask for consecutive duplicates
+        duplicate_mask = ~(df[columns_to_check].shift() == df[columns_to_check]).all(axis=1)
+
+        # Keep first row and non-consecutive duplicates
+        clean_df = df[duplicate_mask]
 
         # Convert back to dictionary format
         return {col: clean_df[col].tolist() for col in df.columns}
@@ -193,57 +148,27 @@ def interpolate_numeric_data(data, columns_to_interpolate):
     try:
         # Create DataFrame from the data
         df = pd.DataFrame(data)
-        
-        # For very large datasets, use a more efficient approach
-        # Check if this is a large dataset
-        if len(df) > 100000:
-            # This is a large dataset - use more efficient processing
-            logging.info(f"Large dataset detected for interpolation ({len(df)} rows), using optimized method")
-            
-            # Interpolate specified columns with optimized batch processing
-            for col in columns_to_interpolate:
-                if col in df.columns:
-                    # Convert to float for interpolation
-                    df[col] = pd.to_numeric(df[col], errors='coerce')
-                    
-                    # Replace infinite values with NaN efficiently
-                    df[col] = df[col].replace([float('inf'), float('-inf')], np.nan)
-                    
-                    # For very large datasets, fill NaN with nearby values instead of interpolating all
-                    # This is faster but slightly less accurate
-                    if df[col].isna().sum() > 0:
-                        # Fill NaN values with the nearest non-NaN value (forward then backward)
-                        df[col] = df[col].fillna(method='ffill').fillna(method='bfill')
-                        
-                        # Handle any remaining NaN values (at the boundaries)
-                        df[col] = df[col].fillna(0)
-                    
-                    # Ensure all values are finite
-                    df[col] = df[col].replace([float('inf'), float('-inf')], 0)
-                    
-                    # Round and convert back to integer (use int32 for memory efficiency)
-                    df[col] = df[col].round().astype('int32')
-        else:
-            # For smaller datasets, use the original detailed interpolation
-            for col in columns_to_interpolate:
-                if col in df.columns:
-                    # Convert to float for interpolation
-                    df[col] = pd.to_numeric(df[col], errors='coerce')
-                    
-                    # Replace infinite values with NaN
-                    df[col] = df[col].replace([float('inf'), float('-inf')], np.nan)
-                    
-                    # Apply two-way interpolation
-                    df[col] = df[col].interpolate(method='linear', limit_direction='both')
-                    
-                    # Fill any remaining NaN values with 0
-                    df[col] = df[col].fillna(0)
-                    
-                    # Ensure all values are finite after interpolation
-                    df[col] = df[col].replace([float('inf'), float('-inf')], 0)
-                    
-                    # Round and convert back to integer
-                    df[col] = df[col].round().astype(int)
+
+        # Interpolate specified columns
+        for col in columns_to_interpolate:
+            if col in df.columns:
+                # Convert to float for interpolation
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+
+                # Replace infinite values with NaN
+                df[col] = df[col].replace([float('inf'), float('-inf')], np.nan)
+
+                # Fill NaN with 0 before interpolation
+                df[col] = df[col].fillna(0)
+
+                # Apply two-way interpolation
+                df[col] = df[col].interpolate(method='linear', limit_direction='both')
+
+                # Ensure all values are finite after interpolation
+                df[col] = df[col].replace([float('inf'), float('-inf')], 0)
+
+                # Round and convert back to integer
+                df[col] = df[col].round().astype(int)
 
         # Convert back to dictionary format
         return {col: df[col].tolist() for col in df.columns}
@@ -316,43 +241,30 @@ def trim_csv_data(file_path, folder_number, start_timestamp, end_timestamp):
         raise
 
 
-
 def process_csv_file(file_path, folder_number=None, existing_csv_type=None, interpolate_values=True):
-    """Обрабатывает CSV-файл и сохраняет обработанные данные с уникальным идентификатором проекта.
-
-    Args:
-        file_path (str): Путь к исходному CSV-файлу.
-        folder_number (int, optional): Номер папки для создания уникального имени обработанного файла.
-        existing_csv_type (str, optional): Заданный тип CSV-файла, если известен.
-        interpolate_values (bool): Флаг для выполнения интерполяции числовых данных.
-
-    Returns:
-        tuple: (csv_type, processed_data) - тип CSV и словарь с обработанными данными.
-
-    Raises:
-        Exception: Если произошла ошибка при обработке файла.
-    """
+    """Process CSV file and save processed data with unique project identifier"""
     try:
-        # Создаем директорию для обработанных данных, если она не существует
+        # Create processed data directory if it doesn't exist
         os.makedirs('processed_data', exist_ok=True)
 
-        # Определяем путь для сохранения обработанного файла
+        # Define processed file path
         processed_csv_path = None
         if folder_number is not None:
             processed_csv_path = os.path.join('processed_data', f'project_{folder_number}_{os.path.basename(file_path)}')
 
-        # Проверяем, существует ли обработанный файл
+        # Check if processed file already exists
         if processed_csv_path and os.path.exists(processed_csv_path):
-            logging.info(f"Загружаем существующий обработанный CSV из {processed_csv_path}")
+            # Load existing processed data
+            logging.info(f"Loading existing processed CSV from {processed_csv_path}")
             df = pd.read_csv(processed_csv_path)
             csv_type = existing_csv_type or detect_csv_type(df)
-
-            # Для обработанных файлов устанавливаем тип по умолчанию
+            
+            # Для обработанных файлов установим тип по умолчанию
             if csv_type == 'processed':
-                csv_type = 'darnkessbot'  # Значение по умолчанию
-                logging.info("Используем 'darnkessbot' как тип по умолчанию для обработанного файла")
+                csv_type = 'darnkessbot'  # Используем как значение по умолчанию
+                logging.info("Using 'darnkessbot' as default type for processed file")
 
-            # Преобразуем DataFrame в словарь
+            # Convert DataFrame to dictionary format
             processed_data = {
                 'timestamp': df['timestamp'].tolist(),
                 'speed': df['speed'].tolist(),
@@ -366,65 +278,56 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
                 'power': df['power'].tolist()
             }
 
-            # Применяем интерполяцию, если требуется
+            # Apply interpolation if requested
             if interpolate_values:
                 columns_to_interpolate = ['speed', 'gps', 'voltage', 'temperature', 'current', 
-                                         'battery', 'mileage', 'pwm', 'power']
+                                      'battery', 'mileage', 'pwm', 'power']
                 processed_data = interpolate_numeric_data(processed_data, columns_to_interpolate)
 
-            # Удаляем последовательные дубликаты
+            # Remove consecutive duplicates
             processed_data = remove_consecutive_duplicates(processed_data)
             return csv_type, processed_data
 
-        # Если файла нет, обрабатываем CSV
+        # If file doesn't exist, process the CSV
+        # Get file size in MB before reading
         file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
-        logging.info(f"Размер CSV-файла: {file_size_mb:.2f} МБ")
-
-        # Определяем, используется ли функция для аналитики или генерации кадров
+        logging.info(f"CSV file size: {file_size_mb:.2f} MB")
+        
+        # For analytics, if the file is very large, use sampling to reduce load
+        # Check if this is being called from the analytics function or for frame generation
         is_analytics = folder_number is None
         sample_rate = 1
-
-        # Для больших файлов в аналитике используем выборку
-        if is_analytics and file_size_mb > 20:
+        
+        # If file is large and this is for analytics, use sampling
+        if is_analytics and file_size_mb > 20:  # If file is larger than 20MB
+            # Calculate sample rate based on file size
             sample_rate = max(1, int(file_size_mb / 20))
-            logging.info(f"Обнаружен большой CSV-файл. Используем выборку 1:{sample_rate}")
-
-            if file_size_mb > 100:  # Для файлов > 100 МБ используем обработку по частям
+            logging.info(f"Large CSV file detected. Using sample rate of 1:{sample_rate}")
+            
+            # Use pandas chunksize parameter to process file in chunks for large files
+            if file_size_mb > 100:  # Over 100MB, process in chunks
                 chunks = []
-                try:
-                    for chunk in pd.read_csv(file_path, chunksize=100000, encoding='utf-8'):
-                        chunks.append(chunk.iloc[::sample_rate])
-                except UnicodeDecodeError:
-                    chunks = []
-                    for chunk in pd.read_csv(file_path, chunksize=100000, encoding='latin1'):
-                        chunks.append(chunk.iloc[::sample_rate])
-
-                if chunks:
-                    df = pd.concat(chunks)
-                else:
-                    raise ValueError("Не удалось прочитать CSV-файл с любой кодировкой")
+                for chunk in pd.read_csv(file_path, chunksize=100000):  # Process 100K rows at a time
+                    chunks.append(chunk.iloc[::sample_rate])  # Sample every Nth row
+                df = pd.concat(chunks)
             else:
-                try:
-                    df = pd.read_csv(file_path, encoding='utf-8').iloc[::sample_rate]
-                except UnicodeDecodeError:
-                    df = pd.read_csv(file_path, encoding='latin1').iloc[::sample_rate]
+                # Sample every Nth row for medium-sized files
+                df = pd.read_csv(file_path).iloc[::sample_rate]
         else:
-            # Обычная обработка для небольших файлов или генерации кадров
-            try:
-                df = pd.read_csv(file_path, encoding='utf-8')
-            except UnicodeDecodeError:
-                df = pd.read_csv(file_path, encoding='latin1')
+            # Normal processing for smaller files or frame generation
+            df = pd.read_csv(file_path)
+        
+        logging.info(f"Processing CSV file: {file_path}, rows after sampling: {len(df)}")
+        logging.info(f"CSV columns: {df.columns.tolist()}")
 
-        logging.info(f"Обработка CSV-файла: {file_path}, строк после выборки: {len(df)}")
-        logging.info(f"Столбцы CSV: {df.columns.tolist()}")
-
-        # Используем заданный тип или определяем автоматически
+        # Use existing type if provided, otherwise detect
         csv_type = existing_csv_type
         if csv_type is None:
             csv_type = detect_csv_type(df)
-            logging.info(f"Определённый тип CSV: {csv_type}")
+            logging.info(f"Detected CSV type: {csv_type}")
 
         if csv_type == 'processed':
+            # Данные уже в нужном формате, просто преобразуем их
             raw_data = {
                 'timestamp': df['timestamp'],
                 'speed': df['speed'],
@@ -437,25 +340,18 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
                 'pwm': df['pwm'],
                 'power': df['power']
             }
+            
+            # Для уже обработанных данных просто возвращаем их как есть
             processed_data = raw_data
+            # Устанавливаем дефолтный тип CSV
             csv_type = 'darnkessbot'
-
+            
         elif csv_type == 'darnkessbot':
-            # Для больших файлов используем векторизованный парсинг
-            if file_size_mb > 20:
-                df['timestamp'] = pd.to_datetime(
-                    df['Date'], 
-                    format='%d.%m.%Y %H:%M:%S.%f', 
-                    errors='coerce'
-                ).astype('int64') // 10**9
-                invalid_dates = df[df['timestamp'].isna()]['Date']
-                if not invalid_dates.empty:
-                    logging.warning(f"Найдено {len(invalid_dates)} некорректных дат, например: {invalid_dates.iloc[0]}")
-            else:
-                df['timestamp'] = df['Date'].apply(parse_timestamp_darnkessbot)
-
-            # Фильтруем строки с некорректными временными метками
+            # Parse timestamps and create a mask for valid timestamps
+            df['timestamp'] = df['Date'].apply(parse_timestamp_darnkessbot)
             valid_timestamp_mask = df['timestamp'].notna()
+
+            # Filter out rows with invalid timestamps
             df = df[valid_timestamp_mask]
 
             raw_data = {
@@ -471,11 +367,13 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
                 'power': pd.to_numeric(df['Power'], errors='coerce')
             }
 
+            # Apply interpolation before cleaning if requested
             if interpolate_values:
                 columns_to_interpolate = ['speed', 'gps', 'voltage', 'temperature', 'current', 
-                                         'battery', 'mileage', 'pwm', 'power']
+                                      'battery', 'mileage', 'pwm', 'power']
                 raw_data = interpolate_numeric_data(raw_data, columns_to_interpolate)
 
+            # Clean and process the data
             processed_data = {
                 'timestamp': raw_data['timestamp'],
                 'speed': clean_numeric_column(pd.Series(raw_data['speed'])),
@@ -490,17 +388,11 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
             }
 
         else:  # wheellog
-            if file_size_mb > 20:
-                try:
-                    df['datetime_str'] = df['date'] + ' ' + df['time']
-                    df['timestamp'] = pd.to_datetime(df['datetime_str'], format='%Y-%m-%d %H:%M:%S.%f').astype('int64') // 10**9
-                except Exception as e:
-                    logging.warning(f"Ошибка векторизованного преобразования для wheellog, используем apply: {e}")
-                    df['timestamp'] = df.apply(lambda x: parse_timestamp_wheellog(x['date'], x['time']), axis=1)
-            else:
-                df['timestamp'] = df.apply(lambda x: parse_timestamp_wheellog(x['date'], x['time']), axis=1)
-
+            # Parse timestamps and create a mask for valid timestamps
+            df['timestamp'] = df.apply(lambda x: parse_timestamp_wheellog(x['date'], x['time']), axis=1)
             valid_timestamp_mask = df['timestamp'].notna()
+
+            # Filter out rows with invalid timestamps
             df = df[valid_timestamp_mask]
 
             raw_data = {
@@ -516,11 +408,13 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
                 'power': pd.to_numeric(df['power'], errors='coerce')
             }
 
+            # Apply interpolation before cleaning if requested
             if interpolate_values:
                 columns_to_interpolate = ['speed', 'gps', 'voltage', 'temperature', 'current', 
-                                         'battery', 'mileage', 'pwm', 'power']
+                                      'battery', 'mileage', 'pwm', 'power']
                 raw_data = interpolate_numeric_data(raw_data, columns_to_interpolate)
 
+            # Clean and process the data
             processed_data = {
                 'timestamp': raw_data['timestamp'],
                 'speed': clean_numeric_column(pd.Series(raw_data['speed'])),
@@ -534,17 +428,17 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
                 'power': clean_numeric_column(pd.Series(raw_data['power']))
             }
 
-        # Удаляем последовательные дубликаты
+        # Remove consecutive duplicates
         processed_data = remove_consecutive_duplicates(processed_data)
 
-        # Сохраняем обработанные данные, если указан folder_number
+        # Save processed data if folder_number is provided
         if processed_csv_path:
             processed_df = pd.DataFrame(processed_data)
             processed_df.to_csv(processed_csv_path, index=False)
-            logging.info(f"Сохранён обработанный CSV в {processed_csv_path}")
+            logging.info(f"Saved processed CSV to {processed_csv_path}")
 
         return csv_type, processed_data
 
     except Exception as e:
-        logging.error(f"Ошибка обработки CSV-файла: {e}")
+        logging.error(f"Error processing CSV file: {e}")
         raise

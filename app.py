@@ -1770,39 +1770,17 @@ def analyze_csv():
                     # Get the number of data points
                     num_points = len(processed_data['timestamp'])
                     
-                    # For large datasets, use sampling to reduce client-side load
-                    sample_interval = 1
-                    if num_points > 10000:
-                        # Calculate sample interval based on number of points
-                        # Aim for about 5,000 points maximum to prevent browser performance issues
-                        sample_interval = max(1, int(num_points / 5000))
-                        logging.info(f"Large dataset ({num_points} points), sampling at interval of 1:{sample_interval} for client-side rendering")
-                    
-                    # Pre-check and validate all values in processed_data
-                    # This avoids repeatedly checking inside the loop
-                    cleaned_data = {}
-                    for key, values in processed_data.items():
-                        if len(values) > 0:
-                            # If first value is numeric, assume all values should be numeric
-                            is_numeric = isinstance(values[0], (int, float)) or (
-                                isinstance(values[0], str) and values[0].replace('.', '', 1).isdigit()
-                            )
-                            cleaned_data[key] = values
-                    
-                    # Create a record for each data point (using sampling for large datasets)
-                    for i in range(0, num_points, sample_interval):
+                    # Create a record for each data point
+                    for i in range(num_points):
                         record = {}
-                        for key, values in cleaned_data.items():
+                        for key, values in processed_data.items():
                             if i < len(values):
                                 value = values[i]
                                 # Handle special data types
                                 if pd.isna(value):
                                     record[key] = None
-                                elif isinstance(value, (int, float)):
-                                    record[key] = float(value)
                                 else:
-                                    # Convert to string only if not already numeric
-                                    record[key] = str(value)
+                                    record[key] = float(value) if isinstance(value, (int, float)) else str(value)
                             else:
                                 record[key] = None
                         serializable_data.append(record)
