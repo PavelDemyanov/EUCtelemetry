@@ -406,6 +406,7 @@ let currentProjectPage = 1;
 let charts = {};
 let currentRange = 'day';
 const resources = ['cpu', 'memory', 'disk', 'gpu'];
+let usersData = null; // Global variable to store full users data including pagination metadata
 
 // Get user's timezone
 const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -650,6 +651,8 @@ document.addEventListener('DOMContentLoaded', function() {
 function updateUsersTable(users) {
     // Store all users data for filtering
     allUsers = users.items;
+    // Store full users data including pagination metadata
+    usersData = users;
     renderUsersTable();
 }
 
@@ -701,7 +704,7 @@ function renderUsersTable() {
         </tr>
     `).join('');
 
-    updatePagination('users', users);
+    updatePagination('users', usersData);
 }
 
 function updateProjectsTable(projects) {
@@ -760,7 +763,7 @@ function updateProjectsTable(projects) {
 
 function updatePagination(type, data) {
     const nav = document.querySelector(`#${type}-pagination`);
-    if (!nav) return;
+    if (!nav || !data) return;
 
     const pagination = [];
 
@@ -1112,6 +1115,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initial load of data
     updateData();
+    // Initial load of user and project lists
+    updateLists(currentUserPage, currentProjectPage);
 
     // Start periodic updates
     setInterval(updateData, 5000);
