@@ -191,6 +191,36 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Please log in to access this page.'
 
+# Check for orphaned projects (projects in processing or pending status when server restarted)
+def check_orphaned_projects():
+    """
+    Check for projects in 'processing' or 'pending' status that were orphaned 
+    due to server restart and mark them as 'error'
+    """
+    try:
+        # Find all projects in processing or pending status
+        orphaned_projects = Project.query.filter(
+            Project.status.in_(['processing', 'pending'])
+        ).all()
+        
+        count = 0
+        for project in orphaned_projects:
+            project.status = 'error'
+            project.error_message = 'Project processing was interrupted due to server restart'
+            count += 1
+        
+        if count > 0:
+            db.session.commit()
+            logging.info(f"Marked {count} orphaned projects as 'error' during server startup")
+        
+        return count
+    except Exception as e:
+        logging.error(f"Error checking orphaned projects: {str(e)}")
+        db.session.rollback()
+        return 0
+
+# Note: Moved below - this will be called after app and DB initialization
+
 @login_manager.user_loader
 def load_user(id):
     return User.query.get(int(id))
@@ -346,7 +376,9 @@ def admin_lists():
         'time_until_expiry': p.time_until_expiry(),  # Add expiry time
         'processing_time': p.get_processing_time_str(),  # Add processing time
         'fps': f"{p.fps:.2f}" if p.fps else '-',  # Add FPS
-        'resolution': p.resolution or '-'  # Add resolution
+        'resolution': p.resolution or '-',  # Add resolution
+        'has_csv': bool(p.csv_file and os.path.exists(os.path.join('processed_data', f'project_{p.folder_number}_{p.csv_file}'))),
+        'has_video': bool(p.video_file and os.path.exists(os.path.join('videos', p.video_file)))
     } for p in projects.items]
 
     return jsonify({
@@ -384,6 +416,12 @@ for directory in ['uploads', 'frames', 'videos', 'processed_data', 'previews']:
 
 db.init_app(app)
 migrate = Migrate(app, db)
+
+# Mark orphaned projects as error during startup (only after DB init)
+with app.app_context():
+    orphaned_count = check_orphaned_projects()
+    if orphaned_count > 0:
+        logging.info(f"Marked {orphaned_count} projects as 'error' due to server restart")
 
 
 # Authentication routes
@@ -930,7 +968,7 @@ def list_projects():
 @login_required
 def download_file(project_id, type):
     project = Project.query.get_or_404(project_id)
-    if project.user_id != current_user.id:
+    if project.user_id != current_user.id and not current_user.is_admin:
         return jsonify({'error': 'Unauthorized'}), 403
 
     if type == 'video' and project.video_file:

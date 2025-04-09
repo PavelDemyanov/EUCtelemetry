@@ -175,6 +175,7 @@
                             <th>Proc. Time</th>
                             <th>FPS</th>
                             <th>Resolution</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -209,6 +210,23 @@
                             <td>{{ project.get_processing_time_str() }}</td>
                             <td>{{ "%.2f"|format(project.fps) if project.fps else '-' }}</td>
                             <td>{{ project.resolution or '-' }}</td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    {% if project.csv_file %}
+                                    <a href="{{ url_for('download_file', project_id=project.id, type='processed_csv') }}" 
+                                       class="btn btn-sm btn-outline-primary" title="Download CSV">
+                                        <i class="fas fa-file-csv"></i> CSV
+                                    </a>
+                                    {% endif %}
+                                    
+                                    {% if project.video_file %}
+                                    <a href="{{ url_for('download_file', project_id=project.id, type='video') }}" 
+                                       class="btn btn-sm btn-outline-success" title="Download Video">
+                                        <i class="fas fa-file-video"></i> Video
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -719,6 +737,21 @@ function updateProjectsTable(projects) {
             <td>${project.processing_time}</td>
             <td>${project.fps}</td>
             <td>${project.resolution}</td>
+            <td>
+                <div class="btn-group" role="group">
+                    ${project.has_csv ? 
+                    `<a href="/download/${project.id}/processed_csv" 
+                       class="btn btn-sm btn-outline-primary" title="Download CSV">
+                        <i class="fas fa-file-csv"></i> CSV
+                    </a>` : ''}
+                    
+                    ${project.has_video ? 
+                    `<a href="/download/${project.id}/video" 
+                       class="btn btn-sm btn-outline-success" title="Download Video">
+                        <i class="fas fa-file-video"></i> Video
+                    </a>` : ''}
+                </div>
+            </td>
         </tr>
     `).join('');
 
