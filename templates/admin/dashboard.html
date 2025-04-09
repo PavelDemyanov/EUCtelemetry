@@ -92,6 +92,7 @@
                             <th>Email</th>
                             <th>Registration Date</th>
                             <th>Email Status</th>
+                            <th>Account Status</th>
                             <th>Admin Status</th>
                             <th>Actions</th>
                         </tr>
@@ -112,6 +113,13 @@
                                 <span class="badge bg-success muted text-white">Confirmed</span>
                                 {% else %}
                                 <span class="badge bg-warning muted text-dark">Pending</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if user.is_active %}
+                                <span class="badge bg-success muted text-white">Active</span>
+                                {% else %}
+                                <span class="badge bg-danger muted text-white">Deactivated</span>
                                 {% endif %}
                             </td>
                             <td>
@@ -269,6 +277,10 @@
                         <div class="mb-3 form-check">
                             <input type="checkbox" class="form-check-input" id="editUserIsEmailConfirmed">
                             <label class="form-check-label" for="editUserIsEmailConfirmed">Confirm Email Registration</label>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="editUserIsActive">
+                            <label class="form-check-label" for="editUserIsActive">Account Active</label>
                         </div>
                     </form>
                 </div>
@@ -626,7 +638,7 @@ function renderUsersTable() {
     
     // Render table
     tbody.innerHTML = filteredUsers.map(user => `
-        <tr>
+        <tr${!user.is_active ? ' class="table-secondary"' : ''}>
             <td>
                 ${user.name}
                 ${user.is_new ? '<span class="badge bg-success muted text-white">New User</span>' : ''}
@@ -639,17 +651,26 @@ function renderUsersTable() {
                 '<span class="badge bg-warning muted text-dark">Pending</span>'}
             </td>
             <td>
+                ${user.is_active ? 
+                '<span class="badge bg-success muted text-white">Active</span>' : 
+                '<span class="badge bg-danger muted text-white">Deactivated</span>'}
+            </td>
+            <td>
                 ${user.is_admin ?
                 '<span class="badge bg-info muted text-white">Admin</span>' :
                 '<span class="badge bg-secondary muted text-white">User</span>'}
             </td>
             <td>
-                <button class="btn btn-sm btn-primary" onclick="editUser(${user.id}, '${user.name}', '${user.email}', ${user.is_admin}, ${user.is_email_confirmed})">
+                <button class="btn btn-sm btn-primary" onclick="editUser(${user.id}, '${user.name}', '${user.email}', ${user.is_admin}, ${user.is_email_confirmed}, ${user.is_active})">
                     <i class="fas fa-edit"></i> Edit
                 </button>
-                <button class="btn btn-sm btn-danger" onclick="confirmDeleteUser(${user.id}, '${user.email}')">
-                    <i class="fas fa-trash"></i> Delete
-                </button>
+                ${user.is_active ? 
+                `<button class="btn btn-sm btn-warning" onclick="toggleUserActivation(${user.id}, '${user.email}', false)">
+                    <i class="fas fa-ban"></i> Deactivate
+                </button>` : 
+                `<button class="btn btn-sm btn-success" onclick="toggleUserActivation(${user.id}, '${user.email}', true)">
+                    <i class="fas fa-check"></i> Activate
+                </button>`}
             </td>
         </tr>
     `).join('');
@@ -789,12 +810,13 @@ function updateData() {
 
 let userToDelete = null;
 
-function editUser(userId, name, email, isAdmin, isEmailConfirmed) {
+function editUser(userId, name, email, isAdmin, isEmailConfirmed, isActive) {
     document.getElementById('editUserId').value = userId;
     document.getElementById('editUserName').value = name;
     document.getElementById('editUserEmail').value = email;
     document.getElementById('editUserIsAdmin').checked = isAdmin;
     document.getElementById('editUserIsEmailConfirmed').checked = isEmailConfirmed;
+    document.getElementById('editUserIsActive').checked = isActive !== false; // default to true if undefined
     new bootstrap.Modal(document.getElementById('editUserModal')).show();
 }
 
@@ -810,7 +832,8 @@ function saveUserChanges() {
         name: document.getElementById('editUserName').value,
         email: document.getElementById('editUserEmail').value,
         is_admin: document.getElementById('editUserIsAdmin').checked,
-        is_email_confirmed: document.getElementById('editUserIsEmailConfirmed').checked
+        is_email_confirmed: document.getElementById('editUserIsEmailConfirmed').checked,
+        is_active: document.getElementById('editUserIsActive').checked
     };
 
     fetch(`/admin/user/${userId}`, {
@@ -905,6 +928,72 @@ function deleteUser() {
     .catch(error => {
         console.error('Error:', error);
         alert('Failed to deactivate user');
+    });
+}
+
+// Функция для прямой активации/деактивации через кнопки в таблице
+function toggleUserActivation(userId, email, activate) {
+    const action = activate ? 'activate' : 'deactivate';
+    
+    // Подтверждение действия
+    if (!confirm(`Are you sure you want to ${action} user ${email}?`)) {
+        return;
+    }
+    
+    // Отправляем запрос на изменение статуса активации
+    fetch(`/admin/user/${userId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            is_active: activate
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => Promise.reject(err));
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Показать уведомление об успешном действии
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
+            alertDiv.setAttribute('role', 'alert');
+            alertDiv.innerHTML = `
+                <strong>Success!</strong> User has been successfully ${activate ? 'activated' : 'deactivated'}.
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            document.body.appendChild(alertDiv);
+            
+            // Обновить список пользователей
+            updateLists(currentUserPage, currentProjectPage);
+            
+            // Удалить уведомление через 3 секунды
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 3000);
+        } else {
+            throw new Error(data.error || `Failed to ${action} user`);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-danger alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
+        alertDiv.setAttribute('role', 'alert');
+        alertDiv.innerHTML = `
+            <strong>Error!</strong> ${error.error || error.message || `Failed to ${action} user`}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        document.body.appendChild(alertDiv);
+
+        setTimeout(() => {
+            alertDiv.remove();
+        }, 5000);
     });
 }
 

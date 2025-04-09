@@ -329,7 +329,8 @@ def admin_lists():
         'created_at': u.created_at.strftime('%Y-%m-%d %H:%M'),
         'is_email_confirmed': u.is_email_confirmed,
         'is_new': u.created_at.date() == today,
-        'is_admin': u.is_admin
+        'is_admin': u.is_admin,
+        'is_active': u.is_active
     } for u in users.items]
 
     # Format projects data with additional fields
@@ -1312,6 +1313,19 @@ def update_user(user_id):
             user.is_email_confirmed = bool(data['is_email_confirmed'])
             # If email confirmation is manually set by admin, clear token
             if user.is_email_confirmed:
+                user.email_confirmation_token = None
+        if 'is_active' in data:
+            # Обновляем статус активации пользователя
+            was_active = user.is_active
+            user.is_active = bool(data['is_active'])
+            
+            # Логируем изменение статуса
+            action = "activated" if user.is_active else "deactivated"
+            logging.info(f"User {user.id} ({user.email}) {action} by admin")
+            
+            # Если пользователь активирован, но email не подтвержден, сбрасываем токен
+            # чтобы пользователь мог запросить новое письмо для подтверждения
+            if user.is_active and not was_active and not user.is_email_confirmed:
                 user.email_confirmation_token = None
 
         db.session.commit()
