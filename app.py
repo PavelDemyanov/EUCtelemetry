@@ -972,15 +972,15 @@ def download_file(project_id, type):
         return jsonify({'error': 'Unauthorized'}), 403
 
     if type == 'video' and project.video_file:
-        return send_file(f'videos/{project.video_file}')
+        video_path = os.path.join('videos', project.video_file)
+        return send_file(video_path, as_attachment=True)
     elif type == 'frames':
         # TODO: Implement frame download as ZIP
         pass
     elif type == 'processed_csv':
         processed_csv = os.path.join('processed_data', f'project_{project.folder_number}_{project.csv_file}')
         if os.path.exists(processed_csv):
-            return send_file(processed_csv, as_attachment=True, 
-                           attachment_filename=f'processed_{project.csv_file}')
+            return send_file(processed_csv, as_attachment=True)
 
     return jsonify({'error': 'File not found'}), 404
 
