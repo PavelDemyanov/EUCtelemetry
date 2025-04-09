@@ -285,22 +285,22 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Delete User Account</h5>
+                    <h5 class="modal-title">Deactivate User Account</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p>Are you sure you want to delete the user account <strong id="deleteUserEmail"></strong>?</p>
-                    <p class="text-danger">This action will:</p>
-                    <ul class="text-danger">
+                    <p>Are you sure you want to deactivate the user account <strong id="deleteUserEmail"></strong>?</p>
+                    <p class="text-warning">This action will:</p>
+                    <ul class="text-warning">
                         <li>Delete all user's projects</li>
                         <li>Remove all associated files (previews, frames, videos, etc.)</li>
-                        <li>Delete the user account permanently</li>
+                        <li>Deactivate the user account (they won't be able to log in)</li>
                     </ul>
-                    <p class="text-danger"><strong>This action cannot be undone!</strong></p>
+                    <p class="text-warning"><strong>The user's data will be preserved in the database but the account will be disabled!</strong></p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-danger" onclick="deleteUser()">Delete User</button>
+                    <button type="button" class="btn btn-warning" onclick="deleteUser()">Deactivate User</button>
                 </div>
             </div>
         </div>
@@ -878,15 +878,33 @@ function deleteUser() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
+            // Скрыть модальное окно подтверждения удаления
             bootstrap.Modal.getInstance(document.getElementById('deleteUserModal')).hide();
+            
+            // Показать уведомление об успешном деактивировании
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
+            alertDiv.setAttribute('role', 'alert');
+            alertDiv.innerHTML = `
+                <strong>Success!</strong> User has been successfully deactivated.
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            document.body.appendChild(alertDiv);
+            
+            // Обновить список пользователей
             updateLists(currentUserPage, currentProjectPage);
+            
+            // Удалить уведомление через 3 секунды
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 3000);
         } else {
-            alert(data.error || 'Failed to delete user');
+            alert(data.error || 'Failed to deactivate user');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Failed to delete user');
+        alert('Failed to deactivate user');
     });
 }
 

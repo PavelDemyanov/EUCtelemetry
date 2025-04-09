@@ -277,7 +277,7 @@ def admin_dashboard():
     today = datetime.utcnow().date()
     users = User.query.filter(User.created_at >= today - timedelta(days=30))\
         .order_by(User.created_at.desc())\
-        .paginate(page=user_page, per_page=20, error_out=False)
+        .paginate(page=user_page, per_page=10, error_out=False)
 
     return render_template('admin/dashboard.html', 
                          projects=projects,
@@ -319,7 +319,7 @@ def admin_lists():
 
     # Get paginated users (all users, not just recent ones)
     users = User.query.order_by(User.created_at.desc())\
-        .paginate(page=user_page, per_page=20, error_out=False)
+        .paginate(page=user_page, per_page=10, error_out=False)
 
     # Format users data with additional fields
     users_data = [{
@@ -1342,12 +1342,10 @@ def delete_admin_user(user_id):
                 return jsonify({'error': f'Failed to clean up files for project {project.id}'}), 500
             db.session.delete(project)
 
-        # Instead of deleting the user, deactivate them
+        # Деактивируем пользователя вместо физического удаления
         user.is_active = False
-        # Clear sensitive and authentication-related data
-        user.password_hash = None
-        user.email_confirmation_token = None
-        user.is_email_confirmed = False
+        # Сохраняем запись о деактивации
+        logging.info(f"User {user.id} ({user.email}) deactivated by admin")
         db.session.commit()
 
         return jsonify({'success': True})
