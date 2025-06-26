@@ -225,11 +225,6 @@ def create_frame(values,
         show_current = text_settings.get('show_current', True)  # Add current visibility setting
         show_bottom_elements = text_settings.get('show_bottom_elements', True)
         use_icons = text_settings.get('use_icons', False)  # Add icons setting
-        
-        # Calculate icon size for potential use
-        box_height = int(40 * scale_factor)  # Box height will be used later
-        # Icon size scales with font size to maintain proportions
-        icon_size = max(12, int(font_size * 0.8))  # Icon size proportional to font size
 
         # Получаем настройки позиционирования индикатора и текста
         indicator_x_percent = float(text_settings.get('indicator_x', 50))
@@ -260,6 +255,8 @@ def create_frame(values,
                               speed_indicator)
 
         font_size = int(text_settings.get('font_size', 26) * scale_factor)
+        # Icon size scales with font size to maintain proportions
+        icon_size = max(12, int(font_size * 0.8))  # Icon size proportional to font size
         top_padding = int(text_settings.get('top_padding', 14) * scale_factor)
         box_height = int(text_settings.get('bottom_padding', 47) * scale_factor)
         spacing = int(text_settings.get('spacing', 10) * scale_factor)
