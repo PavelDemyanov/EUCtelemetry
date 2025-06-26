@@ -1063,3 +1063,14 @@ msgstr "Загрузка..."
 msgid "Processing data..."
 msgstr "Обработка данных..."
 
+
+# Security and CAPTCHA messages
+msgid "Too many registration attempts from your IP address. Please try again tomorrow."
+msgstr "Слишком много попыток регистрации с вашего IP-адреса. Попробуйте снова завтра."
+
+msgid "Please complete the CAPTCHA verification"
+msgstr "Пожалуйста, пройдите проверку CAPTCHA"
+
+msgid "CAPTCHA verification failed. Please try again."
+msgstr "Проверка CAPTCHA не удалась. Попробуйте снова."
+
