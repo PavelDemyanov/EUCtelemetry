@@ -464,18 +464,15 @@ def register():
         if client_ip and ',' in client_ip:
             client_ip = client_ip.split(',')[0].strip()
         
-        # Check IP registration limit
+        # Check IP registration limit BEFORE creating any user records
         if not RegistrationAttempt.can_register(client_ip):
             attempts_count = RegistrationAttempt.get_daily_attempts_count(client_ip)
-            flash(_('Too many registration attempts from your IP address. Please try again tomorrow.'))
+            if get_locale() == 'ru':
+                flash('Превышен лимит регистраций с вашего IP-адреса (максимум 3 в день). Попробуйте снова завтра.')
+            else:
+                flash('Registration limit exceeded from your IP address (maximum 3 per day). Please try again tomorrow.')
             logging.warning(f"Registration blocked for IP {client_ip}: {attempts_count} attempts in 24 hours")
-            # Log the blocked attempt
-            RegistrationAttempt.log_attempt(
-                ip_address=client_ip,
-                email=form.email.data,
-                success=False,
-                user_agent=request.headers.get('User-Agent')
-            )
+            # Do NOT log failed attempts or create user records to prevent database spam
             return redirect(url_for('register'))
         
         # Проверяем, существует ли пользователь с таким email (активный или неактивный)
