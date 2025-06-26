@@ -17,8 +17,14 @@ _metal_initialized = False
 _metal_context = None
 _metal_device = None
 
-# Cache for loaded icons
+# Cache for loaded icons - clear cache when restarting
 _icon_cache = {}
+
+def clear_icon_cache():
+    """Clear the icon cache to force reload of updated SVG files."""
+    global _icon_cache
+    _icon_cache.clear()
+    logging.info("Icon cache cleared")
 
 def load_icon(icon_name, size=24, color='white'):
     """Load and cache an icon from SVG file, return PIL Image."""
