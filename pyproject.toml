@@ -29,4 +29,6 @@ dependencies = [
     "psutil>=7.0.0",
     "flask-babel>=4.0.0",
     "markdown>=3.7",
+    "flask-limiter>=3.12",
+    "requests>=2.32.3",
 ]

@@ -1,7 +1,28 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, TextAreaField, BooleanField
-from wtforms.validators import DataRequired, Email, Length, EqualTo
+from wtforms import StringField, PasswordField, SubmitField, TextAreaField, BooleanField, HiddenField
+from wtforms.validators import DataRequired, Email, Length, EqualTo, ValidationError
 from flask_babel import lazy_gettext as _l
+import requests
+import os
+
+def validate_recaptcha(form, field):
+    """Validate Google reCAPTCHA response"""
+    if not field.data:
+        raise ValidationError(_l('Please complete the CAPTCHA verification'))
+    
+    secret_key = os.environ.get('RECAPTCHA_SECRET_KEY')
+    if not secret_key:
+        # If no CAPTCHA configured, skip validation in development
+        return
+    
+    response = requests.post('https://www.google.com/recaptcha/api/siteverify', {
+        'secret': secret_key,
+        'response': field.data
+    })
+    
+    result = response.json()
+    if not result.get('success'):
+        raise ValidationError(_l('CAPTCHA verification failed. Please try again.'))
 
 class LoginForm(FlaskForm):
     email = StringField(_l('Email'), validators=[DataRequired(), Email()])
@@ -14,6 +35,7 @@ class RegistrationForm(FlaskForm):
     password = PasswordField(_l('Password'), validators=[DataRequired(), Length(min=6)])
     password2 = PasswordField(_l('Confirm Password'), 
                             validators=[DataRequired(), EqualTo('password', message=_l('Passwords must match'))])
+    recaptcha = HiddenField(validators=[validate_recaptcha])
     submit = SubmitField(_l('Register'))
 
 class ProfileForm(FlaskForm):

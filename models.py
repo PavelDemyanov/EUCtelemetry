@@ -181,3 +181,40 @@ class Preset(db.Model):
         )
         preset.set_settings(settings_dict)
         return preset
+
+
+class RegistrationAttempt(db.Model):
+    """Model for tracking registration attempts by IP address"""
+    id = db.Column(db.Integer, primary_key=True)
+    ip_address = db.Column(db.String(45), nullable=False)  # IPv6 can be up to 45 chars
+    attempted_at = db.Column(db.DateTime, default=datetime.utcnow)
+    email = db.Column(db.String(120), nullable=False)
+    success = db.Column(db.Boolean, default=False)
+    user_agent = db.Column(db.Text)
+
+    @staticmethod
+    def get_daily_attempts_count(ip_address):
+        """Get count of registration attempts from IP in last 24 hours"""
+        cutoff_time = datetime.utcnow() - timedelta(days=1)
+        return RegistrationAttempt.query.filter(
+            RegistrationAttempt.ip_address == ip_address,
+            RegistrationAttempt.attempted_at > cutoff_time
+        ).count()
+
+    @staticmethod
+    def can_register(ip_address, max_attempts=3):
+        """Check if IP can register (under daily limit)"""
+        return RegistrationAttempt.get_daily_attempts_count(ip_address) < max_attempts
+
+    @staticmethod
+    def log_attempt(ip_address, email, success=False, user_agent=None):
+        """Log a registration attempt"""
+        attempt = RegistrationAttempt(
+            ip_address=ip_address,
+            email=email,
+            success=success,
+            user_agent=user_agent
+        )
+        db.session.add(attempt)
+        db.session.commit()
+        return attempt
