@@ -22,7 +22,7 @@ from werkzeug.utils import secure_filename
 from flask_babel import Babel, gettext as _, get_locale
 from extensions import db
 from utils.csv_processor import process_csv_file, detect_csv_type
-from utils.image_generator import generate_frames, create_preview_frame
+from utils.image_generator import generate_frames, create_preview_frame, clear_icon_cache
 from utils.video_creator import create_video
 from utils.background_processor import process_project, stop_project_processing
 from utils.env_setup import setup_env_variables
@@ -74,6 +74,9 @@ app.config['MAIL_USE_SSL'] = True
 
 # Initialize used_folders as an empty set
 used_folders = set()
+
+# Clear icon cache on startup to ensure updated SVG files are loaded
+clear_icon_cache()
 
 # Initialize Babel
 babel = Babel(app)
