@@ -47,7 +47,7 @@
                     
                     <!-- CAPTCHA Section -->
                     <div class="mb-3">
-                        <div class="g-recaptcha" data-sitekey="{{ config.get('RECAPTCHA_SITE_KEY', '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI') }}" data-callback="onCaptchaSuccess"></div>
+                        <div class="g-recaptcha" data-sitekey="{{ recaptcha_site_key }}" data-callback="onCaptchaSuccess"></div>
                         {{ form.recaptcha() }}
                         {% for error in form.recaptcha.errors %}
                         <span class="text-danger d-block mt-2">{{ error }}</span>
