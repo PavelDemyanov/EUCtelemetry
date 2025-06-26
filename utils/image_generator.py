@@ -373,7 +373,11 @@ def create_frame(values,
                 if use_icons:
                     # Draw with icon instead of text label
                     icon_name = get_icon_name_for_label(label, loc)
-                    icon = load_icon(icon_name, icon_size, 'white')
+                    
+                    # Determine icon color based on box color
+                    # If box is colored (yellow/red), use black icon for better visibility
+                    icon_color = 'black' if box_color != (0, 0, 0, 255) else 'white'
+                    icon = load_icon(icon_name, icon_size, icon_color)
                     
                     if icon:
                         # Calculate text metrics for proper alignment
