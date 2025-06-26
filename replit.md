@@ -120,3 +120,4 @@ Icon vertical positioning: Default offset of 5 pixels works best for telemetry o
 - June 26, 2025: Implemented adaptive icon coloring (black icons on yellow/red backgrounds)
 - June 26, 2025: Extended icon vertical positioning range from -10/+10 to -30/+30 pixels
 - June 26, 2025: Added icon settings to preset system (use_icons and icon_vertical_offset)
+- June 26, 2025: Moved BETA label from "Preset Controls" and "Trim CSV Data" to "Icons instead of text"
