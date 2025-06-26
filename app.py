@@ -30,7 +30,7 @@ from utils.email_sender import send_email
 from forms import (LoginForm, RegistrationForm, ProfileForm, 
                   ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm, DeleteAccountForm, 
                   NewsForm, EmailCampaignForm, ResendConfirmationForm)
-from models import User, Project, EmailCampaign, News, Preset
+from models import User, Project, EmailCampaign, News, Preset, RegistrationAttempt
 import markdown
 from sqlalchemy import desc
 
@@ -459,6 +459,25 @@ def register():
         return redirect(url_for('index'))
     form = RegistrationForm()
     if form.validate_on_submit():
+        # Get client IP address
+        client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr)
+        if client_ip and ',' in client_ip:
+            client_ip = client_ip.split(',')[0].strip()
+        
+        # Check IP registration limit
+        if not RegistrationAttempt.can_register(client_ip):
+            attempts_count = RegistrationAttempt.get_daily_attempts_count(client_ip)
+            flash(_('Too many registration attempts from your IP address. Please try again tomorrow.'))
+            logging.warning(f"Registration blocked for IP {client_ip}: {attempts_count} attempts in 24 hours")
+            # Log the blocked attempt
+            RegistrationAttempt.log_attempt(
+                ip_address=client_ip,
+                email=form.email.data,
+                success=False,
+                user_agent=request.headers.get('User-Agent')
+            )
+            return redirect(url_for('register'))
+        
         # Проверяем, существует ли пользователь с таким email (активный или неактивный)
         existing_user = User.query.filter_by(email=form.email.data).first()
         
@@ -572,6 +591,13 @@ def register():
                 """
 
             if send_email(user.email, "Confirm Your Email Address", confirmation_html):
+                # Log successful registration attempt
+                RegistrationAttempt.log_attempt(
+                    ip_address=client_ip,
+                    email=form.email.data,
+                    success=True,
+                    user_agent=request.headers.get('User-Agent')
+                )
                 flash(_('Please check your email to complete registration.'))
                 # Перенаправляем с параметром, чтобы показать опцию повторной отправки
                 return redirect(url_for('login', email_needs_confirmation=1))

@@ -1,5 +1,11 @@
 {% extends "base.html" %}
 
+{% block head %}
+{{ super() }}
+<!-- Google reCAPTCHA -->
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+{% endblock %}
+
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-6">
@@ -38,8 +44,18 @@
                         <span class="text-danger">{{ error }}</span>
                         {% endfor %}
                     </div>
+                    
+                    <!-- CAPTCHA Section -->
                     <div class="mb-3">
-                        {{ form.submit(class="btn btn-primary") }}
+                        <div class="g-recaptcha" data-sitekey="{{ config.get('RECAPTCHA_SITE_KEY', '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI') }}" data-callback="onCaptchaSuccess"></div>
+                        {{ form.recaptcha() }}
+                        {% for error in form.recaptcha.errors %}
+                        <span class="text-danger d-block mt-2">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.submit(class="btn btn-primary", id="submit-btn", disabled=true) }}
                     </div>
                 </form>
                 <p>{{ _('Already have an account?') }} <a href="{{ url_for('login') }}">{{ _('Sign in') }}</a></p>
@@ -47,4 +63,26 @@
         </div>
     </div>
 </div>
+
+<script>
+function onCaptchaSuccess(response) {
+    document.getElementById('recaptcha').value = response;
+    document.getElementById('submit-btn').disabled = false;
+}
+
+// Reset CAPTCHA callback
+function onCaptchaExpire() {
+    document.getElementById('recaptcha').value = '';
+    document.getElementById('submit-btn').disabled = true;
+}
+
+// Set the expired callback
+window.onload = function() {
+    if (typeof grecaptcha !== 'undefined') {
+        grecaptcha.render(document.querySelector('.g-recaptcha'), {
+            'expired-callback': onCaptchaExpire
+        });
+    }
+}
+</script>
 {% endblock %}
