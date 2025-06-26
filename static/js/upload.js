@@ -707,6 +707,7 @@ function setupTrimmerHandlers() {
             show_current: document.getElementById('showCurrent').checked,
             show_gps: document.getElementById('showGPS').checked,
             show_bottom_elements: document.getElementById('showBottomElements').checked,
+            use_icons: document.getElementById('useIcons').checked,
             start_timestamp: csvTimeRange.start,
             end_timestamp: csvTimeRange.end
         };
@@ -815,7 +816,8 @@ function updatePreview(projectId) {
         show_power: document.getElementById('showPower').checked,
         show_current: document.getElementById('showCurrent').checked,
         show_gps: document.getElementById('showGPS').checked,
-        show_bottom_elements: document.getElementById('showBottomElements').checked
+        show_bottom_elements: document.getElementById('showBottomElements').checked,
+        use_icons: document.getElementById('useIcons').checked
     };
 
     console.log('Sending preview settings:', settings);
@@ -956,7 +958,8 @@ allSettings.forEach(setting => {
                     show_power: document.getElementById('showPower').checked,
                     show_current: document.getElementById('showCurrent').checked,
                     show_gps: document.getElementById('showGPS').checked,
-                    show_bottom_elements: document.getElementById('showBottomElements').checked
+                    show_bottom_elements: document.getElementById('showBottomElements').checked,
+                    use_icons: document.getElementById('useIcons').checked
                 };
 
                 // Update preview with all current settings
