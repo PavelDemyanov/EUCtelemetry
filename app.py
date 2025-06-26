@@ -1925,7 +1925,8 @@ def generate_preview(project_id):
             'show_power': data.get('show_power', True),
             'show_current': data.get('show_current', True),
             'show_bottom_elements': data.get('show_bottom_elements', True),
-            'use_icons': data.get('use_icons', False)
+            'use_icons': data.get('use_icons', False),
+            'icon_vertical_offset': int(data.get('icon_vertical_offset', 0))
         }
 
         logging.info(f"Generating preview with settings: {text_settings}")
