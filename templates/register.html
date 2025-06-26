@@ -45,17 +45,19 @@
                         {% endfor %}
                     </div>
                     
-                    <!-- CAPTCHA Section -->
+                    <!-- CAPTCHA Section (only show if configured) -->
+                    {% if config.get('RECAPTCHA_SITE_KEY') %}
                     <div class="mb-3">
-                        <div class="g-recaptcha" data-sitekey="{{ config.get('RECAPTCHA_SITE_KEY', '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI') }}" data-callback="onCaptchaSuccess"></div>
+                        <div class="g-recaptcha" data-sitekey="{{ config.get('RECAPTCHA_SITE_KEY') }}" data-callback="onCaptchaSuccess"></div>
                         {{ form.recaptcha() }}
                         {% for error in form.recaptcha.errors %}
                         <span class="text-danger d-block mt-2">{{ error }}</span>
                         {% endfor %}
                     </div>
+                    {% endif %}
                     
                     <div class="mb-3">
-                        {{ form.submit(class="btn btn-primary", id="submit-btn", disabled=true) }}
+                        {{ form.submit(class="btn btn-primary", id="submit-btn", disabled=config.get('RECAPTCHA_SITE_KEY') and true or false) }}
                     </div>
                 </form>
                 <p>{{ _('Already have an account?') }} <a href="{{ url_for('login') }}">{{ _('Sign in') }}</a></p>
@@ -75,6 +77,17 @@ function onCaptchaExpire() {
     document.getElementById('recaptcha').value = '';
     document.getElementById('submit-btn').disabled = true;
 }
+
+// Enable button if no CAPTCHA is configured
+document.addEventListener('DOMContentLoaded', function() {
+    var captchaDiv = document.querySelector('.g-recaptcha');
+    var submitBtn = document.getElementById('submit-btn');
+    
+    // If no CAPTCHA div exists, enable the button
+    if (!captchaDiv && submitBtn) {
+        submitBtn.disabled = false;
+    }
+});
 
 // Set the expired callback
 window.onload = function() {
