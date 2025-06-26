@@ -34,12 +34,8 @@ def load_icon(icon_name, size=24, color='white'):
         return _icon_cache[cache_key]
     
     try:
-        # First try PNG file
+        # Load PNG file
         icon_path = os.path.join('static', 'icons', 'icons_telemetry', f'{icon_name}.png')
-        
-        # Handle special case for voltage (filename is "votage.png")
-        if icon_name == 'voltage' and not os.path.exists(icon_path):
-            icon_path = os.path.join('static', 'icons', 'icons_telemetry', 'votage.png')
         
         if not os.path.exists(icon_path):
             logging.warning(f"Icon file not found: {icon_path}")
