@@ -377,8 +377,19 @@ def create_frame(values,
                     icon = load_icon(icon_name, icon_size, 'white')
                     
                     if icon:
-                        # Calculate icon position (vertically centered)
-                        icon_y = y_position + (box_height - icon_size) // 2
+                        # Calculate text metrics for proper alignment
+                        value_bbox = draw.textbbox((0, 0), value, font=bold_font)
+                        
+                        # Get text ascent and descent to align icon with text baseline
+                        text_ascent = abs(value_bbox[1])  # Distance from baseline to top
+                        text_descent = value_bbox[3] - text_ascent  # Distance from baseline to bottom
+                        text_total_height = text_ascent + text_descent
+                        
+                        # Position icon so it aligns with text height
+                        # Top of icon should align with top of capital letters
+                        # Bottom of icon should align with baseline of text
+                        icon_y = text_y + text_ascent - icon_size
+                        
                         overlay.paste(icon, (text_x, icon_y), icon)
                         
                         # Draw value after icon
@@ -386,7 +397,6 @@ def create_frame(values,
                         draw.text((value_x, text_y), value, fill=text_color, font=bold_font)
                         
                         # Draw unit after value
-                        value_bbox = draw.textbbox((0, 0), value, font=bold_font)
                         value_width = value_bbox[2] - value_bbox[0]
                         draw.text((value_x + value_width, text_y), f" {unit}", fill=text_color, font=regular_font)
                     else:
