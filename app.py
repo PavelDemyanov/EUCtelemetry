@@ -1442,7 +1442,7 @@ def search_users():
         if not pattern:
             return jsonify({'error': 'Pattern is required'}), 400
             
-        # Search for users whose name contains the pattern (case-insensitive)
+        # Search for users whose name contains the exact sequence of characters (case-insensitive)
         users = User.query.filter(User.name.ilike(f'%{pattern}%')).all()
         
         return jsonify({
