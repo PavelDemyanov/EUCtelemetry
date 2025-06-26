@@ -27,14 +27,19 @@ def clear_icon_cache():
     logging.info("Icon cache cleared")
 
 def load_icon(icon_name, size=24, color='white'):
-    """Load and cache an icon from SVG file, return PIL Image."""
+    """Load and cache an icon from PNG file, return PIL Image with inversion if needed."""
     cache_key = f"{icon_name}_{size}_{color}"
     
     if cache_key in _icon_cache:
         return _icon_cache[cache_key]
     
     try:
-        icon_path = os.path.join('static', 'icons', 'icons_telemetry', f'{icon_name}.svg')
+        # First try PNG file
+        icon_path = os.path.join('static', 'icons', 'icons_telemetry', f'{icon_name}.png')
+        
+        # Handle special case for voltage (filename is "votage.png")
+        if icon_name == 'voltage' and not os.path.exists(icon_path):
+            icon_path = os.path.join('static', 'icons', 'icons_telemetry', 'votage.png')
         
         if not os.path.exists(icon_path):
             logging.warning(f"Icon file not found: {icon_path}")
@@ -42,29 +47,23 @@ def load_icon(icon_name, size=24, color='white'):
         
         logging.debug(f"Loading icon: {icon_path}")
         
-        # Read SVG file
-        with open(icon_path, 'r', encoding='utf-8') as f:
-            svg_content = f.read()
+        # Load PNG image
+        icon_image = Image.open(icon_path).convert('RGBA')
         
-        # Replace fill color if needed - handle various black color formats
-        if 'fill=' in svg_content:
-            # Replace different variations of black color
-            svg_content = svg_content.replace('fill="black"', f'fill="{color}"')
-            svg_content = svg_content.replace('fill="#000"', f'fill="{color}"')
-            svg_content = svg_content.replace('fill="#000000"', f'fill="{color}"')
-            svg_content = svg_content.replace("fill='black'", f"fill='{color}'")
-            svg_content = svg_content.replace("fill='#000'", f"fill='{color}'")
-            svg_content = svg_content.replace("fill='#000000'", f"fill='{color}'")
+        # Resize to required size
+        icon_image = icon_image.resize((size, size), Image.Resampling.LANCZOS)
         
-        # Convert SVG to PNG
-        png_data = cairosvg.svg2png(
-            bytestring=svg_content.encode('utf-8'),
-            output_width=size,
-            output_height=size
-        )
-        
-        # Convert to PIL Image
-        icon_image = Image.open(io.BytesIO(png_data)).convert('RGBA')
+        # Invert colors if we need white icons (since PNG icons are black)
+        if color == 'white':
+            # Create a new image with inverted colors
+            pixels = icon_image.load()
+            for y in range(icon_image.height):
+                for x in range(icon_image.width):
+                    r, g, b, a = pixels[x, y]
+                    # Only invert if pixel is not transparent
+                    if a > 0:
+                        # Invert RGB values
+                        pixels[x, y] = (255 - r, 255 - g, 255 - b, a)
         
         # Cache the result
         _icon_cache[cache_key] = icon_image
