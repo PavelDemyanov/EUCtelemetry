@@ -57,6 +57,7 @@
                         {% endfor %}
                         <!-- Debug info -->
                         <small class="text-muted">Ключ: {{ recaptcha_site_key[:10] if recaptcha_site_key else 'НЕТ' }}...</small>
+                        <br><small class="text-muted">Домен: {{ request.host }}</small>
                     </div>
                     
                     <div class="mb-3">
