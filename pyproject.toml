@@ -31,4 +31,5 @@ dependencies = [
     "markdown>=3.7",
     "flask-limiter>=3.12",
     "requests>=2.32.3",
+    "cairosvg>=2.8.2",
 ]

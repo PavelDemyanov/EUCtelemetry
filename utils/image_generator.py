@@ -10,10 +10,59 @@ from functools import lru_cache
 from utils.hardware_detection import is_apple_silicon
 from utils.image_processor import create_speed_indicator
 from concurrent.futures import ThreadPoolExecutor
+import cairosvg
+import io
 
 _metal_initialized = False
 _metal_context = None
 _metal_device = None
+
+# Cache for loaded icons
+_icon_cache = {}
+
+def load_icon(icon_name, size=24, color='white'):
+    """Load and cache an icon from SVG file, return PIL Image."""
+    cache_key = f"{icon_name}_{size}_{color}"
+    
+    if cache_key in _icon_cache:
+        return _icon_cache[cache_key]
+    
+    try:
+        icon_path = os.path.join('static', 'icons', 'icons_telemetry', f'{icon_name}.svg')
+        
+        if not os.path.exists(icon_path):
+            logging.warning(f"Icon file not found: {icon_path}")
+            return None
+        
+        # Read SVG file
+        with open(icon_path, 'r', encoding='utf-8') as f:
+            svg_content = f.read()
+        
+        # Replace fill color if needed
+        if 'fill=' in svg_content:
+            # Simple color replacement - may need more sophisticated approach
+            svg_content = svg_content.replace('fill="black"', f'fill="{color}"')
+            svg_content = svg_content.replace('fill="#000"', f'fill="{color}"')
+            svg_content = svg_content.replace('fill="#000000"', f'fill="{color}"')
+        
+        # Convert SVG to PNG
+        png_data = cairosvg.svg2png(
+            bytestring=svg_content.encode('utf-8'),
+            output_width=size,
+            output_height=size
+        )
+        
+        # Convert to PIL Image
+        icon_image = Image.open(io.BytesIO(png_data)).convert('RGBA')
+        
+        # Cache the result
+        _icon_cache[cache_key] = icon_image
+        
+        return icon_image
+        
+    except Exception as e:
+        logging.error(f"Error loading icon {icon_name}: {e}")
+        return None
 
 _LOCALIZATION = {
     'en': {
@@ -151,6 +200,7 @@ def create_frame(values,
         show_power = text_settings.get('show_power', True)
         show_current = text_settings.get('show_current', True)  # Add current visibility setting
         show_bottom_elements = text_settings.get('show_bottom_elements', True)
+        use_icons = text_settings.get('use_icons', False)  # Add icons setting
 
         # Получаем настройки позиционирования индикатора и текста
         indicator_x_percent = float(text_settings.get('indicator_x', 50))

@@ -987,7 +987,7 @@ allSettings.forEach(setting => {
 const visibilitySettings = [
     'showSpeed', 'showMaxSpeed', 'showVoltage', 'showTemp', 
     'showBattery', 'showMileage', 'showPWM', 'showPower', 
-    'showCurrent', 'showGPS', 'showBottomElements'
+    'showCurrent', 'showGPS', 'showBottomElements', 'useIcons'
 ];
 
 visibilitySettings.forEach(setting => {
@@ -1084,7 +1084,8 @@ document.getElementById('startProcessButton').addEventListener('click', async fu
         show_power: document.getElementById('showPower').checked,
         show_current: document.getElementById('showCurrent').checked,
         show_gps: document.getElementById('showGPS').checked,
-        show_bottom_elements: document.getElementById('showBottomElements').checked
+        show_bottom_elements: document.getElementById('showBottomElements').checked,
+        use_icons: document.getElementById('useIcons').checked
     };
 
     // Start processing
