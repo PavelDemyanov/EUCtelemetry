@@ -228,7 +228,8 @@ def create_frame(values,
         
         # Calculate icon size for potential use
         box_height = int(40 * scale_factor)  # Box height will be used later
-        icon_size = max(20, int(box_height * 0.6))  # Icon size based on box height
+        # Icon size scales with font size to maintain proportions
+        icon_size = max(12, int(font_size * 0.8))  # Icon size proportional to font size
 
         # Получаем настройки позиционирования индикатора и текста
         indicator_x_percent = float(text_settings.get('indicator_x', 50))
