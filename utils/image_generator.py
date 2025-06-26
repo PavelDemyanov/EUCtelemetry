@@ -73,7 +73,7 @@ def get_icon_name_for_label(label, loc):
         loc['voltage']: 'voltage',
         loc['temp']: 'temp',
         loc['battery']: 'battery',
-        loc['mileage']: 'mileage',  # Use mileage icon for mileage
+        loc['mileage']: 'gps',  # Using GPS icon for mileage
         loc['pwm']: 'pwm',
         loc['power']: 'power',
         loc['current']: 'current',
