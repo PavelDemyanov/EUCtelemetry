@@ -708,6 +708,7 @@ function setupTrimmerHandlers() {
             show_gps: document.getElementById('showGPS').checked,
             show_bottom_elements: document.getElementById('showBottomElements').checked,
             use_icons: document.getElementById('useIcons').checked,
+            icon_vertical_offset: document.getElementById('iconVerticalOffset').value,
             start_timestamp: csvTimeRange.start,
             end_timestamp: csvTimeRange.end
         };
@@ -817,7 +818,8 @@ function updatePreview(projectId) {
         show_current: document.getElementById('showCurrent').checked,
         show_gps: document.getElementById('showGPS').checked,
         show_bottom_elements: document.getElementById('showBottomElements').checked,
-        use_icons: document.getElementById('useIcons').checked
+        use_icons: document.getElementById('useIcons').checked,
+        icon_vertical_offset: document.getElementById('iconVerticalOffset').value
     };
 
     console.log('Sending preview settings:', settings);
@@ -959,7 +961,8 @@ allSettings.forEach(setting => {
                     show_current: document.getElementById('showCurrent').checked,
                     show_gps: document.getElementById('showGPS').checked,
                     show_bottom_elements: document.getElementById('showBottomElements').checked,
-                    use_icons: document.getElementById('useIcons').checked
+                    use_icons: document.getElementById('useIcons').checked,
+                    icon_vertical_offset: document.getElementById('iconVerticalOffset').value
                 };
 
                 // Update preview with all current settings
@@ -994,6 +997,14 @@ visibilitySettings.forEach(setting => {
     const checkbox = document.getElementById(setting);
     if (checkbox) {
         checkbox.addEventListener('change', function() {
+            // Special handling for useIcons checkbox
+            if (setting === 'useIcons') {
+                const iconOffsetContainer = document.getElementById('iconVerticalOffsetContainer');
+                if (iconOffsetContainer) {
+                    iconOffsetContainer.style.display = this.checked ? 'block' : 'none';
+                }
+            }
+            
             const projectId = document.getElementById('startProcessButton').dataset.projectId;
             if (projectId) {
                 updatePreview(projectId);
@@ -1001,6 +1012,17 @@ visibilitySettings.forEach(setting => {
         });
     }
 });
+
+// Add event listener for icon vertical offset slider
+const iconVerticalOffsetSlider = document.getElementById('iconVerticalOffset');
+if (iconVerticalOffsetSlider) {
+    iconVerticalOffsetSlider.addEventListener('input', function() {
+        const projectId = document.getElementById('startProcessButton').dataset.projectId;
+        if (projectId) {
+            updatePreview(projectId);
+        }
+    });
+}
 
 // Handle start processing button click
 document.getElementById('startProcessButton').addEventListener('click', async function() {
