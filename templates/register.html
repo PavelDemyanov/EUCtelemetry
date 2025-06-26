@@ -47,15 +47,20 @@
                     
                     <!-- CAPTCHA Section -->
                     <div class="mb-3">
-                        <div class="g-recaptcha" data-sitekey="{{ recaptcha_site_key }}" data-callback="onCaptchaSuccess"></div>
-                        {{ form.recaptcha() }}
+                        {% if recaptcha_site_key %}
+                        <div class="g-recaptcha" data-sitekey="{{ recaptcha_site_key }}"></div>
+                        {% else %}
+                        <div class="alert alert-warning">CAPTCHA не настроена - отсутствует ключ</div>
+                        {% endif %}
                         {% for error in form.recaptcha.errors %}
                         <span class="text-danger d-block mt-2">{{ error }}</span>
                         {% endfor %}
+                        <!-- Debug info -->
+                        <small class="text-muted">Ключ: {{ recaptcha_site_key[:10] if recaptcha_site_key else 'НЕТ' }}...</small>
                     </div>
                     
                     <div class="mb-3">
-                        {{ form.submit(class="btn btn-primary", id="submit-btn", disabled=true) }}
+                        {{ form.submit(class="btn btn-primary") }}
                     </div>
                 </form>
                 <p>{{ _('Already have an account?') }} <a href="{{ url_for('login') }}">{{ _('Sign in') }}</a></p>
@@ -64,25 +69,5 @@
     </div>
 </div>
 
-<script>
-function onCaptchaSuccess(response) {
-    document.getElementById('recaptcha').value = response;
-    document.getElementById('submit-btn').disabled = false;
-}
 
-// Reset CAPTCHA callback
-function onCaptchaExpire() {
-    document.getElementById('recaptcha').value = '';
-    document.getElementById('submit-btn').disabled = true;
-}
-
-// Set the expired callback
-window.onload = function() {
-    if (typeof grecaptcha !== 'undefined') {
-        grecaptcha.render(document.querySelector('.g-recaptcha'), {
-            'expired-callback': onCaptchaExpire
-        });
-    }
-}
-</script>
 {% endblock %}
