@@ -1430,6 +1430,84 @@ def delete_admin_user(user_id):
         logging.error(f"Error deactivating user: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/admin/search-users', methods=['POST'])
+@login_required
+@admin_required
+def search_users():
+    """Search users by name pattern"""
+    try:
+        data = request.get_json()
+        pattern = data.get('pattern', '').strip()
+        
+        if not pattern:
+            return jsonify({'error': 'Pattern is required'}), 400
+            
+        # Search for users whose name contains the pattern (case-insensitive)
+        users = User.query.filter(User.name.ilike(f'%{pattern}%')).all()
+        
+        return jsonify({
+            'users': [{
+                'id': user.id,
+                'name': user.name,
+                'email': user.email,
+                'is_admin': user.is_admin
+            } for user in users]
+        })
+        
+    except Exception as e:
+        logging.error(f"Error searching users: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/admin/bulk-delete-users', methods=['POST'])
+@login_required
+@admin_required
+def bulk_delete_users():
+    """Bulk delete users by their IDs"""
+    try:
+        data = request.get_json()
+        user_ids = data.get('user_ids', [])
+        
+        if not user_ids:
+            return jsonify({'error': 'No user IDs provided'}), 400
+            
+        deleted_count = 0
+        
+        for user_id in user_ids:
+            user = User.query.get(user_id)
+            if user and not user.is_admin:  # Don't delete admin users
+                # Delete all user's projects and files first
+                projects = Project.query.filter_by(user_id=user.id).all()
+                for project in projects:
+                    cleanup_project_files(project)
+                    db.session.delete(project)
+                
+                # Delete all user's presets
+                presets = Preset.query.filter_by(user_id=user.id).all()
+                for preset in presets:
+                    db.session.delete(preset)
+                
+                # Delete registration attempts for this user
+                registration_attempts = RegistrationAttempt.query.filter_by(email=user.email).all()
+                for attempt in registration_attempts:
+                    db.session.delete(attempt)
+                    
+                # Delete the user completely
+                db.session.delete(user)
+                deleted_count += 1
+                logging.info(f"Admin deleted user {user.id} ({user.email}) via bulk delete")
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'deleted_count': deleted_count
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Error bulk deleting users: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 import os
 # Add this new endpoint after other admin routes
 @app.route('/admin/cleanup-storage', methods=['POST'])
