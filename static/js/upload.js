@@ -1296,6 +1296,20 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
+        // Reset icon settings
+        document.getElementById('useIcons').checked = false;
+        document.getElementById('iconVerticalOffset').value = 5;
+        // Hide icon offset container
+        const iconOffsetContainer = document.getElementById('iconVerticalOffsetContainer');
+        if (iconOffsetContainer) {
+            iconOffsetContainer.style.display = 'none';
+        }
+        // Update displayed value
+        const valueSpan = document.getElementById('iconOffsetValue');
+        if (valueSpan) {
+            valueSpan.textContent = '5';
+        }
+
         // Update preview if project is loaded
         const projectId = document.getElementById('startProcessButton').dataset.projectId;
         if (projectId) {
@@ -1339,7 +1353,9 @@ document.addEventListener('DOMContentLoaded', function() {
             show_power: document.getElementById('showPower').checked,
             show_current: document.getElementById('showCurrent').checked,
             show_gps: document.getElementById('showGPS').checked,
-            show_bottom_elements: document.getElementById('showBottomElements').checked
+            show_bottom_elements: document.getElementById('showBottomElements').checked,
+            use_icons: document.getElementById('useIcons').checked,
+            icon_vertical_offset: document.getElementById('iconVerticalOffset').value
         };
 
         fetch('/save_preset', {
@@ -1429,6 +1445,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('showCurrent').checked = settings.show_current;
                 document.getElementById('showGPS').checked = settings.show_gps;
                 document.getElementById('showBottomElements').checked = settings.show_bottom_elements;
+
+                // Apply icon settings
+                if (settings.use_icons !== undefined) {
+                    document.getElementById('useIcons').checked = settings.use_icons;
+                    // Show/hide icon offset container based on use_icons setting
+                    const iconOffsetContainer = document.getElementById('iconVerticalOffsetContainer');
+                    if (iconOffsetContainer) {
+                        iconOffsetContainer.style.display = settings.use_icons ? 'block' : 'none';
+                    }
+                }
+                if (settings.icon_vertical_offset !== undefined) {
+                    document.getElementById('iconVerticalOffset').value = settings.icon_vertical_offset;
+                    // Update displayed value
+                    const valueSpan = document.getElementById('iconOffsetValue');
+                    if (valueSpan) {
+                        valueSpan.textContent = settings.icon_vertical_offset;
+                    }
+                }
 
                 // Update preview if project is loaded
                 const projectId = document.getElementById('startProcessButton').dataset.projectId;
