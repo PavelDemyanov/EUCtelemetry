@@ -34,16 +34,21 @@ def load_icon(icon_name, size=24, color='white'):
             logging.warning(f"Icon file not found: {icon_path}")
             return None
         
+        logging.debug(f"Loading icon: {icon_path}")
+        
         # Read SVG file
         with open(icon_path, 'r', encoding='utf-8') as f:
             svg_content = f.read()
         
-        # Replace fill color if needed
+        # Replace fill color if needed - handle various black color formats
         if 'fill=' in svg_content:
-            # Simple color replacement - may need more sophisticated approach
+            # Replace different variations of black color
             svg_content = svg_content.replace('fill="black"', f'fill="{color}"')
             svg_content = svg_content.replace('fill="#000"', f'fill="{color}"')
             svg_content = svg_content.replace('fill="#000000"', f'fill="{color}"')
+            svg_content = svg_content.replace("fill='black'", f"fill='{color}'")
+            svg_content = svg_content.replace("fill='#000'", f"fill='{color}'")
+            svg_content = svg_content.replace("fill='#000000'", f"fill='{color}'")
         
         # Convert SVG to PNG
         png_data = cairosvg.svg2png(
@@ -73,11 +78,11 @@ def get_icon_name_for_label(label, loc):
         loc['voltage']: 'voltage',
         loc['temp']: 'temp',
         loc['battery']: 'battery',
-        loc['mileage']: 'gps',  # Using GPS icon for mileage
+        loc['gps']: 'gps',
+        loc['mileage']: 'mileage',
         loc['pwm']: 'pwm',
         loc['power']: 'power',
-        loc['current']: 'current',
-        loc['gps']: 'gps'
+        loc['current']: 'current'
     }
     
     return label_to_icon.get(label, 'speed')  # Default to speed icon
