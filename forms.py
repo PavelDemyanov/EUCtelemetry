@@ -35,7 +35,7 @@ class RegistrationForm(FlaskForm):
     password = PasswordField(_l('Password'), validators=[DataRequired(), Length(min=6)])
     password2 = PasswordField(_l('Confirm Password'), 
                             validators=[DataRequired(), EqualTo('password', message=_l('Passwords must match'))])
-    recaptcha = HiddenField(validators=[validate_recaptcha])
+    recaptcha = HiddenField()  # Временно отключено до настройки домена
     submit = SubmitField(_l('Register'))
 
 class ProfileForm(FlaskForm):

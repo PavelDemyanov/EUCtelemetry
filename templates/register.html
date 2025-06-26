@@ -2,8 +2,7 @@
 
 {% block head %}
 {{ super() }}
-<!-- Google reCAPTCHA -->
-<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+<!-- reCAPTCHA temporarily disabled until domain configuration -->
 {% endblock %}
 
 {% block content %}
@@ -45,20 +44,7 @@
                         {% endfor %}
                     </div>
                     
-                    <!-- CAPTCHA Section -->
-                    <div class="mb-3">
-                        {% if recaptcha_site_key %}
-                        <div class="g-recaptcha" data-sitekey="{{ recaptcha_site_key }}"></div>
-                        {% else %}
-                        <div class="alert alert-warning">CAPTCHA не настроена - отсутствует ключ</div>
-                        {% endif %}
-                        {% for error in form.recaptcha.errors %}
-                        <span class="text-danger d-block mt-2">{{ error }}</span>
-                        {% endfor %}
-                        <!-- Debug info -->
-                        <small class="text-muted">Ключ: {{ recaptcha_site_key[:10] if recaptcha_site_key else 'НЕТ' }}...</small>
-                        <br><small class="text-muted">Домен: {{ request.host }}</small>
-                    </div>
+                    <!-- IP-based rate limiting is active (3 registrations per day per IP) -->
                     
                     <div class="mb-3">
                         {{ form.submit(class="btn btn-primary") }}
