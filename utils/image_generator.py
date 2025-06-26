@@ -64,6 +64,24 @@ def load_icon(icon_name, size=24, color='white'):
         logging.error(f"Error loading icon {icon_name}: {e}")
         return None
 
+def get_icon_name_for_label(label, loc):
+    """Map label text to icon filename."""
+    # Create a mapping from localized labels to icon names
+    label_to_icon = {
+        loc['speed']: 'speed',
+        loc['max_speed']: 'max_speed', 
+        loc['voltage']: 'voltage',
+        loc['temp']: 'temp',
+        loc['battery']: 'battery',
+        loc['mileage']: 'gps',  # Using GPS icon for mileage
+        loc['pwm']: 'pwm',
+        loc['power']: 'power',
+        loc['current']: 'current',
+        loc['gps']: 'gps'
+    }
+    
+    return label_to_icon.get(label, 'speed')  # Default to speed icon
+
 _LOCALIZATION = {
     'en': {
         'speed': 'Speed',
@@ -201,6 +219,10 @@ def create_frame(values,
         show_current = text_settings.get('show_current', True)  # Add current visibility setting
         show_bottom_elements = text_settings.get('show_bottom_elements', True)
         use_icons = text_settings.get('use_icons', False)  # Add icons setting
+        
+        # Calculate icon size for potential use
+        box_height = int(40 * scale_factor)  # Box height will be used later
+        icon_size = max(20, int(box_height * 0.6))  # Icon size based on box height
 
         # Получаем настройки позиционирования индикатора и текста
         indicator_x_percent = float(text_settings.get('indicator_x', 50))
@@ -277,14 +299,23 @@ def create_frame(values,
             total_width = 0
 
             for label, value, unit in params:
-                label_bbox = draw.textbbox((0, 0), f"{label}: ", font=regular_font)
-                value_bbox = draw.textbbox((0, 0), value, font=bold_font)
-                unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
+                if use_icons:
+                    # For icons, calculate width differently
+                    value_bbox = draw.textbbox((0, 0), value, font=bold_font)
+                    unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
+                    
+                    text_width = icon_size + 5 + (value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])  # Icon + spacing + value + unit
+                    text_height = max(icon_size, value_bbox[3] - value_bbox[1], unit_bbox[3] - unit_bbox[1])
+                else:
+                    # Original text-based layout
+                    label_bbox = draw.textbbox((0, 0), f"{label}: ", font=regular_font)
+                    value_bbox = draw.textbbox((0, 0), value, font=bold_font)
+                    unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
 
-                text_width = (label_bbox[2] - label_bbox[0]) + (value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])
-                text_height = max(label_bbox[3] - label_bbox[1],
-                                  value_bbox[3] - value_bbox[1],
-                                  unit_bbox[3] - unit_bbox[1])
+                    text_width = (label_bbox[2] - label_bbox[0]) + (value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])
+                    text_height = max(label_bbox[3] - label_bbox[1],
+                                      value_bbox[3] - value_bbox[1],
+                                      unit_bbox[3] - unit_bbox[1])
 
                 element_width = text_width + (2 * top_padding)
                 element_widths.append(element_width)
@@ -334,24 +365,47 @@ def create_frame(values,
                 baseline_offset = int(max_text_height * 0.2)
                 text_y = text_baseline_y - baseline_offset
 
-                label_bbox = draw.textbbox((0, 0), f"{label}: ", font=regular_font)
-                label_width = label_bbox[2] - label_bbox[0]
-                draw.text((text_x, text_y),
-                          f"{label}: ",
-                          fill=text_color,
-                          font=regular_font)
+                if use_icons:
+                    # Draw with icon instead of text label
+                    icon_name = get_icon_name_for_label(label, loc)
+                    icon = load_icon(icon_name, icon_size, 'white')
+                    
+                    if icon:
+                        # Calculate icon position (vertically centered)
+                        icon_y = y_position + (box_height - icon_size) // 2
+                        overlay.paste(icon, (text_x, icon_y), icon)
+                        
+                        # Draw value after icon
+                        value_x = text_x + icon_size + 5
+                        draw.text((value_x, text_y), value, fill=text_color, font=bold_font)
+                        
+                        # Draw unit after value
+                        value_bbox = draw.textbbox((0, 0), value, font=bold_font)
+                        value_width = value_bbox[2] - value_bbox[0]
+                        draw.text((value_x + value_width, text_y), f" {unit}", fill=text_color, font=regular_font)
+                    else:
+                        # Fallback to text if icon not found
+                        draw.text((text_x, text_y), f"{label}: {value} {unit}", fill=text_color, font=regular_font)
+                else:
+                    # Original text-based rendering
+                    label_bbox = draw.textbbox((0, 0), f"{label}: ", font=regular_font)
+                    label_width = label_bbox[2] - label_bbox[0]
+                    draw.text((text_x, text_y),
+                              f"{label}: ",
+                              fill=text_color,
+                              font=regular_font)
 
-                value_bbox = draw.textbbox((0, 0), value, font=bold_font)
-                value_width = value_bbox[2] - value_bbox[0]
-                draw.text((text_x + label_width, text_y),
-                          value,
-                          fill=text_color,
-                          font=bold_font)
+                    value_bbox = draw.textbbox((0, 0), value, font=bold_font)
+                    value_width = value_bbox[2] - value_bbox[0]
+                    draw.text((text_x + label_width, text_y),
+                              value,
+                              fill=text_color,
+                              font=bold_font)
 
-                draw.text((text_x + label_width + value_width, text_y),
-                          f" {unit}",
-                          fill=text_color,
-                          font=regular_font)
+                    draw.text((text_x + label_width + value_width, text_y),
+                              f" {unit}",
+                              fill=text_color,
+                              font=regular_font)
 
                 x_position += element_width + spacing
 
