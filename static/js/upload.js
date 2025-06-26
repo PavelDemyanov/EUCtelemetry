@@ -1017,6 +1017,12 @@ visibilitySettings.forEach(setting => {
 const iconVerticalOffsetSlider = document.getElementById('iconVerticalOffset');
 if (iconVerticalOffsetSlider) {
     iconVerticalOffsetSlider.addEventListener('input', function() {
+        // Update the displayed value
+        const valueSpan = document.getElementById('iconOffsetValue');
+        if (valueSpan) {
+            valueSpan.textContent = this.value;
+        }
+        
         const projectId = document.getElementById('startProcessButton').dataset.projectId;
         if (projectId) {
             updatePreview(projectId);

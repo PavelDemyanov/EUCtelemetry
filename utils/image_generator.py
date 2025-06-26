@@ -257,7 +257,7 @@ def create_frame(values,
         font_size = int(text_settings.get('font_size', 26) * scale_factor)
         # Icon size scales with font size to maintain proportions
         icon_size = max(12, int(font_size * 0.8))  # Icon size proportional to font size
-        icon_vertical_offset = int(text_settings.get('icon_vertical_offset', 0))  # Icon vertical offset in pixels
+        icon_vertical_offset = int(text_settings.get('icon_vertical_offset', 5))  # Icon vertical offset in pixels
         top_padding = int(text_settings.get('top_padding', 14) * scale_factor)
         box_height = int(text_settings.get('bottom_padding', 47) * scale_factor)
         spacing = int(text_settings.get('spacing', 10) * scale_factor)

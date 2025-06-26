@@ -109,8 +109,11 @@ EUC Telemetry Visualization is a Flask web application designed for processing E
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+Icon vertical positioning: Default offset of 5 pixels works best for telemetry overlay alignment.
 
 ## Changelog
 
-Changelog:
-- June 26, 2025. Initial setup
+- June 26, 2025: Initial setup and icon positioning implementation
+- June 26, 2025: Added icon vertical positioning slider with default 5px offset
+- June 26, 2025: Icons now scale proportionally with font size (80% ratio)
+- June 26, 2025: Added real-time numeric display for icon positioning slider
