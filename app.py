@@ -925,7 +925,9 @@ def generate_project_frames(project_id):
             'show_power': data.get('show_power', True),
             'show_current': data.get('show_current', True),  # Add current visibility setting
             'show_gps': data.get('show_gps', False),
-            'show_bottom_elements': data.get('show_bottom_elements', True)
+            'show_bottom_elements': data.get('show_bottom_elements', True),
+            'use_icons': data.get('use_icons', False),
+            'icon_vertical_offset': int(data.get('icon_vertical_offset', 5))
         }
 
         logging.info(f"Starting processing with settings: {text_settings}, interpolate_values: {interpolate_values}")
