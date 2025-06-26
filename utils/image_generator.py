@@ -380,15 +380,13 @@ def create_frame(values,
                         # Calculate text metrics for proper alignment
                         value_bbox = draw.textbbox((0, 0), value, font=bold_font)
                         
-                        # Get text ascent and descent to align icon with text baseline
-                        text_ascent = abs(value_bbox[1])  # Distance from baseline to top
-                        text_descent = value_bbox[3] - text_ascent  # Distance from baseline to bottom
-                        text_total_height = text_ascent + text_descent
+                        # Get actual text height from bounding box
+                        text_height = value_bbox[3] - value_bbox[1]
                         
-                        # Position icon so it aligns with text height
-                        # Top of icon should align with top of capital letters
-                        # Bottom of icon should align with baseline of text
-                        icon_y = text_y + text_ascent - icon_size
+                        # Position icon to be vertically centered with the text
+                        # Align the center of the icon with the center of the text
+                        text_center_y = text_y + (text_height // 2)
+                        icon_y = text_center_y - (icon_size // 2)
                         
                         overlay.paste(icon, (text_x, icon_y), icon)
                         
