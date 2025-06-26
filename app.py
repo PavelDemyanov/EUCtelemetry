@@ -614,7 +614,7 @@ def register():
             flash(_('An error occurred during registration. Please try again later.'))
             return redirect(url_for('register'))
 
-    return render_template('register.html', form=form)
+    return render_template('register.html', form=form, recaptcha_site_key=os.environ.get('RECAPTCHA_SITE_KEY'))
 
 @app.route('/confirm/<token>')
 def confirm_email(token):
