@@ -26,10 +26,10 @@ from utils.image_generator import generate_frames, create_preview_frame, clear_i
 from utils.video_creator import create_video
 from utils.background_processor import process_project, stop_project_processing
 from utils.env_setup import setup_env_variables
-from utils.email_sender import send_email
+from utils.email_sender import send_email, test_smtp_connection
 from forms import (LoginForm, RegistrationForm, ProfileForm, 
                   ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm, DeleteAccountForm, 
-                  NewsForm, EmailCampaignForm, ResendConfirmationForm)
+                  NewsForm, EmailCampaignForm, ResendConfirmationForm, EmailTestForm)
 from models import User, Project, EmailCampaign, News, Preset, RegistrationAttempt
 import markdown
 from sqlalchemy import desc
@@ -2406,3 +2406,58 @@ def markdown_preview():
     except Exception as e:
         logging.error(f"Error in markdown preview: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/admin/test-smtp', methods=['POST'])
+@login_required
+@admin_required
+def test_smtp():
+    """Test SMTP connection"""
+    try:
+        success, message = test_smtp_connection()
+        if success:
+            flash(f'SMTP test passed: {message}', 'success')
+        else:
+            flash(f'SMTP test failed: {message}', 'danger')
+    except Exception as e:
+        logging.error(f"Error testing SMTP: {str(e)}")
+        flash(f'SMTP test error: {str(e)}', 'danger')
+    
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/send-test-email', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def send_test_email():
+    """Send test email"""
+    form = EmailTestForm()
+    
+    if form.validate_on_submit():
+        try:
+            # Test email content
+            test_subject = "Test Email from EUC Telemetry"
+            test_html = """
+            <html>
+            <body>
+                <h2>Test Email</h2>
+                <p>This is a test email from EUC Telemetry system.</p>
+                <p>If you received this email, your SMTP server is working correctly!</p>
+                <p>Time sent: """ + datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC') + """</p>
+            </body>
+            </html>
+            """
+            
+            # Send test email
+            success = send_email(form.test_email.data, test_subject, test_html)
+            
+            if success:
+                flash(f'Test email sent successfully to {form.test_email.data}', 'success')
+            else:
+                flash(f'Failed to send test email to {form.test_email.data}', 'danger')
+                
+        except Exception as e:
+            logging.error(f"Error sending test email: {str(e)}")
+            flash(f'Error sending test email: {str(e)}', 'danger')
+        
+        return redirect(url_for('admin_dashboard'))
+    
+    return render_template('admin/send_test_email.html', form=form)

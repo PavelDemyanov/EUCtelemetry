@@ -93,3 +93,7 @@ class NewsForm(FlaskForm):
     ])
     content = TextAreaField(_l('Content'), validators=[DataRequired()])
     submit = SubmitField(_l('Save News'))
+
+class EmailTestForm(FlaskForm):
+    test_email = StringField(_l('Test Email Address'), validators=[DataRequired(), Email()])
+    submit = SubmitField(_l('Send Test Email'))

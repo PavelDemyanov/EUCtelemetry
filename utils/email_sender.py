@@ -20,6 +20,56 @@ def validate_smtp_settings():
 
     return required_settings
 
+def test_smtp_connection() -> tuple[bool, str]:
+    """
+    Test SMTP connection and authentication
+    Returns tuple of (success: bool, message: str)
+    """
+    try:
+        # Validate SMTP settings first
+        settings = validate_smtp_settings()
+        
+        logging.info(f"Testing SMTP connection to: {settings['SMTP_SERVER']}:{settings['SMTP_PORT']}")
+        
+        # Ensure settings are strings and port is integer
+        smtp_server = str(settings["SMTP_SERVER"])
+        smtp_port = int(settings["SMTP_PORT"])
+        smtp_login = str(settings["SMTP_LOGIN"])
+        smtp_password = str(settings["SMTP_PASSWORD"])
+        
+        try:
+            # Create secure SSL/TLS connection
+            server = smtplib.SMTP_SSL(smtp_server, smtp_port)
+            logging.debug("SMTP SSL connection established")
+        except Exception as e:
+            error_msg = f"Failed to establish SSL connection: {str(e)}"
+            logging.error(error_msg)
+            return False, error_msg
+        
+        try:
+            # Test login
+            server.login(smtp_login, smtp_password)
+            logging.debug("SMTP login successful")
+            server.quit()
+            return True, "SMTP connection and authentication successful"
+        except smtplib.SMTPAuthenticationError as e:
+            error_msg = f"SMTP Authentication failed: {str(e)}"
+            logging.error(error_msg)
+            return False, error_msg
+        except Exception as e:
+            error_msg = f"SMTP connection error: {str(e)}"
+            logging.error(error_msg)
+            return False, error_msg
+            
+    except ValueError as ve:
+        error_msg = f"SMTP Configuration Error: {str(ve)}"
+        logging.error(error_msg)
+        return False, error_msg
+    except Exception as e:
+        error_msg = f"Unexpected error testing SMTP: {str(e)}"
+        logging.error(error_msg)
+        return False, error_msg
+
 def send_email(to_email: str, subject: str, html_content: str) -> bool:
     """
     Send email using SMTP server
