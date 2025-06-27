@@ -2164,7 +2164,8 @@ def analyze_csv():
                 max_speed = processed_data['speed'].max()
             analytics_vars['max_speed'] = max_speed
             
-            # Check for "Nomad" and "Tourist" achievements - related to daily travel distance
+            # Calculate daily travel distance
+            max_daily_distance = 0
             if isinstance(processed_data, dict) and 'timestamp' in processed_data and 'mileage' in processed_data:
                 # Convert timestamps to date strings
                 dates = [datetime.utcfromtimestamp(float(ts)).strftime('%Y-%m-%d') 
@@ -2187,51 +2188,22 @@ def analyze_csv():
                     
                     # Get the maximum daily distance
                     max_daily_distance = mileage_by_date['mileage'].max()
-                    
-                    # Check if any day had more than 90 km (Tourist achievement)
-                    if max_daily_distance >= 90:
-                        achievements.append({
-                            'id': 'tourist',
-                            'title': 'Tourist',
-                            'description': "You're a true tourist — you traveled over 90 km in a single day!",
-                            'icon': 'tourist.svg'
-                        })
-                    
-                    # Check if any day had more than 150 km (Nomad achievement)
-                    if max_daily_distance >= 150:
-                        achievements.append({
-                            'id': 'nomad',
-                            'title': 'Nomad',
-                            'description': "You're a true nomad — you traveled over 150 kilometers in a single day!",
-                            'icon': 'supertourist.svg'
-                        })
+            analytics_vars['max_daily_distance'] = max_daily_distance
             
-            # Check for "Strong rider" achievement - power value above 20000 or below -20000
+            # Calculate power values
+            max_power = 0
+            min_power = 0
             if isinstance(processed_data, dict) and 'power' in processed_data:
-                # Get all power values
                 power_values = [float(val) for val in processed_data['power'] if not pd.isna(val)]
-                
-                # Check if any power value is above 20000 or below -20000
-                if power_values and (max(power_values) >= 20000 or min(power_values) <= -20000):
-                    achievements.append({
-                        'id': 'strongrider',
-                        'title': 'Strong rider',
-                        'description': "You're a heavy, powerful rider — you managed to load the hub motor with 20,000 watts!",
-                        'icon': 'fat.svg'
-                    })
-                
-                # Check for "Godlike power" achievement - power value above 30000 or below -30000
-                if power_values and (max(power_values) >= 30000 or min(power_values) <= -30000):
-                    achievements.append({
-                        'id': 'godlikepower',
-                        'title': 'Godlike power',
-                        'description': "You're a godlike-force rider — you managed to load the hub motor with 30,000 watts!",
-                        'icon': 'superfat.svg'
-                    })
+                if power_values:
+                    max_power = max(power_values)
+                    min_power = min(power_values)
+            analytics_vars['max_power'] = max_power
+            analytics_vars['min_power'] = min_power
             
-            # Check for "Clown" achievement - average difference between speed and GPS speed > 5 km/h
+            # Calculate average speed difference (Clown achievement)
+            avg_speed_diff = 0
             if isinstance(processed_data, dict) and 'speed' in processed_data and 'gps' in processed_data:
-                # Get speed and GPS speed values as pairs
                 speed_pairs = []
                 for i in range(len(processed_data['speed'])):
                     if (i < len(processed_data['gps']) and 
@@ -2241,60 +2213,18 @@ def analyze_csv():
                         speed = float(processed_data['speed'][i])
                         gps_speed = float(processed_data['gps'][i])
                         
-                        # Only include if GPS speed is not zero
                         if gps_speed > 0:
                             speed_pairs.append((speed, gps_speed))
                 
-                # Check if we have valid pairs and not all GPS speeds are zero
                 if speed_pairs:
-                    # Calculate average difference
                     differences = [abs(pair[0] - pair[1]) for pair in speed_pairs]
-                    avg_difference = sum(differences) / len(differences)
-                    
-                    # If average difference is greater than 5 km/h, add the achievement
-                    if avg_difference > 5:
-                        achievements.append({
-                            'id': 'clown',
-                            'title': 'Clown',
-                            'description': "You're a real clown — your EUC lies about the speed by more than 5 km/h!",
-                            'icon': 'clown.svg'
-                        })
+                    avg_speed_diff = sum(differences) / len(differences)
+            analytics_vars['avg_speed_diff'] = avg_speed_diff
             
-            # Check for "Sleep" achievement - max speed never reached 50 km/h
-            if isinstance(processed_data, dict) and 'speed' in processed_data:
-                # Get all speed values
-                speed_values = [float(val) for val in processed_data['speed'] if not pd.isna(val)]
-                
-                # Check if max speed is less than 50 km/h
-                if speed_values and max(speed_values) < 50:
-                    achievements.append({
-                        'id': 'sleep',
-                        'title': 'Sleep',
-                        'description': "Your speed has not reached 50 km/h!",
-                        'icon': 'sleep.svg'
-                    })
-                
-                # Check for "Fast" achievement - speed reached 90 km/h
-                if speed_values and max(speed_values) >= 90:
-                    achievements.append({
-                        'id': 'fast',
-                        'title': 'Fast',
-                        'description': "You're very fast — you reached a speed of 90 km/h!",
-                        'icon': 'speed.svg'
-                    })
-                
-                # Check for "Super Fast" achievement - speed reached 100 km/h
-                if speed_values and max(speed_values) >= 100:
-                    achievements.append({
-                        'id': 'superfast',
-                        'title': 'Super Fast',
-                        'description': "You're super fast — you reached a speed of 100 km/h!",
-                        'icon': 'superspeed.svg'
-                    })
-            
-            # Check for "Suicidal madman" and "Dead" achievements - related to 100% PWM
+            # Calculate PWM-related achievements
+            pwm_100_survived = False
+            pwm_100_dead = False
             if isinstance(processed_data, dict) and 'pwm' in processed_data and 'speed' in processed_data and 'timestamp' in processed_data:
-                # Check if we have timestamps and data values
                 if (len(processed_data['pwm']) > 0 and 
                     len(processed_data['speed']) > 0 and 
                     len(processed_data['timestamp']) > 0):
@@ -2306,9 +2236,7 @@ def analyze_csv():
                             float(processed_data['pwm'][i]) >= 100):
                             max_pwm_indices.append(i)
                     
-                    # If we found any 100% PWM instances
                     if max_pwm_indices:
-                        # Get the last occurrence
                         last_max_pwm_index = max_pwm_indices[-1]
                         last_max_pwm_timestamp = float(processed_data['timestamp'][last_max_pwm_index])
                         
@@ -2323,34 +2251,37 @@ def analyze_csv():
                                 timestamp = float(processed_data['timestamp'][i])
                                 speed = float(processed_data['speed'][i])
                                 
-                                # Check if this datapoint is within 10 seconds after the last 100% PWM
                                 if (timestamp > last_max_pwm_timestamp and 
                                     timestamp <= last_max_pwm_timestamp + 10):
                                     
-                                    # If speed dropped below 5 km/h, not suicidal
                                     if speed < 5:
                                         suicidal = False
                                         
-                                    # If speed dropped below 2 km/h, consider "dead"
                                     if speed < 2:
                                         dead = True
                         
-                        # Add appropriate achievements based on conditions
-                        if suicidal:
-                            achievements.append({
-                                'id': 'suicidalmadman',
-                                'title': 'Suicidal madman',
-                                'description': "You're a suicidal madman hit 100% PWM and still didn't kiss the asphalt!",
-                                'icon': 'skeleton.svg'
-                            })
-                        
-                        if dead:
-                            achievements.append({
-                                'id': 'dead',
-                                'title': 'Dead',
-                                'description': "You weren't lucky — you either died or got seriously injured!",
-                                'icon': 'dead.svg'
-                            })
+                        pwm_100_survived = suicidal
+                        pwm_100_dead = dead
+            
+            analytics_vars['pwm_100_survived'] = pwm_100_survived
+            analytics_vars['pwm_100_dead'] = pwm_100_dead
+            
+            # Get all active achievements from database and evaluate them
+            active_achievements = Achievement.query.filter_by(is_active=True).all()
+            
+            for achievement in active_achievements:
+                try:
+                    # Evaluate achievement formula with analytics variables
+                    if eval(achievement.formula, {"__builtins__": {}}, analytics_vars):
+                        achievements.append({
+                            'id': achievement.achievement_id,
+                            'title': achievement.title,
+                            'description': achievement.description,
+                            'icon': achievement.icon
+                        })
+                except Exception as e:
+                    logging.warning(f"Error evaluating achievement formula for {achievement.achievement_id}: {str(e)}")
+                    continue
             
             # Return the processed data with achievements for visualization
             return jsonify({
