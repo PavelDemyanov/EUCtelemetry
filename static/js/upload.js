@@ -892,15 +892,23 @@ document.querySelectorAll('input[name="resolution"]').forEach(radio => {
             if (this.value === '4k') {
                 // Set specific values for 4K
                 document.getElementById('speedY').value = -50;
-                document.getElementById('speedYValue').textContent = '-50';
+                document.getElementById('speedYValue').textContent = '-50px';
                 document.getElementById('unitY').value = 65;
-                document.getElementById('unitYValue').textContent = '65';
+                document.getElementById('unitYValue').textContent = '65px';
+                document.getElementById('topPadding').value = 15;
+                document.getElementById('topPaddingValue').textContent = '15px';
+                document.getElementById('iconVerticalOffset').value = 12;
+                document.getElementById('iconOffsetValue').textContent = '12';
             } else {
                 // Reset to default values for Full HD
                 document.getElementById('speedY').value = -28;
-                document.getElementById('speedYValue').textContent = '-28';
+                document.getElementById('speedYValue').textContent = '-28px';
                 document.getElementById('unitY').value = 36;
-                document.getElementById('unitYValue').textContent = '36';
+                document.getElementById('unitYValue').textContent = '36px';
+                document.getElementById('topPadding').value = 14;
+                document.getElementById('topPaddingValue').textContent = '14px';
+                document.getElementById('iconVerticalOffset').value = 5;
+                document.getElementById('iconOffsetValue').textContent = '5';
             }
             // Update preview with new settings
             updatePreview(projectId);
