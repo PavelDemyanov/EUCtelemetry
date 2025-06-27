@@ -580,6 +580,12 @@ def generate_frames(csv_file,
 
         # Sort dataframe by timestamp to ensure proper interpolation
         df = df.sort_values('timestamp')
+        
+        # Calculate static box widths if enabled
+        static_box_widths = None
+        if text_settings and text_settings.get('static_box_size', False):
+            use_icons = text_settings.get('use_icons', False)
+            static_box_widths = calculate_max_widths_for_static_boxes(df, text_settings, use_icons, locale)
 
         # Calculate frame timestamps
         T_min = df['timestamp'].min()
@@ -612,7 +618,8 @@ def generate_frames(csv_file,
                                resolution,
                                output_path,
                                text_settings,
-                               locale=locale)
+                               locale=locale,
+                               static_box_widths=static_box_widths)
 
                 with lock:
                     completed_frames += 1
@@ -833,6 +840,13 @@ def create_preview_frame(csv_file,
             csv_type, processed_data = process_csv_file(
                 csv_file, project.folder_number)
             df = pd.DataFrame(processed_data)
+            
+            # Calculate static box widths if enabled
+            static_box_widths = None
+            if text_settings and text_settings.get('static_box_size', False):
+                use_icons = text_settings.get('use_icons', False)
+                static_box_widths = calculate_max_widths_for_static_boxes(df, text_settings, use_icons, locale)
+            
             max_speed_idx = df['speed'].idxmax()
             max_speed_timestamp = df.loc[max_speed_idx, 'timestamp']
             values = find_nearest_values(df, max_speed_timestamp)
@@ -844,7 +858,8 @@ def create_preview_frame(csv_file,
                          resolution,
                          preview_path,
                          text_settings,
-                         locale=locale)
+                         locale=locale,
+                         static_box_widths=static_box_widths)
             logging.info(
                 f"Created preview frame: {preview_path} with locale: {locale}")
             return preview_path
