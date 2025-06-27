@@ -402,6 +402,7 @@ def create_frame(values,
             element_widths = []
             text_widths = []
             text_heights = []
+            static_content_widths = []  # List to store static content widths for each element
             total_width = 0
 
             for label, value, unit in params:
@@ -460,6 +461,7 @@ def create_frame(values,
                 element_widths.append(element_width)
                 text_widths.append(text_width)
                 text_heights.append(text_height)
+                static_content_widths.append(static_content_width)  # Store static content width for each element
                 total_width += element_width
 
             total_width += spacing * (len(params) - 1)
@@ -471,7 +473,7 @@ def create_frame(values,
             text_baseline_y = box_vertical_center - (max_text_height // 2)
 
             x_position = start_x
-            for i, ((label, value, unit), element_width, text_width) in enumerate(zip(params, element_widths, text_widths)):
+            for i, ((label, value, unit), element_width, text_width, static_content_width) in enumerate(zip(params, element_widths, text_widths, static_content_widths)):
                 box_color = (0, 0, 0, 255)  # Стандартный черный цвет
                 text_color = (255, 255, 255, 255)  # Стандартный белый цвет
 
