@@ -991,7 +991,7 @@ allSettings.forEach(setting => {
 const visibilitySettings = [
     'showSpeed', 'showMaxSpeed', 'showVoltage', 'showTemp', 
     'showBattery', 'showMileage', 'showPWM', 'showPower', 
-    'showCurrent', 'showGPS', 'showBottomElements', 'useIcons'
+    'showCurrent', 'showGPS', 'showBottomElements', 'useIcons', 'staticBoxSize'
 ];
 
 visibilitySettings.forEach(setting => {
