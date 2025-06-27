@@ -48,6 +48,46 @@
     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
 }
 
+/* Achievement form help section styling */
+.list-group-item {
+    border: none !important;
+    padding: 0.75rem 0 !important;
+    border-bottom: 1px solid rgba(0,0,0,.125) !important;
+}
+
+.list-group-item:last-child {
+    border-bottom: none !important;
+}
+
+.list-group-item code {
+    background-color: rgba(255, 0, 150, 0.1);
+    color: #d63384;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.875em;
+    font-weight: 600;
+}
+
+.list-group-item .text-muted {
+    margin-top: 0.25rem;
+    font-size: 0.875em;
+}
+
+/* Table styling for variables */
+.table-sm td {
+    padding: 0.5rem !important;
+    vertical-align: top !important;
+}
+
+.table-sm code {
+    background-color: rgba(108, 117, 125, 0.1);
+    color: #6c757d;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.875em;
+    font-weight: 600;
+}
+
 /* Limit height for darkman01 video */
 .img-fluid.rounded.shadow.mb-4 {
     max-height: 75vh !important;
