@@ -1312,6 +1312,9 @@ document.addEventListener('DOMContentLoaded', function() {
             valueSpan.textContent = '5';
         }
 
+        // Reset static box size setting
+        document.getElementById('staticBoxSize').checked = false;
+
         // Update preview if project is loaded
         const projectId = document.getElementById('startProcessButton').dataset.projectId;
         if (projectId) {
