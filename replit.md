@@ -124,3 +124,4 @@ Icon vertical positioning: Default offset of 5 pixels works best for telemetry o
 - June 27, 2025: Implemented Static Box Size feature with character-based sizing for consistent data box widths
 - June 27, 2025: Added Static Box Size parameter to preset system with BETA label
 - June 27, 2025: Fixed max_speed sizing issue and limited specific parameters to 3-character maximum width
+- June 27, 2025: Added SMTP email server testing functionality to admin panel with connection test and test email features

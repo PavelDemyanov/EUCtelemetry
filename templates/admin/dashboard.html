@@ -15,7 +15,7 @@
     <div class="card mb-4">
         <div class="card-header">
             <h2 class="h5 mb-0">
-                <i class="fas fa-server"></i> Тестирование почтового сервера
+                <i class="fas fa-server"></i> Email Server Testing
             </h2>
         </div>
         <div class="card-body">
@@ -23,19 +23,19 @@
                 <div class="col-md-6">
                     <form method="POST" action="{{ url_for('test_smtp') }}" class="d-inline">
                         <button type="submit" class="btn btn-outline-info">
-                            <i class="fas fa-plug"></i> Проверить SMTP соединение
+                            <i class="fas fa-plug"></i> Test SMTP Connection
                         </button>
                     </form>
                     <p class="text-muted mt-2 mb-0">
-                        Проверяет подключение к SMTP серверу и аутентификацию
+                        Tests connection to SMTP server and authentication
                     </p>
                 </div>
                 <div class="col-md-6">
                     <a href="{{ url_for('send_test_email') }}" class="btn btn-outline-success">
-                        <i class="fas fa-envelope-open-text"></i> Отправить тестовое письмо
+                        <i class="fas fa-envelope-open-text"></i> Send Test Email
                     </a>
                     <p class="text-muted mt-2 mb-0">
-                        Отправляет тестовое письмо на указанный адрес
+                        Sends a test email to the specified address
                     </p>
                 </div>
             </div>

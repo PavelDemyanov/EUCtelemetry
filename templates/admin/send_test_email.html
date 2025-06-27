@@ -7,7 +7,7 @@
             <div class="card">
                 <div class="card-header">
                     <h3 class="card-title mb-0">
-                        <i class="fas fa-envelope-open-text"></i> Отправить тестовое письмо
+                        <i class="fas fa-envelope-open-text"></i> Send Test Email
                     </h3>
                 </div>
                 <div class="card-body">
@@ -25,13 +25,13 @@
                                 </div>
                             {% endif %}
                             <div class="form-text">
-                                Введите email адрес для отправки тестового письма
+                                Enter email address to send test email
                             </div>
                         </div>
                         
                         <div class="d-flex justify-content-between">
                             <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">
-                                <i class="fas fa-arrow-left"></i> Назад
+                                <i class="fas fa-arrow-left"></i> Back
                             </a>
                             {{ form.submit(class="btn btn-primary") }}
                         </div>
