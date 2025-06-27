@@ -159,14 +159,20 @@ def _initialize_metal():
 
 _font_cache = {}
 
-def calculate_max_widths_for_static_boxes(df, text_settings, use_icons=False, locale='en'):
+def calculate_max_widths_for_static_boxes(df, text_settings, use_icons=False, locale='en', resolution='fullhd'):
     """Calculate maximum text width for each telemetry parameter to ensure static box sizes"""
     try:
         # Get localization
         loc = _LOCALIZATION.get(locale, _LOCALIZATION['en'])
         
-        # Load fonts
-        font_size = text_settings.get('font_size', 26)
+        # Load fonts with resolution scaling
+        base_font_size = text_settings.get('font_size', 26)
+        # Apply resolution scaling
+        if resolution == '4k':
+            font_size = int(base_font_size * 2)  # 4K scaling factor
+        else:
+            font_size = base_font_size
+        
         regular_font = _get_font('fonts/sf-ui-display-regular.otf', font_size)
         bold_font = _get_font('fonts/sf-ui-display-bold.otf', font_size)
         
@@ -606,7 +612,7 @@ def generate_frames(csv_file,
         static_box_widths = None
         if text_settings and text_settings.get('static_box_size', False):
             use_icons = text_settings.get('use_icons', False)
-            static_box_widths = calculate_max_widths_for_static_boxes(df, text_settings, use_icons, locale)
+            static_box_widths = calculate_max_widths_for_static_boxes(df, text_settings, use_icons, locale, resolution)
 
         # Calculate frame timestamps
         T_min = df['timestamp'].min()
@@ -866,7 +872,7 @@ def create_preview_frame(csv_file,
             static_box_widths = None
             if text_settings and text_settings.get('static_box_size', False):
                 use_icons = text_settings.get('use_icons', False)
-                static_box_widths = calculate_max_widths_for_static_boxes(df, text_settings, use_icons, locale)
+                static_box_widths = calculate_max_widths_for_static_boxes(df, text_settings, use_icons, locale, resolution)
             
             max_speed_idx = df['speed'].idxmax()
             max_speed_timestamp = df.loc[max_speed_idx, 'timestamp']
