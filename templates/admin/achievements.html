@@ -64,19 +64,17 @@
                             </div>
                         </div>
                         <div class="card-footer bg-transparent">
-                            <div class="d-flex justify-content-end">
-                                <div class="btn-group btn-group-sm">
-                                    <a href="{{ url_for('admin_achievement_edit', achievement_id=achievement.id) }}" 
-                                       class="btn btn-outline-primary btn-sm">
-                                        <i class="fas fa-edit"></i> Edit
-                                    </a>
-                                    <form method="POST" action="{{ url_for('admin_achievement_delete', achievement_id=achievement.id) }}" 
-                                          class="d-inline" onsubmit="return confirm('Are you sure you want to delete this achievement?');">
-                                        <button type="submit" class="btn btn-outline-danger btn-sm">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </form>
-                                </div>
+                            <div class="d-flex justify-content-end gap-2">
+                                <a href="{{ url_for('admin_achievement_edit', achievement_id=achievement.id) }}" 
+                                   class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                                <form method="POST" action="{{ url_for('admin_achievement_delete', achievement_id=achievement.id) }}" 
+                                      class="d-inline" onsubmit="return confirm('Are you sure you want to delete this achievement?');">
+                                    <button type="submit" class="btn btn-outline-danger btn-sm">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
+                                </form>
                             </div>
                         </div>
                     </div>
