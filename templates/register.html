@@ -44,6 +44,19 @@
                         {% endfor %}
                     </div>
                     
+                    <!-- Math CAPTCHA -->
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('Math CAPTCHA') }}</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light">{{ captcha_question }}</span>
+                            {{ form.math_captcha(class="form-control", placeholder=_('Enter your answer')) }}
+                        </div>
+                        {% for error in form.math_captcha.errors %}
+                        <span class="text-danger">{{ error }}</span>
+                        {% endfor %}
+                        <small class="form-text text-muted">{{ _('Please solve the simple math problem above') }}</small>
+                    </div>
+                    
                     <!-- IP-based rate limiting is active (3 registrations per day per IP) -->
                     
                     <div class="mb-3">

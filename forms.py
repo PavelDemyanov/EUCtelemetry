@@ -1,9 +1,11 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, TextAreaField, BooleanField, HiddenField
+from wtforms import StringField, PasswordField, SubmitField, TextAreaField, BooleanField, HiddenField, IntegerField
 from wtforms.validators import DataRequired, Email, Length, EqualTo, ValidationError
 from flask_babel import lazy_gettext as _l
 import requests
 import os
+import random
+from flask import session
 
 def validate_recaptcha(form, field):
     """Validate Google reCAPTCHA response"""
@@ -24,6 +26,42 @@ def validate_recaptcha(form, field):
     if not result.get('success'):
         raise ValidationError(_l('CAPTCHA verification failed. Please try again.'))
 
+def validate_math_captcha(form, field):
+    """Validate simple math CAPTCHA"""
+    if not field.data:
+        raise ValidationError(_l('Please solve the math problem'))
+    
+    expected_answer = session.get('captcha_answer')
+    if expected_answer is None:
+        raise ValidationError(_l('CAPTCHA session expired. Please refresh the page.'))
+    
+    try:
+        user_answer = int(field.data)
+        if user_answer != expected_answer:
+            raise ValidationError(_l('Incorrect answer. Please try again.'))
+    except (ValueError, TypeError):
+        raise ValidationError(_l('Please enter a valid number'))
+
+def generate_math_captcha():
+    """Generate simple math problem and store answer in session"""
+    num1 = random.randint(1, 10)
+    num2 = random.randint(1, 10)
+    operation = random.choice(['+', '-'])
+    
+    if operation == '+':
+        answer = num1 + num2
+        question = f"{num1} + {num2} = ?"
+    else:
+        # Ensure positive result for subtraction
+        if num1 < num2:
+            num1, num2 = num2, num1
+        answer = num1 - num2
+        question = f"{num1} - {num2} = ?"
+    
+    session['captcha_answer'] = answer
+    session['captcha_question'] = question
+    return question
+
 class LoginForm(FlaskForm):
     email = StringField(_l('Email'), validators=[DataRequired(), Email()])
     password = PasswordField(_l('Password'), validators=[DataRequired()])
@@ -35,6 +73,7 @@ class RegistrationForm(FlaskForm):
     password = PasswordField(_l('Password'), validators=[DataRequired(), Length(min=6)])
     password2 = PasswordField(_l('Confirm Password'), 
                             validators=[DataRequired(), EqualTo('password', message=_l('Passwords must match'))])
+    math_captcha = IntegerField(_l('Math CAPTCHA'), validators=[DataRequired(), validate_math_captcha])
     recaptcha = HiddenField()  # Временно отключено до настройки домена
     submit = SubmitField(_l('Register'))
 

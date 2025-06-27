@@ -29,7 +29,8 @@ from utils.env_setup import setup_env_variables
 from utils.email_sender import send_email, test_smtp_connection
 from forms import (LoginForm, RegistrationForm, ProfileForm, 
                   ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm, DeleteAccountForm, 
-                  NewsForm, EmailCampaignForm, ResendConfirmationForm, EmailTestForm, AchievementForm)
+                  NewsForm, EmailCampaignForm, ResendConfirmationForm, EmailTestForm, AchievementForm, 
+                  generate_math_captcha)
 from models import User, Project, EmailCampaign, News, Preset, RegistrationAttempt, Achievement
 import markdown
 from sqlalchemy import desc
@@ -614,7 +615,11 @@ def register():
             flash(_('An error occurred during registration. Please try again later.'))
             return redirect(url_for('register'))
 
-    return render_template('register.html', form=form, recaptcha_site_key=os.environ.get('RECAPTCHA_SITE_KEY'))
+    # Generate math captcha for GET requests or after form validation errors
+    captcha_question = generate_math_captcha()
+    return render_template('register.html', form=form, 
+                         captcha_question=captcha_question,
+                         recaptcha_site_key=os.environ.get('RECAPTCHA_SITE_KEY'))
 
 @app.route('/confirm/<token>')
 def confirm_email(token):
