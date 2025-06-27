@@ -448,11 +448,11 @@ def create_frame(values,
                                       value_bbox[3] - value_bbox[1],
                                       unit_bbox[3] - unit_bbox[1])
                 
-                # Use static width for content centering if available, but keep dynamic width for box sizing
+                # Use static width for both box sizing and content centering if available
                 if static_box_widths and param_key and param_key in static_box_widths:
-                    # Use static width for content alignment, but dynamic width for element sizing
-                    text_width = dynamic_text_width  # Keep original width for box sizing
-                    static_content_width = static_box_widths[param_key]  # Use for content centering
+                    # Use static width for both element sizing and content centering
+                    static_content_width = static_box_widths[param_key]
+                    text_width = max(dynamic_text_width, static_content_width)  # Use larger of dynamic or static width
                 else:
                     text_width = dynamic_text_width
                     static_content_width = None
