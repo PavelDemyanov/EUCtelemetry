@@ -2149,23 +2149,20 @@ def analyze_csv():
                     # Handle other dictionary formats if needed
                     logging.warning("Unrecognized dictionary data format")
             
-            # Calculate achievements
+            # Calculate achievements using database-driven system
             achievements = []
             
-            # Check for "Devil" achievement - max speed over 130 km/h
+            # Calculate analytics variables for achievement formulas
+            analytics_vars = {}
+            
+            # Calculate max speed
             max_speed = 0
             if isinstance(processed_data, dict) and 'speed' in processed_data:
-                max_speed = max([float(val) for val in processed_data['speed'] if not pd.isna(val)], default=0)
+                speed_values = [float(val) for val in processed_data['speed'] if not pd.isna(val)]
+                max_speed = max(speed_values, default=0)
             elif isinstance(processed_data, pd.DataFrame):
                 max_speed = processed_data['speed'].max()
-            
-            if max_speed >= 130:
-                achievements.append({
-                    'id': 'devil',
-                    'title': 'Devil',
-                    'description': "You're a true Devil of the road — you hit 130 km/h!",
-                    'icon': 'devil.svg'
-                })
+            analytics_vars['max_speed'] = max_speed
             
             # Check for "Nomad" and "Tourist" achievements - related to daily travel distance
             if isinstance(processed_data, dict) and 'timestamp' in processed_data and 'mileage' in processed_data:
