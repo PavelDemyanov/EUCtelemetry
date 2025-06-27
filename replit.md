@@ -127,3 +127,6 @@ Icon vertical positioning: Default offset of 5 pixels works best for telemetry o
 - June 27, 2025: Added SMTP email server testing functionality to admin panel with connection test and test email features
 - June 27, 2025: Implemented comprehensive achievements management system with database models, admin interface, and formula editing capabilities
 - June 27, 2025: Fixed achievements table layout with proper column sizing and responsive design
+- June 27, 2025: Integrated database-driven achievements system with CSV analytics, replacing hardcoded achievement logic
+- June 27, 2025: Added 5 additional achievements to database (sleep, fast, superfast, suicidalmadman, dead) for total of 11 achievements
+- June 27, 2025: Fixed CSS styling issues in achievement edit forms to prevent text overlay in help sections
