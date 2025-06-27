@@ -200,31 +200,32 @@ def calculate_max_widths_for_static_boxes(df, text_settings, use_icons=False, lo
             max_text_width = 0
             
             if column_name in df.columns:
-                # Get unique values for this parameter to find maximum width
-                unique_values = df[column_name].unique()
+                # Find the maximum absolute value to determine character count
+                max_abs_value = df[column_name].abs().max()
+                min_value = df[column_name].min()
                 
-                # Add some extreme values to ensure we cover edge cases
-                test_values = list(unique_values) + [0, 999, 9999, 99999]
+                # Determine the maximum number of characters needed
+                # Consider negative sign if minimum value is negative
+                max_chars = len(str(int(max_abs_value)))
+                if min_value < 0:
+                    max_chars += 1  # Add one for the negative sign
                 
-                for value in test_values:
-                    if pd.isna(value):
-                        continue
-                        
-                    value_str = str(int(value))
-                    
-                    if use_icons:
-                        # Calculate width with icon
-                        value_bbox = draw.textbbox((0, 0), value_str, font=bold_font)
-                        unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
-                        text_width = icon_size + 5 + (value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])
-                    else:
-                        # Calculate width with text label
-                        label_bbox = draw.textbbox((0, 0), f"{label}: ", font=regular_font)
-                        value_bbox = draw.textbbox((0, 0), value_str, font=bold_font)
-                        unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
-                        text_width = (label_bbox[2] - label_bbox[0]) + (value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])
-                    
-                    max_text_width = max(max_text_width, text_width)
+                # Create a test string with maximum character count using '0's
+                test_value_str = '0' * max_chars
+                
+                if use_icons:
+                    # Calculate width with icon
+                    value_bbox = draw.textbbox((0, 0), test_value_str, font=bold_font)
+                    unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
+                    text_width = icon_size + 5 + (value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])
+                else:
+                    # Calculate width with text label
+                    label_bbox = draw.textbbox((0, 0), f"{label}: ", font=regular_font)
+                    value_bbox = draw.textbbox((0, 0), test_value_str, font=bold_font)
+                    unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
+                    text_width = (label_bbox[2] - label_bbox[0]) + (value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])
+                
+                max_text_width = text_width
             
             max_widths[param_key] = max_text_width
         
