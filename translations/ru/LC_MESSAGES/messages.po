@@ -1074,3 +1074,30 @@ msgstr "Пожалуйста, пройдите проверку CAPTCHA"
 msgid "CAPTCHA verification failed. Please try again."
 msgstr "Проверка CAPTCHA не удалась. Попробуйте снова."
 
+# FPS menu translations
+msgid "15 (real fps 14.985)"
+msgstr "15 (реальная частота 14.985)"
+
+msgid "30 (real fps 29.97)"
+msgstr "30 (реальная частота 29.97)"
+
+msgid "60 (real fps 59.94)"
+msgstr "60 (реальная частота 59.94)"
+
+# Static Box Size feature
+msgid "Static Box Size"
+msgstr "Статичный размер блоков"
+
+msgid "Keep box sizes consistent based on maximum text width"
+msgstr "Сохранять размеры блоков постоянными на основе максимальной ширины текста"
+
+# Icons feature  
+msgid "Icons instead of text"
+msgstr "Иконки вместо текста"
+
+msgid "Icon Vertical Position"
+msgstr "Вертикальное положение иконок"
+
+msgid "Adjust icon position relative to text"
+msgstr "Настроить положение иконок относительно текста"
+
