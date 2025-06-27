@@ -19,10 +19,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.17.0\n"
 
-# #-#-#-#-#  messages.po (PROJECT VERSION)  #-#-#-#-#
 # News Section
-# #-#-#-#-#  messages.po (PROJECT VERSION)  #-#-#-#-#
-# News related translations
 msgid "News"
 msgstr "Новости"
 
@@ -112,9 +109,7 @@ msgid "Please check your email to complete registration."
 msgstr "Пожалуйста, проверьте вашу почту для завершения регистрации."
 
 msgid "Error sending confirmation email. Please try registering again."
-msgstr ""
-"Ошибка при отправке письма для подтверждения. Пожалуйста, попробуйте "
-"зарегистрироваться снова."
+msgstr "Ошибка при отправке письма для подтверждения. Пожалуйста, попробуйте зарегистрироваться снова."
 
 msgid "An error occurred during registration. Please try again later."
 msgstr "Произошла ошибка при регистрации. Пожалуйста, попробуйте позже."
@@ -123,9 +118,7 @@ msgid "Invalid confirmation link."
 msgstr "Неверная ссылка подтверждения."
 
 msgid "This confirmation link has expired. Please register again."
-msgstr ""
-"Срок действия этой ссылки подтверждения истек. Пожалуйста, зарегистрируйтесь "
-"снова."
+msgstr "Срок действия этой ссылки подтверждения истек. Пожалуйста, зарегистрируйтесь снова."
 
 msgid "Your email has been confirmed! You can now log in."
 msgstr "Ваш email подтвержден! Теперь вы можете войти в систему."
@@ -134,15 +127,8 @@ msgstr "Ваш email подтвержден! Теперь вы можете во
 msgid "Sign In"
 msgstr "Войти"
 
-#, fuzzy
 msgid "Email"
-msgstr ""
-"#-#-#-#-#  messages.po (PROJECT VERSION)  #-#-#-#-#\n"
-"Электронная почта\n"
-"#-#-#-#-#  messages.po (PROJECT VERSION)  #-#-#-#-#\n"
-"Электронная почта\n"
-"#-#-#-#-#  messages.po (PROJECT VERSION)  #-#-#-#-#\n"
-"Email"
+msgstr "Электронная почта"
 
 msgid "Password"
 msgstr "Пароль"
@@ -159,13 +145,8 @@ msgstr "Регистрация"
 msgid "Registration"
 msgstr "Регистрация"
 
-#, fuzzy
 msgid "Name"
-msgstr ""
-"#-#-#-#-#  messages.po (PROJECT VERSION)  #-#-#-#-#\n"
-"Имя\n"
-"#-#-#-#-#  messages.po (PROJECT VERSION)  #-#-#-#-#\n"
-"Название"
+msgstr "Имя"
 
 msgid "Confirm Password"
 msgstr "Подтвердите пароль"
@@ -216,24 +197,29 @@ msgstr "Пароль должен быть не менее 6 символов"
 msgid "Profile Settings"
 msgstr "Настройки профиля"
 
+msgid "Email"
+msgstr "Электронная почта"
+
 msgid "Email cannot be changed"
 msgstr "Электронную почту нельзя изменить"
 
 msgid "Preferred Language"
 msgstr "Предпочитаемый язык"
 
+msgid "Change Password"
+msgstr "Изменить пароль"
+
+msgid "Delete Account"
+msgstr "Удалить аккаунт"
+
 msgid "Warning!"
 msgstr "Внимание!"
 
-msgid ""
-"This action cannot be undone. All your data will be permanently deleted."
-msgstr ""
-"Это действие нельзя отменить. Все ваши данные будут удалены безвозвратно."
+msgid "This action cannot be undone. All your data will be permanently deleted."
+msgstr "Это действие нельзя отменить. Все ваши данные будут удалены безвозвратно."
 
-msgid ""
-"Are you sure you want to delete your account? This action cannot be undone."
-msgstr ""
-"Вы уверены, что хотите удалить свой аккаунт? Это действие нельзя отменить."
+msgid "Are you sure you want to delete your account? This action cannot be undone."
+msgstr "Вы уверены, что хотите удалить свой аккаунт? Это действие нельзя отменить."
 
 msgid "Profile updated successfully"
 msgstr "Профиль успешно обновлен"
@@ -252,6 +238,7 @@ msgstr "Создать"
 
 msgid "Create Project"
 msgstr "Создать проект"
+
 
 msgid "My Projects"
 msgstr "Проекты"
@@ -274,10 +261,11 @@ msgstr "Выйти"
 msgid "Login"
 msgstr "Войти"
 
+msgid "Register"
+msgstr "Регистрация"
+
 msgid "Transform your EUC ride videos with professional telemetry overlays."
-msgstr ""
-"Преобразуйте ваши видео поездок на моноколесе с помощью профессиональных "
-"наложений телеметрии."
+msgstr "Преобразуйте ваши видео поездок на моноколесе с помощью профессиональных наложений телеметрии."
 
 msgid "Quick Links"
 msgstr "Быстрые ссылки"
@@ -288,22 +276,8 @@ msgstr "Связаться"
 msgid "EUCTelemetry. Created by Pavel Demyanov. All rights reserved."
 msgstr "EUCTelemetry. Создано Павлом Демьяновым. Все права защищены."
 
-msgid ""
-"The program is designed to extract telemetry data (speed, PWM, GPS speed, "
-"power, current, voltage, battery charge, trip mileage, temperature) from "
-"popular programs like <strong>DarknessBot</strong> and <strong>WheelLog</"
-"strong> and overlay them on a blue background (chroma key) for further "
-"integration of telemetry data onto your video recorded during a trip or from "
-"cameras such as <strong>insta360</strong>, <strong>GoPro</strong>, "
-"<strong>iPhone</strong>, or any other camera."
-msgstr ""
-"Программа предназначена для извлечения данных телеметрии (скорость, ШИМ, GPS "
-"скорость, мощность, ток, напряжение, заряд батареи, пробег, температура) из "
-"популярных программ, таких как <strong>DarknessBot</strong> и "
-"<strong>WheelLog</strong>, и наложения их на синий фон (хромакей) для "
-"дальнейшего наложения данных телеметрии на ваше видео, записанное во время "
-"поездки с камер, таких как <strong>insta360</strong>, <strong>GoPro</"
-"strong>, <strong>iPhone</strong> или любой другой камеры."
+msgid "The program is designed to extract telemetry data (speed, PWM, GPS speed, power, current, voltage, battery charge, trip mileage, temperature) from popular programs like <strong>DarknessBot</strong> and <strong>WheelLog</strong> and overlay them on a blue background (chroma key) for further integration of telemetry data onto your video recorded during a trip or from cameras such as <strong>insta360</strong>, <strong>GoPro</strong>, <strong>iPhone</strong>, or any other camera."
+msgstr "Программа предназначена для извлечения данных телеметрии (скорость, ШИМ, GPS скорость, мощность, ток, напряжение, заряд батареи, пробег, температура) из популярных программ, таких как <strong>DarknessBot</strong> и <strong>WheelLog</strong>, и наложения их на синий фон (хромакей) для дальнейшего наложения данных телеметрии на ваше видео, записанное во время поездки с камер, таких как <strong>insta360</strong>, <strong>GoPro</strong>, <strong>iPhone</strong> или любой другой камеры."
 
 msgid "How to Export Telemetry Data"
 msgstr "Как экспортировать данные телеметрии"
@@ -347,26 +321,17 @@ msgstr "Выберите желаемые настройки FPS, разреше
 msgid "Set up the display of telemetry elements on the video"
 msgstr "Настройте отображение элементов телеметрии на видео"
 
-msgid ""
-"Start the process of creating a video on the blue background (Chroma Key)"
+msgid "Start the process of creating a video on the blue background (Chroma Key)"
 msgstr "Запустите процесс создания видео на синем фоне (Хромакей)"
 
 msgid "Go to the \"My Projects\" section to download the finished video"
 msgstr "Перейдите в раздел \"Мои проекты\" для загрузки готового видео"
 
-msgid ""
-"Overlaying on Your Trip Video from iPhone, insta360, GoPro, and Other Cameras"
-msgstr ""
-"Наложение на видео вашей поездки с iPhone, insta360, GoPro и других камер"
+msgid "Overlaying on Your Trip Video from iPhone, insta360, GoPro, and Other Cameras"
+msgstr "Наложение на видео вашей поездки с iPhone, insta360, GoPro и других камер"
 
-msgid ""
-"You can use any video editor that supports chroma key removal, such as <a "
-"href=\"https://www.blackmagicdesign.com/products/davinciresolve\" "
-"target=\"_blank\">Davinci Resolve</a>"
-msgstr ""
-"Вы можете использовать любой видеоредактор, поддерживающий удаление "
-"хромакея, например <a href=\"https://www.blackmagicdesign.com/products/"
-"davinciresolve\" target=\"_blank\">Davinci Resolve</a>"
+msgid "You can use any video editor that supports chroma key removal, such as <a href=\"https://www.blackmagicdesign.com/products/davinciresolve\" target=\"_blank\">Davinci Resolve</a>"
+msgstr "Вы можете использовать любой видеоредактор, поддерживающий удаление хромакея, например <a href=\"https://www.blackmagicdesign.com/products/davinciresolve\" target=\"_blank\">Davinci Resolve</a>"
 
 msgid "Open your camera video in Davinci Resolve"
 msgstr "Откройте видео с вашей камеры в Davinci Resolve"
@@ -392,16 +357,8 @@ msgstr "Павел Демьянов"
 msgid "About EUCtelemetry"
 msgstr "О EUCtelemetry"
 
-msgid ""
-"EUCtelemetry is an application designed to process and visualize Electric "
-"Unicycle telemetry data, creating professional-looking overlays for your "
-"ride videos. As the creator of this tool, I'm committed to helping the EUC "
-"community enhance their riding content."
-msgstr ""
-"EUCtelemetry - это приложение, разработанное для обработки и визуализации "
-"данных телеметрии электрических моноколес, создающее профессионально "
-"выглядящие наложения для ваших видео поездок. Как создатель этого "
-"инструмента, я стремлюсь помочь сообществу EUC улучшить качество их контента."
+msgid "EUCtelemetry is an application designed to process and visualize Electric Unicycle telemetry data, creating professional-looking overlays for your ride videos. As the creator of this tool, I'm committed to helping the EUC community enhance their riding content."
+msgstr "EUCtelemetry - это приложение, разработанное для обработки и визуализации данных телеметрии электрических моноколес, создающее профессионально выглядящие наложения для ваших видео поездок. Как создатель этого инструмента, я стремлюсь помочь сообществу EUC улучшить качество их контента."
 
 msgid "Contact Information"
 msgstr "Контактная информация"
@@ -415,24 +372,23 @@ msgstr "Facebook"
 msgid "Instagram"
 msgstr "Instagram"
 
+msgid "Email"
+msgstr "Email"
+
 msgid "Open Source"
 msgstr "Открытый исходный код"
 
-msgid ""
-"The application is open source and available on GitHub. You can download, "
-"fork, or distribute it according to the license terms. I appreciate "
-"attribution when you use or modify the software."
-msgstr ""
-"Приложение имеет открытый исходный код и доступно на GitHub. Вы можете "
-"скачать, форкнуть или распространять его в соответствии с условиями "
-"лицензии. Я буду признателен за указание авторства при использовании или "
-"модификации программного обеспечения."
+msgid "The application is open source and available on GitHub. You can download, fork, or distribute it according to the license terms. I appreciate attribution when you use or modify the software."
+msgstr "Приложение имеет открытый исходный код и доступно на GitHub. Вы можете скачать, форкнуть или распространять его в соответствии с условиями лицензии. Я буду признателен за указание авторства при использовании или модификации программного обеспечения."
 
 msgid "Access the GitHub Repository"
 msgstr "Перейти в репозиторий GitHub"
 
 msgid "Projects"
 msgstr "Проекты"
+
+msgid "Name"
+msgstr "Название"
 
 msgid "Created"
 msgstr "Создано"
@@ -449,13 +405,8 @@ msgstr "Кадры"
 msgid "FPS"
 msgstr "FPS"
 
-#, fuzzy
 msgid "Resolution"
-msgstr ""
-"#-#-#-#-#  messages.po (PROJECT VERSION)  #-#-#-#-#\n"
-"Разреш.\n"
-"#-#-#-#-#  messages.po (PROJECT VERSION)  #-#-#-#-#\n"
-"Разрешение"
+msgstr "Разреш."
 
 msgid "Codec"
 msgstr "Кодек"
@@ -471,6 +422,15 @@ msgstr "Истекает"
 
 msgid "Actions"
 msgstr "Действия"
+
+msgid "Processing"
+msgstr "Обработка"
+
+msgid "Completed"
+msgstr "Завершено"
+
+msgid "Error"
+msgstr "Ошибка"
 
 msgid "CSV"
 msgstr "CSV"
@@ -500,11 +460,13 @@ msgid "Leave empty for auto-generation"
 msgstr "Оставьте пустым для автоматической генерации"
 
 msgid "Project name can only contain letters and numbers (max 7 characters)"
-msgstr ""
-"Название проекта может содержать только буквы и цифры (макс. 7 символов)"
+msgstr "Название проекта может содержать только буквы и цифры (макс. 7 символов)"
 
 msgid "CSV File"
 msgstr "CSV файл"
+
+msgid "Resolution"
+msgstr "Разрешение"
 
 msgid "Full HD (1920x1080)"
 msgstr "Full HD (1920x1080)"
@@ -521,6 +483,9 @@ msgstr "Медленно"
 msgid "Medium"
 msgstr "Средне"
 
+msgid "FPS"
+msgstr "FPS"
+
 msgid "Video Codec"
 msgstr "Видеокодек"
 
@@ -531,9 +496,7 @@ msgid "Two-way interpolation"
 msgstr "Двухсторонняя интерполяция"
 
 msgid "Automatically fill missing values using two-way interpolation"
-msgstr ""
-"Автоматически заполнять пропущенные значения используя двухстороннюю "
-"интерполяцию"
+msgstr "Автоматически заполнять пропущенные значения используя двухстороннюю интерполяцию"
 
 msgid "Upload and Show Preview"
 msgstr "Загрузить и показать предпросмотр"
@@ -592,19 +555,11 @@ msgstr "Начать обработку"
 msgid "Processing..."
 msgstr "Обработка..."
 
-msgid ""
-"You can close your browser and come back later - the video processing will "
-"continue in the background."
-msgstr ""
-"Вы можете закрыть браузер и вернуться позже - обработка видео продолжится в "
-"фоновом режиме."
+msgid "You can close your browser and come back later - the video processing will continue in the background."
+msgstr "Вы можете закрыть браузер и вернуться позже - обработка видео продолжится в фоновом режиме."
 
-msgid ""
-"Alternatively, you can go to the Projects section to monitor the progress "
-"there."
-msgstr ""
-"Кроме того, вы можете перейти в раздел Проекты, чтобы отслеживать прогресс "
-"там."
+msgid "Alternatively, you can go to the Projects section to monitor the progress there."
+msgstr "Кроме того, вы можете перейти в раздел Проекты, чтобы отслеживать прогресс там."
 
 msgid "Current:"
 msgstr "Текущее:"
@@ -648,12 +603,8 @@ msgstr "Удалить пресет"
 msgid "Trim CSV Data"
 msgstr "Обрезка данных CSV"
 
-msgid ""
-"Drag the blue and orange markers on the chart below to trim your CSV data. "
-"This will reduce file size and video length."
-msgstr ""
-"Перетащите синие и оранжевые маркеры на графике ниже, чтобы обрезать данные "
-"CSV. Это уменьшит размер файла и длительность видео."
+msgid "Drag the blue and orange markers on the chart below to trim your CSV data. This will reduce file size and video length."
+msgstr "Перетащите синие и оранжевые маркеры на графике ниже, чтобы обрезать данные CSV. Это уменьшит размер файла и длительность видео."
 
 msgid "Total Records:"
 msgstr "Всего записей:"
@@ -724,6 +675,12 @@ msgstr "Произошла ошибка при запуске обработки
 msgid "Video processing completed successfully!"
 msgstr "Обработка видео успешно завершена!"
 
+msgid "You can close your browser and come back later - the video processing will continue in the background."
+msgstr "Вы можете закрыть браузер и вернуться позже - обработка видео продолжится в фоновом режиме."
+
+msgid "Alternatively, you can go to the Projects section to monitor the progress there."
+msgstr "Кроме того, вы можете перейти в раздел Проекты, чтобы отслеживать прогресс там."
+
 msgid "Are you sure you want to stop and delete this project?"
 msgstr "Вы уверены, что хотите остановить и удалить этот проект?"
 
@@ -741,6 +698,10 @@ msgstr "Ошибка при удалении проекта: "
 
 msgid "Error deleting project"
 msgstr "Ошибка при удалении проекта"
+
+# News related translations
+msgid "News"
+msgstr "Новости"
 
 msgid "Create News"
 msgstr "Создать новость"
@@ -760,8 +721,20 @@ msgstr "Сохранить новость"
 msgid "Edit"
 msgstr "Редактировать"
 
+msgid "Delete"
+msgstr "Удалить"
+
 msgid "Are you sure you want to delete this news?"
 msgstr "Вы уверены, что хотите удалить эту новость?"
+
+msgid "Posted by %(author)s on %(date)s"
+msgstr "Опубликовано %(date)s пользователем %(author)s"
+
+msgid "Previous"
+msgstr "Предыдущая"
+
+msgid "Next"
+msgstr "Следующая"
 
 msgid "Page %(current)s of %(total)s"
 msgstr "Страница %(current)s из %(total)s"
@@ -784,9 +757,6 @@ msgstr "Отмена"
 msgid "Title must be between 1 and 200 characters"
 msgstr "Заголовок должен быть от 1 до 200 символов"
 
-# #-#-#-#-#  messages.po (PROJECT VERSION)  #-#-#-#-#
-# Analytics page
-# #-#-#-#-#  messages.po (PROJECT VERSION)  #-#-#-#-#
 # Analytics page
 msgid "Analytics"
 msgstr "Аналитика"
@@ -794,43 +764,17 @@ msgstr "Аналитика"
 msgid "EUC Data Analytics"
 msgstr "Аналитика данных моноколеса"
 
-#, fuzzy
-msgid ""
-"Upload a CSV file from DarknessBot or WheelLog to visualize and analyze your "
-"ride data."
-msgstr ""
-"#-#-#-#-#  messages.po (PROJECT VERSION)  #-#-#-#-#\n"
-"Загрузите CSV файл из DarknessBot или WheelLog для визуализации и анализа "
-"данных поездки.\n"
-"#-#-#-#-#  messages.po (PROJECT VERSION)  #-#-#-#-#\n"
-"Загрузите CSV файл из DarknessBot или WheelLog для визуализации и анализа "
-"данных поездки.\n"
-"#-#-#-#-#  messages.po (PROJECT VERSION)  #-#-#-#-#\n"
-"Загрузите файл CSV из DarknessBot или WheelLog, чтобы визуализировать и "
-"проанализировать данные вашей поездки."
+msgid "Upload a CSV file from DarknessBot or WheelLog to visualize and analyze your ride data."
+msgstr "Загрузите CSV файл из DarknessBot или WheelLog для визуализации и анализа данных поездки."
 
 msgid "Upload your data"
 msgstr "Загрузите ваши данные"
 
-#, fuzzy
 msgid "Upload a CSV file exported from DarknessBot or WheelLog."
-msgstr ""
-"#-#-#-#-#  messages.po (PROJECT VERSION)  #-#-#-#-#\n"
-"Загрузите CSV файл, экспортированный из DarknessBot или WheelLog.\n"
-"#-#-#-#-#  messages.po (PROJECT VERSION)  #-#-#-#-#\n"
-"Загрузите CSV файл, экспортированный из DarknessBot или WheelLog.\n"
-"#-#-#-#-#  messages.po (PROJECT VERSION)  #-#-#-#-#\n"
-"Загрузите файл CSV, экспортированный из DarknessBot или WheelLog."
+msgstr "Загрузите CSV файл, экспортированный из DarknessBot или WheelLog."
 
-#, fuzzy
 msgid "Upload and Analyze"
-msgstr ""
-"#-#-#-#-#  messages.po (PROJECT VERSION)  #-#-#-#-#\n"
-"Загрузить и анализировать\n"
-"#-#-#-#-#  messages.po (PROJECT VERSION)  #-#-#-#-#\n"
-"Загрузить и анализировать\n"
-"#-#-#-#-#  messages.po (PROJECT VERSION)  #-#-#-#-#\n"
-"Загрузить и проанализировать"
+msgstr "Загрузить и анализировать"
 
 msgid "Trip Telemetry"
 msgstr "Телеметрия поездки"
@@ -847,23 +791,8 @@ msgstr "Сбросить масштаб"
 msgid "Click on legend items to show or hide each chart"
 msgstr "Нажмите на элементы легенды, чтобы показать или скрыть каждый график"
 
-#, fuzzy
-msgid ""
-"On PC: mouse wheel for zooming, left mouse button for panning. On touch "
-"devices: two fingers for zooming, one finger for panning"
-msgstr ""
-"#-#-#-#-#  messages.po (PROJECT VERSION)  #-#-#-#-#\n"
-"На ПК: колесо мыши для масштабирования, левая кнопка мыши для перемещения. "
-"На сенсорных устройствах: два пальца для масштабирования, один палец для "
-"перемещения\n"
-"#-#-#-#-#  messages.po (PROJECT VERSION)  #-#-#-#-#\n"
-"На ПК: колесо мыши для масштабирования, левая кнопка мыши для перемещения. "
-"На сенсорных устройствах: два пальца для масштабирования, один палец для "
-"перемещения\n"
-"#-#-#-#-#  messages.po (PROJECT VERSION)  #-#-#-#-#\n"
-"На ПК: колесо мыши для масштабирования, левая кнопка мыши для "
-"панорамирования. На сенсорных устройствах: два пальца для масштабирования, "
-"один палец для панорамирования"
+msgid "On PC: mouse wheel for zooming, left mouse button for panning. On touch devices: two fingers for zooming, one finger for panning"
+msgstr "На ПК: колесо мыши для масштабирования, левая кнопка мыши для перемещения. На сенсорных устройствах: два пальца для масштабирования, один палец для перемещения"
 
 msgid "Loading..."
 msgstr "Загрузка..."
@@ -871,9 +800,6 @@ msgstr "Загрузка..."
 msgid "Processing data..."
 msgstr "Обработка данных..."
 
-# #-#-#-#-#  messages.po (PROJECT VERSION)  #-#-#-#-#
-# JavaScript analytics strings
-# #-#-#-#-#  messages.po (PROJECT VERSION)  #-#-#-#-#
 # JavaScript analytics strings
 msgid "Time"
 msgstr "Время"
@@ -909,10 +835,158 @@ msgid "No file selected"
 msgstr "Файл не выбран"
 
 msgid "File is too large. Please upload a CSV file smaller than 50MB."
-msgstr ""
-"Файл слишком большой. Пожалуйста, загрузите CSV файл размером менее 50МБ."
+msgstr "Файл слишком большой. Пожалуйста, загрузите CSV файл размером менее 50МБ."
+# Analytics page
+msgid "Analytics"
+msgstr "Аналитика"
 
-# #-#-#-#-#  messages.po (PROJECT VERSION)  #-#-#-#-#
+msgid "EUC Data Analytics"
+msgstr "Аналитика данных моноколеса"
+
+msgid "Upload a CSV file from DarknessBot or WheelLog to visualize and analyze your ride data."
+msgstr "Загрузите CSV файл из DarknessBot или WheelLog для визуализации и анализа данных поездки."
+
+msgid "Upload your data"
+msgstr "Загрузите ваши данные"
+
+msgid "Upload a CSV file exported from DarknessBot or WheelLog."
+msgstr "Загрузите CSV файл, экспортированный из DarknessBot или WheelLog."
+
+msgid "Upload and Analyze"
+msgstr "Загрузить и анализировать"
+
+msgid "Trip Telemetry"
+msgstr "Телеметрия поездки"
+
+msgid "Adaptive Chart"
+msgstr "Адаптивный график"
+
+msgid "(normalizes values for better visualization)"
+msgstr "(нормализует значения для лучшей визуализации)"
+
+msgid "Reset Zoom"
+msgstr "Сбросить масштаб"
+
+msgid "Click on legend items to show or hide each chart"
+msgstr "Нажмите на элементы легенды, чтобы показать или скрыть каждый график"
+
+msgid "On PC: mouse wheel for zooming, left mouse button for panning. On touch devices: two fingers for zooming, one finger for panning"
+msgstr "На ПК: колесо мыши для масштабирования, левая кнопка мыши для перемещения. На сенсорных устройствах: два пальца для масштабирования, один палец для перемещения"
+
+msgid "Loading..."
+msgstr "Загрузка..."
+
+msgid "Processing data..."
+msgstr "Обработка данных..."
+
+# JavaScript analytics strings
+msgid "Time"
+msgstr "Время"
+
+msgid "Values"
+msgstr "Значения"
+
+msgid "Unknown"
+msgstr "Неизвестно"
+
+msgid "Invalid time"
+msgstr "Неверное время"
+
+msgid "Please select a CSV file"
+msgstr "Пожалуйста, выберите CSV файл"
+
+msgid "Error parsing CSV data: "
+msgstr "Ошибка при разборе данных CSV: "
+
+msgid "Received invalid data format from server"
+msgstr "Получен неверный формат данных от сервера"
+
+msgid "An error occurred while processing the file"
+msgstr "Произошла ошибка при обработке файла"
+
+msgid "Could not load the specified file"
+msgstr "Не удалось загрузить указанный файл"
+
+msgid "No file provided"
+msgstr "Файл не предоставлен"
+
+msgid "No file selected"
+msgstr "Файл не выбран"
+
+msgid "File is too large. Please upload a CSV file smaller than 50MB."
+msgstr "Файл слишком большой. Пожалуйста, загрузите CSV файл размером менее 50МБ."
+
+msgid "speed"
+msgstr "скорость"
+
+msgid "gps"
+msgstr "gps"
+
+msgid "voltage"
+msgstr "напряжение"
+
+msgid "temperature"
+msgstr "температура"
+
+msgid "current"
+msgstr "ток"
+
+msgid "battery"
+msgstr "батарея"
+
+msgid "mileage"
+msgstr "пробег"
+
+msgid "pwm"
+msgstr "шим"
+
+msgid "power"
+msgstr "мощность"
+
+msgid "km/h"
+msgstr "км/ч"
+
+msgid "V"
+msgstr "В"
+
+msgid "°C"
+msgstr "°C"
+
+msgid "A"
+msgstr "А"
+
+msgid "%"
+msgstr "%"
+
+msgid "km"
+msgstr "км"
+
+msgid "W"
+msgstr "Вт"
+
+
+# Analytics units
+msgid "km/h"
+msgstr "км/ч"
+
+msgid "V"
+msgstr "В"
+
+msgid "°C"
+msgstr "°C"
+
+msgid "A"
+msgstr "А"
+
+msgid "km"
+msgstr "км"
+
+msgid "W"
+msgstr "Вт"
+
+msgid "%"
+msgstr "%"
+
 # Analytics page
 msgid "speed"
 msgstr "скорость"
@@ -941,36 +1015,58 @@ msgstr "шим"
 msgid "power"
 msgstr "мощность"
 
-# #-#-#-#-#  messages.po (PROJECT VERSION)  #-#-#-#-#
-# Analytics units
-msgid "km/h"
-msgstr "км/ч"
+msgid "Time"
+msgstr "Время"
 
-msgid "V"
-msgstr "В"
+msgid "Values"
+msgstr "Значения"
 
-msgid "°C"
-msgstr "°C"
+msgid "Analytics"
+msgstr "Аналитика"
 
-msgid "A"
-msgstr "А"
+msgid "EUC Data Analytics"
+msgstr "Аналитика данных моноколеса"
 
-msgid "%"
-msgstr "%"
+msgid "Upload a CSV file from DarknessBot or WheelLog to visualize and analyze your ride data."
+msgstr "Загрузите файл CSV из DarknessBot или WheelLog, чтобы визуализировать и проанализировать данные вашей поездки."
 
-msgid "km"
-msgstr "км"
+msgid "Upload your data"
+msgstr "Загрузите ваши данные"
 
-msgid "W"
-msgstr "Вт"
+msgid "Upload a CSV file exported from DarknessBot or WheelLog."
+msgstr "Загрузите файл CSV, экспортированный из DarknessBot или WheelLog."
+
+msgid "Upload and Analyze"
+msgstr "Загрузить и проанализировать"
+
+msgid "Trip Telemetry"
+msgstr "Телеметрия поездки"
+
+msgid "Adaptive Chart"
+msgstr "Адаптивный график"
+
+msgid "(normalizes values for better visualization)"
+msgstr "(нормализует значения для лучшей визуализации)"
+
+msgid "Reset Zoom"
+msgstr "Сбросить масштаб"
+
+msgid "Click on legend items to show or hide each chart"
+msgstr "Нажмите на элементы легенды, чтобы показать или скрыть каждый график"
+
+msgid "On PC: mouse wheel for zooming, left mouse button for panning. On touch devices: two fingers for zooming, one finger for panning"
+msgstr "На ПК: колесо мыши для масштабирования, левая кнопка мыши для панорамирования. На сенсорных устройствах: два пальца для масштабирования, один палец для панорамирования"
+
+msgid "Loading..."
+msgstr "Загрузка..."
+
+msgid "Processing data..."
+msgstr "Обработка данных..."
+
 
 # Security and CAPTCHA messages
-msgid ""
-"Too many registration attempts from your IP address. Please try again "
-"tomorrow."
-msgstr ""
-"Слишком много попыток регистрации с вашего IP-адреса. Попробуйте снова "
-"завтра."
+msgid "Too many registration attempts from your IP address. Please try again tomorrow."
+msgstr "Слишком много попыток регистрации с вашего IP-адреса. Попробуйте снова завтра."
 
 msgid "Please complete the CAPTCHA verification"
 msgstr "Пожалуйста, пройдите проверку CAPTCHA"
@@ -978,7 +1074,7 @@ msgstr "Пожалуйста, пройдите проверку CAPTCHA"
 msgid "CAPTCHA verification failed. Please try again."
 msgstr "Проверка CAPTCHA не удалась. Попробуйте снова."
 
-# FPS menu translations  
+# FPS menu translations
 msgid "15 (real fps 14.985)"
 msgstr "15 (реальная частота 14.985)"
 
@@ -993,8 +1089,7 @@ msgid "Static Box Size"
 msgstr "Статичный размер блоков"
 
 msgid "Keep box sizes consistent based on maximum text width"
-msgstr ""
-"Сохранять размеры блоков постоянными на основе максимальной ширины текста"
+msgstr "Сохранять размеры блоков постоянными на основе максимальной ширины текста"
 
 # Icons feature  
 msgid "Icons instead of text"
@@ -1005,3 +1100,4 @@ msgstr "Вертикальное положение иконок"
 
 msgid "Adjust icon position relative to text"
 msgstr "Настроить положение иконок относительно текста"
+
