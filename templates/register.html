@@ -48,7 +48,7 @@
                     <div class="mb-3">
                         <label class="form-label">{{ _('Math CAPTCHA') }}</label>
                         <div class="input-group">
-                            <span class="input-group-text bg-light">{{ captcha_question }}</span>
+                            <span class="input-group-text bg-primary text-white fw-bold">{{ captcha_question }}</span>
                             {{ form.math_captcha(class="form-control", placeholder=_('Enter your answer')) }}
                         </div>
                         {% for error in form.math_captcha.errors %}

@@ -39,6 +39,9 @@ def validate_math_captcha(form, field):
         user_answer = int(field.data)
         if user_answer != expected_answer:
             raise ValidationError(_l('Incorrect answer. Please try again.'))
+        # Clear captcha after successful validation to prevent reuse
+        session.pop('captcha_answer', None)
+        session.pop('captcha_question', None)
     except (ValueError, TypeError):
         raise ValidationError(_l('Please enter a valid number'))
 
