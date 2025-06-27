@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-trophy"></i> {{ title }}
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.achievement_id.label(class="form-label") }}
+                                    {{ form.achievement_id(class="form-control") }}
+                                    {% for error in form.achievement_id.errors %}
+                                        <div class="invalid-feedback d-block">{{ error }}</div>
+                                    {% endfor %}
+                                    <div class="form-text">
+                                        Unique identifier (e.g., devil, tourist, nomad)
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.icon.label(class="form-label") }}
+                                    {{ form.icon(class="form-control") }}
+                                    {% for error in form.icon.errors %}
+                                        <div class="invalid-feedback d-block">{{ error }}</div>
+                                    {% endfor %}
+                                    <div class="form-text">
+                                        Icon filename (e.g., devil.svg, tourist.svg)
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.title.label(class="form-label") }}
+                            {{ form.title(class="form-control") }}
+                            {% for error in form.title.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                            <div class="form-text">
+                                Display name for the achievement
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.description.label(class="form-label") }}
+                            {{ form.description(class="form-control", rows="3") }}
+                            {% for error in form.description.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                            <div class="form-text">
+                                Description shown to users when they earn this achievement
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.formula.label(class="form-label") }}
+                            {{ form.formula(class="form-control font-monospace") }}
+                            {% for error in form.formula.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                            <div class="form-text">
+                                Python expression to determine when achievement is earned
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check">
+                                {{ form.is_active(class="form-check-input") }}
+                                {{ form.is_active.label(class="form-check-label") }}
+                            </div>
+                            <div class="form-text">
+                                Inactive achievements won't be calculated
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('admin_achievements') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Back to Achievements
+                            </a>
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Help Card -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-lightbulb"></i> Formula Examples & Variables</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Available Variables:</h6>
+                            <table class="table table-sm">
+                                <tbody>
+                                    <tr>
+                                        <td><code>max_speed</code></td>
+                                        <td>Maximum speed in km/h</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>max_daily_distance</code></td>
+                                        <td>Max distance traveled in a single day (km)</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>max_power</code></td>
+                                        <td>Maximum power output (watts)</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>min_power</code></td>
+                                        <td>Minimum power (negative = regeneration)</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>avg_speed_diff</code></td>
+                                        <td>Average difference between wheel and GPS speed</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Example Formulas:</h6>
+                            <div class="list-group list-group-flush">
+                                <div class="list-group-item px-0">
+                                    <code>max_speed >= 130</code>
+                                    <div class="text-muted small">Speed demon - hit 130+ km/h</div>
+                                </div>
+                                <div class="list-group-item px-0">
+                                    <code>max_daily_distance >= 90</code>
+                                    <div class="text-muted small">Long distance rider</div>
+                                </div>
+                                <div class="list-group-item px-0">
+                                    <code>max_power >= 20000 or min_power <= -20000</code>
+                                    <div class="text-muted small">High power output or strong regeneration</div>
+                                </div>
+                                <div class="list-group-item px-0">
+                                    <code>avg_speed_diff > 5</code>
+                                    <div class="text-muted small">Large difference between wheel and GPS</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
