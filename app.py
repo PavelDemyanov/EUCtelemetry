@@ -927,7 +927,8 @@ def generate_project_frames(project_id):
             'show_gps': data.get('show_gps', False),
             'show_bottom_elements': data.get('show_bottom_elements', True),
             'use_icons': data.get('use_icons', False),
-            'icon_vertical_offset': int(data.get('icon_vertical_offset', 5))
+            'icon_vertical_offset': int(data.get('icon_vertical_offset', 5)),
+            'static_box_size': data.get('static_box_size', False)
         }
 
         logging.info(f"Starting processing with settings: {text_settings}, interpolate_values: {interpolate_values}")
@@ -1160,7 +1161,10 @@ def trim_csv(project_id):
             'show_pwm': data.get('show_pwm', True),
             'show_power': data.get('show_power', True),
             'show_current': data.get('show_current', True),
-            'show_bottom_elements': data.get('show_bottom_elements', True)
+            'show_bottom_elements': data.get('show_bottom_elements', True),
+            'use_icons': data.get('use_icons', False),
+            'icon_vertical_offset': int(data.get('icon_vertical_offset', 5)),
+            'static_box_size': data.get('static_box_size', False)
         }
         
         # Get user's preferred locale
@@ -1928,7 +1932,8 @@ def generate_preview(project_id):
             'show_current': data.get('show_current', True),
             'show_bottom_elements': data.get('show_bottom_elements', True),
             'use_icons': data.get('use_icons', False),
-            'icon_vertical_offset': int(data.get('icon_vertical_offset', 5))
+            'icon_vertical_offset': int(data.get('icon_vertical_offset', 5)),
+            'static_box_size': data.get('static_box_size', False)
         }
 
         logging.info(f"Generating preview with settings: {text_settings}")

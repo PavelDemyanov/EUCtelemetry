@@ -819,7 +819,8 @@ function updatePreview(projectId) {
         show_gps: document.getElementById('showGPS').checked,
         show_bottom_elements: document.getElementById('showBottomElements').checked,
         use_icons: document.getElementById('useIcons').checked,
-        icon_vertical_offset: document.getElementById('iconVerticalOffset').value
+        icon_vertical_offset: document.getElementById('iconVerticalOffset').value,
+        static_box_size: document.getElementById('staticBoxSize').checked
     };
 
     console.log('Sending preview settings:', settings);
@@ -1114,7 +1115,8 @@ document.getElementById('startProcessButton').addEventListener('click', async fu
         show_gps: document.getElementById('showGPS').checked,
         show_bottom_elements: document.getElementById('showBottomElements').checked,
         use_icons: document.getElementById('useIcons').checked,
-        icon_vertical_offset: document.getElementById('iconVerticalOffset').value
+        icon_vertical_offset: document.getElementById('iconVerticalOffset').value,
+        static_box_size: document.getElementById('staticBoxSize').checked
     };
 
     // Start processing
