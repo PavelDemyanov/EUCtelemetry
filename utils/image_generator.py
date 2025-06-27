@@ -199,7 +199,23 @@ def calculate_max_widths_for_static_boxes(df, text_settings, use_icons=False, lo
         for param_key, label, unit, column_name in parameters:
             max_text_width = 0
             
-            if column_name in df.columns:
+            # Special handling for max_speed - use same sizing as speed
+            if param_key == 'max_speed':
+                # Use 'speed' column data for max_speed sizing
+                if 'speed' in df.columns:
+                    max_abs_value = df['speed'].abs().max()
+                    min_value = df['speed'].min()
+                else:
+                    # Fallback to 3 characters if no speed data
+                    max_abs_value = 999
+                    min_value = 0
+                
+                # Determine the maximum number of characters needed
+                max_chars = len(str(int(max_abs_value)))
+                if min_value < 0:
+                    max_chars += 1  # Add one for the negative sign
+                    
+            elif column_name in df.columns:
                 # Find the maximum absolute value to determine character count
                 max_abs_value = df[column_name].abs().max()
                 min_value = df[column_name].min()
@@ -209,24 +225,31 @@ def calculate_max_widths_for_static_boxes(df, text_settings, use_icons=False, lo
                 max_chars = len(str(int(max_abs_value)))
                 if min_value < 0:
                     max_chars += 1  # Add one for the negative sign
-                
-                # Create a test string with maximum character count using '0's
-                test_value_str = '0' * max_chars
-                
-                if use_icons:
-                    # Calculate width with icon
-                    value_bbox = draw.textbbox((0, 0), test_value_str, font=bold_font)
-                    unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
-                    text_width = icon_size + 5 + (value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])
-                else:
-                    # Calculate width with text label
-                    label_bbox = draw.textbbox((0, 0), f"{label}: ", font=regular_font)
-                    value_bbox = draw.textbbox((0, 0), test_value_str, font=bold_font)
-                    unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
-                    text_width = (label_bbox[2] - label_bbox[0]) + (value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])
-                
-                max_text_width = text_width
+            else:
+                # Column not available, skip
+                max_widths[param_key] = 0
+                continue
             
+            # Limit maximum width for specific parameters to 3 characters
+            if param_key in ['speed', 'max_speed', 'gps', 'pwm', 'battery', 'temp']:
+                max_chars = min(max_chars, 3)
+                
+            # Create a test string with maximum character count using '0's
+            test_value_str = '0' * max_chars
+            
+            if use_icons:
+                # Calculate width with icon
+                value_bbox = draw.textbbox((0, 0), test_value_str, font=bold_font)
+                unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
+                text_width = icon_size + 5 + (value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])
+            else:
+                # Calculate width with text label
+                label_bbox = draw.textbbox((0, 0), f"{label}: ", font=regular_font)
+                value_bbox = draw.textbbox((0, 0), test_value_str, font=bold_font)
+                unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
+                text_width = (label_bbox[2] - label_bbox[0]) + (value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])
+            
+            max_text_width = text_width
             max_widths[param_key] = max_text_width
         
         logging.info(f"Calculated static box max widths: {max_widths}")
