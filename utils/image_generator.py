@@ -428,40 +428,33 @@ def create_frame(values,
                 elif label == loc.get('gps'):
                     param_key = 'gps'
                 
-                # Use static width if available, otherwise calculate dynamically
-                if static_box_widths and param_key and param_key in static_box_widths:
-                    text_width = static_box_widths[param_key]
-                    # Calculate height for alignment
-                    if use_icons:
-                        value_bbox = draw.textbbox((0, 0), value, font=bold_font)
-                        unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
-                        text_height = max(icon_size, value_bbox[3] - value_bbox[1], unit_bbox[3] - unit_bbox[1])
-                    else:
-                        label_bbox = draw.textbbox((0, 0), f"{label}: ", font=regular_font)
-                        value_bbox = draw.textbbox((0, 0), value, font=bold_font)
-                        unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
-                        text_height = max(label_bbox[3] - label_bbox[1],
-                                          value_bbox[3] - value_bbox[1],
-                                          unit_bbox[3] - unit_bbox[1])
+                # Calculate text width and height dynamically first (for proper spacing)
+                if use_icons:
+                    # For icons, calculate width differently
+                    value_bbox = draw.textbbox((0, 0), value, font=bold_font)
+                    unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
+                    
+                    dynamic_text_width = icon_size + 5 + (value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])  # Icon + spacing + value + unit
+                    text_height = max(icon_size, value_bbox[3] - value_bbox[1], unit_bbox[3] - unit_bbox[1])
                 else:
-                    # Dynamic calculation (original logic)
-                    if use_icons:
-                        # For icons, calculate width differently
-                        value_bbox = draw.textbbox((0, 0), value, font=bold_font)
-                        unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
-                        
-                        text_width = icon_size + 5 + (value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])  # Icon + spacing + value + unit
-                        text_height = max(icon_size, value_bbox[3] - value_bbox[1], unit_bbox[3] - unit_bbox[1])
-                    else:
-                        # Original text-based layout
-                        label_bbox = draw.textbbox((0, 0), f"{label}: ", font=regular_font)
-                        value_bbox = draw.textbbox((0, 0), value, font=bold_font)
-                        unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
+                    # Original text-based layout
+                    label_bbox = draw.textbbox((0, 0), f"{label}: ", font=regular_font)
+                    value_bbox = draw.textbbox((0, 0), value, font=bold_font)
+                    unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
 
-                        text_width = (label_bbox[2] - label_bbox[0]) + (value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])
-                        text_height = max(label_bbox[3] - label_bbox[1],
-                                          value_bbox[3] - value_bbox[1],
-                                          unit_bbox[3] - unit_bbox[1])
+                    dynamic_text_width = (label_bbox[2] - label_bbox[0]) + (value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])
+                    text_height = max(label_bbox[3] - label_bbox[1],
+                                      value_bbox[3] - value_bbox[1],
+                                      unit_bbox[3] - unit_bbox[1])
+                
+                # Use static width for content centering if available, but keep dynamic width for box sizing
+                if static_box_widths and param_key and param_key in static_box_widths:
+                    # Use static width for content alignment, but dynamic width for element sizing
+                    text_width = dynamic_text_width  # Keep original width for box sizing
+                    static_content_width = static_box_widths[param_key]  # Use for content centering
+                else:
+                    text_width = dynamic_text_width
+                    static_content_width = None
 
                 element_width = text_width + (2 * top_padding)
                 element_widths.append(element_width)
@@ -507,7 +500,9 @@ def create_frame(values,
 
                 overlay.paste(box, (x_position, y_position), box)
 
-                text_x = x_position + ((element_width - text_width) // 2)
+                # Use static content width for centering if available
+                content_width_for_centering = static_content_width if static_content_width else text_width
+                text_x = x_position + ((element_width - content_width_for_centering) // 2)
                 baseline_offset = int(max_text_height * 0.2)
                 text_y = text_baseline_y - baseline_offset
 
