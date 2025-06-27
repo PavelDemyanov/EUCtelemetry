@@ -1357,7 +1357,8 @@ document.addEventListener('DOMContentLoaded', function() {
             show_gps: document.getElementById('showGPS').checked,
             show_bottom_elements: document.getElementById('showBottomElements').checked,
             use_icons: document.getElementById('useIcons').checked,
-            icon_vertical_offset: document.getElementById('iconVerticalOffset').value
+            icon_vertical_offset: document.getElementById('iconVerticalOffset').value,
+            static_box_size: document.getElementById('staticBoxSize').checked
         };
 
         fetch('/save_preset', {
@@ -1464,6 +1465,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (valueSpan) {
                         valueSpan.textContent = settings.icon_vertical_offset;
                     }
+                }
+
+                // Apply static box size setting
+                if (settings.static_box_size !== undefined) {
+                    document.getElementById('staticBoxSize').checked = settings.static_box_size;
                 }
 
                 // Update preview if project is loaded

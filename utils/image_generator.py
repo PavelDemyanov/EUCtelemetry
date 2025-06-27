@@ -159,6 +159,82 @@ def _initialize_metal():
 
 _font_cache = {}
 
+def calculate_max_widths_for_static_boxes(df, text_settings, use_icons=False, locale='en'):
+    """Calculate maximum text width for each telemetry parameter to ensure static box sizes"""
+    try:
+        # Get localization
+        loc = _LOCALIZATION.get(locale, _LOCALIZATION['en'])
+        
+        # Load fonts
+        font_size = text_settings.get('font_size', 26)
+        regular_font = _get_font('fonts/sf-ui-display-regular.otf', font_size)
+        bold_font = _get_font('fonts/sf-ui-display-bold.otf', font_size)
+        
+        # Create dummy draw object for text measurement
+        dummy_image = Image.new('RGBA', (100, 100), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(dummy_image)
+        
+        # Icon size calculation
+        icon_size = int(font_size * 0.8) if use_icons else 0
+        
+        max_widths = {}
+        
+        # Define all possible parameters to check
+        parameters = [
+            ('speed', loc['speed'], loc['units']['speed'], 'speed'),
+            ('max_speed', loc['max_speed'], loc['units']['speed'], 'max_speed'),
+            ('voltage', loc['voltage'], loc['units']['voltage'], 'voltage'),
+            ('temp', loc['temp'], loc['units']['temp'], 'temperature'),
+            ('battery', loc['battery'], loc['units']['battery'], 'battery'),
+            ('mileage', loc['mileage'], loc['units']['mileage'], 'mileage'),
+            ('pwm', loc['pwm'], loc['units']['pwm'], 'pwm'),
+            ('power', loc['power'], loc['units']['power'], 'power'),
+            ('current', loc['current'], loc['units']['current'], 'current'),
+        ]
+        
+        # Add GPS if available
+        if 'gps' in df.columns:
+            parameters.append(('gps', loc['gps'], loc['units']['speed'], 'gps'))
+        
+        for param_key, label, unit, column_name in parameters:
+            max_text_width = 0
+            
+            if column_name in df.columns:
+                # Get unique values for this parameter to find maximum width
+                unique_values = df[column_name].unique()
+                
+                # Add some extreme values to ensure we cover edge cases
+                test_values = list(unique_values) + [0, 999, 9999, 99999]
+                
+                for value in test_values:
+                    if pd.isna(value):
+                        continue
+                        
+                    value_str = str(int(value))
+                    
+                    if use_icons:
+                        # Calculate width with icon
+                        value_bbox = draw.textbbox((0, 0), value_str, font=bold_font)
+                        unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
+                        text_width = icon_size + 5 + (value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])
+                    else:
+                        # Calculate width with text label
+                        label_bbox = draw.textbbox((0, 0), f"{label}: ", font=regular_font)
+                        value_bbox = draw.textbbox((0, 0), value_str, font=bold_font)
+                        unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
+                        text_width = (label_bbox[2] - label_bbox[0]) + (value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])
+                    
+                    max_text_width = max(max_text_width, text_width)
+            
+            max_widths[param_key] = max_text_width
+        
+        logging.info(f"Calculated static box max widths: {max_widths}")
+        return max_widths
+        
+    except Exception as e:
+        logging.error(f"Error calculating max widths for static boxes: {e}")
+        return {}
+
 
 def _get_font(font_path, size):
     cache_key = f"{font_path}_{size}"
@@ -193,7 +269,8 @@ def create_frame(values,
                   resolution='fullhd',
                   output_path=None,
                   text_settings=None,
-                  locale='en'):
+                  locale='en',
+                  static_box_widths=None):
     try:
         # Определяем разрешение и масштаб
         if resolution == "4k":
@@ -304,23 +381,63 @@ def create_frame(values,
             total_width = 0
 
             for label, value, unit in params:
-                if use_icons:
-                    # For icons, calculate width differently
-                    value_bbox = draw.textbbox((0, 0), value, font=bold_font)
-                    unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
-                    
-                    text_width = icon_size + 5 + (value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])  # Icon + spacing + value + unit
-                    text_height = max(icon_size, value_bbox[3] - value_bbox[1], unit_bbox[3] - unit_bbox[1])
+                # Determine parameter key for static width lookup
+                param_key = None
+                if label == loc['speed']:
+                    param_key = 'speed'
+                elif label == loc['max_speed']:
+                    param_key = 'max_speed'
+                elif label == loc['voltage']:
+                    param_key = 'voltage'
+                elif label == loc['temp']:
+                    param_key = 'temp'
+                elif label == loc['battery']:
+                    param_key = 'battery'
+                elif label == loc['mileage']:
+                    param_key = 'mileage'
+                elif label == loc['pwm']:
+                    param_key = 'pwm'
+                elif label == loc['power']:
+                    param_key = 'power'
+                elif label == loc['current']:
+                    param_key = 'current'
+                elif label == loc.get('gps'):
+                    param_key = 'gps'
+                
+                # Use static width if available, otherwise calculate dynamically
+                if static_box_widths and param_key and param_key in static_box_widths:
+                    text_width = static_box_widths[param_key]
+                    # Calculate height for alignment
+                    if use_icons:
+                        value_bbox = draw.textbbox((0, 0), value, font=bold_font)
+                        unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
+                        text_height = max(icon_size, value_bbox[3] - value_bbox[1], unit_bbox[3] - unit_bbox[1])
+                    else:
+                        label_bbox = draw.textbbox((0, 0), f"{label}: ", font=regular_font)
+                        value_bbox = draw.textbbox((0, 0), value, font=bold_font)
+                        unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
+                        text_height = max(label_bbox[3] - label_bbox[1],
+                                          value_bbox[3] - value_bbox[1],
+                                          unit_bbox[3] - unit_bbox[1])
                 else:
-                    # Original text-based layout
-                    label_bbox = draw.textbbox((0, 0), f"{label}: ", font=regular_font)
-                    value_bbox = draw.textbbox((0, 0), value, font=bold_font)
-                    unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
+                    # Dynamic calculation (original logic)
+                    if use_icons:
+                        # For icons, calculate width differently
+                        value_bbox = draw.textbbox((0, 0), value, font=bold_font)
+                        unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
+                        
+                        text_width = icon_size + 5 + (value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])  # Icon + spacing + value + unit
+                        text_height = max(icon_size, value_bbox[3] - value_bbox[1], unit_bbox[3] - unit_bbox[1])
+                    else:
+                        # Original text-based layout
+                        label_bbox = draw.textbbox((0, 0), f"{label}: ", font=regular_font)
+                        value_bbox = draw.textbbox((0, 0), value, font=bold_font)
+                        unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
 
-                    text_width = (label_bbox[2] - label_bbox[0]) + (value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])
-                    text_height = max(label_bbox[3] - label_bbox[1],
-                                      value_bbox[3] - value_bbox[1],
-                                      unit_bbox[3] - unit_bbox[1])
+                        text_width = (label_bbox[2] - label_bbox[0]) + (value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])
+                        text_height = max(label_bbox[3] - label_bbox[1],
+                                          value_bbox[3] - value_bbox[1],
+                                          unit_bbox[3] - unit_bbox[1])
 
                 element_width = text_width + (2 * top_padding)
                 element_widths.append(element_width)
