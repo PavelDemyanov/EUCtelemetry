@@ -29,8 +29,8 @@ from utils.env_setup import setup_env_variables
 from utils.email_sender import send_email, test_smtp_connection
 from forms import (LoginForm, RegistrationForm, ProfileForm, 
                   ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm, DeleteAccountForm, 
-                  NewsForm, EmailCampaignForm, ResendConfirmationForm, EmailTestForm)
-from models import User, Project, EmailCampaign, News, Preset, RegistrationAttempt
+                  NewsForm, EmailCampaignForm, ResendConfirmationForm, EmailTestForm, AchievementForm)
+from models import User, Project, EmailCampaign, News, Preset, RegistrationAttempt, Achievement
 import markdown
 from sqlalchemy import desc
 
@@ -2461,3 +2461,132 @@ def send_test_email():
         return redirect(url_for('admin_dashboard'))
     
     return render_template('admin/send_test_email.html', form=form)
+
+
+@app.route('/admin/achievements')
+@admin_required
+def admin_achievements():
+    """Display achievements management page"""
+    # Initialize default achievements if none exist
+    if Achievement.query.count() == 0:
+        Achievement.initialize_defaults()
+    
+    achievements = Achievement.query.order_by(Achievement.achievement_id).all()
+    return render_template('admin/achievements.html', achievements=achievements)
+
+
+@app.route('/admin/achievements/new', methods=['GET', 'POST'])
+@admin_required
+def admin_achievement_new():
+    """Create new achievement"""
+    form = AchievementForm()
+    
+    if form.validate_on_submit():
+        try:
+            # Check if achievement_id already exists
+            existing = Achievement.query.filter_by(achievement_id=form.achievement_id.data).first()
+            if existing:
+                flash(f'Achievement with ID "{form.achievement_id.data}" already exists', 'danger')
+                return render_template('admin/achievement_form.html', form=form, title='New Achievement')
+            
+            achievement = Achievement(
+                achievement_id=form.achievement_id.data,
+                title=form.title.data,
+                description=form.description.data,
+                icon=form.icon.data,
+                formula=form.formula.data,
+                is_active=form.is_active.data
+            )
+            
+            db.session.add(achievement)
+            db.session.commit()
+            
+            flash(f'Achievement "{form.title.data}" created successfully', 'success')
+            return redirect(url_for('admin_achievements'))
+            
+        except Exception as e:
+            logging.error(f"Error creating achievement: {str(e)}")
+            flash(f'Error creating achievement: {str(e)}', 'danger')
+    
+    return render_template('admin/achievement_form.html', form=form, title='New Achievement')
+
+
+@app.route('/admin/achievements/<int:achievement_id>/edit', methods=['GET', 'POST'])
+@admin_required
+def admin_achievement_edit(achievement_id):
+    """Edit existing achievement"""
+    achievement = Achievement.query.get_or_404(achievement_id)
+    form = AchievementForm(obj=achievement)
+    
+    if form.validate_on_submit():
+        try:
+            # Check if achievement_id already exists (except for current record)
+            existing = Achievement.query.filter(
+                Achievement.achievement_id == form.achievement_id.data,
+                Achievement.id != achievement_id
+            ).first()
+            if existing:
+                flash(f'Achievement with ID "{form.achievement_id.data}" already exists', 'danger')
+                return render_template('admin/achievement_form.html', form=form, 
+                                    title=f'Edit Achievement: {achievement.title}')
+            
+            achievement.achievement_id = form.achievement_id.data
+            achievement.title = form.title.data
+            achievement.description = form.description.data
+            achievement.icon = form.icon.data
+            achievement.formula = form.formula.data
+            achievement.is_active = form.is_active.data
+            achievement.updated_at = datetime.utcnow()
+            
+            db.session.commit()
+            
+            flash(f'Achievement "{achievement.title}" updated successfully', 'success')
+            return redirect(url_for('admin_achievements'))
+            
+        except Exception as e:
+            logging.error(f"Error updating achievement: {str(e)}")
+            flash(f'Error updating achievement: {str(e)}', 'danger')
+    
+    return render_template('admin/achievement_form.html', form=form, 
+                         title=f'Edit Achievement: {achievement.title}')
+
+
+@app.route('/admin/achievements/<int:achievement_id>/delete', methods=['POST'])
+@admin_required
+def admin_achievement_delete(achievement_id):
+    """Delete achievement"""
+    try:
+        achievement = Achievement.query.get_or_404(achievement_id)
+        title = achievement.title
+        
+        db.session.delete(achievement)
+        db.session.commit()
+        
+        flash(f'Achievement "{title}" deleted successfully', 'success')
+        
+    except Exception as e:
+        logging.error(f"Error deleting achievement: {str(e)}")
+        flash(f'Error deleting achievement: {str(e)}', 'danger')
+    
+    return redirect(url_for('admin_achievements'))
+
+
+@app.route('/admin/achievements/reset', methods=['POST'])
+@admin_required
+def admin_achievements_reset():
+    """Reset achievements to defaults"""
+    try:
+        # Delete all existing achievements
+        Achievement.query.delete()
+        db.session.commit()
+        
+        # Initialize defaults
+        Achievement.initialize_defaults()
+        
+        flash('Achievements reset to defaults successfully', 'success')
+        
+    except Exception as e:
+        logging.error(f"Error resetting achievements: {str(e)}")
+        flash(f'Error resetting achievements: {str(e)}', 'danger')
+    
+    return redirect(url_for('admin_achievements'))

@@ -218,3 +218,74 @@ class RegistrationAttempt(db.Model):
         db.session.add(attempt)
         db.session.commit()
         return attempt
+
+
+class Achievement(db.Model):
+    """Model for storing achievement definitions"""
+    id = db.Column(db.Integer, primary_key=True)
+    achievement_id = db.Column(db.String(50), unique=True, nullable=False)  # internal ID like 'devil'
+    title = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    icon = db.Column(db.String(100), nullable=False, default='default.svg')
+    formula = db.Column(db.Text, nullable=False)  # Python code for achievement calculation
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    @staticmethod
+    def get_default_achievements():
+        """Get default achievement definitions"""
+        return [
+            {
+                'achievement_id': 'devil',
+                'title': 'Devil',
+                'description': "You're a devil of the road — you hit 130 km/h!",
+                'icon': 'devil.svg',
+                'formula': 'max_speed >= 130'
+            },
+            {
+                'achievement_id': 'tourist',
+                'title': 'Tourist',
+                'description': "You're a true tourist — you traveled over 90 km in a single day!",
+                'icon': 'tourist.svg',
+                'formula': 'max_daily_distance >= 90'
+            },
+            {
+                'achievement_id': 'nomad',
+                'title': 'Nomad',
+                'description': "You're a true nomad — you traveled over 150 kilometers in a single day!",
+                'icon': 'supertourist.svg',
+                'formula': 'max_daily_distance >= 150'
+            },
+            {
+                'achievement_id': 'strongrider',
+                'title': 'Strong rider',
+                'description': "You're a heavy, powerful rider — you managed to load the hub motor with 20,000 watts!",
+                'icon': 'fat.svg',
+                'formula': 'max_power >= 20000 or min_power <= -20000'
+            },
+            {
+                'achievement_id': 'godlikepower',
+                'title': 'Godlike power',
+                'description': "You're a godlike-force rider — you managed to load the hub motor with 30,000 watts!",
+                'icon': 'superfat.svg',
+                'formula': 'max_power >= 30000 or min_power <= -30000'
+            },
+            {
+                'achievement_id': 'clown',
+                'title': 'Clown',
+                'description': "You're a clown — your wheel and GPS speeds differ by more than 5 km/h on average!",
+                'icon': 'clown.svg',
+                'formula': 'avg_speed_diff > 5'
+            }
+        ]
+
+    @staticmethod
+    def initialize_defaults():
+        """Initialize default achievements if they don't exist"""
+        for achievement_data in Achievement.get_default_achievements():
+            existing = Achievement.query.filter_by(achievement_id=achievement_data['achievement_id']).first()
+            if not existing:
+                achievement = Achievement(**achievement_data)
+                db.session.add(achievement)
+        db.session.commit()

@@ -97,3 +97,23 @@ class NewsForm(FlaskForm):
 class EmailTestForm(FlaskForm):
     test_email = StringField(_l('Test Email Address'), validators=[DataRequired(), Email()])
     submit = SubmitField(_l('Send Test Email'))
+
+
+class AchievementForm(FlaskForm):
+    achievement_id = StringField('Achievement ID', validators=[
+        DataRequired(), 
+        Length(min=1, max=50, message='Achievement ID must be between 1 and 50 characters')
+    ])
+    title = StringField('Title', validators=[
+        DataRequired(), 
+        Length(min=1, max=100, message='Title must be between 1 and 100 characters')
+    ])
+    description = TextAreaField('Description', validators=[DataRequired()])
+    icon = StringField('Icon File', validators=[
+        DataRequired(),
+        Length(min=1, max=100, message='Icon file must be between 1 and 100 characters')
+    ])
+    formula = TextAreaField('Formula', validators=[DataRequired()], 
+                           render_kw={'rows': 5, 'placeholder': 'Enter Python expression (e.g., max_speed >= 130)'})
+    is_active = BooleanField('Active')
+    submit = SubmitField('Save Achievement')
