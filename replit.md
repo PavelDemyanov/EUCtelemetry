@@ -125,3 +125,5 @@ Icon vertical positioning: Default offset of 5 pixels works best for telemetry o
 - June 27, 2025: Added Static Box Size parameter to preset system with BETA label
 - June 27, 2025: Fixed max_speed sizing issue and limited specific parameters to 3-character maximum width
 - June 27, 2025: Added SMTP email server testing functionality to admin panel with connection test and test email features
+- June 27, 2025: Implemented comprehensive achievements management system with database models, admin interface, and formula editing capabilities
+- June 27, 2025: Fixed achievements table layout with proper column sizing and responsive design
