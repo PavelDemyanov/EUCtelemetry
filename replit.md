@@ -133,3 +133,4 @@ Icon vertical positioning: Default offset of 5 pixels works best for telemetry o
 - June 27, 2025: Implemented simple mathematical CAPTCHA on registration page with blue background for better visibility and session-based validation
 - June 30, 2025: Made website fully independent from external CDN resources by downloading Bootstrap, Bootstrap Icons, and Chart.js libraries locally
 - June 30, 2025: Updated footer background color to #181a1d for improved visual design
+- June 30, 2025: Implemented comprehensive dark theme styling for all buttons, forms, cards, alerts, and badges to reduce brightness and improve visual consistency
