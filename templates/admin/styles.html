@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="bi bi-palette"></i> Style Management</h1>
+        <div>
+            <a href="{{ url_for('admin_style_new') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Add New Style
+            </a>
+            <form method="POST" action="{{ url_for('admin_styles_reset') }}" class="d-inline" 
+                  onsubmit="return confirm('Are you sure you want to reset all styles to defaults? This will delete all custom styles.');">
+                <button type="submit" class="btn btn-warning">
+                    <i class="bi bi-arrow-clockwise"></i> Reset to Defaults
+                </button>
+            </form>
+        </div>
+    </div>
+
+    {% if styles %}
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Site Styles</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Preview</th>
+                            <th>Name</th>
+                            <th>Value</th>
+                            <th>Description</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for style in styles %}
+                        <tr>
+                            <td>
+                                <div class="color-preview" style="width: 30px; height: 30px; background-color: {{ style.value }}; border: 1px solid #ccc; border-radius: 4px;"></div>
+                            </td>
+                            <td><code>{{ style.name }}</code></td>
+                            <td><code>{{ style.value }}</code></td>
+                            <td>{{ style.description }}</td>
+                            <td>
+                                <span class="badge bg-secondary">{{ style.category.title() }}</span>
+                            </td>
+                            <td>
+                                {% if style.is_active %}
+                                    <span class="badge bg-success">Active</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('admin_style_edit', style_id=style.id) }}" 
+                                       class="btn btn-outline-primary" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <form method="POST" action="{{ url_for('admin_style_delete', style_id=style.id) }}" 
+                                          class="d-inline" 
+                                          onsubmit="return confirm('Are you sure you want to delete this style?');">
+                                        <button type="submit" class="btn btn-outline-danger" title="Delete">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> No styles configured yet. 
+        <a href="{{ url_for('admin_style_new') }}">Add your first style</a> or 
+        <form method="POST" action="{{ url_for('admin_styles_reset') }}" class="d-inline">
+            <button type="submit" class="btn btn-link p-0">load default styles</button>
+        </form>.
+    </div>
+    {% endif %}
+
+    <div class="mt-4">
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}

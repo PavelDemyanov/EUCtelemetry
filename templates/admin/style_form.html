@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="bi bi-palette"></i> {{ title }}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-3">
+                            {{ form.name.label(class="form-label") }}
+                            {{ form.name(class="form-control") }}
+                            {% for error in form.name.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                            <div class="form-text">Internal name for this style setting (e.g., 'footer_bg_color')</div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.value.label(class="form-label") }}
+                            <div class="input-group">
+                                {{ form.value(class="form-control", type="color" if form.category.data == 'colors' else "text") }}
+                                <span class="input-group-text">
+                                    <div id="color-preview" style="width: 20px; height: 20px; background-color: {{ form.value.data or '#000000' }}; border-radius: 3px;"></div>
+                                </span>
+                            </div>
+                            {% for error in form.value.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                            <div class="form-text">Color value in hex format (e.g., #232323) or CSS color name</div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.description.label(class="form-label") }}
+                            {{ form.description(class="form-control") }}
+                            {% for error in form.description.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                            <div class="form-text">Human-readable description of what this style controls</div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.category.label(class="form-label") }}
+                            {{ form.category(class="form-select") }}
+                            {% for error in form.category.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                            <div class="form-text">Category to group this style with similar ones</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                {{ form.is_active(class="form-check-input") }}
+                                {{ form.is_active.label(class="form-check-label") }}
+                            </div>
+                            <div class="form-text">Only active styles are applied to the website</div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            {{ form.submit(class="btn btn-primary") }}
+                            <a href="{{ url_for('admin_styles') }}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-info-circle"></i> Style Guidelines</h6>
+                </div>
+                <div class="card-body">
+                    <h6>Common Style Names:</h6>
+                    <ul class="small">
+                        <li><code>footer_bg_color</code> - Footer background color</li>
+                        <li><code>navbar_bg_color</code> - Navigation bar background</li>
+                        <li><code>primary_btn_color</code> - Primary button color</li>
+                        <li><code>secondary_btn_color</code> - Secondary button color</li>
+                        <li><code>body_bg_color</code> - Main page background</li>
+                        <li><code>card_bg_color</code> - Card background color</li>
+                        <li><code>text_color</code> - Main text color</li>
+                    </ul>
+                    
+                    <h6 class="mt-3">Color Formats:</h6>
+                    <ul class="small">
+                        <li>Hex: <code>#232323</code>, <code>#fff</code></li>
+                        <li>RGB: <code>rgb(35, 35, 35)</code></li>
+                        <li>RGBA: <code>rgba(35, 35, 35, 0.8)</code></li>
+                        <li>Named: <code>red</code>, <code>blue</code>, <code>transparent</code></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Update color preview when value changes
+document.addEventListener('DOMContentLoaded', function() {
+    const valueInput = document.getElementById('value');
+    const preview = document.getElementById('color-preview');
+    
+    if (valueInput && preview) {
+        valueInput.addEventListener('input', function() {
+            const color = this.value;
+            if (color.match(/^#[0-9A-F]{6}$/i) || color.match(/^#[0-9A-F]{3}$/i)) {
+                preview.style.backgroundColor = color;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
