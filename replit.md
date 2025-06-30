@@ -131,3 +131,4 @@ Icon vertical positioning: Default offset of 5 pixels works best for telemetry o
 - June 27, 2025: Added 5 additional achievements to database (sleep, fast, superfast, suicidalmadman, dead) for total of 11 achievements
 - June 27, 2025: Fixed CSS styling issues in achievement edit forms to prevent text overlay in help sections
 - June 27, 2025: Implemented simple mathematical CAPTCHA on registration page with blue background for better visibility and session-based validation
+- June 30, 2025: Made website fully independent from external CDN resources by downloading Bootstrap, Bootstrap Icons, and Chart.js libraries locally
