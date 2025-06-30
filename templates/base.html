@@ -7,26 +7,6 @@
     <link href="{{ url_for('static', filename='vendor/bootstrap/bootstrap-dark.min.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/custom.css') }}" rel="stylesheet">
-    <!-- Dynamic styles must load AFTER all other CSS to have priority -->
-    <link href="{{ url_for('dynamic_styles') }}" rel="stylesheet">
-    <link href="{{ url_for('static', filename='css/dynamic-styles.css') }}" rel="stylesheet">
-    
-    <!-- Force background color override with inline CSS -->
-    <style>
-        html, body {
-            background-color: var(--body-bg-color, #2c3e50) !important;
-            color: var(--text-color, #ffffff) !important;
-        }
-        
-        /* Ultra-high specificity override */
-        html[data-bs-theme="dark"] body,
-        [data-bs-theme="dark"] html body,
-        html[data-bs-theme="dark"] body.d-flex,
-        [data-bs-theme="dark"] body.d-flex.flex-column.min-vh-100 {
-            background-color: var(--body-bg-color, #2c3e50) !important;
-            color: var(--text-color, #ffffff) !important;
-        }
-    </style>
     <!-- Add JavaScript translations -->
     <script type="text/javascript">
         var translations = {
