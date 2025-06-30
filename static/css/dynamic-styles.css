@@ -21,10 +21,18 @@ footer {
     border-color: var(--secondary-btn-color, #6c757d) !important;
 }
 
-/* Body styles */
-body {
+/* Body styles - highest priority overrides */
+body, html {
     background-color: var(--body-bg-color, #ffffff) !important;
     color: var(--text-color, #212529) !important;
+}
+
+/* Override Bootstrap dark theme body background with maximum specificity */
+[data-bs-theme="dark"] body,
+[data-bs-theme="dark"] html,
+html[data-bs-theme="dark"] body {
+    background-color: var(--body-bg-color, #212529) !important;
+    color: var(--text-color, #ffffff) !important;
 }
 
 /* Card styles */
@@ -47,12 +55,7 @@ body {
     border-color: var(--border-color, #dee2e6) !important;
 }
 
-/* Override Bootstrap dark theme if needed */
-[data-bs-theme="dark"] body {
-    background-color: var(--body-bg-color, #212529) !important;
-    color: var(--text-color, #ffffff) !important;
-}
-
+/* Additional dark theme overrides for cards */
 [data-bs-theme="dark"] .card {
     background-color: var(--card-bg-color, #495057) !important;
     border-color: var(--border-color, #6c757d) !important;
