@@ -29,9 +29,9 @@ from utils.env_setup import setup_env_variables
 from utils.email_sender import send_email, test_smtp_connection
 from forms import (LoginForm, RegistrationForm, ProfileForm, 
                   ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm, DeleteAccountForm, 
-                  NewsForm, EmailCampaignForm, ResendConfirmationForm, EmailTestForm, AchievementForm, 
+                  NewsForm, EmailCampaignForm, ResendConfirmationForm, EmailTestForm, AchievementForm, StyleForm,
                   generate_math_captcha)
-from models import User, Project, EmailCampaign, News, Preset, RegistrationAttempt, Achievement
+from models import User, Project, EmailCampaign, News, Preset, RegistrationAttempt, Achievement, SiteStyle
 import markdown
 from sqlalchemy import desc
 
@@ -2523,3 +2523,127 @@ def admin_achievements_reset():
         flash(f'Error resetting achievements: {str(e)}', 'danger')
     
     return redirect(url_for('admin_achievements'))
+
+
+# Style Management Routes
+@app.route('/admin/styles')
+@admin_required
+def admin_styles():
+    """Display styles management page"""
+    styles = SiteStyle.query.order_by(SiteStyle.category, SiteStyle.name).all()
+    return render_template('admin/styles.html', styles=styles)
+
+
+@app.route('/admin/styles/new', methods=['GET', 'POST'])
+@admin_required
+def admin_style_new():
+    """Create new style"""
+    form = StyleForm()
+    
+    if form.validate_on_submit():
+        try:
+            # Check if style name already exists
+            existing = SiteStyle.query.filter_by(name=form.name.data).first()
+            if existing:
+                flash(f'Style with name "{form.name.data}" already exists', 'danger')
+                return render_template('admin/style_form.html', form=form, title='Create New Style')
+            
+            style = SiteStyle(
+                name=form.name.data,
+                value=form.value.data,
+                description=form.description.data,
+                category=form.category.data,
+                is_active=form.is_active.data
+            )
+            
+            db.session.add(style)
+            db.session.commit()
+            
+            flash(f'Style "{style.name}" created successfully', 'success')
+            return redirect(url_for('admin_styles'))
+            
+        except Exception as e:
+            logging.error(f"Error creating style: {str(e)}")
+            flash(f'Error creating style: {str(e)}', 'danger')
+    
+    return render_template('admin/style_form.html', form=form, title='Create New Style')
+
+
+@app.route('/admin/styles/<int:style_id>/edit', methods=['GET', 'POST'])
+@admin_required
+def admin_style_edit(style_id):
+    """Edit existing style"""
+    style = SiteStyle.query.get_or_404(style_id)
+    form = StyleForm(obj=style)
+    
+    if form.validate_on_submit():
+        try:
+            # Check if style name already exists (except for current record)
+            existing = SiteStyle.query.filter(
+                SiteStyle.name == form.name.data,
+                SiteStyle.id != style_id
+            ).first()
+            if existing:
+                flash(f'Style with name "{form.name.data}" already exists', 'danger')
+                return render_template('admin/style_form.html', form=form, 
+                                    title=f'Edit Style: {style.name}')
+            
+            style.name = form.name.data
+            style.value = form.value.data
+            style.description = form.description.data
+            style.category = form.category.data
+            style.is_active = form.is_active.data
+            style.updated_at = datetime.utcnow()
+            
+            db.session.commit()
+            
+            flash(f'Style "{style.name}" updated successfully', 'success')
+            return redirect(url_for('admin_styles'))
+            
+        except Exception as e:
+            logging.error(f"Error updating style: {str(e)}")
+            flash(f'Error updating style: {str(e)}', 'danger')
+    
+    return render_template('admin/style_form.html', form=form, 
+                         title=f'Edit Style: {style.name}')
+
+
+@app.route('/admin/styles/<int:style_id>/delete', methods=['POST'])
+@admin_required
+def admin_style_delete(style_id):
+    """Delete style"""
+    try:
+        style = SiteStyle.query.get_or_404(style_id)
+        name = style.name
+        
+        db.session.delete(style)
+        db.session.commit()
+        
+        flash(f'Style "{name}" deleted successfully', 'success')
+        
+    except Exception as e:
+        logging.error(f"Error deleting style: {str(e)}")
+        flash(f'Error deleting style: {str(e)}', 'danger')
+    
+    return redirect(url_for('admin_styles'))
+
+
+@app.route('/admin/styles/reset', methods=['POST'])
+@admin_required
+def admin_styles_reset():
+    """Reset styles to defaults"""
+    try:
+        # Delete all existing styles
+        SiteStyle.query.delete()
+        db.session.commit()
+        
+        # Initialize defaults
+        SiteStyle.initialize_defaults()
+        
+        flash('Styles reset to defaults successfully', 'success')
+        
+    except Exception as e:
+        logging.error(f"Error resetting styles: {str(e)}")
+        flash(f'Error resetting styles: {str(e)}', 'danger')
+    
+    return redirect(url_for('admin_styles'))

@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, TextAreaField, BooleanField, HiddenField, IntegerField
+from wtforms import StringField, PasswordField, SubmitField, TextAreaField, BooleanField, HiddenField, IntegerField, SelectField
 from wtforms.validators import DataRequired, Email, Length, EqualTo, ValidationError
 from flask_babel import lazy_gettext as _l
 import requests
@@ -159,3 +159,26 @@ class AchievementForm(FlaskForm):
                            render_kw={'rows': 5, 'placeholder': 'Enter Python expression (e.g., max_speed >= 130)'})
     is_active = BooleanField('Active')
     submit = SubmitField('Save Achievement')
+
+
+class StyleForm(FlaskForm):
+    name = StringField('Style Name', validators=[
+        DataRequired(),
+        Length(min=1, max=50, message='Style name must be between 1 and 50 characters')
+    ])
+    value = StringField('Color Value', validators=[
+        DataRequired(),
+        Length(min=1, max=100, message='Value must be between 1 and 100 characters')
+    ], render_kw={'placeholder': '#000000'})
+    description = StringField('Description', validators=[
+        DataRequired(),
+        Length(min=1, max=200, message='Description must be between 1 and 200 characters')
+    ])
+    category = SelectField('Category', choices=[
+        ('colors', 'Colors'),
+        ('layout', 'Layout'),
+        ('typography', 'Typography'),
+        ('general', 'General')
+    ], default='colors')
+    is_active = BooleanField('Active', default=True)
+    submit = SubmitField('Save Style')
