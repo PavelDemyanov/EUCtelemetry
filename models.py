@@ -392,3 +392,18 @@ class SiteStyle(db.Model):
         """Get all active styles as dictionary"""
         styles = SiteStyle.query.filter_by(is_active=True).all()
         return {style.name: style.value for style in styles}
+    
+    @staticmethod
+    def generate_css_variables():
+        """Generate CSS custom properties from active styles"""
+        styles = SiteStyle.query.filter_by(is_active=True).all()
+        css_vars = []
+        
+        for style in styles:
+            # Convert style name to CSS variable format
+            var_name = f"--{style.name.replace('_', '-')}"
+            css_vars.append(f"  {var_name}: {style.value};")
+        
+        if css_vars:
+            return ":root {\n" + "\n".join(css_vars) + "\n}"
+        return ""

@@ -15,7 +15,7 @@ import psutil
 import pandas as pd
 from dotenv import load_dotenv
 from flask import (Flask, render_template, request, jsonify, send_file, 
-                  url_for, send_from_directory, flash, redirect, abort)
+                  url_for, send_from_directory, flash, redirect, abort, make_response)
 from flask_migrate import Migrate
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.utils import secure_filename
@@ -2647,3 +2647,16 @@ def admin_styles_reset():
         flash(f'Error resetting styles: {str(e)}', 'danger')
     
     return redirect(url_for('admin_styles'))
+
+
+@app.route('/styles.css')
+def dynamic_styles():
+    """Generate dynamic CSS from database styles"""
+    css_content = SiteStyle.generate_css_variables()
+    
+    response = make_response(css_content)
+    response.headers['Content-Type'] = 'text/css'
+    # Cache for 1 hour but allow revalidation
+    response.headers['Cache-Control'] = 'public, max-age=3600, must-revalidate'
+    
+    return response

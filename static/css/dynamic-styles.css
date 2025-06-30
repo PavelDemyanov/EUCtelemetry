@@ -1,0 +1,59 @@
+/* Dynamic styles using CSS custom properties from database */
+
+/* Footer styles */
+footer {
+    background-color: var(--footer-bg-color, #232323) !important;
+}
+
+/* Navigation bar styles */
+.navbar {
+    background-color: var(--navbar-bg-color, #343a40) !important;
+}
+
+/* Button styles */
+.btn-primary {
+    background-color: var(--primary-btn-color, #007bff) !important;
+    border-color: var(--primary-btn-color, #007bff) !important;
+}
+
+.btn-secondary {
+    background-color: var(--secondary-btn-color, #6c757d) !important;
+    border-color: var(--secondary-btn-color, #6c757d) !important;
+}
+
+/* Body styles */
+body {
+    background-color: var(--body-bg-color, #ffffff) !important;
+    color: var(--text-color, #212529) !important;
+}
+
+/* Card styles */
+.card {
+    background-color: var(--card-bg-color, #ffffff) !important;
+    border-color: var(--border-color, #dee2e6) !important;
+}
+
+/* Border styles */
+.border {
+    border-color: var(--border-color, #dee2e6) !important;
+}
+
+/* Additional elements that can use the color variables */
+.table {
+    border-color: var(--border-color, #dee2e6) !important;
+}
+
+.form-control, .form-select {
+    border-color: var(--border-color, #dee2e6) !important;
+}
+
+/* Override Bootstrap dark theme if needed */
+[data-bs-theme="dark"] body {
+    background-color: var(--body-bg-color, #212529) !important;
+    color: var(--text-color, #ffffff) !important;
+}
+
+[data-bs-theme="dark"] .card {
+    background-color: var(--card-bg-color, #495057) !important;
+    border-color: var(--border-color, #6c757d) !important;
+}
