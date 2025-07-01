@@ -277,6 +277,41 @@ class Achievement(db.Model):
                 'description': "You're a clown — your wheel and GPS speeds differ by more than 5 km/h on average!",
                 'icon': 'clown.svg',
                 'formula': 'avg_speed_diff > 5'
+            },
+            {
+                'achievement_id': 'sleep',
+                'title': 'Sleep',
+                'description': "You're a sleepy rider — your maximum speed was only 15 km/h!",
+                'icon': 'sleep.svg',
+                'formula': 'max_speed <= 15'
+            },
+            {
+                'achievement_id': 'fast',
+                'title': 'Fast',
+                'description': "You're a fast rider — you hit 70 km/h!",
+                'icon': 'fast.svg',
+                'formula': 'max_speed >= 70'
+            },
+            {
+                'achievement_id': 'superfast',
+                'title': 'Super Fast',
+                'description': "You're a super fast rider — you hit 100 km/h!",
+                'icon': 'superfast.svg',
+                'formula': 'max_speed >= 100'
+            },
+            {
+                'achievement_id': 'suicidalmadman',
+                'title': 'Suicidal madman',
+                'description': "You're a suicidal madman — you hit 150 km/h!",
+                'icon': 'suicidalmadman.svg',
+                'formula': 'max_speed >= 150'
+            },
+            {
+                'achievement_id': 'dead',
+                'title': 'Dead',
+                'description': "You're dead — you hit 200 km/h!",
+                'icon': 'dead.svg',
+                'formula': 'max_speed >= 200'
             }
         ]
 

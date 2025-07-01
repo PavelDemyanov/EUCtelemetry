@@ -133,3 +133,6 @@ Icon vertical positioning: Default offset of 5 pixels works best for telemetry o
 - June 27, 2025: Implemented simple mathematical CAPTCHA on registration page with blue background for better visibility and session-based validation
 - June 30, 2025: Made website fully independent from external CDN resources by downloading Bootstrap, Bootstrap Icons, and Chart.js libraries locally
 - June 30, 2025: Updated footer background color to #181a1d for improved visual design
+- July 1, 2025: Fixed achievements display issue after CDN migration by replacing FontAwesome icons with Bootstrap Icons
+- July 1, 2025: Updated admin templates (achievements.html, achievement_form.html, dashboard.html) to use Bootstrap Icons instead of FontAwesome
+- July 1, 2025: All 11 achievements now display correctly on /admin/achievements page with proper icon rendering
