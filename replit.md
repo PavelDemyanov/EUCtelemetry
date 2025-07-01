@@ -136,3 +136,5 @@ Icon vertical positioning: Default offset of 5 pixels works best for telemetry o
 - July 1, 2025: Fixed achievements display issue after CDN migration by replacing FontAwesome icons with Bootstrap Icons
 - July 1, 2025: Updated admin templates (achievements.html, achievement_form.html, dashboard.html) to use Bootstrap Icons instead of FontAwesome
 - July 1, 2025: All 11 achievements now display correctly on /admin/achievements page with proper icon rendering
+- July 1, 2025: Fixed missing achievements on production by adding 5 missing achievements (sleep, fast, superfast, suicidalmadman, dead) to get_default_achievements() function
+- July 1, 2025: Created missing_achievements.sql script for manual achievement insertion if needed on production
