@@ -7,7 +7,7 @@
     <!-- Admin Actions -->
     <div class="mb-4">
         <a href="{{ url_for('email_campaigns') }}" class="btn btn-primary">
-            <i class="fas fa-envelope"></i> Email Campaigns
+            <i class="bi bi-envelope"></i> Email Campaigns
         </a>
     </div>
 
@@ -15,7 +15,7 @@
     <div class="card mb-4">
         <div class="card-header">
             <h2 class="h5 mb-0">
-                <i class="fas fa-server"></i> Email Server Testing
+                <i class="bi bi-server"></i> Email Server Testing
             </h2>
         </div>
         <div class="card-body">
@@ -23,7 +23,7 @@
                 <div class="col-md-6">
                     <form method="POST" action="{{ url_for('test_smtp') }}" class="d-inline">
                         <button type="submit" class="btn btn-outline-info">
-                            <i class="fas fa-plug"></i> Test SMTP Connection
+                            <i class="bi bi-plug"></i> Test SMTP Connection
                         </button>
                     </form>
                     <p class="text-muted mt-2 mb-0">
@@ -32,7 +32,7 @@
                 </div>
                 <div class="col-md-6">
                     <a href="{{ url_for('send_test_email') }}" class="btn btn-outline-success">
-                        <i class="fas fa-envelope-open-text"></i> Send Test Email
+                        <i class="bi bi-envelope-open"></i> Send Test Email
                     </a>
                     <p class="text-muted mt-2 mb-0">
                         Sends a test email to the specified address
@@ -46,14 +46,14 @@
     <div class="card mb-4">
         <div class="card-header">
             <h2 class="h5 mb-0">
-                <i class="fas fa-trophy"></i> Achievements Management
+                <i class="bi bi-trophy"></i> Achievements Management
             </h2>
         </div>
         <div class="card-body">
             <div class="row">
                 <div class="col-md-12">
                     <a href="{{ url_for('admin_achievements') }}" class="btn btn-outline-warning">
-                        <i class="fas fa-trophy"></i> Manage Achievements
+                        <i class="bi bi-trophy"></i> Manage Achievements
                     </a>
                     <p class="text-muted mt-2 mb-0">
                         Create, edit, and manage achievement formulas and descriptions
