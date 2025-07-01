@@ -2523,3 +2523,31 @@ def admin_achievements_reset():
         flash(f'Error resetting achievements: {str(e)}', 'danger')
     
     return redirect(url_for('admin_achievements'))
+
+
+@app.route('/admin/achievements/refresh', methods=['POST'])
+@admin_required
+def admin_achievements_refresh():
+    """Refresh achievements - add missing defaults without deleting existing ones"""
+    try:
+        # Get count before refresh
+        count_before = Achievement.query.count()
+        
+        # Initialize defaults (this will only add missing achievements)
+        Achievement.initialize_defaults()
+        
+        # Get count after refresh
+        count_after = Achievement.query.count()
+        added_count = count_after - count_before
+        
+        if added_count > 0:
+            flash(f'Added {added_count} missing achievements. Total achievements: {count_after}', 'success')
+        else:
+            flash(f'All achievements are up to date. Total achievements: {count_after}', 'info')
+            
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Error refreshing achievements: {str(e)}")
+        flash(f'Error refreshing achievements: {str(e)}', 'danger')
+    
+    return redirect(url_for('admin_achievements'))

@@ -10,6 +10,11 @@
                     <a href="{{ url_for('admin_achievement_new') }}" class="btn btn-success">
                         <i class="bi bi-plus"></i> New Achievement
                     </a>
+                    <form method="POST" action="{{ url_for('admin_achievements_refresh') }}" class="d-inline">
+                        <button type="submit" class="btn btn-info">
+                            <i class="bi bi-arrow-repeat"></i> Refresh Achievements
+                        </button>
+                    </form>
                     <form method="POST" action="{{ url_for('admin_achievements_reset') }}" class="d-inline" 
                           onsubmit="return confirm('Are you sure you want to reset all achievements to defaults? This will delete all custom achievements.');">
                         <button type="submit" class="btn btn-warning">
