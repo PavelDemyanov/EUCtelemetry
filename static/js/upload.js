@@ -776,19 +776,8 @@ function updatePreview(projectId) {
     const progressBar = progressDiv.querySelector('.progress-bar');
     const progressTitle = document.getElementById('progressTitle');
 
-    // Check resolution and adjust offsets if needed
+    // Get resolution without changing current slider values
     const resolution = document.querySelector('input[name="resolution"]:checked').value;
-    if (resolution === '4k') {
-        document.getElementById('speedY').value = -50;
-        document.getElementById('speedYValue').textContent = '-50';
-        document.getElementById('unitY').value = 65;
-        document.getElementById('unitYValue').textContent = '65';
-    } else {
-        document.getElementById('speedY').value = -28;
-        document.getElementById('speedYValue').textContent = '-28';
-        document.getElementById('unitY').value = 36;
-        document.getElementById('unitYValue').textContent = '36';
-    }
 
     // Get current values with updated settings
     const settings = {
