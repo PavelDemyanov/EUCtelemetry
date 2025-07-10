@@ -912,6 +912,20 @@ document.querySelectorAll('input[name="resolution"]').forEach(radio => {
                 document.getElementById('iconVerticalOffset').value = 5;
                 document.getElementById('iconOffsetValue').textContent = '5';
             }
+            
+            // Update icon horizontal spacing based on resolution
+            const useIconsCheckbox = document.getElementById('useIcons');
+            if (useIconsCheckbox.checked) {
+                const defaultSpacing = this.value === '4k' ? 20 : 10;
+                const spacingSlider = document.getElementById('iconHorizontalSpacing');
+                const spacingValue = document.getElementById('iconSpacingValue');
+                
+                spacingSlider.value = defaultSpacing;
+                if (spacingValue) {
+                    spacingValue.textContent = defaultSpacing;
+                }
+            }
+            
             // Update preview with new settings
             updatePreview(projectId);
         }
@@ -1581,29 +1595,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Add event listeners for resolution changes to update icon horizontal spacing
-    document.querySelectorAll('input[name="resolution"]').forEach(radio => {
-        radio.addEventListener('change', function() {
-            const useIconsCheckbox = document.getElementById('useIcons');
-            const spacingSlider = document.getElementById('iconHorizontalSpacing');
-            const spacingValue = document.getElementById('iconSpacingValue');
-            
-            // Only update if icons are enabled
-            if (useIconsCheckbox.checked) {
-                const defaultSpacing = this.value === '4k' ? 20 : 10;
-                spacingSlider.value = defaultSpacing;
-                if (spacingValue) {
-                    spacingValue.textContent = defaultSpacing;
-                }
-                
-                // Update preview if project is loaded
-                const projectId = document.getElementById('startProcessButton').dataset.projectId;
-                if (projectId) {
-                    updatePreview(projectId);
-                }
-            }
-        });
-    });
+
 });
 
 // Function to load presets into select
