@@ -459,7 +459,7 @@ def create_frame(values,
                 if static_box_widths and param_key and param_key in static_box_widths:
                     # Use static width for both element sizing and content centering
                     static_content_width = static_box_widths[param_key]
-                    text_width = max(dynamic_text_width, static_content_width)  # Use larger of dynamic or static width
+                    text_width = static_content_width  # Use only static width for fixed box size
                 else:
                     text_width = dynamic_text_width
                     static_content_width = None
@@ -510,7 +510,7 @@ def create_frame(values,
                 overlay.paste(box, (x_position, y_position), box)
 
                 # Use static content width for centering if available
-                content_width_for_centering = static_content_width if static_content_width else text_width
+                content_width_for_centering = dynamic_text_width if static_content_width else text_width
                 text_x = x_position + ((element_width - content_width_for_centering) // 2)
                 baseline_offset = int(max_text_height * 0.2)
                 text_y = text_baseline_y - baseline_offset
