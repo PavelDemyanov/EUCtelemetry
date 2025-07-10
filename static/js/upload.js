@@ -1436,6 +1436,7 @@ document.addEventListener('DOMContentLoaded', function() {
             show_power: document.getElementById('showPower').checked,
             show_current: document.getElementById('showCurrent').checked,
             show_gps: document.getElementById('showGPS').checked,
+            show_time: document.getElementById('showTime').checked,
             show_bottom_elements: document.getElementById('showBottomElements').checked,
             use_icons: document.getElementById('useIcons').checked,
             icon_vertical_offset: document.getElementById('iconVerticalOffset').value,
@@ -1529,6 +1530,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('showPower').checked = settings.show_power;
                 document.getElementById('showCurrent').checked = settings.show_current;
                 document.getElementById('showGPS').checked = settings.show_gps;
+                document.getElementById('showTime').checked = settings.show_time;
                 document.getElementById('showBottomElements').checked = settings.show_bottom_elements;
 
                 // Apply icon settings
