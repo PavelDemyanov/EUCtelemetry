@@ -138,3 +138,5 @@ Icon vertical positioning: Default offset of 5 pixels works best for telemetry o
 - July 1, 2025: All 11 achievements now display correctly on /admin/achievements page with proper icon rendering
 - July 1, 2025: Fixed missing achievements on production by adding 5 missing achievements (sleep, fast, superfast, suicidalmadman, dead) to get_default_achievements() function
 - July 1, 2025: Created missing_achievements.sql script for manual achievement insertion if needed on production
+- July 1, 2025: Added "Refresh Achievements" button in admin panel to automatically restore missing achievements without deleting existing ones
+- July 1, 2025: Created admin_achievements_refresh() function that safely adds missing default achievements to database
