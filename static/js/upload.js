@@ -48,7 +48,24 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
 
         projectId = data.project_id;
         console.log('Project ID after upload:', projectId); // Добавляем логирование
-        updatePreview(projectId);
+        
+        // Show preview section first
+        progressDiv.classList.add('d-none');
+        previewSection.classList.remove('d-none');
+        
+        // Set project ID for processing button
+        document.getElementById('startProcessButton').dataset.projectId = projectId;
+        
+        // Update preview image directly from upload response
+        if (data.preview_url) {
+            document.getElementById('previewImage').src = data.preview_url + '?t=' + new Date().getTime();
+        }
+        
+        // Re-enable form
+        this.querySelectorAll('input, button').forEach(el => el.disabled = false);
+        
+        // Initialize CSV trimmer
+        initCsvTrimmer(projectId);
     })
     .catch(error => {
         console.error('Error:', error);
