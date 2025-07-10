@@ -62,6 +62,12 @@
                                class="btn btn-sm btn-info">
                                 <i class="bi bi-download"></i> {{ _('CSV') }}
                             </a>
+                            {% if project.status == 'completed' %}
+                            <a href="{{ url_for('download_file', project_id=project.id, type='png_archive') }}" 
+                               class="btn btn-sm btn-warning">
+                                <i class="bi bi-download"></i> {{ _('PNG') }}
+                            </a>
+                            {% endif %}
                             {% if project.video_file %}
                             <a href="{{ url_for('download_file', project_id=project.id, type='video') }}" 
                                class="btn btn-sm btn-success">

@@ -61,6 +61,7 @@ class Project(db.Model):
     frame_count = db.Column(db.Integer, default=0)
     fps = db.Column(db.Float, default=29.97)
     video_file = db.Column(db.String(255))
+    png_archive_file = db.Column(db.String(255))  # Path to PNG archive file
     codec = db.Column(db.String(10))
     resolution = db.Column(db.String(10))  # 'fullhd' or '4k'
     video_duration = db.Column(db.Float)  # Duration in seconds

@@ -142,6 +142,13 @@ def cleanup_project_files(project):
                 os.remove(video_path)
                 logging.info(f"Deleted video file: {video_path}")
 
+        # Delete PNG archive file
+        if project.png_archive_file:
+            archive_path = os.path.join('archives', project.png_archive_file)
+            if os.path.exists(archive_path):
+                os.remove(archive_path)
+                logging.info(f"Deleted PNG archive file: {archive_path}")
+
         # Delete frames directory
         frames_dir = f'frames/project_{project.folder_number}'
         if os.path.exists(frames_dir):
@@ -410,7 +417,7 @@ def inject_now():
     return {'now': datetime.utcnow()}
 
 # Create required directories with proper error handling
-for directory in ['uploads', 'frames', 'videos', 'processed_data', 'previews']:
+for directory in ['uploads', 'frames', 'videos', 'processed_data', 'previews', 'archives']:
     try:
         os.makedirs(directory, exist_ok=True)
         logging.info(f"Ensuring directory exists: {directory}")
@@ -1009,9 +1016,26 @@ def download_file(project_id, type):
     if type == 'video' and project.video_file:
         video_path = os.path.join('videos', project.video_file)
         return send_file(video_path, as_attachment=True)
+    elif type == 'png_archive':
+        # Create PNG archive if it doesn't exist
+        if not project.png_archive_file:
+            from utils.archive_creator import create_png_archive
+            archive_filename = create_png_archive(project.id, project.folder_number, project.name)
+            if archive_filename:
+                project.png_archive_file = archive_filename
+                db.session.commit()
+            else:
+                return jsonify({'error': 'Failed to create PNG archive'}), 500
+        
+        # Download existing archive
+        archive_path = os.path.join('archives', project.png_archive_file)
+        if os.path.exists(archive_path):
+            return send_file(archive_path, as_attachment=True, download_name=f'{project.name}_frames.zip')
+        else:
+            return jsonify({'error': 'Archive file not found'}), 404
     elif type == 'frames':
-        # TODO: Implement frame download as ZIP
-        pass
+        # Legacy support - redirect to png_archive
+        return download_file(project_id, 'png_archive')
     elif type == 'processed_csv':
         processed_csv = os.path.join('processed_data', f'project_{project.folder_number}_{project.csv_file}')
         if os.path.exists(processed_csv):
@@ -1042,6 +1066,12 @@ def delete_project(project_id):
             video_path = os.path.join('videos', project.video_file)
             if os.path.exists(video_path):
                 os.remove(video_path)
+
+        # Delete PNG archive file if exists
+        if project.png_archive_file:
+            archive_path = os.path.join('archives', project.png_archive_file)
+            if os.path.exists(archive_path):
+                os.remove(archive_path)
 
         # Delete frames directory if it exists
         frames_dir = f'frames/project_{project.folder_number}'
@@ -1544,6 +1574,8 @@ def cleanup_storage():
                 used_files.add(f'project_{project.folder_number}_{project.csv_file}')  # processed_data directory
             if project.video_file:
                 used_files.add(project.video_file)  # videos directory
+            if project.png_archive_file:
+                used_files.add(project.png_archive_file)  # archives directory
             used_files.add(f'{project.id}_preview.png')  # previews directory
             # frames directory is handled by folder name
             used_folders.add(f'project_{project.folder_number}')  # frames directory
@@ -1611,6 +1643,19 @@ def cleanup_storage():
                         logging.info(f"Deleted unused folder: {folder_path}")
                 except Exception as e:
                     logging.error(f"Error deleting folder {folder_path}: {str(e)}")
+
+        # Check archives directory
+        if os.path.exists('archives'):
+            for filename in os.listdir('archives'):
+                if filename not in used_files:
+                    file_path = os.path.join('archives', filename)
+                    try:
+                        os.remove(file_path)
+                        deleted_files.append(f'archives/{filename}')
+                        deleted_count += 1
+                        logging.info(f"Deleted unused archive: {file_path}")
+                    except Exception as e:
+                        logging.error(f"Error deleting archive {file_path}: {str(e)}")
 
         return jsonify({
             'success': True,
