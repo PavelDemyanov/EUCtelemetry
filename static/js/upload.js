@@ -988,7 +988,8 @@ allSettings.forEach(setting => {
                     show_bottom_elements: document.getElementById('showBottomElements').checked,
                     use_icons: document.getElementById('useIcons').checked,
                     icon_vertical_offset: document.getElementById('iconVerticalOffset').value,
-                    icon_horizontal_spacing: document.getElementById('iconHorizontalSpacing').value
+                    icon_horizontal_spacing: document.getElementById('iconHorizontalSpacing').value,
+                    static_box_size: document.getElementById('staticBoxSize').checked
                 };
 
                 // Update preview with all current settings
