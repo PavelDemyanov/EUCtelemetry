@@ -627,11 +627,9 @@ def generate_frames(csv_file,
         if text_settings and text_settings.get('static_box_size', False):
             use_icons = text_settings.get('use_icons', False)
             static_box_widths = calculate_max_widths_for_static_boxes(df, text_settings, use_icons, locale, resolution)
-            # Clear box cache to force regeneration with new sizes
-            clear_box_cache()
-        else:
-            # Also clear cache when switching from static to dynamic
-            clear_box_cache()
+        
+        # Always clear box cache to ensure fresh rendering
+        clear_box_cache()
 
         # Calculate frame timestamps
         T_min = df['timestamp'].min()
@@ -892,11 +890,9 @@ def create_preview_frame(csv_file,
             if text_settings and text_settings.get('static_box_size', False):
                 use_icons = text_settings.get('use_icons', False)
                 static_box_widths = calculate_max_widths_for_static_boxes(df, text_settings, use_icons, locale, resolution)
-                # Clear box cache to force regeneration with new sizes
-                clear_box_cache()
-            else:
-                # Also clear cache when switching from static to dynamic
-                clear_box_cache()
+            
+            # Always clear box cache to ensure fresh rendering
+            clear_box_cache()
             
             max_speed_idx = df['speed'].idxmax()
             max_speed_timestamp = df.loc[max_speed_idx, 'timestamp']
