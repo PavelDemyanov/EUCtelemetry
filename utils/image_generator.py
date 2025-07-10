@@ -180,8 +180,9 @@ def calculate_max_widths_for_static_boxes(df, text_settings, use_icons=False, lo
         dummy_image = Image.new('RGBA', (100, 100), (0, 0, 0, 0))
         draw = ImageDraw.Draw(dummy_image)
         
-        # Icon size calculation
+        # Icon size calculation and horizontal spacing
         icon_size = int(font_size * 0.8) if use_icons else 0
+        icon_horizontal_spacing = text_settings.get('icon_horizontal_spacing', 10) if use_icons else 0
         
         max_widths = {}
         
@@ -244,10 +245,10 @@ def calculate_max_widths_for_static_boxes(df, text_settings, use_icons=False, lo
             test_value_str = '0' * max_chars
             
             if use_icons:
-                # Calculate width with icon
+                # Calculate width with icon using actual spacing settings
                 value_bbox = draw.textbbox((0, 0), test_value_str, font=bold_font)
                 unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
-                text_width = icon_size + 5 + (value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])
+                text_width = icon_size + icon_horizontal_spacing + (value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])
             else:
                 # Calculate width with text label
                 label_bbox = draw.textbbox((0, 0), f"{label}: ", font=regular_font)
