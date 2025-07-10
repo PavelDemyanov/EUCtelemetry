@@ -48,24 +48,7 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
 
         projectId = data.project_id;
         console.log('Project ID after upload:', projectId); // Добавляем логирование
-        
-        // Show preview section first
-        progressDiv.classList.add('d-none');
-        previewSection.classList.remove('d-none');
-        
-        // Set project ID for processing button
-        document.getElementById('startProcessButton').dataset.projectId = projectId;
-        
-        // Update preview image directly from upload response
-        if (data.preview_url) {
-            document.getElementById('previewImage').src = data.preview_url + '?t=' + new Date().getTime();
-        }
-        
-        // Re-enable form
-        this.querySelectorAll('input, button').forEach(el => el.disabled = false);
-        
-        // Initialize CSV trimmer
-        initCsvTrimmer(projectId);
+        updatePreview(projectId);
     })
     .catch(error => {
         console.error('Error:', error);
@@ -793,8 +776,19 @@ function updatePreview(projectId) {
     const progressBar = progressDiv.querySelector('.progress-bar');
     const progressTitle = document.getElementById('progressTitle');
 
-    // Get resolution without changing current slider values
+    // Check resolution and adjust offsets if needed
     const resolution = document.querySelector('input[name="resolution"]:checked').value;
+    if (resolution === '4k') {
+        document.getElementById('speedY').value = -50;
+        document.getElementById('speedYValue').textContent = '-50';
+        document.getElementById('unitY').value = 65;
+        document.getElementById('unitYValue').textContent = '65';
+    } else {
+        document.getElementById('speedY').value = -28;
+        document.getElementById('speedYValue').textContent = '-28';
+        document.getElementById('unitY').value = 36;
+        document.getElementById('unitYValue').textContent = '36';
+    }
 
     // Get current values with updated settings
     const settings = {
@@ -994,8 +988,7 @@ allSettings.forEach(setting => {
                     show_bottom_elements: document.getElementById('showBottomElements').checked,
                     use_icons: document.getElementById('useIcons').checked,
                     icon_vertical_offset: document.getElementById('iconVerticalOffset').value,
-                    icon_horizontal_spacing: document.getElementById('iconHorizontalSpacing').value,
-                    static_box_size: document.getElementById('staticBoxSize').checked
+                    icon_horizontal_spacing: document.getElementById('iconHorizontalSpacing').value
                 };
 
                 // Update preview with all current settings

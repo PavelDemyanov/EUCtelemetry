@@ -879,8 +879,7 @@ def upload_file():
 
         return jsonify({
             'success': True,
-            'project_id': project.id,
-            'preview_url': f'/previews/{project.id}_preview.png'
+            'project_id': project.id
         })
 
     except Exception as e:

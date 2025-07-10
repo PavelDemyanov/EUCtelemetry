@@ -281,13 +281,6 @@ def _get_font(font_path, size):
 _box_cache = {}
 
 
-def clear_box_cache():
-    """Clear the box cache to force regeneration of rounded boxes."""
-    global _box_cache
-    _box_cache.clear()
-    logging.debug("Box cache cleared")
-
-
 def create_rounded_box(width, height, radius):
     cache_key = f"{width}_{height}_{radius}"
     if cache_key not in _box_cache:
@@ -462,11 +455,11 @@ def create_frame(values,
                                       value_bbox[3] - value_bbox[1],
                                       unit_bbox[3] - unit_bbox[1])
                 
-                # Use static width for box sizing if available
+                # Use static width for both box sizing and content centering if available
                 if static_box_widths and param_key and param_key in static_box_widths:
-                    # Use static width for element sizing
+                    # Use static width for both element sizing and content centering
                     static_content_width = static_box_widths[param_key]
-                    text_width = static_content_width
+                    text_width = max(dynamic_text_width, static_content_width)  # Use larger of dynamic or static width
                 else:
                     text_width = dynamic_text_width
                     static_content_width = None
@@ -516,14 +509,8 @@ def create_frame(values,
 
                 overlay.paste(box, (x_position, y_position), box)
 
-                # Use appropriate width for centering
-                if static_content_width:
-                    # For static boxes, center the actual dynamic content within the fixed-size box
-                    content_width_for_centering = dynamic_text_width
-                else:
-                    # For dynamic boxes, use the calculated text width
-                    content_width_for_centering = text_width
-                
+                # Use static content width for centering if available
+                content_width_for_centering = static_content_width if static_content_width else text_width
                 text_x = x_position + ((element_width - content_width_for_centering) // 2)
                 baseline_offset = int(max_text_height * 0.2)
                 text_y = text_baseline_y - baseline_offset
@@ -627,9 +614,6 @@ def generate_frames(csv_file,
         if text_settings and text_settings.get('static_box_size', False):
             use_icons = text_settings.get('use_icons', False)
             static_box_widths = calculate_max_widths_for_static_boxes(df, text_settings, use_icons, locale, resolution)
-        
-        # Always clear box cache to ensure fresh rendering
-        clear_box_cache()
 
         # Calculate frame timestamps
         T_min = df['timestamp'].min()
@@ -890,9 +874,6 @@ def create_preview_frame(csv_file,
             if text_settings and text_settings.get('static_box_size', False):
                 use_icons = text_settings.get('use_icons', False)
                 static_box_widths = calculate_max_widths_for_static_boxes(df, text_settings, use_icons, locale, resolution)
-            
-            # Always clear box cache to ensure fresh rendering
-            clear_box_cache()
             
             max_speed_idx = df['speed'].idxmax()
             max_speed_timestamp = df.loc[max_speed_idx, 'timestamp']
