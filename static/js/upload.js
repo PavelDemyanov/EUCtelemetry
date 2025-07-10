@@ -709,6 +709,7 @@ function setupTrimmerHandlers() {
             show_bottom_elements: document.getElementById('showBottomElements').checked,
             use_icons: document.getElementById('useIcons').checked,
             icon_vertical_offset: document.getElementById('iconVerticalOffset').value,
+            icon_horizontal_spacing: document.getElementById('iconHorizontalSpacing').value,
             start_timestamp: csvTimeRange.start,
             end_timestamp: csvTimeRange.end
         };
@@ -820,6 +821,7 @@ function updatePreview(projectId) {
         show_bottom_elements: document.getElementById('showBottomElements').checked,
         use_icons: document.getElementById('useIcons').checked,
         icon_vertical_offset: document.getElementById('iconVerticalOffset').value,
+        icon_horizontal_spacing: document.getElementById('iconHorizontalSpacing').value,
         static_box_size: document.getElementById('staticBoxSize').checked
     };
 
@@ -971,7 +973,8 @@ allSettings.forEach(setting => {
                     show_gps: document.getElementById('showGPS').checked,
                     show_bottom_elements: document.getElementById('showBottomElements').checked,
                     use_icons: document.getElementById('useIcons').checked,
-                    icon_vertical_offset: document.getElementById('iconVerticalOffset').value
+                    icon_vertical_offset: document.getElementById('iconVerticalOffset').value,
+                    icon_horizontal_spacing: document.getElementById('iconHorizontalSpacing').value
                 };
 
                 // Update preview with all current settings
@@ -1009,8 +1012,12 @@ visibilitySettings.forEach(setting => {
             // Special handling for useIcons checkbox
             if (setting === 'useIcons') {
                 const iconOffsetContainer = document.getElementById('iconVerticalOffsetContainer');
+                const iconSpacingContainer = document.getElementById('iconHorizontalSpacingContainer');
                 if (iconOffsetContainer) {
                     iconOffsetContainer.style.display = this.checked ? 'block' : 'none';
+                }
+                if (iconSpacingContainer) {
+                    iconSpacingContainer.style.display = this.checked ? 'block' : 'none';
                 }
             }
             
@@ -1028,6 +1035,23 @@ if (iconVerticalOffsetSlider) {
     iconVerticalOffsetSlider.addEventListener('input', function() {
         // Update the displayed value
         const valueSpan = document.getElementById('iconOffsetValue');
+        if (valueSpan) {
+            valueSpan.textContent = this.value;
+        }
+        
+        const projectId = document.getElementById('startProcessButton').dataset.projectId;
+        if (projectId) {
+            updatePreview(projectId);
+        }
+    });
+}
+
+// Add event listener for icon horizontal spacing slider
+const iconHorizontalSpacingSlider = document.getElementById('iconHorizontalSpacing');
+if (iconHorizontalSpacingSlider) {
+    iconHorizontalSpacingSlider.addEventListener('input', function() {
+        // Update the displayed value
+        const valueSpan = document.getElementById('iconSpacingValue');
         if (valueSpan) {
             valueSpan.textContent = this.value;
         }
@@ -1124,6 +1148,7 @@ document.getElementById('startProcessButton').addEventListener('click', async fu
         show_bottom_elements: document.getElementById('showBottomElements').checked,
         use_icons: document.getElementById('useIcons').checked,
         icon_vertical_offset: document.getElementById('iconVerticalOffset').value,
+        icon_horizontal_spacing: document.getElementById('iconHorizontalSpacing').value,
         static_box_size: document.getElementById('staticBoxSize').checked
     };
 
@@ -1309,15 +1334,24 @@ document.addEventListener('DOMContentLoaded', function() {
         // Reset icon settings
         document.getElementById('useIcons').checked = false;
         document.getElementById('iconVerticalOffset').value = 5;
-        // Hide icon offset container
+        document.getElementById('iconHorizontalSpacing').value = 5;
+        // Hide icon containers
         const iconOffsetContainer = document.getElementById('iconVerticalOffsetContainer');
+        const iconSpacingContainer = document.getElementById('iconHorizontalSpacingContainer');
         if (iconOffsetContainer) {
             iconOffsetContainer.style.display = 'none';
         }
-        // Update displayed value
+        if (iconSpacingContainer) {
+            iconSpacingContainer.style.display = 'none';
+        }
+        // Update displayed values
         const valueSpan = document.getElementById('iconOffsetValue');
+        const spacingSpan = document.getElementById('iconSpacingValue');
         if (valueSpan) {
             valueSpan.textContent = '5';
+        }
+        if (spacingSpan) {
+            spacingSpan.textContent = '5';
         }
 
         // Reset static box size setting
@@ -1369,6 +1403,7 @@ document.addEventListener('DOMContentLoaded', function() {
             show_bottom_elements: document.getElementById('showBottomElements').checked,
             use_icons: document.getElementById('useIcons').checked,
             icon_vertical_offset: document.getElementById('iconVerticalOffset').value,
+            icon_horizontal_spacing: document.getElementById('iconHorizontalSpacing').value,
             static_box_size: document.getElementById('staticBoxSize').checked
         };
 
@@ -1463,10 +1498,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Apply icon settings
                 if (settings.use_icons !== undefined) {
                     document.getElementById('useIcons').checked = settings.use_icons;
-                    // Show/hide icon offset container based on use_icons setting
+                    // Show/hide icon containers based on use_icons setting
                     const iconOffsetContainer = document.getElementById('iconVerticalOffsetContainer');
+                    const iconSpacingContainer = document.getElementById('iconHorizontalSpacingContainer');
                     if (iconOffsetContainer) {
                         iconOffsetContainer.style.display = settings.use_icons ? 'block' : 'none';
+                    }
+                    if (iconSpacingContainer) {
+                        iconSpacingContainer.style.display = settings.use_icons ? 'block' : 'none';
                     }
                 }
                 if (settings.icon_vertical_offset !== undefined) {
@@ -1475,6 +1514,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     const valueSpan = document.getElementById('iconOffsetValue');
                     if (valueSpan) {
                         valueSpan.textContent = settings.icon_vertical_offset;
+                    }
+                }
+                if (settings.icon_horizontal_spacing !== undefined) {
+                    document.getElementById('iconHorizontalSpacing').value = settings.icon_horizontal_spacing;
+                    // Update displayed value
+                    const spacingSpan = document.getElementById('iconSpacingValue');
+                    if (spacingSpan) {
+                        spacingSpan.textContent = settings.icon_horizontal_spacing;
                     }
                 }
 

@@ -933,6 +933,7 @@ def generate_project_frames(project_id):
             'show_bottom_elements': data.get('show_bottom_elements', True),
             'use_icons': data.get('use_icons', False),
             'icon_vertical_offset': int(data.get('icon_vertical_offset', 5)),
+            'icon_horizontal_spacing': int(data.get('icon_horizontal_spacing', 5)),
             'static_box_size': data.get('static_box_size', False)
         }
 
@@ -1169,6 +1170,7 @@ def trim_csv(project_id):
             'show_bottom_elements': data.get('show_bottom_elements', True),
             'use_icons': data.get('use_icons', False),
             'icon_vertical_offset': int(data.get('icon_vertical_offset', 5)),
+            'icon_horizontal_spacing': int(data.get('icon_horizontal_spacing', 5)),
             'static_box_size': data.get('static_box_size', False)
         }
         
@@ -1938,6 +1940,7 @@ def generate_preview(project_id):
             'show_bottom_elements': data.get('show_bottom_elements', True),
             'use_icons': data.get('use_icons', False),
             'icon_vertical_offset': int(data.get('icon_vertical_offset', 5)),
+            'icon_horizontal_spacing': int(data.get('icon_horizontal_spacing', 5)),
             'static_box_size': data.get('static_box_size', False)
         }
 

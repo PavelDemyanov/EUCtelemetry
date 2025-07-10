@@ -365,6 +365,7 @@ def create_frame(values,
         # Icon size scales with font size to maintain proportions
         icon_size = max(12, int(font_size * 0.8))  # Icon size proportional to font size
         icon_vertical_offset = int(text_settings.get('icon_vertical_offset', 5))  # Icon vertical offset in pixels
+        icon_horizontal_spacing = int(text_settings.get('icon_horizontal_spacing', 5))  # Icon horizontal spacing in pixels
         top_padding = int(text_settings.get('top_padding', 14) * scale_factor)
         box_height = int(text_settings.get('bottom_padding', 47) * scale_factor)
         spacing = int(text_settings.get('spacing', 10) * scale_factor)
@@ -441,7 +442,7 @@ def create_frame(values,
                     value_bbox = draw.textbbox((0, 0), value, font=bold_font)
                     unit_bbox = draw.textbbox((0, 0), f" {unit}", font=regular_font)
                     
-                    dynamic_text_width = icon_size + 5 + (value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])  # Icon + spacing + value + unit
+                    dynamic_text_width = icon_size + icon_horizontal_spacing + (value_bbox[2] - value_bbox[0]) + (unit_bbox[2] - unit_bbox[0])  # Icon + spacing + value + unit
                     text_height = max(icon_size, value_bbox[3] - value_bbox[1], unit_bbox[3] - unit_bbox[1])
                 else:
                     # Original text-based layout
@@ -538,7 +539,7 @@ def create_frame(values,
                         overlay.paste(icon, (text_x, icon_y), icon)
                         
                         # Draw value after icon
-                        value_x = text_x + icon_size + 5
+                        value_x = text_x + icon_size + icon_horizontal_spacing
                         draw.text((value_x, text_y), value, fill=text_color, font=bold_font)
                         
                         # Draw unit after value
