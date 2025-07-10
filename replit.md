@@ -140,3 +140,6 @@ Icon vertical positioning: Default offset of 5 pixels works best for telemetry o
 - July 1, 2025: Created missing_achievements.sql script for manual achievement insertion if needed on production
 - July 1, 2025: Added "Refresh Achievements" button in admin panel to automatically restore missing achievements without deleting existing ones
 - July 1, 2025: Created admin_achievements_refresh() function that safely adds missing default achievements to database
+- July 10, 2025: Extended icon horizontal spacing slider range from 0-20px to 0-50px with resolution-dependent defaults
+- July 10, 2025: Implemented automatic spacing values: 10px for Full HD, 20px for 4K resolution
+- July 10, 2025: Added dynamic spacing adjustment when switching resolutions or enabling icons

@@ -1019,6 +1019,19 @@ visibilitySettings.forEach(setting => {
                 if (iconSpacingContainer) {
                     iconSpacingContainer.style.display = this.checked ? 'block' : 'none';
                 }
+                
+                // Set default spacing values based on resolution when icons are enabled
+                if (this.checked) {
+                    const selectedResolution = document.querySelector('input[name="resolution"]:checked').value;
+                    const defaultSpacing = selectedResolution === '4k' ? 20 : 10;
+                    const spacingSlider = document.getElementById('iconHorizontalSpacing');
+                    const spacingValue = document.getElementById('iconSpacingValue');
+                    
+                    spacingSlider.value = defaultSpacing;
+                    if (spacingValue) {
+                        spacingValue.textContent = defaultSpacing;
+                    }
+                }
             }
             
             const projectId = document.getElementById('startProcessButton').dataset.projectId;
@@ -1331,10 +1344,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // Reset icon settings
+        // Reset icon settings with resolution-based defaults
         document.getElementById('useIcons').checked = false;
         document.getElementById('iconVerticalOffset').value = 5;
-        document.getElementById('iconHorizontalSpacing').value = 5;
+        
+        // Set default horizontal spacing based on resolution
+        const selectedResolution = document.querySelector('input[name="resolution"]:checked').value;
+        const defaultSpacing = selectedResolution === '4k' ? 20 : 10;
+        document.getElementById('iconHorizontalSpacing').value = defaultSpacing;
         // Hide icon containers
         const iconOffsetContainer = document.getElementById('iconVerticalOffsetContainer');
         const iconSpacingContainer = document.getElementById('iconHorizontalSpacingContainer');
@@ -1351,7 +1368,7 @@ document.addEventListener('DOMContentLoaded', function() {
             valueSpan.textContent = '5';
         }
         if (spacingSpan) {
-            spacingSpan.textContent = '5';
+            spacingSpan.textContent = defaultSpacing;
         }
 
         // Reset static box size setting
@@ -1561,6 +1578,30 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(error => {
             console.error('Error:', error);
             alert(gettext('Error deleting preset: ') + error.message);
+        });
+    });
+
+    // Add event listeners for resolution changes to update icon horizontal spacing
+    document.querySelectorAll('input[name="resolution"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const useIconsCheckbox = document.getElementById('useIcons');
+            const spacingSlider = document.getElementById('iconHorizontalSpacing');
+            const spacingValue = document.getElementById('iconSpacingValue');
+            
+            // Only update if icons are enabled
+            if (useIconsCheckbox.checked) {
+                const defaultSpacing = this.value === '4k' ? 20 : 10;
+                spacingSlider.value = defaultSpacing;
+                if (spacingValue) {
+                    spacingValue.textContent = defaultSpacing;
+                }
+                
+                // Update preview if project is loaded
+                const projectId = document.getElementById('startProcessButton').dataset.projectId;
+                if (projectId) {
+                    updatePreview(projectId);
+                }
+            }
         });
     });
 });
