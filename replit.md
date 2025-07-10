@@ -143,3 +143,4 @@ Icon vertical positioning: Default offset of 5 pixels works best for telemetry o
 - July 10, 2025: Extended icon horizontal spacing slider range from 0-20px to 0-50px with resolution-dependent defaults
 - July 10, 2025: Implemented automatic spacing values: 10px for Full HD, 20px for 4K resolution
 - July 10, 2025: Added dynamic spacing adjustment when switching resolutions or enabling icons
+- July 10, 2025: Added "Time" element to Telemetry Elements Visibility section displaying real-time in HH:MM:SS format with proper localization support and time icon

@@ -763,7 +763,8 @@ def find_nearest_values(df, timestamp, interpolate=True):
             'mileage': int(df.loc[last_idx, 'mileage']),
             'pwm': int(df.loc[last_idx, 'pwm']),
             'power': int(df.loc[last_idx, 'power']),
-            'max_speed': int(df.loc[:before_mask, 'speed'].max())
+            'max_speed': int(df.loc[:before_mask, 'speed'].max()),
+            'timestamp': df.loc[last_idx, 'timestamp']
         }
         
         # Add GPS data if it exists
@@ -792,7 +793,8 @@ def find_nearest_values(df, timestamp, interpolate=True):
             'battery': int(df.loc[use_idx, 'battery']),
             'mileage': int(df.loc[use_idx, 'mileage']),
             'pwm': int(df.loc[use_idx, 'pwm']),
-            'power': int(df.loc[use_idx, 'power'])
+            'power': int(df.loc[use_idx, 'power']),
+            'timestamp': df.loc[use_idx, 'timestamp']
         }
         
         # Add GPS data if it exists
@@ -826,6 +828,9 @@ def find_nearest_values(df, timestamp, interpolate=True):
 
     # Calculate max speed up to current point
     result['max_speed'] = int(df.loc[:before_idx, 'speed'].max())
+    
+    # Add timestamp for time display
+    result['timestamp'] = timestamp
 
     return result
 
