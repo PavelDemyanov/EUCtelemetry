@@ -83,7 +83,8 @@ def get_icon_name_for_label(label, loc):
         loc['mileage']: 'mileage',
         loc['pwm']: 'pwm',
         loc['power']: 'power',
-        loc['current']: 'current'
+        loc['current']: 'current',
+        loc['time']: 'time'
     }
     
     return label_to_icon.get(label, 'speed')  # Default to speed icon
@@ -100,6 +101,7 @@ _LOCALIZATION = {
         'mileage': 'Mileage',
         'pwm': 'PWM',
         'power': 'Power',
+        'time': 'Time',
         'units': {
             'speed': 'km/h',
             'voltage': 'V',
@@ -122,6 +124,7 @@ _LOCALIZATION = {
         'mileage': 'Пробег',
         'pwm': 'ШИМ',
         'power': 'Мощность',
+        'time': 'Время',
         'units': {
             'speed': 'км/ч',
             'voltage': 'В',
@@ -197,6 +200,7 @@ def calculate_max_widths_for_static_boxes(df, text_settings, use_icons=False, lo
             ('pwm', loc['pwm'], loc['units']['pwm'], 'pwm'),
             ('power', loc['power'], loc['units']['power'], 'power'),
             ('current', loc['current'], loc['units']['current'], 'current'),
+            ('time', loc['time'], '', 'timestamp'),
         ]
         
         # Add GPS if available
@@ -222,6 +226,9 @@ def calculate_max_widths_for_static_boxes(df, text_settings, use_icons=False, lo
                 if min_value < 0:
                     max_chars += 1  # Add one for the negative sign
                     
+            elif param_key == 'time':
+                # Time is always in HH:MM:SS format (8 characters)
+                max_chars = 8
             elif column_name in df.columns:
                 # Find the maximum absolute value to determine character count
                 max_abs_value = df[column_name].abs().max()
@@ -331,6 +338,7 @@ def create_frame(values,
         show_pwm = text_settings.get('show_pwm', True)
         show_power = text_settings.get('show_power', True)
         show_current = text_settings.get('show_current', True)  # Add current visibility setting
+        show_time = text_settings.get('show_time', False)  # Add time visibility setting
         show_bottom_elements = text_settings.get('show_bottom_elements', True)
         use_icons = text_settings.get('use_icons', False)  # Add icons setting
 
@@ -405,6 +413,11 @@ def create_frame(values,
             params.append((loc['power'], f"{values['power']}", loc['units']['power']))
         if show_current:  # Add current display
             params.append((loc['current'], f"{values['current']}", loc['units']['current']))
+        if show_time and 'timestamp' in values:  # Add time display
+            # Convert timestamp to HH:MM:SS format
+            from datetime import datetime
+            time_str = datetime.fromtimestamp(values['timestamp']).strftime('%H:%M:%S')
+            params.append((loc['time'], time_str, ""))
 
         if params:  # Only proceed if there are visible elements
             element_widths = []
@@ -436,6 +449,8 @@ def create_frame(values,
                     param_key = 'current'
                 elif label == loc.get('gps'):
                     param_key = 'gps'
+                elif label == loc.get('time'):
+                    param_key = 'time'
                 
                 # Calculate text width and height dynamically first (for proper spacing)
                 if use_icons:

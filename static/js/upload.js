@@ -818,6 +818,7 @@ function updatePreview(projectId) {
         show_power: document.getElementById('showPower').checked,
         show_current: document.getElementById('showCurrent').checked,
         show_gps: document.getElementById('showGPS').checked,
+        show_time: document.getElementById('showTime').checked,
         show_bottom_elements: document.getElementById('showBottomElements').checked,
         use_icons: document.getElementById('useIcons').checked,
         icon_vertical_offset: document.getElementById('iconVerticalOffset').value,
@@ -1016,7 +1017,7 @@ allSettings.forEach(setting => {
 const visibilitySettings = [
     'showSpeed', 'showMaxSpeed', 'showVoltage', 'showTemp', 
     'showBattery', 'showMileage', 'showPWM', 'showPower', 
-    'showCurrent', 'showGPS', 'showBottomElements', 'useIcons', 'staticBoxSize'
+    'showCurrent', 'showGPS', 'showTime', 'showBottomElements', 'useIcons', 'staticBoxSize'
 ];
 
 visibilitySettings.forEach(setting => {
@@ -1172,6 +1173,7 @@ document.getElementById('startProcessButton').addEventListener('click', async fu
         show_power: document.getElementById('showPower').checked,
         show_current: document.getElementById('showCurrent').checked,
         show_gps: document.getElementById('showGPS').checked,
+        show_time: document.getElementById('showTime').checked,
         show_bottom_elements: document.getElementById('showBottomElements').checked,
         use_icons: document.getElementById('useIcons').checked,
         icon_vertical_offset: document.getElementById('iconVerticalOffset').value,
@@ -1348,6 +1350,7 @@ document.addEventListener('DOMContentLoaded', function() {
             'showPower': true,
             'showCurrent': true,
             'showGPS': true,
+            'showTime': false,
             'showBottomElements': true
         };
 
