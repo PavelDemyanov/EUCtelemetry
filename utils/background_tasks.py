@@ -78,9 +78,15 @@ class BackgroundTaskManager:
                 logging.info(f"Creating PNG archive for project {project_id}")
                 archive_filename = create_png_archive(project_id, project_folder_number, project_name)
                 
-                if archive_filename == "TOO_LARGE":
+                if archive_filename and archive_filename.startswith("TOO_LARGE"):
                     # Archive would be too large
                     project.png_archive_status = 'too_large'
+                    # Store the size information in the project for later use
+                    if ":" in archive_filename:
+                        size_mb = archive_filename.split(":")[1]
+                        project.png_archive_error_message = f"Archive is too large ({size_mb} MB). Maximum allowed size is 100 MB."
+                    else:
+                        project.png_archive_error_message = "Archive is too large (>100 MB). Maximum allowed size is 100 MB."
                     db.session.commit()
                     
                     logging.warning(f"PNG archive for project {project_id} is too large (>100MB)")
@@ -90,6 +96,8 @@ class BackgroundTaskManager:
                         if task_id in self.active_tasks:
                             self.active_tasks[task_id]['status'] = 'too_large'
                             self.active_tasks[task_id]['completed_at'] = datetime.utcnow()
+                            if ":" in archive_filename:
+                                self.active_tasks[task_id]['error_message'] = f"Archive is too large ({archive_filename.split(':')[1]} MB). Maximum allowed size is 100 MB."
                 elif archive_filename:
                     # Update project with successful creation
                     project.png_archive_file = archive_filename

@@ -62,8 +62,9 @@ class Project(db.Model):
     fps = db.Column(db.Float, default=29.97)
     video_file = db.Column(db.String(255))
     png_archive_file = db.Column(db.String(255))  # Path to PNG archive file
-    png_archive_status = db.Column(db.String(20), default='not_created')  # not_created, creating, ready, error
+    png_archive_status = db.Column(db.String(20), default='not_created')  # not_created, creating, ready, error, too_large
     png_archive_created_at = db.Column(db.DateTime)  # When PNG archive was created
+    png_archive_error_message = db.Column(db.Text)  # Error message for PNG archive issues
     codec = db.Column(db.String(10))
     resolution = db.Column(db.String(10))  # 'fullhd' or '4k'
     video_duration = db.Column(db.Float)  # Duration in seconds

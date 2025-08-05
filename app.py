@@ -1016,7 +1016,8 @@ def get_archive_status(project_id):
             'project_id': project_id,
             'archive_status': project.png_archive_status,
             'archive_file': project.png_archive_file,
-            'created_at': project.png_archive_created_at.isoformat() if project.png_archive_created_at else None
+            'created_at': project.png_archive_created_at.isoformat() if project.png_archive_created_at else None,
+            'error_message': project.png_archive_error_message
         }
         
         # Add task-specific information if available

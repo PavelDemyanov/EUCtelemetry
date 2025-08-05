@@ -38,7 +38,7 @@ def create_png_archive(project_id, project_folder_number, project_name):
         if total_size > max_size:
             size_mb = total_size / (1024 * 1024)
             logging.warning(f"Archive would be too large: {size_mb:.1f}MB (limit: 100MB). Skipping creation.")
-            return "TOO_LARGE"  # Special return value to indicate size limit exceeded
+            return f"TOO_LARGE:{size_mb:.1f}"  # Return size info with the error
         
         # Create ZIP archive
         with zipfile.ZipFile(archive_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
@@ -54,7 +54,7 @@ def create_png_archive(project_id, project_folder_number, project_name):
             os.remove(archive_path)
             size_mb = final_size / (1024 * 1024)
             logging.warning(f"Created archive was too large: {size_mb:.1f}MB (limit: 100MB). Removed.")
-            return "TOO_LARGE"
+            return f"TOO_LARGE:{size_mb:.1f}"
         
         logging.info(f"Created PNG archive: {archive_path} with {len(png_files)} files ({final_size / (1024*1024):.1f}MB)")
         return archive_filename

@@ -225,7 +225,8 @@ function pollArchiveStatus(projectId) {
                 } else if (data.archive_status === 'error') {
                     alert('{{ _("Failed to create archive. Please try again.") }}');
                 } else if (data.archive_status === 'too_large') {
-                    alert('{{ _("Archive is too large for download (>100 MB). Please reduce the number of frames or video duration.") }}');
+                    const errorMessage = data.error_message || '{{ _("Archive is too large for download (>100 MB). Please reduce the number of frames or video duration.") }}';
+                    alert(errorMessage);
                 }
             })
             .catch(error => {
