@@ -999,6 +999,38 @@ def check_processing_projects():
         logging.error(f"Error in check_processing_projects: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/archive_status/<int:project_id>', methods=['GET'])
+@login_required
+def get_archive_status(project_id):
+    """Get PNG archive creation status for a project"""
+    try:
+        project = Project.query.get_or_404(project_id)
+        if project.user_id != current_user.id and not current_user.is_admin:
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        # Get task status from background task manager
+        from utils.background_tasks import task_manager
+        task_status = task_manager.get_task_status(project_id)
+        
+        response = {
+            'project_id': project_id,
+            'archive_status': project.png_archive_status,
+            'archive_file': project.png_archive_file,
+            'created_at': project.png_archive_created_at.isoformat() if project.png_archive_created_at else None
+        }
+        
+        # Add task-specific information if available
+        if task_status:
+            response['task_status'] = task_status['status']
+            response['task_started_at'] = task_status['started_at'].isoformat() if task_status.get('started_at') else None
+            if 'error' in task_status:
+                response['task_error'] = task_status['error']
+        
+        return jsonify(response)
+    except Exception as e:
+        logging.error(f"Error in get_archive_status: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/projects')
 @login_required
 def list_projects():
@@ -1019,22 +1051,30 @@ def download_file(project_id, type):
         video_path = os.path.join('videos', project.video_file)
         return send_file(video_path, as_attachment=True)
     elif type == 'png_archive':
-        # Create PNG archive if it doesn't exist
-        if not project.png_archive_file:
-            from utils.archive_creator import create_png_archive
-            archive_filename = create_png_archive(project.id, project.folder_number, project.name)
-            if archive_filename:
-                project.png_archive_file = archive_filename
-                db.session.commit()
+        # Check archive status
+        if project.png_archive_status == 'ready' and project.png_archive_file:
+            # Archive is ready, download it
+            archive_path = os.path.join('archives', project.png_archive_file)
+            if os.path.exists(archive_path):
+                return send_file(archive_path, as_attachment=True, download_name=f'{project.name}_frames.zip')
             else:
-                return jsonify({'error': 'Failed to create PNG archive'}), 500
-        
-        # Download existing archive
-        archive_path = os.path.join('archives', project.png_archive_file)
-        if os.path.exists(archive_path):
-            return send_file(archive_path, as_attachment=True, download_name=f'{project.name}_frames.zip')
+                # File doesn't exist, reset status
+                project.png_archive_status = 'not_created'
+                project.png_archive_file = None
+                db.session.commit()
+                return jsonify({'error': 'Archive file not found, please try again'}), 404
+        elif project.png_archive_status == 'creating':
+            return jsonify({'error': 'Archive is being created, please wait...'}), 202
+        elif project.png_archive_status == 'error':
+            return jsonify({'error': 'Failed to create archive, please try again'}), 500
         else:
-            return jsonify({'error': 'Archive file not found'}), 404
+            # Archive not created yet, start creation
+            from utils.background_tasks import task_manager
+            success = task_manager.create_png_archive_async(project.id, project.folder_number, project.name)
+            if success:
+                return jsonify({'message': 'Archive creation started, please wait...'}), 202
+            else:
+                return jsonify({'error': 'Archive creation is already in progress'}), 409
     elif type == 'frames':
         # Legacy support - redirect to png_archive
         return download_file(project_id, 'png_archive')
