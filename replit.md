@@ -147,3 +147,5 @@ Icon vertical positioning: Default offset of 5 pixels works best for telemetry o
 - August 5, 2025: Implemented asynchronous PNG archive creation system with BackgroundTaskManager to solve HTTP timeout issues
 - August 5, 2025: Added streaming download support for large files (>100MB) using werkzeug's efficient file wrapper to prevent Gunicorn worker timeouts
 - August 5, 2025: Enhanced UI with real-time archive status checking and progress indicators, archives create in background without blocking interface
+- August 5, 2025: Added 100MB size limit for PNG archives to prevent Gunicorn worker timeouts, with pre-creation size estimation and user-friendly error messages
+- August 5, 2025: Removed complex streaming functions in favor of simple size-based limits, ensuring stable downloads without server crashes

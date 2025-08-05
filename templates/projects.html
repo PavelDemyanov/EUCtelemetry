@@ -224,6 +224,8 @@ function pollArchiveStatus(projectId) {
                     setTimeout(() => downloadPngArchive(projectId), 500);
                 } else if (data.archive_status === 'error') {
                     alert('{{ _("Failed to create archive. Please try again.") }}');
+                } else if (data.archive_status === 'too_large') {
+                    alert('{{ _("Archive is too large for download (>100 MB). Please reduce the number of frames or video duration.") }}');
                 }
             })
             .catch(error => {
@@ -262,6 +264,12 @@ function updatePngButtonStatus(projectId, status) {
             icon.className = 'bi bi-exclamation-triangle';
             text.textContent = '{{ _("Error") }}';
             btn.disabled = false;
+            break;
+        case 'too_large':
+            btn.className = 'btn btn-sm btn-secondary';
+            icon.className = 'bi bi-file-earmark-x';
+            text.textContent = '{{ _("Too Large") }}';
+            btn.disabled = true;
             break;
         default: // not_created
             btn.className = 'btn btn-sm btn-warning';

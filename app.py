@@ -1056,31 +1056,25 @@ def download_file(project_id, type):
             # Archive is ready, download it
             archive_path = os.path.join('archives', project.png_archive_file)
             if os.path.exists(archive_path):
-                # Check file size for Gunicorn timeout protection
+                # Check file size and limit to 100MB to prevent server timeout
                 file_size = os.path.getsize(archive_path)
-                if file_size > 500 * 1024 * 1024:  # 500MB threshold for huge files
-                    # For very large files (>500MB), use optimized streaming to prevent Gunicorn timeout
-                    logging.info(f"Using optimized streaming for large archive ({file_size / (1024*1024):.1f}MB)")
-                    return stream_large_file(archive_path, f'{project.name}_frames.zip')
-                elif file_size > 100 * 1024 * 1024:  # 100MB threshold
-                    # For large files, use send_file with range request support
-                    logging.info(f"Using range-enabled download for large archive ({file_size / (1024*1024):.1f}MB)")
-                    return send_file(
-                        archive_path, 
-                        as_attachment=True, 
-                        download_name=f'{project.name}_frames.zip',
-                        mimetype='application/zip',
-                        conditional=True,  # Enable range requests for resumable downloads
-                        max_age=3600  # Cache for 1 hour
-                    )
+                max_size = 100 * 1024 * 1024  # 100MB limit
+                
+                if file_size > max_size:
+                    # Archive too large - show error message
+                    size_mb = file_size / (1024 * 1024)
+                    logging.warning(f"Archive too large for download: {size_mb:.1f}MB (limit: 100MB)")
+                    flash(_('Archive is too large for download (%(size).1f MB). Maximum allowed size is 100 MB. Please reduce the number of frames or video duration.', size=size_mb), 'error')
+                    return redirect(url_for('projects'))
                 else:
-                    # Use send_file with conditional headers for smaller files
+                    # Archive size OK - download it
+                    logging.info(f"Downloading archive: {file_size / (1024*1024):.1f}MB")
                     return send_file(
                         archive_path, 
                         as_attachment=True, 
                         download_name=f'{project.name}_frames.zip',
                         mimetype='application/zip',
-                        conditional=True  # Enable range requests and caching
+                        conditional=True
                     )
             else:
                 # File doesn't exist, reset status
@@ -1090,6 +1084,9 @@ def download_file(project_id, type):
                 return jsonify({'error': 'Archive file not found, please try again'}), 404
         elif project.png_archive_status == 'creating':
             return jsonify({'error': 'Archive is being created, please wait...'}), 202
+        elif project.png_archive_status == 'too_large':
+            flash(_('Archive is too large for download (>100 MB). Please reduce the number of frames or video duration.'), 'error')
+            return redirect(url_for('projects'))
         elif project.png_archive_status == 'error':
             return jsonify({'error': 'Failed to create archive, please try again'}), 500
         else:

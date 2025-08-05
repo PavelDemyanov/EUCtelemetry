@@ -78,7 +78,19 @@ class BackgroundTaskManager:
                 logging.info(f"Creating PNG archive for project {project_id}")
                 archive_filename = create_png_archive(project_id, project_folder_number, project_name)
                 
-                if archive_filename:
+                if archive_filename == "TOO_LARGE":
+                    # Archive would be too large
+                    project.png_archive_status = 'too_large'
+                    db.session.commit()
+                    
+                    logging.warning(f"PNG archive for project {project_id} is too large (>100MB)")
+                    
+                    # Update task status
+                    with self.task_lock:
+                        if task_id in self.active_tasks:
+                            self.active_tasks[task_id]['status'] = 'too_large'
+                            self.active_tasks[task_id]['completed_at'] = datetime.utcnow()
+                elif archive_filename:
                     # Update project with successful creation
                     project.png_archive_file = archive_filename
                     project.png_archive_status = 'ready'
