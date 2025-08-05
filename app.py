@@ -1058,10 +1058,21 @@ def download_file(project_id, type):
             if os.path.exists(archive_path):
                 # Check file size for Gunicorn timeout protection
                 file_size = os.path.getsize(archive_path)
-                if file_size > 100 * 1024 * 1024:  # 100MB threshold
-                    # Use optimized streaming for very large files to prevent Gunicorn timeout
+                if file_size > 500 * 1024 * 1024:  # 500MB threshold for huge files
+                    # For very large files (>500MB), use optimized streaming to prevent Gunicorn timeout
                     logging.info(f"Using optimized streaming for large archive ({file_size / (1024*1024):.1f}MB)")
                     return stream_large_file(archive_path, f'{project.name}_frames.zip')
+                elif file_size > 100 * 1024 * 1024:  # 100MB threshold
+                    # For large files, use send_file with range request support
+                    logging.info(f"Using range-enabled download for large archive ({file_size / (1024*1024):.1f}MB)")
+                    return send_file(
+                        archive_path, 
+                        as_attachment=True, 
+                        download_name=f'{project.name}_frames.zip',
+                        mimetype='application/zip',
+                        conditional=True,  # Enable range requests for resumable downloads
+                        max_age=3600  # Cache for 1 hour
+                    )
                 else:
                     # Use send_file with conditional headers for smaller files
                     return send_file(
@@ -2660,35 +2671,52 @@ def admin_achievements_refresh():
 
 
 def stream_large_file(file_path, download_name):
-    """Stream large files using werkzeug's efficient file wrapper to prevent Gunicorn timeout"""
-    from werkzeug.wsgi import wrap_file
-    from werkzeug.wrappers import Response as WerkzeugResponse
-    
+    """Stream very large files (>500MB) with custom chunking to prevent Gunicorn timeout"""
     try:
-        # Get file size
         file_size = os.path.getsize(file_path)
+        logging.info(f"Streaming huge file: {download_name} ({file_size / (1024*1024):.1f}MB)")
         
-        # Open file and create efficient file wrapper
-        file_obj = open(file_path, 'rb')
+        # For huge files, create a generator that yields smaller chunks
+        def generate_chunks():
+            try:
+                with open(file_path, 'rb') as f:
+                    chunk_size = 64 * 1024  # 64KB chunks for better performance
+                    while True:
+                        chunk = f.read(chunk_size)
+                        if not chunk:
+                            break
+                        yield chunk
+            except Exception as e:
+                logging.error(f"Error reading file during streaming: {str(e)}")
+                return
         
-        # Use werkzeug's wrap_file for efficient file serving
-        wrapped_file = wrap_file(None, file_obj)  # None means use default environ
-        
-        # Create response with proper headers
-        response = WerkzeugResponse(
-            wrapped_file,
+        # Create Flask Response with generator
+        response = Response(
+            generate_chunks(),
             mimetype='application/zip',
             headers={
                 'Content-Disposition': f'attachment; filename="{download_name}"',
                 'Content-Length': str(file_size),
-                'Content-Type': 'application/zip'
-            },
-            direct_passthrough=True  # Important for large files
+                'Content-Type': 'application/zip',
+                'Accept-Ranges': 'bytes'  # Enable range requests
+            }
         )
         
         return response
         
     except Exception as e:
-        logging.error(f"Error serving large file {file_path}: {str(e)}")
-        # Fallback to regular send_file
-        return send_file(file_path, as_attachment=True, download_name=download_name)
+        logging.error(f"Error setting up streaming for large file {file_path}: {str(e)}")
+        # Fallback to send_file if streaming setup fails
+        try:
+            logging.info("Falling back to send_file for large file")
+            return send_file(
+                file_path, 
+                as_attachment=True, 
+                download_name=download_name,
+                mimetype='application/zip',
+                conditional=True
+            )
+        except Exception as fallback_error:
+            logging.error(f"Fallback also failed: {str(fallback_error)}")
+            from flask import abort
+            abort(500)
