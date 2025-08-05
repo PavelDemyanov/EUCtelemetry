@@ -193,7 +193,7 @@ function downloadPngArchive(projectId) {
                 // Archive creation started
                 icon.className = 'bi bi-clock';
                 text.textContent = '{{ _("Creating...") }}';
-                btn.className = 'btn btn-sm btn-info';
+                btn.className = 'btn btn-sm btn-warning';
                 
                 // Start polling for status
                 pollArchiveStatus(projectId);
@@ -252,7 +252,7 @@ function updatePngButtonStatus(projectId, status) {
             btn.disabled = false;
             break;
         case 'creating':
-            btn.className = 'btn btn-sm btn-info';
+            btn.className = 'btn btn-sm btn-warning';
             icon.className = 'bi bi-clock';
             text.textContent = '{{ _("Creating...") }}';
             btn.disabled = true;
