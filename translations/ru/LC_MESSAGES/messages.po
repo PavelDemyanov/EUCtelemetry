@@ -1005,15 +1005,3 @@ msgstr "Вертикальное положение иконок"
 
 msgid "Adjust icon position relative to text"
 msgstr "Настроить положение иконок относительно текста"
-
-# Archive size limit error
-msgid "Archive is too large for download (%(size).1f MB). Maximum allowed size is 100 MB. Please reduce the number of frames or video duration."
-msgstr "Архив слишком большой для скачивания (%(size).1f МБ). Максимальный размер 100 МБ. Пожалуйста, уменьшите количество кадров или продолжительность видео."
-
-# Archive size limit error (short version)
-msgid "Archive is too large for download (>100 MB). Please reduce the number of frames or video duration."
-msgstr "Архив слишком большой (>100 МБ). Уменьшите количество кадров или продолжительность."
-
-# Too Large button text
-msgid "Too Large"
-msgstr "Слишком большой"

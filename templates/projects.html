@@ -63,13 +63,10 @@
                                 <i class="bi bi-download"></i> {{ _('CSV') }}
                             </a>
                             {% if project.status == 'completed' %}
-                            <button onclick="downloadPngArchive({{ project.id }})" 
-                                    class="btn btn-sm btn-warning" 
-                                    id="png-btn-{{ project.id }}"
-                                    data-archive-status="{{ project.png_archive_status or 'not_created' }}">
-                                <i class="bi bi-download" id="png-icon-{{ project.id }}"></i> 
-                                <span id="png-text-{{ project.id }}">{{ _('PNG') }}</span>
-                            </button>
+                            <a href="{{ url_for('download_file', project_id=project.id, type='png_archive') }}" 
+                               class="btn btn-sm btn-warning">
+                                <i class="bi bi-download"></i> {{ _('PNG') }}
+                            </a>
                             {% endif %}
                             {% if project.video_file %}
                             <a href="{{ url_for('download_file', project_id=project.id, type='video') }}" 
@@ -155,152 +152,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const date = new Date(timestamp * 1000); // Convert to milliseconds
         td.textContent = date.toLocaleString();
     });
-
-    // Initialize PNG buttons status
-    updateAllPngButtonStatuses();
 });
-
-function downloadPngArchive(projectId) {
-    const btn = document.getElementById(`png-btn-${projectId}`);
-    const icon = document.getElementById(`png-icon-${projectId}`);
-    const text = document.getElementById(`png-text-${projectId}`);
-    
-    // Disable button temporarily
-    btn.disabled = true;
-    
-    fetch(`/download/${projectId}/png_archive`)
-        .then(response => {
-            if (response.ok && response.headers.get('content-type') === 'application/zip') {
-                // File is ready, download it
-                return response.blob().then(blob => {
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.style.display = 'none';
-                    a.href = url;
-                    a.download = response.headers.get('content-disposition')?.split('filename=')[1] || `project_${projectId}_frames.zip`;
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                    document.body.removeChild(a);
-                    btn.disabled = false;
-                });
-            } else {
-                return response.json();
-            }
-        })
-        .then(data => {
-            if (data && data.message) {
-                // Archive creation started
-                icon.className = 'bi bi-clock';
-                text.textContent = '{{ _("Creating...") }}';
-                btn.className = 'btn btn-sm btn-warning';
-                
-                // Start polling for status
-                pollArchiveStatus(projectId);
-            } else if (data && data.error) {
-                alert(data.error);
-                btn.disabled = false;
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('{{ _("Error downloading archive") }}');
-            btn.disabled = false;
-        });
-}
-
-function pollArchiveStatus(projectId) {
-    const checkStatus = () => {
-        fetch(`/archive_status/${projectId}`)
-            .then(response => response.json())
-            .then(data => {
-                updatePngButtonStatus(projectId, data.archive_status);
-                
-                if (data.archive_status === 'creating') {
-                    // Continue polling
-                    setTimeout(checkStatus, 2000);
-                } else if (data.archive_status === 'ready') {
-                    // Archive is ready, try to download again
-                    setTimeout(() => downloadPngArchive(projectId), 500);
-                } else if (data.archive_status === 'error') {
-                    alert('{{ _("Failed to create archive. Please try again.") }}');
-                } else if (data.archive_status === 'too_large') {
-                    const errorMessage = data.error_message || '{{ _("Archive is too large for download (>100 MB). Please reduce the number of frames or video duration.") }}';
-                    alert(errorMessage);
-                }
-            })
-            .catch(error => {
-                console.error('Error checking status:', error);
-                setTimeout(checkStatus, 5000); // Retry after 5 seconds
-            });
-    };
-    
-    setTimeout(checkStatus, 2000);
-}
-
-function updatePngButtonStatus(projectId, status) {
-    const btn = document.getElementById(`png-btn-${projectId}`);
-    const icon = document.getElementById(`png-icon-${projectId}`);
-    const text = document.getElementById(`png-text-${projectId}`);
-    
-    if (!btn) return;
-    
-    btn.dataset.archiveStatus = status;
-    
-    switch(status) {
-        case 'ready':
-            btn.className = 'btn btn-sm btn-warning';
-            icon.className = 'bi bi-download';
-            text.textContent = '{{ _("PNG") }}';
-            btn.disabled = false;
-            break;
-        case 'creating':
-            btn.className = 'btn btn-sm btn-warning';
-            icon.className = 'bi bi-clock';
-            text.textContent = '{{ _("Creating...") }}';
-            btn.disabled = true;
-            break;
-        case 'error':
-            btn.className = 'btn btn-sm btn-danger';
-            icon.className = 'bi bi-exclamation-triangle';
-            text.textContent = '{{ _("Error") }}';
-            btn.disabled = false;
-            break;
-        case 'too_large':
-            btn.className = 'btn btn-sm btn-secondary';
-            icon.className = 'bi bi-file-earmark-x';
-            text.textContent = '{{ _("Too Large") }}';
-            btn.disabled = true;
-            break;
-        default: // not_created
-            btn.className = 'btn btn-sm btn-warning';
-            icon.className = 'bi bi-download';
-            text.textContent = '{{ _("PNG") }}';
-            btn.disabled = false;
-            break;
-    }
-}
-
-function updateAllPngButtonStatuses() {
-    document.querySelectorAll('[id^="png-btn-"]').forEach(btn => {
-        const projectId = btn.id.replace('png-btn-', '');
-        const currentStatus = btn.dataset.archiveStatus;
-        
-        if (currentStatus === 'creating') {
-            // Check current status
-            fetch(`/archive_status/${projectId}`)
-                .then(response => response.json())
-                .then(data => {
-                    updatePngButtonStatus(projectId, data.archive_status);
-                    if (data.archive_status === 'creating') {
-                        pollArchiveStatus(projectId);
-                    }
-                })
-                .catch(error => console.error('Error checking status:', error));
-        } else {
-            updatePngButtonStatus(projectId, currentStatus);
-        }
-    });
-}
 </script>
 {% endblock %}

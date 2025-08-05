@@ -15,7 +15,7 @@ import psutil
 import pandas as pd
 from dotenv import load_dotenv
 from flask import (Flask, render_template, request, jsonify, send_file, 
-                  url_for, send_from_directory, flash, redirect, abort, Response)
+                  url_for, send_from_directory, flash, redirect, abort)
 from flask_migrate import Migrate
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.utils import secure_filename
@@ -999,39 +999,6 @@ def check_processing_projects():
         logging.error(f"Error in check_processing_projects: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/archive_status/<int:project_id>', methods=['GET'])
-@login_required
-def get_archive_status(project_id):
-    """Get PNG archive creation status for a project"""
-    try:
-        project = Project.query.get_or_404(project_id)
-        if project.user_id != current_user.id and not current_user.is_admin:
-            return jsonify({'error': 'Unauthorized'}), 403
-        
-        # Get task status from background task manager
-        from utils.background_tasks import task_manager
-        task_status = task_manager.get_task_status(project_id)
-        
-        response = {
-            'project_id': project_id,
-            'archive_status': project.png_archive_status,
-            'archive_file': project.png_archive_file,
-            'created_at': project.png_archive_created_at.isoformat() if project.png_archive_created_at else None,
-            'error_message': project.png_archive_error_message
-        }
-        
-        # Add task-specific information if available
-        if task_status:
-            response['task_status'] = task_status['status']
-            response['task_started_at'] = task_status['started_at'].isoformat() if task_status.get('started_at') else None
-            if 'error' in task_status:
-                response['task_error'] = task_status['error']
-        
-        return jsonify(response)
-    except Exception as e:
-        logging.error(f"Error in get_archive_status: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
 @app.route('/projects')
 @login_required
 def list_projects():
@@ -1052,52 +1019,22 @@ def download_file(project_id, type):
         video_path = os.path.join('videos', project.video_file)
         return send_file(video_path, as_attachment=True)
     elif type == 'png_archive':
-        # Check archive status
-        if project.png_archive_status == 'ready' and project.png_archive_file:
-            # Archive is ready, download it
-            archive_path = os.path.join('archives', project.png_archive_file)
-            if os.path.exists(archive_path):
-                # Check file size and limit to 100MB to prevent server timeout
-                file_size = os.path.getsize(archive_path)
-                max_size = 100 * 1024 * 1024  # 100MB limit
-                
-                if file_size > max_size:
-                    # Archive too large - show error message
-                    size_mb = file_size / (1024 * 1024)
-                    logging.warning(f"Archive too large for download: {size_mb:.1f}MB (limit: 100MB)")
-                    flash(_('Archive is too large for download (%(size).1f MB). Maximum allowed size is 100 MB. Please reduce the number of frames or video duration.', size=size_mb), 'error')
-                    return redirect(url_for('projects'))
-                else:
-                    # Archive size OK - download it
-                    logging.info(f"Downloading archive: {file_size / (1024*1024):.1f}MB")
-                    return send_file(
-                        archive_path, 
-                        as_attachment=True, 
-                        download_name=f'{project.name}_frames.zip',
-                        mimetype='application/zip',
-                        conditional=True
-                    )
-            else:
-                # File doesn't exist, reset status
-                project.png_archive_status = 'not_created'
-                project.png_archive_file = None
+        # Create PNG archive if it doesn't exist
+        if not project.png_archive_file:
+            from utils.archive_creator import create_png_archive
+            archive_filename = create_png_archive(project.id, project.folder_number, project.name)
+            if archive_filename:
+                project.png_archive_file = archive_filename
                 db.session.commit()
-                return jsonify({'error': 'Archive file not found, please try again'}), 404
-        elif project.png_archive_status == 'creating':
-            return jsonify({'error': 'Archive is being created, please wait...'}), 202
-        elif project.png_archive_status == 'too_large':
-            flash(_('Archive is too large for download (>100 MB). Please reduce the number of frames or video duration.'), 'error')
-            return redirect(url_for('projects'))
-        elif project.png_archive_status == 'error':
-            return jsonify({'error': 'Failed to create archive, please try again'}), 500
-        else:
-            # Archive not created yet, start creation
-            from utils.background_tasks import task_manager
-            success = task_manager.create_png_archive_async(project.id, project.folder_number, project.name)
-            if success:
-                return jsonify({'message': 'Archive creation started, please wait...'}), 202
             else:
-                return jsonify({'error': 'Archive creation is already in progress'}), 409
+                return jsonify({'error': 'Failed to create PNG archive'}), 500
+        
+        # Download existing archive
+        archive_path = os.path.join('archives', project.png_archive_file)
+        if os.path.exists(archive_path):
+            return send_file(archive_path, as_attachment=True, download_name=f'{project.name}_frames.zip')
+        else:
+            return jsonify({'error': 'Archive file not found'}), 404
     elif type == 'frames':
         # Legacy support - redirect to png_archive
         return download_file(project_id, 'png_archive')
@@ -2666,55 +2603,3 @@ def admin_achievements_refresh():
         flash(f'Error refreshing achievements: {str(e)}', 'danger')
     
     return redirect(url_for('admin_achievements'))
-
-
-def stream_large_file(file_path, download_name):
-    """Stream very large files (>500MB) with custom chunking to prevent Gunicorn timeout"""
-    try:
-        file_size = os.path.getsize(file_path)
-        logging.info(f"Streaming huge file: {download_name} ({file_size / (1024*1024):.1f}MB)")
-        
-        # For huge files, create a generator that yields smaller chunks
-        def generate_chunks():
-            try:
-                with open(file_path, 'rb') as f:
-                    chunk_size = 64 * 1024  # 64KB chunks for better performance
-                    while True:
-                        chunk = f.read(chunk_size)
-                        if not chunk:
-                            break
-                        yield chunk
-            except Exception as e:
-                logging.error(f"Error reading file during streaming: {str(e)}")
-                return
-        
-        # Create Flask Response with generator
-        response = Response(
-            generate_chunks(),
-            mimetype='application/zip',
-            headers={
-                'Content-Disposition': f'attachment; filename="{download_name}"',
-                'Content-Length': str(file_size),
-                'Content-Type': 'application/zip',
-                'Accept-Ranges': 'bytes'  # Enable range requests
-            }
-        )
-        
-        return response
-        
-    except Exception as e:
-        logging.error(f"Error setting up streaming for large file {file_path}: {str(e)}")
-        # Fallback to send_file if streaming setup fails
-        try:
-            logging.info("Falling back to send_file for large file")
-            return send_file(
-                file_path, 
-                as_attachment=True, 
-                download_name=download_name,
-                mimetype='application/zip',
-                conditional=True
-            )
-        except Exception as fallback_error:
-            logging.error(f"Fallback also failed: {str(fallback_error)}")
-            from flask import abort
-            abort(500)
