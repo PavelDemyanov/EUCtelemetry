@@ -1056,13 +1056,21 @@ def download_file(project_id, type):
             # Archive is ready, download it
             archive_path = os.path.join('archives', project.png_archive_file)
             if os.path.exists(archive_path):
-                # Check file size to decide on streaming
+                # Check file size for Gunicorn timeout protection
                 file_size = os.path.getsize(archive_path)
-                if file_size > 50 * 1024 * 1024:  # 50MB threshold
-                    # Use streaming for large files
+                if file_size > 100 * 1024 * 1024:  # 100MB threshold
+                    # Use optimized streaming for very large files to prevent Gunicorn timeout
+                    logging.info(f"Using optimized streaming for large archive ({file_size / (1024*1024):.1f}MB)")
                     return stream_large_file(archive_path, f'{project.name}_frames.zip')
                 else:
-                    return send_file(archive_path, as_attachment=True, download_name=f'{project.name}_frames.zip')
+                    # Use send_file with conditional headers for smaller files
+                    return send_file(
+                        archive_path, 
+                        as_attachment=True, 
+                        download_name=f'{project.name}_frames.zip',
+                        mimetype='application/zip',
+                        conditional=True  # Enable range requests and caching
+                    )
             else:
                 # File doesn't exist, reset status
                 project.png_archive_status = 'not_created'
@@ -2652,30 +2660,35 @@ def admin_achievements_refresh():
 
 
 def stream_large_file(file_path, download_name):
-    """Stream large files in chunks to prevent timeout"""
-    def generate():
-        try:
-            with open(file_path, "rb") as f:
-                while True:
-                    chunk = f.read(8192)  # 8KB chunks
-                    if not chunk:
-                        break
-                    yield chunk
-        except Exception as e:
-            logging.error(f"Error streaming file {file_path}: {str(e)}")
-            yield b""  # Empty chunk to end the stream
+    """Stream large files using werkzeug's efficient file wrapper to prevent Gunicorn timeout"""
+    from werkzeug.wsgi import wrap_file
+    from werkzeug.wrappers import Response as WerkzeugResponse
     
-    # Get file size and mime type
-    file_size = os.path.getsize(file_path)
-    
-    response = Response(
-        generate(),
-        mimetype="application/zip",
-        headers={
-            "Content-Disposition": f"attachment; filename=\"{download_name}\"",
-            "Content-Length": str(file_size),
-            "Content-Type": "application/zip"
-        }
-    )
-    
-    return response
+    try:
+        # Get file size
+        file_size = os.path.getsize(file_path)
+        
+        # Open file and create efficient file wrapper
+        file_obj = open(file_path, 'rb')
+        
+        # Use werkzeug's wrap_file for efficient file serving
+        wrapped_file = wrap_file(None, file_obj)  # None means use default environ
+        
+        # Create response with proper headers
+        response = WerkzeugResponse(
+            wrapped_file,
+            mimetype='application/zip',
+            headers={
+                'Content-Disposition': f'attachment; filename="{download_name}"',
+                'Content-Length': str(file_size),
+                'Content-Type': 'application/zip'
+            },
+            direct_passthrough=True  # Important for large files
+        )
+        
+        return response
+        
+    except Exception as e:
+        logging.error(f"Error serving large file {file_path}: {str(e)}")
+        # Fallback to regular send_file
+        return send_file(file_path, as_attachment=True, download_name=download_name)

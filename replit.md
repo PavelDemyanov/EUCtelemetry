@@ -144,3 +144,6 @@ Icon vertical positioning: Default offset of 5 pixels works best for telemetry o
 - July 10, 2025: Implemented automatic spacing values: 10px for Full HD, 20px for 4K resolution
 - July 10, 2025: Added dynamic spacing adjustment when switching resolutions or enabling icons
 - July 10, 2025: Added "Time" element to Telemetry Elements Visibility section displaying real-time in HH:MM:SS format with proper localization support and time icon
+- August 5, 2025: Implemented asynchronous PNG archive creation system with BackgroundTaskManager to solve HTTP timeout issues
+- August 5, 2025: Added streaming download support for large files (>100MB) using werkzeug's efficient file wrapper to prevent Gunicorn worker timeouts
+- August 5, 2025: Enhanced UI with real-time archive status checking and progress indicators, archives create in background without blocking interface
