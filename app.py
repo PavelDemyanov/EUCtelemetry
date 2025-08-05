@@ -1056,7 +1056,13 @@ def download_file(project_id, type):
             # Archive is ready, download it
             archive_path = os.path.join('archives', project.png_archive_file)
             if os.path.exists(archive_path):
-                return send_file(archive_path, as_attachment=True, download_name=f'{project.name}_frames.zip')
+                # Check file size to decide on streaming
+                file_size = os.path.getsize(archive_path)
+                if file_size > 50 * 1024 * 1024:  # 50MB threshold
+                    # Use streaming for large files
+                    return stream_large_file(archive_path, f'{project.name}_frames.zip')
+                else:
+                    return send_file(archive_path, as_attachment=True, download_name=f'{project.name}_frames.zip')
             else:
                 # File doesn't exist, reset status
                 project.png_archive_status = 'not_created'
@@ -2643,3 +2649,33 @@ def admin_achievements_refresh():
         flash(f'Error refreshing achievements: {str(e)}', 'danger')
     
     return redirect(url_for('admin_achievements'))
+
+
+def stream_large_file(file_path, download_name):
+    """Stream large files in chunks to prevent timeout"""
+    def generate():
+        try:
+            with open(file_path, "rb") as f:
+                while True:
+                    chunk = f.read(8192)  # 8KB chunks
+                    if not chunk:
+                        break
+                    yield chunk
+        except Exception as e:
+            logging.error(f"Error streaming file {file_path}: {str(e)}")
+            yield b""  # Empty chunk to end the stream
+    
+    # Get file size and mime type
+    file_size = os.path.getsize(file_path)
+    
+    response = Response(
+        generate(),
+        mimetype="application/zip",
+        headers={
+            "Content-Disposition": f"attachment; filename=\"{download_name}\"",
+            "Content-Length": str(file_size),
+            "Content-Type": "application/zip"
+        }
+    )
+    
+    return response
