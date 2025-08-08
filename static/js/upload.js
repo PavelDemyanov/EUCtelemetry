@@ -794,6 +794,7 @@ function updatePreview(projectId) {
     const settings = {
         resolution: resolution,
         vertical_position: document.getElementById('verticalPosition').value,
+        horizontal_position: document.getElementById('horizontalPosition').value,
         top_padding: document.getElementById('topPadding').value,
         bottom_padding: document.getElementById('bottomPadding').value,
         spacing: document.getElementById('spacing').value,
