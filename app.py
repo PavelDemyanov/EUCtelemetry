@@ -202,6 +202,10 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Please log in to access this page.'
 
+# Initialize background task manager
+from utils.background_tasks import task_manager
+logging.info("Background task manager initialized")
+
 # Check for orphaned projects (projects in processing or pending status when server restarted)
 def check_orphaned_projects():
     """

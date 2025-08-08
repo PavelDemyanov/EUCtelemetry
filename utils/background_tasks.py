@@ -22,10 +22,10 @@ class Task:
     status: TaskStatus
     data: Dict[str, Any]
     created_at: float
-    started_at: float = None
-    completed_at: float = None
+    started_at: float = 0.0
+    completed_at: float = 0.0
     progress: int = 0
-    error: str = None
+    error: str = ""
     result: Any = None
 
 class BackgroundTaskManager:
@@ -193,7 +193,7 @@ class BackgroundTaskManager:
         logging.info(f"Added task {task_id} of type {task_type} to queue")
         return task_id
     
-    def get_task_status(self, task_id: str) -> Dict[str, Any]:
+    def get_task_status(self, task_id: str) -> Dict[str, Any] | None:
         """Get task status and progress"""
         if task_id not in self.tasks:
             return None
