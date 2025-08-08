@@ -276,6 +276,12 @@
                         return;
                     }
                     
+                    // Stop monitoring for completed campaigns from database
+                    if (data.status === 'completed' || (data.progress === 100 && data.sent_count > 0)) {
+                        clearInterval(interval);
+                        return;
+                    }
+                    
                     // Update progress bar and status
                     const statusElement = document.querySelector(`[data-task-id="${taskId}"].campaign-status`);
                     const progressElement = document.querySelector(`[data-task-id="${taskId}"].campaign-progress`);
@@ -316,20 +322,8 @@
         }, 600000);
     }
     
-    // Start monitoring existing active campaigns on page load
-    document.addEventListener('DOMContentLoaded', function() {
-        const activeCampaigns = document.querySelectorAll('[data-task-id]:not([data-task-id=""])');
-        activeCampaigns.forEach(element => {
-            const taskId = element.getAttribute('data-task-id');
-            const row = element.closest('tr');
-            const statusBadge = row.querySelector('.campaign-status');
-            
-            // Only monitor if status is not completed
-            if (statusBadge && !statusBadge.classList.contains('bg-success')) {
-                monitorCampaignProgress(taskId);
-            }
-        });
-    });
+    // Disabled auto-monitoring to prevent endless loops with completed campaigns
+    // Users can manually refresh the page to see campaign status updates
     
     // Alert functions
     function showSuccessAlert(message) {
