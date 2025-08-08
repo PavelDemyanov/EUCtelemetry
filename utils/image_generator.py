@@ -496,8 +496,8 @@ def create_frame(values,
                 base_y = int((height * vertical_position) / 100)
                 start_y = base_y - (total_height // 2)  # Центрируем относительно позиции
                 # Используем horizontal_position для позиционирования по горизонтали
-                base_x = int((width * horizontal_position) / 100)
-                x_position = base_x - (max(element_widths) // 2)  # Центрируем относительно позиции
+                # Фиксируем левый край плашек вместо центрирования
+                x_position = int((width * horizontal_position) / 100)
                 y_position = start_y
                 max_text_height = max(text_heights)
             else:
