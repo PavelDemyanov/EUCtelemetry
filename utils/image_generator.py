@@ -491,7 +491,9 @@ def create_frame(values,
             if vertical_layout:
                 # Вертикальное расположение плашек
                 total_height = len(params) * box_height + spacing * (len(params) - 1)
-                start_y = (height - total_height) // 2
+                # Используем vertical_position для позиционирования всего столбца
+                base_y = int((height * vertical_position) / 100)
+                start_y = base_y - (total_height // 2)  # Центрируем относительно позиции
                 x_position = int((width - max(element_widths)) / 2)  # Центрируем по горизонтали
                 y_position = start_y
                 max_text_height = max(text_heights)
