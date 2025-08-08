@@ -117,9 +117,9 @@ class BackgroundTaskManager:
                     user.email_confirmation_token = unsubscribe_token
                     db.session.commit()
                     
-                    # Create unsubscribe URL (we'll need to import url_for)
-                    from flask import url_for
-                    unsubscribe_url = url_for('unsubscribe', token=unsubscribe_token, _external=True)
+                    # Create simple unsubscribe URL without url_for to avoid SERVER_NAME issues
+                    base_url = "https://3518c8f7-8399-4a86-9a66-b85d1bb2f8a0-00-3ozj7plswi26j.riker.replit.dev"
+                    unsubscribe_url = f"{base_url}/unsubscribe?token={unsubscribe_token}"
                     
                     # Add localized footer
                     user_locale = user.locale or 'en'
