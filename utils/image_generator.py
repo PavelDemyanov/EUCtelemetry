@@ -342,7 +342,7 @@ def create_frame(values,
         show_bottom_elements = text_settings.get('show_bottom_elements', True)
         use_icons = text_settings.get('use_icons', False)  # Add icons setting
         vertical_layout = text_settings.get('vertical_layout', False)  # Add vertical layout setting
-        horizontal_position = int(text_settings.get('horizontal_position', 50))  # Add horizontal position setting
+        horizontal_position = float(text_settings.get('horizontal_position', 50))  # Add horizontal position setting
 
         # Получаем настройки позиционирования индикатора и текста
         indicator_x_percent = float(text_settings.get('indicator_x', 50))

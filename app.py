@@ -916,7 +916,7 @@ def generate_project_frames(project_id):
         # Get text display settings with explicit defaults
         text_settings = {
             'vertical_position': int(data.get('vertical_position', 50)),
-            'horizontal_position': int(data.get('horizontal_position', 50)),
+            'horizontal_position': float(data.get('horizontal_position', 50)),
             'top_padding': int(data.get('top_padding', 10)),
             'bottom_padding': int(data.get('bottom_padding', 30)),
             'spacing': int(data.get('spacing', 20)),
@@ -1180,7 +1180,7 @@ def trim_csv(project_id):
         resolution = data.get('resolution', 'fullhd')
         text_settings = {
             'vertical_position': int(data.get('vertical_position', 50)),
-            'horizontal_position': int(data.get('horizontal_position', 50)),
+            'horizontal_position': float(data.get('horizontal_position', 50)),
             'top_padding': int(data.get('top_padding', 10)),
             'bottom_padding': int(data.get('bottom_padding', 30)),
             'spacing': int(data.get('spacing', 20)),
@@ -1966,7 +1966,7 @@ def generate_preview(project_id):
         # Get all visibility settings with explicit defaults of True
         text_settings = {
             'vertical_position': int(data.get('vertical_position', 50)),
-            'horizontal_position': int(data.get('horizontal_position', 50)),
+            'horizontal_position': float(data.get('horizontal_position', 50)),
             'top_padding': int(data.get('top_padding', 10)),
             'bottom_padding': int(data.get('bottom_padding', 30)),
             'spacing': int(data.get('spacing', 20)),
