@@ -2623,9 +2623,8 @@ def test_campaign():
         test_campaign = EmailCampaign(
             subject="Test Campaign - Background Tasks",
             html_content="<h2>Test Email</h2><p>This is a test to verify that background email processing is working correctly.</p>",
-            target_locale='all',
             created_at=datetime.utcnow(),
-            created_by=current_user.id
+            sender_id=current_user.id
         )
         
         db.session.add(test_campaign)
