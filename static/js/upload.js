@@ -1440,6 +1440,7 @@ document.addEventListener('DOMContentLoaded', function() {
             codec: document.querySelector('input[name="codec"]:checked').value,
             interpolate_values: document.getElementById('interpolateValues').checked,
             vertical_position: document.getElementById('verticalPosition').value,
+            horizontal_position: document.getElementById('horizontalPosition').value,
             top_padding: document.getElementById('topPadding').value,
             bottom_padding: document.getElementById('bottomPadding').value,
             spacing: document.getElementById('spacing').value,
@@ -1520,6 +1521,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Apply slider values
                 const sliderSettings = {
                     'verticalPosition': settings.vertical_position,
+                    'horizontalPosition': settings.horizontal_position,
                     'topPadding': settings.top_padding,
                     'bottomPadding': settings.bottom_padding,
                     'spacing': settings.spacing,
@@ -1541,7 +1543,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         const valueDisplay = document.getElementById(id + 'Value');
                         if (valueDisplay) {
                             const unit = id.includes('Size') || id.includes('indicator') ? '%' : 'px';
-                            valueDisplay.textContent = value + (id === 'verticalPosition' ? '%' : unit);
+                            valueDisplay.textContent = value + (id === 'verticalPosition' || id === 'horizontalPosition' ? '%' : unit);
                         }
                     }
                 });
@@ -1593,6 +1595,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Apply static box size setting
                 if (settings.static_box_size !== undefined) {
                     document.getElementById('staticBoxSize').checked = settings.static_box_size;
+                }
+
+                // Apply vertical layout setting
+                if (settings.vertical_layout !== undefined) {
+                    document.getElementById('verticalLayout').checked = settings.vertical_layout;
                 }
 
                 // Update preview if project is loaded
