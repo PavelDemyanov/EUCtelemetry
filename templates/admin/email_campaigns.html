@@ -38,6 +38,9 @@
                 <button type="button" class="btn btn-outline-secondary" id="previewBtn">
                     {{ _('Preview') }}
                 </button>
+                <button type="button" class="btn btn-success" onclick="testBackgroundTasks()">
+                    <i class="bi bi-gear"></i> Test Background Tasks
+                </button>
             </form>
             
             <!-- Preview Section -->
@@ -361,6 +364,31 @@
         editor.addEventListener('input', function() {
             this.style.height = 'auto';
             this.style.height = (this.scrollHeight) + 'px';
+        });
+    }
+    
+    // Test background tasks function
+    function testBackgroundTasks() {
+        fetch('/admin/test-campaign', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showSuccessAlert(`Test campaign created successfully! Task ID: ${data.task_id}, Recipients: ${data.recipients_count}`);
+                setTimeout(() => {
+                    location.reload();
+                }, 2000);
+            } else {
+                showErrorAlert(data.error || 'Failed to create test campaign');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showErrorAlert('Network error occurred');
         });
     }
 </script>

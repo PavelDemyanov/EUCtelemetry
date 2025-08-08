@@ -1780,11 +1780,26 @@ def campaign_status(task_id):
         from utils.background_tasks import task_manager
         status = task_manager.get_task_status(task_id)
         
-        if not status:
-            return jsonify({'error': 'Task not found'}), 404
+        logging.info(f"Task manager status for {task_id}: {status}")
         
         # Also get campaign info from database
         campaign = EmailCampaign.query.filter_by(task_id=task_id).first()
+        
+        if not status:
+            if campaign:
+                # Return database status if task not in memory (after server restart)
+                logging.info(f"Task not found in manager, using database status for campaign {campaign.id}")
+                return jsonify({
+                    'status': 'completed' if campaign.is_completed else 'running',
+                    'progress': 100 if campaign.is_completed else 50,
+                    'sent_count': campaign.sent_count or 0,
+                    'failed_count': campaign.failed_count or 0,
+                    'campaign_id': campaign.id,
+                    'subject': campaign.subject,
+                    'recipients_count': campaign.recipients_count or 0
+                })
+            return jsonify({'error': 'Task not found'}), 404
+        
         if campaign:
             status['campaign_id'] = campaign.id
             status['subject'] = campaign.subject
@@ -2596,3 +2611,57 @@ def admin_achievements_refresh():
         flash(f'Error refreshing achievements: {str(e)}', 'danger')
     
     return redirect(url_for('admin_achievements'))
+
+
+@app.route('/admin/test-campaign', methods=['POST'])
+@login_required
+@admin_required
+def test_campaign():
+    """Create and send a test campaign to verify background task system"""
+    try:
+        # Create test campaign
+        test_campaign = EmailCampaign(
+            subject="Test Campaign - Background Tasks",
+            html_content="<h2>Test Email</h2><p>This is a test to verify that background email processing is working correctly.</p>",
+            target_locale='all',
+            created_at=datetime.utcnow(),
+            created_by=current_user.id
+        )
+        
+        db.session.add(test_campaign)
+        db.session.commit()
+        
+        # Get first 3 admin users for testing
+        test_users = User.query.filter_by(is_admin=True).limit(3).all()
+        
+        if not test_users:
+            return jsonify({'error': 'No admin users found for testing'}), 400
+        
+        # Start background task
+        from utils.background_tasks import task_manager
+        task_id = task_manager.add_task('email_campaign', {
+            'campaign_id': test_campaign.id,
+            'subject': test_campaign.subject,
+            'html_content': test_campaign.html_content,
+            'user_ids': [user.id for user in test_users]
+        })
+        
+        # Update campaign
+        test_campaign.task_id = task_id
+        test_campaign.is_sent = True
+        test_campaign.sent_at = datetime.utcnow()
+        test_campaign.recipients_count = len(test_users)
+        db.session.commit()
+        
+        logging.info(f"Created test campaign {test_campaign.id} with task {task_id}")
+        
+        return jsonify({
+            'success': True,
+            'campaign_id': test_campaign.id,
+            'task_id': task_id,
+            'recipients_count': len(test_users)
+        })
+        
+    except Exception as e:
+        logging.error(f"Error creating test campaign: {str(e)}")
+        return jsonify({'error': str(e)}), 500
