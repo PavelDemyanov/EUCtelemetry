@@ -11,36 +11,7 @@
         </a>
     </div>
 
-    <!-- Email Server Testing -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h2 class="h5 mb-0">
-                <i class="bi bi-server"></i> Email Server Testing
-            </h2>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <form method="POST" action="{{ url_for('test_smtp') }}" class="d-inline">
-                        <button type="submit" class="btn btn-outline-info">
-                            <i class="bi bi-plug"></i> Test SMTP Connection
-                        </button>
-                    </form>
-                    <p class="text-muted mt-2 mb-0">
-                        Tests connection to SMTP server and authentication
-                    </p>
-                </div>
-                <div class="col-md-6">
-                    <a href="{{ url_for('send_test_email') }}" class="btn btn-outline-success">
-                        <i class="bi bi-envelope-open"></i> Send Test Email
-                    </a>
-                    <p class="text-muted mt-2 mb-0">
-                        Sends a test email to the specified address
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
+
 
     <!-- Achievements Management -->
     <div class="card mb-4">

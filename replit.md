@@ -152,3 +152,4 @@ Icon vertical positioning: Default offset of 5 pixels works best for telemetry o
 - August 8, 2025: Updated both admin email campaigns and news campaign sending to use background processing
 - August 8, 2025: Added database fields for tracking email campaign status and progress
 - August 8, 2025: Implemented real-time progress bars and status updates in admin interface
+- August 8, 2025: Moved Email Server Testing block from main admin dashboard to email campaigns page for better organization
