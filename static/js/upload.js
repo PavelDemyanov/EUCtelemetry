@@ -892,6 +892,9 @@ document.querySelectorAll('input[name="resolution"]').forEach(radio => {
     radio.addEventListener('change', function() {
         const projectId = document.getElementById('startProcessButton').dataset.projectId;
         if (projectId) {
+            // Save current horizontal position before making resolution-specific changes
+            const currentHorizontalPosition = document.getElementById('horizontalPosition').value;
+            
             // Adjust slider values based on resolution
             if (this.value === '4k') {
                 // Set specific values for 4K
@@ -914,6 +917,10 @@ document.querySelectorAll('input[name="resolution"]').forEach(radio => {
                 document.getElementById('iconVerticalOffset').value = 5;
                 document.getElementById('iconOffsetValue').textContent = '5';
             }
+            
+            // Restore horizontal position after resolution changes
+            document.getElementById('horizontalPosition').value = currentHorizontalPosition;
+            document.getElementById('horizontalPositionValue').textContent = currentHorizontalPosition + '%';
             
             // Update icon horizontal spacing based on resolution
             const useIconsCheckbox = document.getElementById('useIcons');
