@@ -342,6 +342,7 @@ def create_frame(values,
         show_bottom_elements = text_settings.get('show_bottom_elements', True)
         use_icons = text_settings.get('use_icons', False)  # Add icons setting
         vertical_layout = text_settings.get('vertical_layout', False)  # Add vertical layout setting
+        horizontal_position = int(text_settings.get('horizontal_position', 50))  # Add horizontal position setting
 
         # Получаем настройки позиционирования индикатора и текста
         indicator_x_percent = float(text_settings.get('indicator_x', 50))
@@ -494,7 +495,9 @@ def create_frame(values,
                 # Используем vertical_position для позиционирования всего столбца
                 base_y = int((height * vertical_position) / 100)
                 start_y = base_y - (total_height // 2)  # Центрируем относительно позиции
-                x_position = int((width - max(element_widths)) / 2)  # Центрируем по горизонтали
+                # Используем horizontal_position для позиционирования по горизонтали
+                base_x = int((width * horizontal_position) / 100)
+                x_position = base_x - (max(element_widths) // 2)  # Центрируем относительно позиции
                 y_position = start_y
                 max_text_height = max(text_heights)
             else:

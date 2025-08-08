@@ -881,7 +881,7 @@ document.getElementById('projectName').addEventListener('input', function() {
 });
 
 // Add event listeners for text display settings
-const textSettings = ['verticalPosition', 'topPadding', 'bottomPadding', 'spacing', 'fontSize', 'borderRadius'];
+const textSettings = ['verticalPosition', 'horizontalPosition', 'topPadding', 'bottomPadding', 'spacing', 'fontSize', 'borderRadius'];
 const speedIndicatorSettings = ['indicatorScale', 'indicatorX', 'indicatorY', 'speedSize', 'speedY', 'unitSize', 'unitY'];
 
 // Combine all settings
@@ -950,7 +950,7 @@ allSettings.forEach(setting => {
         } else {
             // Add unit only if it's not already present
             valueDisplay.textContent = value + (
-                this.id === 'speedSize' || this.id === 'unitSize' || this.id.includes('indicator') ? '%' : 'px'
+                this.id === 'speedSize' || this.id === 'unitSize' || this.id.includes('indicator') || this.id === 'verticalPosition' || this.id === 'horizontalPosition' ? '%' : 'px'
             );
         }
 
@@ -963,6 +963,7 @@ allSettings.forEach(setting => {
                 const settings = {
                     resolution: document.querySelector('input[name="resolution"]:checked').value,
                     vertical_position: document.getElementById('verticalPosition').value,
+                    horizontal_position: document.getElementById('horizontalPosition').value,
                     top_padding: document.getElementById('topPadding').value,
                     bottom_padding: document.getElementById('bottomPadding').value,
                     spacing: document.getElementById('spacing').value,
@@ -1095,6 +1096,27 @@ if (iconHorizontalSpacingSlider) {
     });
 }
 
+// Add event listener for vertical layout checkbox
+const verticalLayoutCheckbox = document.getElementById('verticalLayout');
+if (verticalLayoutCheckbox) {
+    verticalLayoutCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            // Set vertical position to 24% when vertical layout is enabled
+            const verticalPositionSlider = document.getElementById('verticalPosition');
+            const verticalPositionValue = document.getElementById('verticalPositionValue');
+            if (verticalPositionSlider && verticalPositionValue) {
+                verticalPositionSlider.value = 24;
+                verticalPositionValue.textContent = '24';
+            }
+        }
+        
+        const projectId = document.getElementById('startProcessButton').dataset.projectId;
+        if (projectId) {
+            updatePreview(projectId);
+        }
+    });
+}
+
 // Handle start processing button click
 document.getElementById('startProcessButton').addEventListener('click', async function() {
     const projectId = this.dataset.projectId;
@@ -1154,6 +1176,7 @@ document.getElementById('startProcessButton').addEventListener('click', async fu
         codec: document.querySelector('input[name="codec"]:checked').value,
         interpolate_values: document.getElementById('interpolateValues').checked,
         vertical_position: document.getElementById('verticalPosition').value,
+        horizontal_position: document.getElementById('horizontalPosition').value,
         top_padding: document.getElementById('topPadding').value,
         bottom_padding: document.getElementById('bottomPadding').value,
         spacing: document.getElementById('spacing').value,

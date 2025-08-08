@@ -225,10 +225,10 @@
                                     </div>
                                     <div class="col-md-6">
                                         <div class="mb-3">
-                                            <label for="borderRadius" class="form-label">{{ _('Corner Radius') }}</label>
-                                            <input type="range" class="form-range" id="borderRadius" name="border_radius" 
-                                                   min="0" max="50" value="13" step="1">
-                                            <div class="text-muted small">{{ _('Current:') }} <span id="borderRadiusValue">13</span>{{ _('px') }}</div>
+                                            <label for="horizontalPosition" class="form-label">{{ _('Horizontal Position') }}</label>
+                                            <input type="range" class="form-range" id="horizontalPosition" name="horizontal_position" 
+                                                   min="1" max="100" value="50" step="1">
+                                            <div class="text-muted small">{{ _('Current:') }} <span id="horizontalPositionValue">50</span>%</div>
                                         </div>
                                     </div>
                                 </div>
@@ -266,6 +266,18 @@
                                                    min="12" max="72" value="23" step="1">
                                             <div class="text-muted small">{{ _('Current:') }} <span id="fontSizeValue">23</span>{{ _('px') }}</div>
                                         </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="borderRadius" class="form-label">{{ _('Corner Radius') }}</label>
+                                            <input type="range" class="form-range" id="borderRadius" name="border_radius" 
+                                                   min="0" max="50" value="13" step="1">
+                                            <div class="text-muted small">{{ _('Current:') }} <span id="borderRadiusValue">13</span>{{ _('px') }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
                                     </div>
                                 </div>
                                 <div class="row">
