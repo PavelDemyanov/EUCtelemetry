@@ -1731,49 +1731,33 @@ def email_campaigns():
                 subject=form.subject.data,
                 html_content=form.html_content.data,
                 sender_id=current_user.id,
-                recipients_count=len(subscribed_users)
+                recipients_count=len(subscribed_users),
+                started_at=datetime.utcnow()
             )
             db.session.add(campaign)
             db.session.commit()
 
-            # Send emails to all subscribed users
-            for user in subscribed_users:
-                # Generate unsubscribe token for this user
-                unsubscribe_token = user.generate_unsubscribe_token()
-                user.email_confirmation_token = unsubscribe_token
-                db.session.commit()
+            # Start background email sending task
+            from utils.background_tasks import task_manager
+            
+            user_ids = [user.id for user in subscribed_users]
+            task_id = task_manager.add_task('email_campaign', {
+                'campaign_id': campaign.id,
+                'subject': form.subject.data,
+                'html_content': form.html_content.data,
+                'user_ids': user_ids
+            })
+            
+            # Update campaign with task ID
+            campaign.task_id = task_id
+            db.session.commit()
 
-                # Add unsubscribe link to email content
-                unsubscribe_url = url_for('unsubscribe', token=unsubscribe_token, _external=True)
-
-                # Get user's preferred language
-                user_locale = user.locale or 'en'
-
-                # Add localized unsubscribe text
-                if user_locale == 'ru':
-                    footer = f"""
-                    <hr>
-                    <p style="font-size: 12px; color: #666;">
-                        Чтобы отписаться от рассылки, <a href="{unsubscribe_url}">нажмите здесь</a>.
-                    </p>
-                    """
-                else:
-                    footer = f"""
-                    <hr>
-                    <p style="font-size: 12px; color: #666;">
-                        To unsubscribe from these emails, <a href="{unsubscribe_url}">click here</a>.
-                    </p>
-                    """
-
-                # Combine content with footer
-                full_content = form.html_content.data + footer
-
-                # Send email
-                if not send_email(user.email, form.subject.data, full_content):
-                    flash(_('Error sending email to %(email)s', email=user.email))
-
-            flash(_('Campaign sent successfully to %(count)d users.', count=len(subscribed_users)))
-            return jsonify({'success': True, 'message': _('Campaign sent successfully.')})
+            flash(_('Campaign queued successfully for %(count)d users. Sending in background.', count=len(subscribed_users)))
+            return jsonify({
+                'success': True, 
+                'message': _('Campaign queued successfully. Sending in background.'),
+                'task_id': task_id
+            })
 
         except Exception as e:
             db.session.rollback()
@@ -1782,6 +1766,31 @@ def email_campaigns():
 
     campaigns = EmailCampaign.query.order_by(EmailCampaign.created_at.desc()).all()
     return render_template('admin/email_campaigns.html', form=form, campaigns=campaigns)
+
+@app.route('/admin/campaign-status/<task_id>')
+@login_required
+@admin_required
+def campaign_status(task_id):
+    """Get status of email campaign background task"""
+    try:
+        from utils.background_tasks import task_manager
+        status = task_manager.get_task_status(task_id)
+        
+        if not status:
+            return jsonify({'error': 'Task not found'}), 404
+        
+        # Also get campaign info from database
+        campaign = EmailCampaign.query.filter_by(task_id=task_id).first()
+        if campaign:
+            status['campaign_id'] = campaign.id
+            status['subject'] = campaign.subject
+            status['recipients_count'] = campaign.recipients_count
+        
+        return jsonify(status)
+        
+    except Exception as e:
+        logging.error(f"Error getting campaign status: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/admin/campaign/<int:campaign_id>')
 @login_required

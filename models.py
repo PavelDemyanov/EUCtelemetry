@@ -144,6 +144,14 @@ class EmailCampaign(db.Model):
     recipients_count = db.Column(db.Integer, default=0)
     sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     sender = db.relationship('User', backref='campaigns')
+    
+    # Background task tracking
+    task_id = db.Column(db.String(100), nullable=True)  # UUID of background task
+    is_completed = db.Column(db.Boolean, default=False)
+    sent_count = db.Column(db.Integer, default=0)
+    failed_count = db.Column(db.Integer, default=0)
+    started_at = db.Column(db.DateTime, nullable=True)
+    completed_at = db.Column(db.DateTime, nullable=True)
 
 class News(db.Model):
     id = db.Column(db.Integer, primary_key=True)

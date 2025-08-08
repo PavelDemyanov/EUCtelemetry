@@ -66,21 +66,52 @@
         <div class="card-body">
             <h3>{{ _('Campaign History') }}</h3>
             <div class="table-responsive">
-                <table class="table">
+                <table class="table" id="campaignTable">
                     <thead>
                         <tr>
                             <th>{{ _('Date') }}</th>
                             <th>{{ _('Subject') }}</th>
                             <th>{{ _('Recipients') }}</th>
+                            <th>{{ _('Status') }}</th>
+                            <th>{{ _('Progress') }}</th>
                             <th>{{ _('Actions') }}</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for campaign in campaigns %}
-                        <tr>
+                        <tr data-campaign-id="{{ campaign.id }}" data-task-id="{{ campaign.task_id }}">
                             <td>{{ campaign.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
                             <td>{{ campaign.subject }}</td>
                             <td>{{ campaign.recipients_count }}</td>
+                            <td>
+                                {% if campaign.is_completed %}
+                                    <span class="badge bg-success">{{ _('Completed') }}</span>
+                                {% elif campaign.task_id %}
+                                    <span class="badge bg-primary campaign-status" data-task-id="{{ campaign.task_id }}">{{ _('Processing') }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ _('Unknown') }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if campaign.is_completed %}
+                                    <span class="text-success">{{ campaign.sent_count or 0 }}/{{ campaign.recipients_count }} {{ _('sent') }}</span>
+                                    {% if campaign.failed_count and campaign.failed_count > 0 %}
+                                        <br><span class="text-danger">{{ campaign.failed_count }} {{ _('failed') }}</span>
+                                    {% endif %}
+                                {% elif campaign.task_id %}
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar campaign-progress" 
+                                             data-task-id="{{ campaign.task_id }}" 
+                                             role="progressbar" 
+                                             style="width: 0%" 
+                                             aria-valuenow="0" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="100">0%</div>
+                                    </div>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
                             <td>
                                 <button class="btn btn-sm btn-info view-campaign" 
                                         data-id="{{ campaign.id }}"
@@ -192,55 +223,127 @@
 
         submitBtn.disabled = true;
         submitSpinner.classList.remove('d-none');
-        submitText.textContent = '{{ _("Sending...") }}';
-
-        // Send form data
-        fetch(window.location.pathname, {
+        
+        // Submit form data
+        const formData = new FormData(this);
+        
+        fetch(this.action, {
             method: 'POST',
-            body: new FormData(this),
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
+            body: formData
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Show success message
-                const successAlert = document.getElementById('successAlert');
-                const successMessage = document.getElementById('successMessage');
-                successMessage.textContent = data.message;
-                successAlert.classList.remove('d-none');
-                successAlert.classList.add('show');
-
+                showSuccessAlert(data.message);
+                // Start monitoring task progress if task_id is provided
+                if (data.task_id) {
+                    monitorCampaignProgress(data.task_id);
+                }
                 // Reset form
                 this.reset();
-                
-                // Hide preview section
                 document.getElementById('previewSection').classList.add('d-none');
-
-                // Refresh the page after 2 seconds to update campaign history
+                
+                // Reload page after 2 seconds to show updated campaigns
                 setTimeout(() => {
                     window.location.reload();
                 }, 2000);
             } else {
-                throw new Error(data.error || '{{ _("Failed to send campaign") }}');
+                showErrorAlert(data.error || '{{ _("Error sending campaign") }}');
             }
         })
         .catch(error => {
-            // Show error message
-            const errorAlert = document.getElementById('errorAlert');
-            const errorMessage = document.getElementById('errorMessage');
-            errorMessage.textContent = error.message;
-            errorAlert.classList.remove('d-none');
-            errorAlert.classList.add('show');
+            console.error('Error:', error);
+            showErrorAlert('{{ _("Error sending campaign") }}');
         })
         .finally(() => {
             // Re-enable submit button and hide spinner
             submitBtn.disabled = false;
             submitSpinner.classList.add('d-none');
-            submitText.textContent = '{{ _("Send Campaign") }}';
         });
     });
+    
+    // Progress monitoring function
+    function monitorCampaignProgress(taskId) {
+        const interval = setInterval(() => {
+            fetch(`/admin/campaign-status/${taskId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        clearInterval(interval);
+                        return;
+                    }
+                    
+                    // Update progress bar and status
+                    const statusElement = document.querySelector(`[data-task-id="${taskId}"].campaign-status`);
+                    const progressElement = document.querySelector(`[data-task-id="${taskId}"].campaign-progress`);
+                    
+                    if (statusElement) {
+                        if (data.status === 'completed') {
+                            statusElement.textContent = '{{ _("Completed") }}';
+                            statusElement.className = 'badge bg-success';
+                            clearInterval(interval);
+                            
+                            // Reload page to show final results
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1000);
+                        } else if (data.status === 'failed') {
+                            statusElement.textContent = '{{ _("Failed") }}';
+                            statusElement.className = 'badge bg-danger';
+                            clearInterval(interval);
+                        } else if (data.status === 'running') {
+                            statusElement.textContent = '{{ _("Sending") }}';
+                        }
+                    }
+                    
+                    if (progressElement && data.progress !== undefined) {
+                        progressElement.style.width = `${data.progress}%`;
+                        progressElement.setAttribute('aria-valuenow', data.progress);
+                        progressElement.textContent = `${data.progress}%`;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking progress:', error);
+                });
+        }, 2000); // Check every 2 seconds
+        
+        // Clear interval after 10 minutes to avoid indefinite polling
+        setTimeout(() => {
+            clearInterval(interval);
+        }, 600000);
+    }
+    
+    // Start monitoring existing active campaigns on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        const activeCampaigns = document.querySelectorAll('[data-task-id]:not([data-task-id=""])');
+        activeCampaigns.forEach(element => {
+            const taskId = element.getAttribute('data-task-id');
+            const row = element.closest('tr');
+            const statusBadge = row.querySelector('.campaign-status');
+            
+            // Only monitor if status is not completed
+            if (statusBadge && !statusBadge.classList.contains('bg-success')) {
+                monitorCampaignProgress(taskId);
+            }
+        });
+    });
+    
+    // Alert functions
+    function showSuccessAlert(message) {
+        const alert = document.getElementById('successAlert');
+        const messageElement = document.getElementById('successMessage');
+        messageElement.textContent = message;
+        alert.classList.remove('d-none');
+        alert.classList.add('show');
+    }
+    
+    function showErrorAlert(message) {
+        const alert = document.getElementById('errorAlert');
+        const messageElement = document.getElementById('errorMessage');
+        messageElement.textContent = message;
+        alert.classList.remove('d-none');
+        alert.classList.add('show');
+    }
 
     // View campaign content
     document.querySelectorAll('.view-campaign').forEach(button => {

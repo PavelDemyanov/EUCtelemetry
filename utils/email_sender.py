@@ -131,3 +131,90 @@ def send_email(to_email: str, subject: str, html_content: str) -> bool:
     except Exception as e:
         logging.error(f"Unexpected error sending email to {to_email}: {str(e)}")
         return False
+
+def send_email_batch(emails: list) -> list:
+    """
+    Send multiple emails using a single SMTP connection for better performance
+    Returns list of results for each email
+    """
+    try:
+        # Validate SMTP settings first
+        settings = validate_smtp_settings()
+        
+        # Ensure settings are strings and port is integer
+        smtp_server = str(settings["SMTP_SERVER"])
+        smtp_port = int(settings["SMTP_PORT"])
+        smtp_login = str(settings["SMTP_LOGIN"])
+        smtp_password = str(settings["SMTP_PASSWORD"])
+        
+        results = []
+        server = None
+        
+        try:
+            # Create single connection for the entire batch
+            server = smtplib.SMTP_SSL(smtp_server, smtp_port)
+            logging.debug("SMTP SSL connection established for batch")
+            
+            # Login once
+            server.login(smtp_login, smtp_password)
+            logging.debug("SMTP login successful for batch")
+            
+            # Send all emails using the same connection
+            for email_data in emails:
+                try:
+                    to_email = email_data['to_email']
+                    subject = email_data['subject']
+                    html_content = email_data['html_content']
+                    
+                    # Create message
+                    msg = MIMEMultipart('alternative')
+                    msg['Subject'] = subject
+                    msg['From'] = smtp_login
+                    msg['To'] = to_email
+                    
+                    # Add HTML content
+                    html_part = MIMEText(html_content, 'html')
+                    msg.attach(html_part)
+                    
+                    # Send email
+                    server.send_message(msg)
+                    
+                    results.append({
+                        'email': to_email,
+                        'success': True,
+                        'error': None
+                    })
+                    logging.info(f"Email sent successfully to {to_email}")
+                    
+                except Exception as e:
+                    results.append({
+                        'email': email_data.get('to_email', 'unknown'),
+                        'success': False,
+                        'error': str(e)
+                    })
+                    logging.error(f"Failed to send email to {email_data.get('to_email', 'unknown')}: {str(e)}")
+            
+        finally:
+            # Always close the connection
+            if server:
+                server.quit()
+                logging.debug("SMTP connection closed")
+        
+        return results
+        
+    except ValueError as ve:
+        # If SMTP is not configured, mark all emails as failed
+        return [{
+            'email': email_data.get('to_email', 'unknown'),
+            'success': False,
+            'error': f"SMTP Configuration Error: {str(ve)}"
+        } for email_data in emails]
+        
+    except Exception as e:
+        # If connection fails, mark all emails as failed
+        logging.error(f"Unexpected error in batch email sending: {str(e)}")
+        return [{
+            'email': email_data.get('to_email', 'unknown'),
+            'success': False,
+            'error': str(e)
+        } for email_data in emails]
