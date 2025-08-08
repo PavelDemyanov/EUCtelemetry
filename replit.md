@@ -147,3 +147,8 @@ Icon vertical positioning: Default offset of 5 pixels works best for telemetry o
 - August 8, 2025: Implemented Horizontal Position slider with 0.5% precision for precise panel placement control
 - August 8, 2025: Fixed Horizontal Position persistence in presets and resolution switching
 - August 8, 2025: Moved BETA label from "Static Box Size" to "Vertical Layout" checkbox
+- August 8, 2025: Implemented asynchronous email campaign processing to prevent worker timeouts
+- August 8, 2025: Added background task management system with real-time progress monitoring
+- August 8, 2025: Updated both admin email campaigns and news campaign sending to use background processing
+- August 8, 2025: Added database fields for tracking email campaign status and progress
+- August 8, 2025: Implemented real-time progress bars and status updates in admin interface

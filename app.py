@@ -1895,58 +1895,31 @@ def news_send_campaign(id):
             subject=news.title,
             html_content=news.content,  # Using original markdown content
             sender_id=current_user.id,
-            recipients_count=len(subscribed_users)
+            recipients_count=len(subscribed_users),
+            started_at=datetime.utcnow()
         )
         db.session.add(campaign)
         db.session.commit()
         
+        # Start background email sending task
+        from utils.background_tasks import task_manager
+        
         # Convert markdown to HTML for email
         html_content = markdown_filter(news.content)
         
-        # Send emails to all subscribed users
-        success_count = 0
-        for user in subscribed_users:
-            # Generate unsubscribe token for this user
-            unsubscribe_token = user.generate_unsubscribe_token()
-            user.email_confirmation_token = unsubscribe_token
-            db.session.commit()
-            
-            # Add unsubscribe link to email content
-            unsubscribe_url = url_for('unsubscribe', token=unsubscribe_token, _external=True)
-            
-            # Get user's preferred language
-            user_locale = user.locale or 'en'
-            
-            # Add localized unsubscribe text
-            if user_locale == 'ru':
-                footer = f"""
-                <hr>
-                <p style="font-size: 12px; color: #666;">
-                    Чтобы отписаться от рассылки, <a href="{unsubscribe_url}">нажмите здесь</a>.
-                </p>
-                """
-            else:
-                footer = f"""
-                <hr>
-                <p style="font-size: 12px; color: #666;">
-                    To unsubscribe from these emails, <a href="{unsubscribe_url}">click here</a>.
-                </p>
-                """
-                
-            # Combine HTML content with footer
-            full_content = html_content + footer
-            
-            # Send email
-            if send_email(user.email, news.title, full_content):
-                success_count += 1
+        user_ids = [user.id for user in subscribed_users]
+        task_id = task_manager.add_task('email_campaign', {
+            'campaign_id': campaign.id,
+            'subject': news.title,
+            'html_content': html_content,  # Use converted HTML content
+            'user_ids': user_ids
+        })
         
-        # Update flash message based on results
-        if success_count == len(subscribed_users):
-            flash(_('Campaign sent successfully to %(count)d users.', count=success_count))
-        else:
-            flash(_('Campaign sent to %(success)d out of %(total)d users.', 
-                    success=success_count, total=len(subscribed_users)))
-            
+        # Update campaign with task ID
+        campaign.task_id = task_id
+        db.session.commit()
+        
+        flash(_('News campaign queued successfully for %(count)d users. Sending in background.', count=len(subscribed_users)))
         return redirect(url_for('news_list'))
             
     except Exception as e:
