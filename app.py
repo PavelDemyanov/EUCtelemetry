@@ -943,7 +943,8 @@ def generate_project_frames(project_id):
             'use_icons': data.get('use_icons', False),
             'icon_vertical_offset': int(data.get('icon_vertical_offset', 5)),
             'icon_horizontal_spacing': int(data.get('icon_horizontal_spacing', 10)),
-            'static_box_size': data.get('static_box_size', False)
+            'static_box_size': data.get('static_box_size', False),
+            'vertical_layout': data.get('vertical_layout', False)
         }
 
         logging.info(f"Starting processing with settings: {text_settings}, interpolate_values: {interpolate_values}")
@@ -1204,7 +1205,8 @@ def trim_csv(project_id):
             'use_icons': data.get('use_icons', False),
             'icon_vertical_offset': int(data.get('icon_vertical_offset', 5)),
             'icon_horizontal_spacing': int(data.get('icon_horizontal_spacing', 10)),
-            'static_box_size': data.get('static_box_size', False)
+            'static_box_size': data.get('static_box_size', False),
+            'vertical_layout': data.get('vertical_layout', False)
         }
         
         # Get user's preferred locale
@@ -1990,7 +1992,8 @@ def generate_preview(project_id):
             'use_icons': data.get('use_icons', False),
             'icon_vertical_offset': int(data.get('icon_vertical_offset', 5)),
             'icon_horizontal_spacing': int(data.get('icon_horizontal_spacing', 10)),
-            'static_box_size': data.get('static_box_size', False)
+            'static_box_size': data.get('static_box_size', False),
+            'vertical_layout': data.get('vertical_layout', False)
         }
 
         logging.info(f"Generating preview with settings: {text_settings}")

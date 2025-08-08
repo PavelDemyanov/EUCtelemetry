@@ -341,6 +341,7 @@ def create_frame(values,
         show_time = text_settings.get('show_time', False)  # Add time visibility setting
         show_bottom_elements = text_settings.get('show_bottom_elements', True)
         use_icons = text_settings.get('use_icons', False)  # Add icons setting
+        vertical_layout = text_settings.get('vertical_layout', False)  # Add vertical layout setting
 
         # Получаем настройки позиционирования индикатора и текста
         indicator_x_percent = float(text_settings.get('indicator_x', 50))
@@ -487,15 +488,22 @@ def create_frame(values,
                 static_content_widths.append(static_content_width)  # Store static content width for each element
                 total_width += element_width
 
-            total_width += spacing * (len(params) - 1)
-            start_x = (width - total_width) // 2
-            y_position = int((height * vertical_position) / 100)
-
-            max_text_height = max(text_heights)
-            box_vertical_center = y_position + (box_height // 2)
-            text_baseline_y = box_vertical_center - (max_text_height // 2)
-
-            x_position = start_x
+            if vertical_layout:
+                # Вертикальное расположение плашек
+                total_height = len(params) * box_height + spacing * (len(params) - 1)
+                start_y = (height - total_height) // 2
+                x_position = int((width - max(element_widths)) / 2)  # Центрируем по горизонтали
+                y_position = start_y
+                max_text_height = max(text_heights)
+            else:
+                # Горизонтальное расположение плашек (как было)
+                total_width += spacing * (len(params) - 1)
+                start_x = (width - total_width) // 2
+                y_position = int((height * vertical_position) / 100)
+                max_text_height = max(text_heights)
+                box_vertical_center = y_position + (box_height // 2)
+                text_baseline_y = box_vertical_center - (max_text_height // 2)
+                x_position = start_x
             for i, ((label, value, unit), element_width, text_width, static_content_width) in enumerate(zip(params, element_widths, text_widths, static_content_widths)):
                 box_color = (0, 0, 0, 255)  # Стандартный черный цвет
                 text_color = (255, 255, 255, 255)  # Стандартный белый цвет
@@ -528,8 +536,15 @@ def create_frame(values,
                 # Use static content width for centering if available
                 content_width_for_centering = static_content_width if static_content_width else text_width
                 text_x = x_position + ((element_width - content_width_for_centering) // 2)
-                baseline_offset = int(max_text_height * 0.2)
-                text_y = text_baseline_y - baseline_offset
+                
+                if vertical_layout:
+                    # В вертикальном режиме текст центрируется в каждой плашке
+                    box_vertical_center = y_position + (box_height // 2)
+                    text_y = box_vertical_center - (max_text_height // 2) - int(max_text_height * 0.2)
+                else:
+                    # В горизонтальном режиме используем общую базовую линию
+                    baseline_offset = int(max_text_height * 0.2)
+                    text_y = text_baseline_y - baseline_offset
 
                 if use_icons:
                     # Draw with icon instead of text label
@@ -585,7 +600,12 @@ def create_frame(values,
                               fill=text_color,
                               font=regular_font)
 
-                x_position += element_width + spacing
+                if vertical_layout:
+                    # В вертикальном режиме переходим к следующей плашке по вертикали
+                    y_position += box_height + spacing
+                else:
+                    # В горизонтальном режиме переходим к следующей плашке по горизонтали
+                    x_position += element_width + spacing
 
         result = Image.alpha_composite(background, overlay)
 

@@ -823,7 +823,8 @@ function updatePreview(projectId) {
         use_icons: document.getElementById('useIcons').checked,
         icon_vertical_offset: document.getElementById('iconVerticalOffset').value,
         icon_horizontal_spacing: document.getElementById('iconHorizontalSpacing').value,
-        static_box_size: document.getElementById('staticBoxSize').checked
+        static_box_size: document.getElementById('staticBoxSize').checked,
+        vertical_layout: document.getElementById('verticalLayout').checked
     };
 
     console.log('Sending preview settings:', settings);
@@ -991,7 +992,8 @@ allSettings.forEach(setting => {
                     use_icons: document.getElementById('useIcons').checked,
                     icon_vertical_offset: document.getElementById('iconVerticalOffset').value,
                     icon_horizontal_spacing: document.getElementById('iconHorizontalSpacing').value,
-                    static_box_size: document.getElementById('staticBoxSize').checked
+                    static_box_size: document.getElementById('staticBoxSize').checked,
+                    vertical_layout: document.getElementById('verticalLayout').checked
                 };
 
                 // Update preview with all current settings
@@ -1019,7 +1021,7 @@ allSettings.forEach(setting => {
 const visibilitySettings = [
     'showSpeed', 'showMaxSpeed', 'showVoltage', 'showTemp', 
     'showBattery', 'showMileage', 'showPWM', 'showPower', 
-    'showCurrent', 'showGPS', 'showTime', 'showBottomElements', 'useIcons', 'staticBoxSize'
+    'showCurrent', 'showGPS', 'showTime', 'showBottomElements', 'useIcons', 'staticBoxSize', 'verticalLayout'
 ];
 
 visibilitySettings.forEach(setting => {
@@ -1180,7 +1182,8 @@ document.getElementById('startProcessButton').addEventListener('click', async fu
         use_icons: document.getElementById('useIcons').checked,
         icon_vertical_offset: document.getElementById('iconVerticalOffset').value,
         icon_horizontal_spacing: document.getElementById('iconHorizontalSpacing').value,
-        static_box_size: document.getElementById('staticBoxSize').checked
+        static_box_size: document.getElementById('staticBoxSize').checked,
+        vertical_layout: document.getElementById('verticalLayout').checked
     };
 
     // Start processing
@@ -1441,7 +1444,8 @@ document.addEventListener('DOMContentLoaded', function() {
             use_icons: document.getElementById('useIcons').checked,
             icon_vertical_offset: document.getElementById('iconVerticalOffset').value,
             icon_horizontal_spacing: document.getElementById('iconHorizontalSpacing').value,
-            static_box_size: document.getElementById('staticBoxSize').checked
+            static_box_size: document.getElementById('staticBoxSize').checked,
+            vertical_layout: document.getElementById('verticalLayout').checked
         };
 
         fetch('/save_preset', {
