@@ -322,8 +322,23 @@
         }, 600000);
     }
     
-    // Disabled auto-monitoring to prevent endless loops with completed campaigns
-    // Users can manually refresh the page to see campaign status updates
+    // Smart monitoring that stops for completed campaigns
+    document.addEventListener('DOMContentLoaded', function() {
+        const activeCampaigns = document.querySelectorAll('[data-task-id]:not([data-task-id=""])');
+        activeCampaigns.forEach(element => {
+            const taskId = element.getAttribute('data-task-id');
+            const row = element.closest('tr');
+            const statusBadge = row.querySelector('.campaign-status');
+            
+            // Only monitor campaigns that are not completed/failed
+            if (statusBadge) {
+                const statusText = statusBadge.textContent.trim();
+                if (statusText === 'Processing' || statusText === 'Отправка' || statusText === 'Sending') {
+                    monitorCampaignProgress(taskId);
+                }
+            }
+        });
+    });
     
     // Alert functions
     function showSuccessAlert(message) {
