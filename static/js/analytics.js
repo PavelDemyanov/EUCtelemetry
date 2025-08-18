@@ -563,8 +563,11 @@ document.addEventListener('DOMContentLoaded', function() {
         // Clear previous achievements
         achievementsContainer.innerHTML = '';
         
+        console.log('Displaying achievements:', achievements);
+        
         // Create achievement cards
         achievements.forEach(achievement => {
+            console.log('Processing achievement:', achievement.title, 'Icon:', achievement.icon);
             const achievementDiv = document.createElement('div');
             achievementDiv.className = 'col-md-4 col-lg-3 mb-3';
             
@@ -581,6 +584,20 @@ document.addEventListener('DOMContentLoaded', function() {
             icon.src = `/static/icons/euc_man_pack/${achievement.icon}`;
             icon.alt = achievement.title;
             icon.style.height = '100px';
+            icon.style.width = 'auto';
+            icon.style.maxWidth = '100px';
+            
+            // Add error handling for broken images
+            icon.onerror = function() {
+                console.warn(`Failed to load achievement icon: ${achievement.icon}`);
+                this.style.display = 'none';
+                // Create fallback icon using Bootstrap icon
+                const fallbackIcon = document.createElement('i');
+                fallbackIcon.className = 'bi bi-trophy-fill text-warning';
+                fallbackIcon.style.fontSize = '80px';
+                iconDiv.appendChild(fallbackIcon);
+            };
+            
             iconDiv.appendChild(icon);
             
             // Create achievement title
