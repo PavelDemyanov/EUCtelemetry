@@ -2338,10 +2338,14 @@ def analyze_csv():
                     len(processed_data['pwm']) > 0 and 
                     len(processed_data['timestamp']) > 0):
                     
+                    logging.debug("Starting Dead achievement analysis...")
+                    
                     # Find periods where speed > 30 km/h for at least 3 seconds with PWM = 100
                     high_speed_periods = []
                     
-                    for i in range(len(processed_data['timestamp'])):
+                    # First pass: identify high speed periods with PWM 100
+                    i = 0
+                    while i < len(processed_data['timestamp']):
                         if (not pd.isna(processed_data['timestamp'][i]) and 
                             not pd.isna(processed_data['speed'][i])):
                             
@@ -2349,19 +2353,20 @@ def analyze_csv():
                             speed = float(processed_data['speed'][i])
                             
                             if speed > 30:
-                                # Check if this high speed period lasts at least 3 seconds
+                                # Start of potential high speed period
                                 period_start = timestamp
                                 period_end = timestamp
                                 has_pwm_100 = False
                                 
-                                # Check current PWM
+                                # Check PWM at start
                                 if (i < len(processed_data['pwm']) and 
                                     not pd.isna(processed_data['pwm'][i]) and 
-                                    float(processed_data['pwm'][i]) >= 100):
+                                    float(processed_data['pwm'][i]) == 100):
                                     has_pwm_100 = True
                                 
-                                # Look ahead to find the end of high speed period
-                                for j in range(i + 1, len(processed_data['timestamp'])):
+                                # Continue through the high speed period
+                                j = i + 1
+                                while j < len(processed_data['timestamp']):
                                     if (not pd.isna(processed_data['timestamp'][j]) and 
                                         not pd.isna(processed_data['speed'][j])):
                                         
@@ -2370,20 +2375,35 @@ def analyze_csv():
                                         
                                         if next_speed > 30:
                                             period_end = next_timestamp
-                                            # Check PWM in this period
+                                            # Check for PWM 100 in this period
                                             if (j < len(processed_data['pwm']) and 
                                                 not pd.isna(processed_data['pwm'][j]) and 
-                                                float(processed_data['pwm'][j]) >= 100):
+                                                float(processed_data['pwm'][j]) == 100):
                                                 has_pwm_100 = True
+                                                logging.debug(f"Found PWM=100 at timestamp {next_timestamp} during high speed period")
                                         else:
                                             break
+                                    j += 1
                                 
-                                # Check if period is at least 3 seconds and has PWM 100
-                                if period_end - period_start >= 3 and has_pwm_100:
+                                # Check if period duration >= 3 seconds and has PWM 100
+                                period_duration = period_end - period_start
+                                if period_duration >= 3 and has_pwm_100:
                                     high_speed_periods.append((period_start, period_end))
+                                    logging.debug(f"Found high speed period: {period_start} to {period_end} (duration: {period_duration}s)")
+                                
+                                # Move to end of this period
+                                i = j
+                            else:
+                                i += 1
+                        else:
+                            i += 1
+                    
+                    logging.debug(f"Found {len(high_speed_periods)} high speed periods with PWM 100")
                     
                     # Check for PWM failure after high speed periods
                     for period_start, period_end in high_speed_periods:
+                        logging.debug(f"Checking PWM failure after period ending at {period_end}")
+                        
                         # Look for PWM = 0 within 5 seconds after the period
                         check_until = period_end + 5
                         
@@ -2402,6 +2422,7 @@ def analyze_csv():
                                     pwm == 0):
                                     pwm_zero_found = True
                                     pwm_zero_timestamp = timestamp
+                                    logging.debug(f"Found PWM=0 at {pwm_zero_timestamp}")
                                     break
                         
                         # If PWM = 0 found, check if it stays < 3 for 5 seconds
@@ -2420,11 +2441,19 @@ def analyze_csv():
                                         timestamp <= check_until_low and 
                                         pwm >= 3):
                                         pwm_stays_low = False
+                                        logging.debug(f"PWM went above 3 at {timestamp}, value: {pwm}")
                                         break
                             
                             if pwm_stays_low:
                                 dead_condition_met = True
+                                logging.debug("Dead condition MET!")
                                 break
+                            else:
+                                logging.debug("PWM did not stay low enough")
+                        else:
+                            logging.debug("No PWM=0 found within 5 seconds after high speed period")
+                    
+                    logging.debug(f"Final dead_condition_met: {dead_condition_met}")
             
             analytics_vars['dead_condition_met'] = dead_condition_met
             

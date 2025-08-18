@@ -318,7 +318,7 @@ class Achievement(db.Model):
             {
                 'achievement_id': 'dead',
                 'title': 'Dead',
-                'description': "You're dead — high speed followed by complete PWM failure!",
+                'description': "You're dead — high speed with PWM=100, then complete PWM failure!",
                 'icon': 'dead.svg',
                 'formula': 'dead_condition_met'
             }
