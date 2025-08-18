@@ -2331,6 +2331,103 @@ def analyze_csv():
             analytics_vars['pwm_100_survived'] = pwm_100_survived
             analytics_vars['pwm_100_dead'] = pwm_100_dead
             
+            # Calculate complex Dead achievement condition
+            dead_condition_met = False
+            if isinstance(processed_data, dict) and all(key in processed_data for key in ['speed', 'pwm', 'timestamp']):
+                if (len(processed_data['speed']) > 0 and 
+                    len(processed_data['pwm']) > 0 and 
+                    len(processed_data['timestamp']) > 0):
+                    
+                    # Find periods where speed > 30 km/h for at least 3 seconds with PWM = 100
+                    high_speed_periods = []
+                    
+                    for i in range(len(processed_data['timestamp'])):
+                        if (not pd.isna(processed_data['timestamp'][i]) and 
+                            not pd.isna(processed_data['speed'][i])):
+                            
+                            timestamp = float(processed_data['timestamp'][i])
+                            speed = float(processed_data['speed'][i])
+                            
+                            if speed > 30:
+                                # Check if this high speed period lasts at least 3 seconds
+                                period_start = timestamp
+                                period_end = timestamp
+                                has_pwm_100 = False
+                                
+                                # Check current PWM
+                                if (i < len(processed_data['pwm']) and 
+                                    not pd.isna(processed_data['pwm'][i]) and 
+                                    float(processed_data['pwm'][i]) >= 100):
+                                    has_pwm_100 = True
+                                
+                                # Look ahead to find the end of high speed period
+                                for j in range(i + 1, len(processed_data['timestamp'])):
+                                    if (not pd.isna(processed_data['timestamp'][j]) and 
+                                        not pd.isna(processed_data['speed'][j])):
+                                        
+                                        next_timestamp = float(processed_data['timestamp'][j])
+                                        next_speed = float(processed_data['speed'][j])
+                                        
+                                        if next_speed > 30:
+                                            period_end = next_timestamp
+                                            # Check PWM in this period
+                                            if (j < len(processed_data['pwm']) and 
+                                                not pd.isna(processed_data['pwm'][j]) and 
+                                                float(processed_data['pwm'][j]) >= 100):
+                                                has_pwm_100 = True
+                                        else:
+                                            break
+                                
+                                # Check if period is at least 3 seconds and has PWM 100
+                                if period_end - period_start >= 3 and has_pwm_100:
+                                    high_speed_periods.append((period_start, period_end))
+                    
+                    # Check for PWM failure after high speed periods
+                    for period_start, period_end in high_speed_periods:
+                        # Look for PWM = 0 within 5 seconds after the period
+                        check_until = period_end + 5
+                        
+                        pwm_zero_found = False
+                        pwm_zero_timestamp = None
+                        
+                        for i in range(len(processed_data['timestamp'])):
+                            if (not pd.isna(processed_data['timestamp'][i]) and 
+                                not pd.isna(processed_data['pwm'][i])):
+                                
+                                timestamp = float(processed_data['timestamp'][i])
+                                pwm = float(processed_data['pwm'][i])
+                                
+                                if (timestamp > period_end and 
+                                    timestamp <= check_until and 
+                                    pwm == 0):
+                                    pwm_zero_found = True
+                                    pwm_zero_timestamp = timestamp
+                                    break
+                        
+                        # If PWM = 0 found, check if it stays < 3 for 5 seconds
+                        if pwm_zero_found:
+                            pwm_stays_low = True
+                            check_until_low = pwm_zero_timestamp + 5
+                            
+                            for i in range(len(processed_data['timestamp'])):
+                                if (not pd.isna(processed_data['timestamp'][i]) and 
+                                    not pd.isna(processed_data['pwm'][i])):
+                                    
+                                    timestamp = float(processed_data['timestamp'][i])
+                                    pwm = float(processed_data['pwm'][i])
+                                    
+                                    if (timestamp > pwm_zero_timestamp and 
+                                        timestamp <= check_until_low and 
+                                        pwm >= 3):
+                                        pwm_stays_low = False
+                                        break
+                            
+                            if pwm_stays_low:
+                                dead_condition_met = True
+                                break
+            
+            analytics_vars['dead_condition_met'] = dead_condition_met
+            
             # Get all active achievements from database and evaluate them
             active_achievements = Achievement.query.filter_by(is_active=True).all()
             

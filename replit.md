@@ -153,3 +153,4 @@ Icon vertical positioning: Default offset of 5 pixels works best for telemetry o
 - August 8, 2025: Added database fields for tracking email campaign status and progress
 - August 8, 2025: Implemented real-time progress bars and status updates in admin interface
 - August 8, 2025: Moved Email Server Testing block from main admin dashboard to email campaigns page for better organization
+- August 18, 2025: Enhanced "Dead" achievement with complex multi-condition formula: speed >30 km/h for 3+ seconds with PWM=100, followed by PWM=0 and staying <3 for 5 seconds
