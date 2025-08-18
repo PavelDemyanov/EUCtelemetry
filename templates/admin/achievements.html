@@ -62,29 +62,10 @@
                                 <code class="small d-block p-2 bg-light rounded">{{ achievement.formula }}</code>
                             </div>
                             
-                            <div class="mb-3">
-                                <strong class="small">Icon Path:</strong>
-                                <form method="POST" action="{{ url_for('admin_update_achievement_icon', achievement_id=achievement.id) }}" class="mt-1">
-                                    <div class="input-group input-group-sm">
-                                        <input type="text" class="form-control form-control-sm" 
-                                               name="new_icon" value="{{ achievement.icon }}" 
-                                               placeholder="e.g., speed.svg">
-                                        <button type="submit" class="btn btn-outline-secondary btn-sm">
-                                            <i class="bi bi-check"></i> Update
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-                            
                             <div class="row text-muted small">
                                 <div class="col-6">
-                                    <strong>Status:</strong><br>
-                                    {% set icon_path = 'static/icons/euc_man_pack/' + achievement.icon %}
-                                    {% if icon_path|file_exists %}
-                                        <span class="badge bg-success">✓ Found</span>
-                                    {% else %}
-                                        <span class="badge bg-danger">✗ Missing</span>
-                                    {% endif %}
+                                    <strong>Icon:</strong><br>
+                                    <span class="badge bg-light text-dark">{{ achievement.icon }}</span>
                                 </div>
                                 <div class="col-6">
                                     <strong>Created:</strong><br>

@@ -47,17 +47,6 @@ def markdown_filter(text):
 app = Flask(__name__)
 app.jinja_env.filters['markdown'] = markdown_filter
 
-# Add file_exists filter for templates
-def file_exists_filter(file_path):
-    """Check if a file exists"""
-    try:
-        import os
-        return os.path.exists(file_path)
-    except:
-        return False
-
-app.jinja_env.filters['file_exists'] = file_exists_filter
-
 # Load environment variables from .env file
 load_dotenv()
 
@@ -2709,29 +2698,4 @@ def admin_check_icons():
         
     except Exception as e:
         flash(f'Error checking icons: {str(e)}', 'error')
-        return redirect(url_for('admin_achievements'))
-
-@app.route('/admin/achievements/update-icon/<int:achievement_id>', methods=['POST'])
-@login_required
-@admin_required
-def admin_update_achievement_icon(achievement_id):
-    """Update achievement icon path"""
-    try:
-        achievement = Achievement.query.get_or_404(achievement_id)
-        new_icon = request.form.get('new_icon')
-        
-        if not new_icon:
-            flash('Icon path cannot be empty', 'error')
-            return redirect(url_for('admin_achievements'))
-        
-        old_icon = achievement.icon
-        achievement.icon = new_icon
-        db.session.commit()
-        
-        flash(f'Updated {achievement.achievement_id}: {old_icon} → {new_icon}')
-        return redirect(url_for('admin_achievements'))
-        
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error updating icon: {str(e)}', 'error')
         return redirect(url_for('admin_achievements'))
