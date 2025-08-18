@@ -154,3 +154,4 @@ Icon vertical positioning: Default offset of 5 pixels works best for telemetry o
 - August 8, 2025: Implemented real-time progress bars and status updates in admin interface
 - August 8, 2025: Moved Email Server Testing block from main admin dashboard to email campaigns page for better organization
 - August 18, 2025: Enhanced "Dead" achievement with complex multi-condition formula: speed >30 km/h for 3+ seconds with PWM=100, followed by PWM=0 and staying <3 for 5 seconds
+- August 18, 2025: **IMPORTANT**: When deploying to new servers, manually update Dead achievement formula in database from 'max_speed >= 200' to 'dead_condition_met' via /admin/achievements or SQL command
