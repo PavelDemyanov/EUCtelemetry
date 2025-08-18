@@ -2664,3 +2664,38 @@ def test_campaign():
     except Exception as e:
         logging.error(f"Error creating test campaign: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/admin/check-icons', methods=['POST'])
+@login_required
+@admin_required
+def admin_check_icons():
+    """Check achievement icons availability"""
+    try:
+        import os
+        from pathlib import Path
+        
+        achievements = Achievement.query.all()
+        icons_dir = Path('static/icons/euc_man_pack')
+        
+        missing_icons = []
+        total_icons = 0
+        found_icons = 0
+        
+        for achievement in achievements:
+            total_icons += 1
+            icon_path = icons_dir / achievement.icon
+            if not icon_path.exists():
+                missing_icons.append(achievement.icon)
+            else:
+                found_icons += 1
+        
+        if missing_icons:
+            flash(f'Missing {len(missing_icons)} icons: {", ".join(missing_icons)}. Check deployment and file permissions.', 'warning')
+        else:
+            flash(f'All {found_icons} achievement icons found successfully!')
+            
+        return redirect(url_for('admin_achievements'))
+        
+    except Exception as e:
+        flash(f'Error checking icons: {str(e)}', 'error')
+        return redirect(url_for('admin_achievements'))
