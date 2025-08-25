@@ -201,8 +201,18 @@
                         <span id="js-translation-error-trimming">{{ _('Error trimming CSV: ') }}</span>
                     </div>
 
-                    <div class="preview-image-container mb-3">
+                    <div class="preview-image-container mb-3" style="position: relative; display: inline-block;">
                         <img id="previewImage" class="img-fluid" alt="{{ _('Preview frame') }}">
+                        <div id="aspectRatioFrame" class="aspect-ratio-frame d-none"></div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="showAspectRatioFrame">
+                            <label class="form-check-label" for="showAspectRatioFrame">
+                                {{ _('Show 9:16 aspect ratio frame') }}
+                            </label>
+                        </div>
                     </div>
 
                     <div class="card mb-3">

@@ -1672,3 +1672,72 @@ function loadPresets() {
             alert(gettext('Error loading presets: ') + error.message);
         });
 }
+
+// Aspect ratio frame functionality
+function updateAspectRatioFrame() {
+    const previewImage = document.getElementById('previewImage');
+    const aspectRatioFrame = document.getElementById('aspectRatioFrame');
+    
+    if (!previewImage || !aspectRatioFrame || !previewImage.src) {
+        return;
+    }
+    
+    // Wait for image to load if it's not loaded yet
+    if (!previewImage.complete) {
+        previewImage.onload = updateAspectRatioFrame;
+        return;
+    }
+    
+    // Get actual displayed image dimensions
+    const imageRect = previewImage.getBoundingClientRect();
+    const imageWidth = imageRect.width;
+    const imageHeight = imageRect.height;
+    
+    // Calculate 9:16 frame dimensions that fit within the 16:9 preview
+    // Since preview is 16:9 (landscape) and frame should be 9:16 (portrait),
+    // the frame will be constrained by the preview height
+    const frameHeight = imageHeight;
+    const frameWidth = frameHeight * (9 / 16);
+    
+    // Update frame dimensions
+    aspectRatioFrame.style.width = frameWidth + 'px';
+    aspectRatioFrame.style.height = frameHeight + 'px';
+}
+
+// Toggle aspect ratio frame visibility
+function toggleAspectRatioFrame() {
+    const checkbox = document.getElementById('showAspectRatioFrame');
+    const aspectRatioFrame = document.getElementById('aspectRatioFrame');
+    
+    if (checkbox.checked) {
+        aspectRatioFrame.classList.remove('d-none');
+        updateAspectRatioFrame();
+    } else {
+        aspectRatioFrame.classList.add('d-none');
+    }
+}
+
+// Add event listeners for aspect ratio frame
+document.addEventListener('DOMContentLoaded', function() {
+    const checkbox = document.getElementById('showAspectRatioFrame');
+    if (checkbox) {
+        checkbox.addEventListener('change', toggleAspectRatioFrame);
+    }
+    
+    // Update frame when window is resized
+    window.addEventListener('resize', function() {
+        if (document.getElementById('showAspectRatioFrame').checked) {
+            updateAspectRatioFrame();
+        }
+    });
+    
+    // Update frame when preview image loads
+    const previewImage = document.getElementById('previewImage');
+    if (previewImage) {
+        previewImage.addEventListener('load', function() {
+            if (document.getElementById('showAspectRatioFrame').checked) {
+                updateAspectRatioFrame();
+            }
+        });
+    }
+});
