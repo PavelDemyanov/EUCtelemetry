@@ -8,6 +8,8 @@ A Flask web application for transforming Electric Unicycle (EUC) telemetry data 
 
 Now includes a **built-in Video Editor** for compositing telemetry overlays directly onto your ride videos in the browser.
 
+![Video Editor](static/images/video-editor-preview.png)
+
 ## Features
 
 ### Telemetry Visualization
