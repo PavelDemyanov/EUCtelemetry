@@ -1,6 +1,22 @@
 import math
 from PIL import Image, ImageDraw, ImageFont
 
+# Cache for speed indicator images — speed is int, so at most ~200 unique values
+_speed_indicator_cache = {}
+
+# Cache for fonts to avoid repeated disk loads
+_font_cache = {}
+
+def _get_cached_font(path, size):
+    key = (path, size)
+    if key not in _font_cache:
+        _font_cache[key] = ImageFont.truetype(path, size)
+    return _font_cache[key]
+
+def clear_speed_indicator_cache():
+    """Clear the speed indicator cache."""
+    _speed_indicator_cache.clear()
+
 def interpolate_color(color1, color2, factor):
     """
     Интерполирует между двумя цветами с заданным фактором
@@ -39,6 +55,12 @@ def create_speed_indicator(speed,
     :param locale: Язык локализации ('en' или 'ru')
     :return: PIL Image объект
     """
+    # Check cache — speed is int, so cache hit rate is very high
+    cache_key = (int(speed), size, speed_offset, unit_offset, speed_size,
+                 unit_size, indicator_scale, resolution, locale)
+    if cache_key in _speed_indicator_cache:
+        return _speed_indicator_cache[cache_key].copy()
+
     # Создаем изображение стандартного размера (не масштабированное)
     image = Image.new('RGBA', (size, size), (0, 0, 0, 0))
 
@@ -137,10 +159,10 @@ def create_speed_indicator(speed,
     base_unit_font_size = int((size // 8) * unit_size / 100 * resolution_scale)
 
     try:
-        speed_font = ImageFont.truetype("fonts/sf-ui-display-bold.otf",
-                                        base_speed_font_size)
-        unit_font = ImageFont.truetype("fonts/sf-ui-display-regular.otf",
-                                       base_unit_font_size)
+        speed_font = _get_cached_font("fonts/sf-ui-display-bold.otf",
+                                       base_speed_font_size)
+        unit_font = _get_cached_font("fonts/sf-ui-display-regular.otf",
+                                      base_unit_font_size)
     except Exception as e:
         raise ValueError(f"Error loading fonts: {str(e)}")
 
@@ -181,7 +203,9 @@ def create_speed_indicator(speed,
               fill=(255, 255, 255, 255),
               font=unit_font)
 
-    return final_image
+    # Cache the result for reuse (speed is int, limited unique values)
+    _speed_indicator_cache[cache_key] = final_image
+    return final_image.copy()
 
 
 def overlay_speed_indicator(base_image,

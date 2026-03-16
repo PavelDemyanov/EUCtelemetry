@@ -77,10 +77,10 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     logging.error(f"Error updating progress: {e}")
                     raise
 
-            # Process CSV
+            # Pre-process CSV so it's cached for generate_frames
             try:
                 logging.info(f"Processing CSV file {csv_file}")
-                _, _ = process_csv_file(csv_file, folder_number)
+                process_csv_file(csv_file, folder_number)
             except Exception as e:
                 logging.error(f"Error processing CSV: {e}")
                 raise
@@ -88,7 +88,7 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
             if stop_flags.get(project_id, False):
                 raise InterruptedError("Processing was stopped by user")
 
-            # Generate frames
+            # Generate frames (will use cached processed CSV)
             try:
                 logging.info(f"Generating frames for project {project_id}")
                 frame_count, duration = generate_frames(
