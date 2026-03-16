@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
+from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageChops
 import os
 import logging
 import shutil
@@ -51,15 +51,12 @@ def load_icon(icon_name, size=24, color='white'):
         
         # Invert colors if we need white icons (since PNG icons are black)
         if color == 'white':
-            # Create a new image with inverted colors
-            pixels = icon_image.load()
-            for y in range(icon_image.height):
-                for x in range(icon_image.width):
-                    r, g, b, a = pixels[x, y]
-                    # Only invert if pixel is not transparent
-                    if a > 0:
-                        # Invert RGB values
-                        pixels[x, y] = (255 - r, 255 - g, 255 - b, a)
+            # Use vectorized PIL operations instead of pixel-by-pixel loop
+            r, g, b, a = icon_image.split()
+            r = ImageChops.invert(r)
+            g = ImageChops.invert(g)
+            b = ImageChops.invert(b)
+            icon_image = Image.merge('RGBA', (r, g, b, a))
         
         # Cache the result
         _icon_cache[cache_key] = icon_image
@@ -616,9 +613,7 @@ def create_frame(values,
 
         if output_path:
             result.convert('RGB').save(output_path,
-                                        format='PNG',
-                                        quality=95,
-                                        optimize=True)
+                                        format='PNG')
             logging.debug(f"Saved frame to {output_path}")
 
         return result
@@ -665,6 +660,9 @@ def generate_frames(csv_file,
         )
         frame_timestamps = np.linspace(T_min, T_max, frame_count)
 
+        # Precompute lookup arrays once for O(log N) binary search per frame
+        lookup = precompute_lookup_arrays(df)
+
         completed_frames = 0
         lock = threading.Lock()
         stop_event = threading.Event()
@@ -678,8 +676,8 @@ def generate_frames(csv_file,
                 raise InterruptedError("Frame generation stopped by user")
 
             try:
-                # Use interpolated values for frame generation if enabled
-                values = find_nearest_values(df,
+                # Use precomputed arrays with binary search for fast lookup
+                values = find_nearest_values_fast(lookup,
                                               timestamp,
                                               interpolate=interpolate_values)
                 output_path = f'{frames_dir}/frame_{i:06d}.png'
@@ -751,113 +749,113 @@ def generate_frames(csv_file,
         raise
 
 
-def find_nearest_values(df, timestamp, interpolate=True):
-    """Find nearest or interpolated values for the given timestamp"""
-    # Define the default set of columns to search for
+def precompute_lookup_arrays(df):
+    """Precompute numpy arrays and cumulative max for fast frame lookups.
+
+    Returns a dict with:
+      - timestamps: sorted numpy array of timestamps
+      - columns: dict of column_name -> numpy array
+      - cumulative_max_speed: numpy array of running max speed
+      - has_gps: bool
+    """
+    timestamps = df['timestamp'].values.astype(np.float64)
+
     standard_columns = [
-        'speed', 'voltage', 'temperature', 'current', 
+        'speed', 'voltage', 'temperature', 'current',
         'battery', 'mileage', 'pwm', 'power'
     ]
-    
-    # Check if 'gps' column exists in the DataFrame
+
     has_gps = 'gps' in df.columns
-    if has_gps:
-        all_columns = standard_columns + ['gps']
-    else:
-        all_columns = standard_columns
-    
-    # If timestamp is before the first data point, return zeros
-    if timestamp < df['timestamp'].iloc[0]:
+    all_columns = standard_columns + (['gps'] if has_gps else [])
+
+    columns = {}
+    for col in all_columns:
+        columns[col] = df[col].values.astype(np.float64)
+
+    # Precompute cumulative max speed — O(N) once instead of O(N) per frame
+    cumulative_max_speed = np.maximum.accumulate(columns['speed'])
+
+    return {
+        'timestamps': timestamps,
+        'columns': columns,
+        'cumulative_max_speed': cumulative_max_speed,
+        'has_gps': has_gps,
+        'all_columns': all_columns,
+    }
+
+
+def find_nearest_values_fast(lookup, timestamp, interpolate=True):
+    """Find nearest or interpolated values using precomputed arrays and binary search.
+
+    Uses np.searchsorted for O(log N) lookup instead of O(N) mask scan.
+    """
+    timestamps = lookup['timestamps']
+    columns = lookup['columns']
+    cum_max_speed = lookup['cumulative_max_speed']
+    has_gps = lookup['has_gps']
+    all_columns = lookup['all_columns']
+    n = len(timestamps)
+
+    # Before first data point — return zeros
+    if timestamp < timestamps[0]:
         result = {key: 0 for key in all_columns}
         result['max_speed'] = 0
         return result
 
-    # Find the indices of the surrounding data points
-    after_mask = df['timestamp'] >= timestamp
-    before_mask = df['timestamp'] <= timestamp
-
-    if not after_mask.any() or not before_mask.any():
-        # If timestamp is outside the range, use the last available values
-        last_idx = df.index[-1]
-        result = {
-            'speed': int(df.loc[last_idx, 'speed']),
-            'voltage': int(df.loc[last_idx, 'voltage']),
-            'temperature': int(df.loc[last_idx, 'temperature']),
-            'current': int(df.loc[last_idx, 'current']),
-            'battery': int(df.loc[last_idx, 'battery']),
-            'mileage': int(df.loc[last_idx, 'mileage']),
-            'pwm': int(df.loc[last_idx, 'pwm']),
-            'power': int(df.loc[last_idx, 'power']),
-            'max_speed': int(df.loc[:before_mask, 'speed'].max()),
-            'timestamp': df.loc[last_idx, 'timestamp']
-        }
-        
-        # Add GPS data if it exists
-        if has_gps:
-            result['gps'] = int(df.loc[last_idx, 'gps'])
-            
+    # After last data point — return last values
+    if timestamp >= timestamps[-1]:
+        result = {key: int(columns[key][-1]) for key in all_columns}
+        result['max_speed'] = int(cum_max_speed[-1])
+        result['timestamp'] = timestamps[-1]
         return result
 
-    # Get indices of surrounding points
-    after_idx = df[after_mask].index[0]
-    before_idx = df[before_mask].index[-1]
+    # Binary search: find index where timestamp would be inserted
+    idx = np.searchsorted(timestamps, timestamp, side='right')
+    before_idx = max(idx - 1, 0)
+    after_idx = min(idx, n - 1)
 
-    # If exact match found or interpolation is disabled, return nearest values
+    # Exact match or interpolation disabled
     if before_idx == after_idx or not interpolate:
-        use_idx = before_idx
-        if not interpolate and timestamp - df.loc[
-                before_idx, 'timestamp'] > df.loc[after_idx,
-                                                  'timestamp'] - timestamp:
-            use_idx = after_idx
+        if not interpolate:
+            # Pick the nearest point
+            if (timestamp - timestamps[before_idx]) > (timestamps[after_idx] - timestamp):
+                use_idx = after_idx
+            else:
+                use_idx = before_idx
+        else:
+            use_idx = before_idx
 
-        result = {
-            'speed': int(df.loc[use_idx, 'speed']),
-            'voltage': int(df.loc[use_idx, 'voltage']),
-            'temperature': int(df.loc[use_idx, 'temperature']),
-            'current': int(df.loc[use_idx, 'current']),
-            'battery': int(df.loc[use_idx, 'battery']),
-            'mileage': int(df.loc[use_idx, 'mileage']),
-            'pwm': int(df.loc[use_idx, 'pwm']),
-            'power': int(df.loc[use_idx, 'power']),
-            'timestamp': df.loc[use_idx, 'timestamp']
-        }
-        
-        # Add GPS data if it exists
-        if has_gps:
-            result['gps'] = int(df.loc[use_idx, 'gps'])
-            
-        result['max_speed'] = int(df.loc[:use_idx, 'speed'].max())
+        result = {key: int(columns[key][use_idx]) for key in all_columns}
+        result['max_speed'] = int(cum_max_speed[use_idx])
+        result['timestamp'] = timestamps[use_idx]
         return result
 
-    # Calculate interpolation factor
-    t0 = df.loc[before_idx, 'timestamp']
-    t1 = df.loc[after_idx, 'timestamp']
+    # Interpolate
+    t0 = timestamps[before_idx]
+    t1 = timestamps[after_idx]
     factor = (timestamp - t0) / (t1 - t0)
 
-    # Interpolate all numeric values
     result = {}
-    # Define the standard columns to interpolate
-    standard_columns = [
-        'speed', 'voltage', 'temperature', 'current', 'battery',
-        'mileage', 'pwm', 'power'
-    ]
-    
-    # Add GPS if available
-    columns_to_interpolate = standard_columns + (['gps'] if has_gps else [])
-    
-    for key in columns_to_interpolate:
-        v0 = float(df.loc[before_idx, key])
-        v1 = float(df.loc[after_idx, key])
-        interpolated_value = v0 + factor * (v1 - v0)
-        result[key] = int(round(interpolated_value))
+    for key in all_columns:
+        v0 = columns[key][before_idx]
+        v1 = columns[key][after_idx]
+        result[key] = int(round(v0 + factor * (v1 - v0)))
 
-    # Calculate max speed up to current point
-    result['max_speed'] = int(df.loc[:before_idx, 'speed'].max())
-    
-    # Add timestamp for time display
+    result['max_speed'] = int(cum_max_speed[before_idx])
     result['timestamp'] = timestamp
 
     return result
+
+
+def find_nearest_values(df, timestamp, interpolate=True):
+    """Find nearest or interpolated values for the given timestamp.
+
+    Legacy wrapper — used by create_preview_frame where precomputed arrays
+    are not available. For batch frame generation, use find_nearest_values_fast.
+    """
+    # Build a one-off lookup (acceptable cost for single calls like preview)
+    lookup = precompute_lookup_arrays(df)
+    return find_nearest_values_fast(lookup, timestamp, interpolate)
 
 
 def get_column_name(csv_type, base_name):

@@ -57,7 +57,7 @@ class Project(db.Model):
     csv_file = db.Column(db.String(255), nullable=False)
     csv_type = db.Column(db.String(20), nullable=False)  # 'darnkessbot' or 'wheellog'
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    expiry_date = db.Column(db.DateTime, nullable=False)
+    expiry_date = db.Column(db.DateTime, nullable=False, index=True)
     frame_count = db.Column(db.Integer, default=0)
     fps = db.Column(db.Float, default=29.97)
     video_file = db.Column(db.String(255))
@@ -65,13 +65,13 @@ class Project(db.Model):
     codec = db.Column(db.String(10))
     resolution = db.Column(db.String(10))  # 'fullhd' or '4k'
     video_duration = db.Column(db.Float)  # Duration in seconds
-    status = db.Column(db.String(20), default='pending')  # pending, processing, completed, error
+    status = db.Column(db.String(20), default='pending', index=True)  # pending, processing, completed, error
     error_message = db.Column(db.Text)
-    folder_number = db.Column(db.Integer)  # Field for storing unique folder number
+    folder_number = db.Column(db.Integer, index=True)  # Field for storing unique folder number
     processing_started_at = db.Column(db.DateTime)  # When processing started
     processing_completed_at = db.Column(db.DateTime)  # When processing completed
     progress = db.Column(db.Float, default=0)  # Progress percentage from 0 to 100
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
 
     def days_until_expiry(self):
         """DEPRECATED: Use time_until_expiry instead"""
@@ -116,25 +116,19 @@ class Project(db.Model):
     def get_next_folder_number(cls):
         """Find the next available folder number"""
         import os
-        # Get all existing folder numbers from the frames directory
-        existing_folders = set()
+        from sqlalchemy import func
+
+        # Get max folder number from database with a single aggregate query
+        max_db = db.session.query(func.max(cls.folder_number)).scalar() or 0
+
+        # Get max folder number from filesystem
+        max_fs = 0
         if os.path.exists('frames'):
             for folder in os.listdir('frames'):
                 if folder.startswith('project_') and folder[8:].isdigit():
-                    existing_folders.add(int(folder[8:]))
+                    max_fs = max(max_fs, int(folder[8:]))
 
-        # Get all folder numbers from the database
-        db_folders = set(p.folder_number for p in cls.query.all() if p.folder_number is not None)
-
-        # Combine both sets
-        all_used_numbers = existing_folders.union(db_folders)
-
-        # Find the first available number
-        next_number = 1
-        while next_number in all_used_numbers:
-            next_number += 1
-
-        return next_number
+        return max(max_db, max_fs) + 1
 
 class EmailCampaign(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -195,8 +189,8 @@ class Preset(db.Model):
 class RegistrationAttempt(db.Model):
     """Model for tracking registration attempts by IP address"""
     id = db.Column(db.Integer, primary_key=True)
-    ip_address = db.Column(db.String(45), nullable=False)  # IPv6 can be up to 45 chars
-    attempted_at = db.Column(db.DateTime, default=datetime.utcnow)
+    ip_address = db.Column(db.String(45), nullable=False, index=True)  # IPv6 can be up to 45 chars
+    attempted_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     email = db.Column(db.String(120), nullable=False)
     success = db.Column(db.Boolean, default=False)
     user_agent = db.Column(db.Text)

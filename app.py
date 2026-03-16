@@ -312,9 +312,10 @@ def admin_dashboard():
     # Get system stats
     stats = get_system_stats()
 
-    # Get paginated projects
+    # Get paginated projects with eager-loaded user
     project_page = request.args.get('project_page', 1, type=int)
-    projects = Project.query.order_by(Project.created_at.desc())\
+    projects = Project.query.options(db.joinedload(Project.user))\
+        .order_by(Project.created_at.desc())\
         .paginate(page=project_page, per_page=20, error_out=False)
 
     # Get paginated recent users (registered in the last 30 days)
@@ -358,8 +359,9 @@ def admin_lists():
     user_page = request.args.get('user_page', 1, type=int)
     today = datetime.utcnow().date()
 
-    # Get paginated projects
-    projects = Project.query.order_by(Project.created_at.desc())\
+    # Get paginated projects with eager-loaded user to avoid N+1 queries
+    projects = Project.query.options(db.joinedload(Project.user))\
+        .order_by(Project.created_at.desc())\
         .paginate(page=project_page, per_page=20, error_out=False)
 
     # Get paginated users (all users, not just recent ones)
