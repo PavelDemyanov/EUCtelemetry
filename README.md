@@ -6,35 +6,70 @@ Fork and run your own instance, or use our cloud version! ⚡️
 
 A Flask web application for transforming Electric Unicycle (EUC) telemetry data into dynamic video visualizations with advanced processing capabilities. The application processes telemetry data from DarknessBot and WheelLog to create professional-looking video visualizations.
 
+Now includes a **built-in Video Editor** for compositing telemetry overlays directly onto your ride videos in the browser.
+
 ## Features
 
+### Telemetry Visualization
 - Processes and visualizes EUC telemetry metrics:
-  - Speed
-  - Battery level
-  - Temperature
-  - Power consumption
-  - GPS coordinates
-  - Additional metrics
+  - Speed, Max Speed, GPS Speed
+  - Battery level, Voltage, Current
+  - Temperature, Power, PWM
+  - Mileage, Time
 - Generates smooth animations with clean typography using SF UI Display Bold
+- Supports DarknessBot and WheelLog CSV formats
 - Perfect for social media sharing and ride analysis
+
+### Video Editor (New)
+- Browser-based video editor with real-time telemetry overlay preview
+- Multi-track timeline: Video, CSV telemetry, and VBO (Dragy GPS speed) tracks
+- Independent track dragging and positioning
+- Trim mode with visual handles and off-screen indicators
+- Zoom controls with Fit All option
+- Customizable overlay elements (speed, battery, temperature, power, arc indicator, etc.)
+- Export with server-side FFmpeg rendering (H.264/H.265, FullHD/4K)
+- Hardware-accelerated encoding on Apple Silicon (VideoToolbox)
+
+### Analytics & Gamification
+- Interactive ride analytics with charts in the browser
+- Achievement system based on telemetry data (max speed, PWM, etc.)
+
+### General
+- User accounts with email confirmation
+- Project management with auto-cleanup
+- Admin dashboard with statistics
+- i18n support (English, Russian)
 - Automated environment configuration
 - Production-ready with Gunicorn support
 
 ## Project Structure
 
 ```
-├── app.py              # Main Flask application
-├── main.py            # Application entry point
-├── models.py          # Database models
-├── extensions.py      # Flask extensions
-├── static/            # Static files (CSS, JS, images)
-├── templates/         # HTML templates
-├── uploads/          # Temporary CSV file storage
-├── frames/           # Generated video frames
-├── videos/           # Output video files
-├── processed_data/   # Processed CSV files
-├── previews/         # Preview images
-└── fonts/            # Custom fonts (SF UI Display Bold)
+├── app.py                     # Main Flask application (~2800 lines, 55+ routes)
+├── main.py                    # Application entry point
+├── models.py                  # Database models (User, Project, Preset, Achievement, etc.)
+├── extensions.py              # Flask extensions
+├── static/
+│   ├── css/video-editor.css   # Video editor styles
+│   ├── js/video-editor.js     # Video editor logic (timeline, tracks, overlay)
+│   └── ...                    # Other static assets
+├── templates/
+│   ├── video_editor.html      # Video editor page
+│   └── ...                    # Other templates
+├── utils/
+│   ├── csv_processor.py       # CSV parsing (DarknessBot + WheelLog)
+│   ├── image_generator.py     # Pillow frame generation
+│   ├── image_processor.py     # Speedometer, arc indicator rendering
+│   ├── video_creator.py       # FFmpeg video assembly (HW accel)
+│   ├── background_processor.py # Threading-based task runner
+│   └── email_sender.py        # SMTP email delivery
+├── translations/              # i18n (en, ru) via Flask-Babel
+├── uploads/                   # Temporary CSV/VBO file storage
+├── frames/                    # Generated video frames
+├── videos/                    # Output video files
+├── processed_data/            # Processed CSV files
+├── previews/                  # Preview images
+└── fonts/                     # Custom fonts (SF UI Display Bold)
 ```
 
 ## Prerequisites
