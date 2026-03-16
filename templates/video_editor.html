@@ -1,0 +1,334 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="video-editor-page" id="videoEditorApp">
+
+  <!-- Top Bar -->
+  <div class="ve-topbar">
+    <input type="text" id="projectName" placeholder="Project name" maxlength="7">
+    
+    <button class="btn btn-sm btn-outline-primary" id="btnUploadVideo">
+      <i class="bi bi-camera-video"></i> Upload Video
+    </button>
+    <input type="file" id="videoFileInput" accept="video/*" style="display:none">
+    
+    <button class="btn btn-sm btn-outline-info" id="btnUploadCSV">
+      <i class="bi bi-filetype-csv"></i> Upload CSV
+    </button>
+    <input type="file" id="csvFileInput" accept=".csv" style="display:none">
+
+    <button class="btn btn-sm btn-outline-warning" id="btnAddVBO" title="Add VBO (Dragy) speed data">
+      <i class="bi bi-speedometer2"></i> VBO
+    </button>
+    <input type="file" id="vboFileInput" accept=".vbo" style="display:none">
+
+    <!-- Upload progress indicators -->
+    <div class="ve-upload-progress" id="videoUploadProgress">
+      <span>Uploading video...</span>
+      <div class="progress"><div class="progress-bar" role="progressbar" style="width:0%"></div></div>
+      <span class="percent">0%</span>
+    </div>
+
+    <div class="spacer"></div>
+
+    <!-- Export dropdown -->
+    <div class="dropdown">
+      <button class="btn btn-sm btn-primary dropdown-toggle" type="button" id="btnExport" data-bs-toggle="dropdown" disabled>
+        <i class="bi bi-download"></i> Export
+      </button>
+      <div class="dropdown-menu dropdown-menu-end ve-export-settings">
+        <div class="mb-2">
+          <label>Data FPS</label>
+          <select class="form-select form-select-sm" id="exportDataFPS">
+            <option value="14.985" selected>15</option>
+            <option value="29.97">30</option>
+            <option value="59.94">60</option>
+          </select>
+          <small class="text-muted">Telemetry update rate</small>
+        </div>
+        <div class="mb-2">
+          <label>FPS</label>
+          <select class="form-select form-select-sm" id="exportFPS">
+            <option value="source" selected>Source</option>
+            <option value="14.985">15</option>
+            <option value="29.97">30</option>
+            <option value="59.94">60</option>
+          </select>
+        </div>
+        <div class="mb-2">
+          <label>Codec</label>
+          <select class="form-select form-select-sm" id="exportCodec">
+            <option value="h264" selected>H.264</option>
+            <option value="h265">H.265</option>
+          </select>
+        </div>
+        <div class="mb-2">
+          <label>Resolution</label>
+          <select class="form-select form-select-sm" id="exportResolution">
+            <option value="source" selected>Source</option>
+            <option value="fullhd">Full HD (1080p)</option>
+            <option value="4k">4K (2160p)</option>
+          </select>
+        </div>
+        <button class="btn btn-primary btn-sm w-100 mt-2" id="btnStartExport">
+          <i class="bi bi-film"></i> Start Export
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Area: Sidebar + Preview -->
+  <div class="ve-main">
+
+    <!-- Left Sidebar: Settings -->
+    <div class="ve-sidebar">
+      <ul class="nav nav-tabs" role="tablist">
+        <li class="nav-item">
+          <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabText">Text</button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabIndicator">Indicator</button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabElements">Elements</button>
+        </li>
+      </ul>
+      <div class="tab-content">
+        
+        <!-- Tab: Text Display Settings -->
+        <div class="tab-pane fade show active" id="tabText">
+          <div class="ve-setting">
+            <label>Font Size <span class="value" id="valFontSize">22</span></label>
+            <input type="range" id="fontSize" min="10" max="50" value="22">
+          </div>
+          <div class="ve-setting">
+            <label>Vertical Position <span class="value" id="valVertPos">1</span></label>
+            <input type="range" id="verticalPosition" min="0" max="100" value="1">
+          </div>
+          <div class="ve-setting">
+            <label>Horizontal Position <span class="value" id="valHorizPos">50</span></label>
+            <input type="range" id="horizontalPosition" min="0" max="100" value="50">
+          </div>
+          <div class="ve-setting">
+            <label>Top Padding <span class="value" id="valTopPad">14</span></label>
+            <input type="range" id="topPadding" min="0" max="100" value="14">
+          </div>
+          <div class="ve-setting">
+            <label>Bottom Padding <span class="value" id="valBotPad">41</span></label>
+            <input type="range" id="bottomPadding" min="0" max="100" value="41">
+          </div>
+          <div class="ve-setting">
+            <label>Spacing <span class="value" id="valSpacing">10</span></label>
+            <input type="range" id="spacing" min="0" max="50" value="10">
+          </div>
+          <div class="ve-setting">
+            <label>Border Radius <span class="value" id="valRadius">13</span></label>
+            <input type="range" id="borderRadius" min="0" max="30" value="13">
+          </div>
+          <div class="ve-setting">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="staticBoxSize">
+              <label class="form-check-label" for="staticBoxSize">Static Box Size</label>
+            </div>
+          </div>
+          <div class="ve-setting">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="verticalLayout">
+              <label class="form-check-label" for="verticalLayout">Vertical Layout</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Speed Indicator Settings -->
+        <div class="tab-pane fade" id="tabIndicator">
+          <div class="ve-setting">
+            <label>Scale <span class="value" id="valScale">100</span>%</label>
+            <input type="range" id="indicatorScale" min="10" max="300" value="100">
+          </div>
+          <div class="ve-setting">
+            <label>Horizontal Position <span class="value" id="valIndX">50</span></label>
+            <input type="range" id="indicatorX" min="-20" max="120" value="50">
+          </div>
+          <div class="ve-setting">
+            <label>Vertical Position <span class="value" id="valIndY">90</span></label>
+            <input type="range" id="indicatorY" min="-20" max="120" value="90">
+          </div>
+          <div class="ve-setting">
+            <label>Speed Number Size <span class="value" id="valSpeedSize">138</span>%</label>
+            <input type="range" id="speedSize" min="50" max="200" value="138">
+          </div>
+          <div class="ve-setting">
+            <label>Unit Text Size <span class="value" id="valUnitSize">90</span>%</label>
+            <input type="range" id="unitSize" min="10" max="200" value="90">
+          </div>
+          <div class="ve-setting">
+            <label>Speed Y Offset <span class="value" id="valSpeedY">-15</span></label>
+            <input type="range" id="speedY" min="-50" max="50" value="-15">
+          </div>
+          <div class="ve-setting">
+            <label>Unit Y Offset <span class="value" id="valUnitY">-5</span></label>
+            <input type="range" id="unitY" min="-50" max="50" value="-5">
+          </div>
+        </div>
+
+        <!-- Tab: Telemetry Elements -->
+        <div class="tab-pane fade" id="tabElements">
+          <div class="ve-setting">
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="showSpeed"><label class="form-check-label" for="showSpeed">Speed</label></div>
+          </div>
+          <div class="ve-setting">
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="showMaxSpeed" checked><label class="form-check-label" for="showMaxSpeed">Max Speed</label></div>
+          </div>
+          <div class="ve-setting">
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="showVoltage" checked><label class="form-check-label" for="showVoltage">Voltage</label></div>
+          </div>
+          <div class="ve-setting">
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="showTemp" checked><label class="form-check-label" for="showTemp">Temperature</label></div>
+          </div>
+          <div class="ve-setting">
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="showBattery" checked><label class="form-check-label" for="showBattery">Battery</label></div>
+          </div>
+          <div class="ve-setting">
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="showGPS" checked><label class="form-check-label" for="showGPS">GPS Speed</label></div>
+          </div>
+          <div class="ve-setting">
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="showMileage" checked><label class="form-check-label" for="showMileage">Mileage</label></div>
+          </div>
+          <div class="ve-setting">
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="showPWM" checked><label class="form-check-label" for="showPWM">PWM</label></div>
+          </div>
+          <div class="ve-setting">
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="showPower" checked><label class="form-check-label" for="showPower">Power</label></div>
+          </div>
+          <div class="ve-setting">
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="showCurrent" checked><label class="form-check-label" for="showCurrent">Current</label></div>
+          </div>
+          <div class="ve-setting">
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="showTime"><label class="form-check-label" for="showTime">Time</label></div>
+          </div>
+          <hr class="my-2" style="border-color:#2d3238">
+          <div class="ve-setting">
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="showDragySpeed"><label class="form-check-label" for="showDragySpeed">Dragy Speed</label></div>
+          </div>
+          <hr class="my-2" style="border-color:#2d3238">
+          
+          <hr class="my-2" style="border-color:#2d3238">
+          <div class="ve-setting">
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="showBottomElements" checked><label class="form-check-label" for="showBottomElements">Speed Indicator (Arc)</label></div>
+          </div>
+          <div class="ve-setting">
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="useIcons"><label class="form-check-label" for="useIcons">Use Icons</label></div>
+          </div>
+          <hr style="border-color:#2d3238;margin:8px 0">
+          <div class="ve-setting">
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="debugOverlay"><label class="form-check-label" for="debugOverlay">Debug Info</label></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Video Preview -->
+    <div class="ve-preview">
+      <div class="ve-preview-container" id="previewContainer">
+        <video id="editorVideo" preload="auto" playsinline style="display:none"></video>
+        <canvas id="overlayCanvas" style="display:none"></canvas>
+        <!-- Placeholder -->
+        <div class="ve-placeholder" id="videoPlaceholder">
+          <i class="bi bi-camera-video"></i>
+          <div>Drop a video file here or click "Upload Video"</div>
+        </div>
+      </div>
+      <!-- Player Controls -->
+      <div class="ve-controls">
+        <button class="btn" id="btnPlayPause" title="Play/Pause"><i class="bi bi-play-fill" id="playIcon"></i></button>
+        <input type="range" class="ve-seek" id="seekBar" min="0" max="1000" value="0">
+        <span class="ve-time"><span id="currentTime">00:00:00</span> / <span id="totalTime">00:00:00</span></span>
+        <button class="btn" id="btnFullscreen" title="Fullscreen"><i class="bi bi-fullscreen"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Timeline -->
+  <div class="ve-timeline">
+    <!-- Timeline header with zoom controls -->
+    <div class="ve-timeline-header">
+      <div class="ve-ruler-label">
+        <div class="ve-zoom-controls">
+          <button class="btn btn-sm" id="btnZoomOut" title="Zoom Out"><i class="bi bi-zoom-out"></i></button>
+          <button class="btn btn-sm" id="btnZoomFit" title="Fit All"><i class="bi bi-arrows-angle-expand"></i></button>
+          <button class="btn btn-sm" id="btnZoomIn" title="Zoom In"><i class="bi bi-zoom-in"></i></button>
+          <button class="btn btn-sm" id="btnTrimToggle" title="Trim mode"><i class="bi bi-scissors"></i></button>
+        </div>
+      </div>
+      <div class="ve-ruler">
+        <canvas id="rulerCanvas"></canvas>
+      </div>
+    </div>
+
+    <!-- Playhead scrub bar -->
+    <div class="ve-playhead-bar">
+      <div class="ve-playhead-bar-label"></div>
+      <div class="ve-playhead-bar-content" id="playheadBarContent">
+        <div class="ve-playhead-ruler" id="playheadRuler">
+          <div class="ve-playhead-handle"></div>
+          <div class="ve-playhead-grab"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tracks -->
+    <div class="ve-tracks">
+      <div class="ve-playhead-line" id="playheadLine"></div>
+      <!-- Video Track -->
+      <div class="ve-track" id="videoTrackRow">
+        <div class="ve-track-label"><i class="bi bi-camera-video"></i> Video Track</div>
+        <div class="ve-track-content" id="videoTrackContent">
+          <div class="ve-video-strip" id="videoStrip"></div>
+
+        </div>
+      </div>
+
+      <!-- CSV Data Track -->
+      <div class="ve-track" id="csvTrackRow">
+        <div class="ve-track-label"><i class="bi bi-file-earmark-bar-graph"></i> CSV Data</div>
+        <div class="ve-track-content" id="csvTrackContent">
+          <div class="ve-csv-track" id="csvTrack" style="display:none">
+            <canvas id="csvWaveformCanvas"></canvas>
+            <div class="ve-trim-handle left" id="trimLeft"></div>
+            <div class="ve-trim-handle right" id="trimRight"></div>
+            <button class="ve-trim-scissors" id="btnTrimCropLeft" title="Trim start">&#9986;</button>
+            <button class="ve-trim-scissors" id="btnTrimCropRight" title="Trim end">&#9986;</button>
+          </div>
+          <div class="ve-trim-arrow left" id="csvTrimArrowLeft">&#9664;</div>
+          <div class="ve-trim-arrow right" id="csvTrimArrowRight">&#9654;</div>
+        </div>
+      </div>
+
+      <!-- VBO Data Track -->
+      <div class="ve-track" id="vboTrackRow" style="display:none">
+        <div class="ve-track-label">
+          <i class="bi bi-speedometer2"></i> VBO (Dragy)
+          <button class="btn btn-sm text-danger p-0 ms-auto" id="btnVboRemove" title="Remove VBO"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="ve-track-content" id="vboTrackContent">
+          <div class="ve-csv-track" id="vboTrack" style="display:none">
+            <canvas id="vboWaveformCanvas"></canvas>
+            <div class="ve-trim-handle left" id="vboTrimLeft"></div>
+            <div class="ve-trim-handle right" id="vboTrimRight"></div>
+            <button class="ve-trim-scissors" id="vboBtnTrimCropLeft" title="Trim start">&#9986;</button>
+            <button class="ve-trim-scissors" id="vboBtnTrimCropRight" title="Trim end">&#9986;</button>
+          </div>
+          <div class="ve-trim-arrow left" id="vboTrimArrowLeft">&#9664;</div>
+          <div class="ve-trim-arrow right" id="vboTrimArrowRight">&#9654;</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/video-editor.css') }}?v=1773585846">
+<script src="{{ url_for('static', filename='js/video-editor.js') }}?v=1773585846"></script>
+{% endblock %}

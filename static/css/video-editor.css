@@ -1,0 +1,557 @@
+/* Video Editor — Full-width layout */
+.video-editor-page .container.flex-grow-1,
+.container.flex-grow-1:has(.video-editor-page) {
+  max-width: 100% !important;
+  padding: 0 !important;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+.video-editor-page .navbar { margin-bottom: 0 !important; }
+.video-editor-page .footer { display: none; }
+
+/* Top Bar */
+.ve-topbar {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 10px;
+  padding: 8px 12px;
+  background: #1a1d21;
+  border-bottom: 1px solid #2d3238;
+}
+.ve-topbar input[type="text"] {
+  background: #2d3238;
+  border: 1px solid #3d4248;
+  color: #e0e0e0;
+  border-radius: 6px;
+  padding: 6px 12px;
+  width: 200px;
+}
+.ve-topbar .btn { white-space: nowrap; }
+.ve-topbar .spacer { flex: 1; }
+
+/* Upload progress */
+.ve-upload-progress {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #8b949e;
+}
+.ve-upload-progress .progress {
+  width: 120px;
+  height: 6px;
+}
+.ve-upload-progress.active { display: flex; }
+
+/* Main Layout — 3 panels */
+.ve-main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Left sidebar — settings */
+.ve-sidebar {
+  width: 300px;
+  min-width: 300px;
+  background: #1a1d21;
+  border-right: 1px solid #2d3238;
+  overflow-y: auto;
+  overflow-x: hidden;
+  align-self: stretch;
+}
+.ve-sidebar .nav-tabs {
+  font-size: 12px;
+  border-bottom: 1px solid #2d3238;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #1a1d21;
+}
+.ve-sidebar .nav-tabs .nav-link {
+  color: #8b949e;
+  border: none;
+  padding: 8px 12px;
+  font-size: 11px;
+}
+.ve-sidebar .nav-tabs .nav-link.active {
+  color: #e0e0e0;
+  background: transparent;
+  border-bottom: 2px solid #0d6efd;
+}
+.ve-sidebar .tab-content {
+  padding: 12px;
+}
+
+/* Settings controls */
+.ve-setting {
+  margin-bottom: 12px;
+}
+.ve-setting label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #8b949e;
+  margin-bottom: 4px;
+}
+.ve-setting label .value {
+  color: #e0e0e0;
+  font-weight: 500;
+  min-width: 40px;
+  text-align: right;
+}
+.ve-setting input[type="range"] {
+  width: 100%;
+  height: 4px;
+  accent-color: #0d6efd;
+}
+.ve-setting .form-check {
+  font-size: 13px;
+}
+.ve-setting .form-check-input {
+  margin-top: 0.2em;
+}
+
+/* Preview area */
+.ve-preview {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #0d1117;
+  overflow: hidden;
+  min-height: 0;
+}
+.ve-preview-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  background: #000;
+  min-height: 0;
+}
+.ve-preview-container video {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.ve-preview-container canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+/* Placeholder when no video loaded */
+.ve-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #484f58;
+  font-size: 14px;
+  gap: 12px;
+}
+.ve-placeholder i { font-size: 48px; }
+
+/* Player controls */
+.ve-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #161b22;
+  border-top: 1px solid #2d3238;
+}
+.ve-controls .btn {
+  padding: 4px 8px;
+  font-size: 14px;
+  color: #e0e0e0;
+  background: none;
+  border: none;
+}
+.ve-controls .btn:hover { color: #fff; }
+.ve-controls .ve-seek {
+  flex: 1;
+  height: 4px;
+  accent-color: #0d6efd;
+  cursor: pointer;
+}
+.ve-controls .ve-time {
+  font-size: 12px;
+  color: #8b949e;
+  font-family: monospace;
+  white-space: nowrap;
+}
+
+/* Timeline */
+.ve-timeline {
+  background: #161b22;
+  border-top: 1px solid #2d3238;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+/* Timeline header (ruler + zoom buttons) */
+.ve-timeline-header {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid #2d3238;
+  background: #1a1d21;
+  flex-shrink: 0;
+}
+.ve-ruler {
+  flex: 1;
+  height: 24px;
+  position: relative;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.ve-ruler::-webkit-scrollbar { display: none; }
+.ve-ruler canvas {
+  width: 100%;
+  height: 100%;
+}
+.ve-ruler-label {
+  width: 120px;
+  min-width: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1a1d21;
+  border-right: 1px solid #2d3238;
+}
+.ve-zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0 1px;
+}
+.ve-zoom-controls .btn {
+  padding: 1px 4px;
+  font-size: 12px;
+  color: #8e959e;
+  line-height: 1;
+}
+.ve-zoom-controls .btn:hover {
+  color: #fff;
+}
+
+/* Timeline tracks area */
+.ve-tracks {
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Single track row */
+.ve-track {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid #21262d;
+  min-height: 60px;
+}
+.ve-track-label {
+  width: 120px;
+  min-width: 120px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #8b949e;
+  background: #1a1d21;
+  border-right: 1px solid #2d3238;
+}
+.ve-track-label i { font-size: 14px; }
+.ve-track-content {
+  flex: 1;
+  position: relative;
+  overflow-x: auto;
+  overflow-y: hidden;
+  cursor: default;
+}
+.ve-track-content::-webkit-scrollbar { display: none; }
+
+/* Video track thumbnails */
+.ve-video-strip {
+  display: flex;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+.ve-video-strip canvas {
+  height: 100%;
+  flex-shrink: 0;
+}
+
+/* CSV waveform track */
+.ve-csv-track {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  cursor: grab;
+  min-width: 50px;
+  border: 1px solid rgba(60, 130, 255, 0.3);
+  border-radius: 3px;
+  box-sizing: border-box;
+}
+.ve-csv-track:active { cursor: grabbing; }
+.ve-csv-track canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+}
+
+/* Trim handles */
+.ve-trim-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  background: rgba(255, 165, 0, 0.9);
+  cursor: ew-resize;
+  z-index: 5;
+  transition: background 0.15s, width 0.15s;
+  display: none;
+}
+.ve-trim-handle:hover {
+  background: rgba(255, 165, 0, 1);
+  width: 10px;
+}
+.ve-trim-handle.left { border-radius: 4px 0 0 4px; }
+.ve-trim-handle.right { border-radius: 0 4px 4px 0; }
+/* Grip dots inside handle */
+.ve-trim-handle::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: rgba(0,0,0,0.5);
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* Playhead scrub bar — dedicated row between ruler and tracks */
+.ve-playhead-bar {
+  display: flex;
+  align-items: stretch;
+  height: 18px;
+  background: #12161b;
+  border-bottom: 1px solid #2d3238;
+  flex-shrink: 0;
+}
+.ve-playhead-bar-label {
+  width: 120px;
+  min-width: 120px;
+  background: #12161b;
+  border-right: 1px solid #2d3238;
+}
+.ve-playhead-bar-content {
+  flex: 1;
+  position: relative;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.ve-playhead-bar-content::-webkit-scrollbar { display: none; }
+
+/* Playhead — unified: handle in scrub bar, line through all tracks */
+.ve-playhead-ruler {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #e03131;
+  z-index: 20;
+  pointer-events: none;
+  left: 0;
+}
+.ve-playhead-ruler .ve-playhead-handle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+  background: #e03131;
+  border-radius: 50%;
+  border: 2px solid #ff4444;
+  cursor: grab;
+  z-index: 25;
+  pointer-events: auto;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+}
+.ve-playhead-ruler .ve-playhead-handle:hover {
+  background: #ff4444;
+  transform: translate(-50%, -50%) scale(1.2);
+}
+.ve-playhead-ruler .ve-playhead-grab {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: grab;
+  pointer-events: auto;
+  z-index: 22;
+}
+.ve-playhead-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #e03131;
+  z-index: 10;
+  pointer-events: none;
+  left: 0;
+}
+
+
+/* Trim handle off-screen arrow indicators */
+.ve-trim-arrow {
+  display: none;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(255, 165, 0, 0.95);
+  font-size: 18px;
+  z-index: 30;
+  pointer-events: none;
+  line-height: 1;
+  text-shadow: 0 0 6px rgba(255, 165, 0, 0.7), 0 0 2px rgba(0,0,0,0.8);
+}
+.ve-trim-arrow.left {
+  left: 4px;
+}
+.ve-trim-arrow.right {
+  right: 4px;
+}
+.ve-trim-arrow.visible {
+  display: block;
+}
+/* Drop zone highlight */
+.ve-drop-active {
+  outline: 2px dashed #0d6efd;
+  outline-offset: -2px;
+  background: rgba(13, 110, 253, 0.05) !important;
+}
+
+/* Export dropdown */
+.ve-export-settings {
+  padding: 12px;
+  min-width: 220px;
+}
+.ve-export-settings label {
+  font-size: 12px;
+  color: #8b949e;
+  margin-bottom: 4px;
+}
+.ve-export-settings select, .ve-export-settings input {
+  font-size: 13px;
+}
+
+/* Scrollbar styles */
+.ve-sidebar::-webkit-scrollbar,
+.ve-tracks::-webkit-scrollbar {
+  width: 6px;
+}
+.ve-sidebar::-webkit-scrollbar-track,
+.ve-tracks::-webkit-scrollbar-track {
+  background: transparent;
+}
+.ve-sidebar::-webkit-scrollbar-thumb,
+.ve-tracks::-webkit-scrollbar-thumb {
+  background: #30363d;
+  border-radius: 3px;
+}
+
+/* Drag-over visual feedback */
+.ve-dragover {
+  outline: 2px dashed #0d6efd !important;
+  outline-offset: -2px;
+  background: rgba(13, 110, 253, 0.08) !important;
+}
+
+/* Video thumbnails in strip */
+.ve-thumb {
+  height: 50px;
+  display: block;
+  flex-shrink: 0;
+}
+
+/* Full-width layout override */
+.video-editor-page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+.video-editor-page > .container {
+  max-width: 100% !important;
+  padding: 0 !important;
+}
+
+/* Hide footer in editor */
+.video-editor-page ~ footer,
+body:has(.video-editor-page) footer {
+  display: none;
+}
+
+
+.ve-trim-scissors {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #2d3238;
+  border: 1px solid rgba(255,165,0,0.6);
+  color: #ffa500;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 12px;
+  cursor: pointer;
+  z-index: 15;
+  line-height: 1.2;
+  display: none;
+  white-space: nowrap;
+}
+.ve-trim-scissors:hover { background: #3d4248; }
+.ve-trim-scissors.visible { display: block; }
+/* Prevent page-level vertical scroll — editor fills exact 100vh */
+body:has(.video-editor-page) {
+  overflow: hidden;
+  height: 100vh;
+  max-height: 100vh;
+  min-height: 100vh;
+}
+
+/* VBO add-track button */
+.ve-add-track-row {
+  padding: 4px 8px;
+  border-top: 1px solid #2d3238;
+}
+.ve-add-track-row .btn {
+  font-size: 0.75rem;
+  padding: 2px 10px;
+}
+
+/* Trim toggle active state */
+.ve-zoom-controls .btn.trim-active {
+  color: #ffa500 !important;
+  background: rgba(255, 165, 0, 0.15);
+}

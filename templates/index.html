@@ -8,6 +8,20 @@
                 <h2 class="card-title">{{ _('Create New Project') }}</h2>
             </div>
             <div class="card-body">
+                <!-- Editor Choice -->
+                <div class="mb-4 p-3 rounded" style="background: rgba(13,110,253,0.08); border: 1px solid rgba(13,110,253,0.2);">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div>
+                            <h6 class="mb-1"><i class="bi bi-film"></i> Video Editor <span class="badge bg-primary">NEW</span></h6>
+                            <small class="text-muted">Upload your ride video + CSV, sync them visually, preview overlay in real-time, and export the final composited video.</small>
+                        </div>
+                        <a href="/video-editor" class="btn btn-primary btn-sm">
+                            <i class="bi bi-camera-reels"></i> Open Video Editor
+                        </a>
+                    </div>
+                </div>
+
+                <h6 class="text-muted mb-3"><i class="bi bi-speedometer2"></i> Classic Mode — Generate overlay video from CSV</h6>
                 <form id="uploadForm">
                     <div class="mb-3">
                         <label for="projectName" class="form-label">{{ _('Project Name') }}</label>

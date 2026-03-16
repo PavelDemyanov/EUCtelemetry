@@ -112,6 +112,48 @@ class Project(db.Model):
         seconds = int(delta.total_seconds() % 60)
         return f"{minutes}:{seconds:02d}"
 
+    def get_resolution_display(self):
+        """Return human-readable resolution string"""
+        if not self.resolution:
+            return '–'
+        mapping = {'fullhd': '1080p', '4k': '4K', '1080p': '1080p'}
+        return mapping.get(self.resolution.lower(), self.resolution.upper())
+
+    def get_codec_display(self):
+        """Return human-readable codec string"""
+        if not self.codec:
+            return '–'
+        mapping = {'h264': 'H.264', 'h265': 'H.265', 'hevc': 'H.265'}
+        return mapping.get(self.codec.lower(), self.codec.upper())
+
+    def hours_until_expiry(self):
+        """Return hours until expiry as a float (for template logic)"""
+        if self.expiry_date:
+            delta = self.expiry_date - datetime.utcnow()
+            return max(0, delta.total_seconds() / 3600)
+        return 0
+
+    def get_expiry_display(self):
+        """Return formatted expiry string (e.g. '2d 5h' or '3h 12m')"""
+        if not self.expiry_date:
+            return 'expired'
+        delta = self.expiry_date - datetime.utcnow()
+        total_seconds = delta.total_seconds()
+        if total_seconds <= 0:
+            return 'expired'
+        hours = int(total_seconds // 3600)
+        minutes = int((total_seconds % 3600) // 60)
+        if hours >= 24:
+            days = hours // 24
+            rem_h = hours % 24
+            return f"{days}d {rem_h}h"
+        elif hours > 0:
+            return f"{hours}h {minutes}m"
+        elif minutes > 0:
+            return f"{minutes}m"
+        else:
+            return 'expiring' 
+
     @classmethod
     def get_next_folder_number(cls):
         """Find the next available folder number"""

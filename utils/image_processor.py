@@ -25,7 +25,8 @@ def create_speed_indicator(speed,
                            unit_size=100,
                            indicator_scale=100,
                            resolution='fullhd',
-                           locale='en'):
+                           locale='en',
+                           show_background_arc=False):
     """
     Создает индикатор скорости в виде полукруглой дуги
     :param speed: Скорость (0-100 км/ч)
@@ -122,6 +123,28 @@ def create_speed_indicator(speed,
     # Создаем финальное изображение с правильным размером
     final_image = Image.new('RGBA', (size, size), (0, 0, 0, 0))
 
+    # Draw background arc (gauge track) if enabled — matches Canvas preview
+    if show_background_arc:
+        bg_arc_img = Image.new('RGBA', (arc_size, arc_size), (0, 0, 0, 0))
+        bg_draw = ImageDraw.Draw(bg_arc_img)
+        # Full gauge range: 150° to 390° (same as Canvas degToRad(150) to degToRad(390))
+        bg_draw.arc([10, 10, arc_size - 10, arc_size - 10],
+                    start=150, end=390,
+                    fill=(60, 60, 60, 128),  # rgba(60,60,60,0.5)
+                    width=arc_width)
+        # Rounded ends for background arc
+        bg_start_angle = 150
+        bg_end_angle = 390
+        for angle in [bg_start_angle, bg_end_angle]:
+            ex = arc_center + (arc_radius - arc_width // 2) * math.cos(math.radians(angle))
+            ey = arc_center + (arc_radius - arc_width // 2) * math.sin(math.radians(angle))
+            bg_draw.ellipse([ex - corner_radius, ey - corner_radius,
+                             ex + corner_radius, ey + corner_radius],
+                            fill=(60, 60, 60, 128))
+        bg_paste_x = (size - arc_size) // 2
+        bg_paste_y = (size - arc_size) // 2
+        final_image.paste(bg_arc_img, (bg_paste_x, bg_paste_y), bg_arc_img)
+
     # Центрируем дугу на финальном изображении
     paste_x = (size - arc_size) // 2
     paste_y = (size - arc_size) // 2
@@ -156,20 +179,43 @@ def create_speed_indicator(speed,
     unit_text_width = unit_bbox[2] - unit_bbox[0]
     unit_text_height = unit_bbox[3] - unit_bbox[1]
 
-    # Масштабируем смещения в зависимости от разрешения
-    scaled_speed_offset = (speed_offset[0],
-                           int(speed_offset[1] * resolution_scale))
-    scaled_unit_offset = (unit_offset[0],
-                          int(unit_offset[1] * resolution_scale))
-
-    # Позиционирование текста с учетом масштабированных смещений
+    # Scale offsets for positioning
     center = size // 2
-    speed_x = center - speed_text_width // 2
-    speed_y = center - speed_text_height // 2 - unit_text_height // 2 + scaled_speed_offset[
-        1]
 
-    unit_x = center - unit_text_width // 2
-    unit_y = speed_y + speed_text_height + 5 + scaled_unit_offset[1]
+    if show_background_arc:
+        # Video Editor mode: match Canvas positioning exactly
+        # Frontend uses offset * sf where sf = canvasWidth/1920
+        # Gauge image is size px, equivalent to baseSize=250 at sf=1
+        # So offset_scale = size / 250.0 to match frontend proportions
+        offset_scale = size / 250.0
+        scaled_speed_y = int(speed_offset[1] * offset_scale)
+        scaled_unit_y = int(unit_offset[1] * offset_scale)
+
+        # IMPORTANT: Pillow textbbox returns y0 != 0 (font ascent offset).
+        # draw.text() positions from font origin, so actual pixels start at y + bbox[1].
+        # We must subtract bbox[1] to center on the ACTUAL rendered pixels.
+        speed_y0_offset = speed_bbox[1]  # typically ~40px for large bold font
+        unit_y0_offset = unit_bbox[1]    # typically ~14px
+
+        # Canvas: speed text centered at (gaugeCenter + speed_y * sf), textBaseline=middle
+        speed_x = center - speed_text_width // 2
+        speed_visual_center = center + scaled_speed_y
+        speed_y = speed_visual_center - speed_text_height // 2 - speed_y0_offset
+
+        # Canvas: KM/H at (gaugeCenter + speedFontSize/2 + unitFontSize/2 + unit_y * sf)
+        unit_x = center - unit_text_width // 2
+        unit_visual_center = center + base_speed_font_size // 2 + base_unit_font_size // 2 + scaled_unit_y
+        unit_y = unit_visual_center - unit_text_height // 2 - unit_y0_offset
+    else:
+        # Classic mode: legacy positioning (group speed+unit centered)
+        scaled_speed_offset_y = int(speed_offset[1] * resolution_scale)
+        scaled_unit_offset_y = int(unit_offset[1] * resolution_scale)
+
+        speed_x = center - speed_text_width // 2
+        speed_y = center - speed_text_height // 2 - unit_text_height // 2 + scaled_speed_offset_y
+
+        unit_x = center - unit_text_width // 2
+        unit_y = speed_y + speed_text_height + 5 + scaled_unit_offset_y
 
     # Рисуем тексты
     draw.text((speed_x, speed_y),

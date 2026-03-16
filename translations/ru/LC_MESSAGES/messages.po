@@ -449,13 +449,8 @@ msgstr "Кадры"
 msgid "FPS"
 msgstr "FPS"
 
-#, fuzzy
 msgid "Resolution"
-msgstr ""
-"#-#-#-#-#  messages.po (PROJECT VERSION)  #-#-#-#-#\n"
-"Разреш.\n"
-"#-#-#-#-#  messages.po (PROJECT VERSION)  #-#-#-#-#\n"
-"Разрешение"
+msgstr "Разрешение"
 
 msgid "Codec"
 msgstr "Кодек"
@@ -464,7 +459,7 @@ msgid "Duration"
 msgstr "Длит."
 
 msgid "Proc. Time"
-msgstr "Обработ."
+msgstr "Обработка"
 
 msgid "Expires In"
 msgstr "Истекает"
@@ -1005,3 +1000,21 @@ msgstr "Вертикальное положение иконок"
 
 msgid "Adjust icon position relative to text"
 msgstr "Настроить положение иконок относительно текста"
+
+msgid "Expires"
+msgstr "Истекает"
+
+msgid "expired"
+msgstr "истёк"
+
+msgid "d"
+msgstr "д"
+
+msgid "h"
+msgstr "ч"
+
+msgid "m"
+msgstr "м"
+
+msgid "No projects yet"
+msgstr "Проектов пока нет"

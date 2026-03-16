@@ -152,3 +152,113 @@ def create_video(folder_number, fps=29.97, codec='h264', resolution='fullhd', pr
     except Exception as e:
         logging.error(f"Error creating video: {e}")
         raise
+
+
+def create_composite_video(source_video, overlay_frames_dir, output_file, fps=29.97, codec='h264', progress_callback=None, source_width=None, source_height=None):
+    """Composite overlay frames onto source video using FFmpeg overlay filter.
+    Preserves audio from source video."""
+    try:
+        os.makedirs(os.path.dirname(output_file) or '.', exist_ok=True)
+
+        # Get overlay frame count
+        frame_files = sorted([f for f in os.listdir(overlay_frames_dir) if f.startswith('frame_') and f.endswith('.png')])
+        total_frames = len(frame_files)
+        if total_frames == 0:
+            raise ValueError('No overlay frames found')
+
+        # Determine encoder
+        if is_apple_silicon():
+            encoder = 'h264_videotoolbox' if codec == 'h264' else 'hevc_videotoolbox'
+        else:
+            encoder = 'libx264' if codec == 'h264' else 'libx265'
+
+        bitrate = '12M'
+
+        command = ['ffmpeg', '-y']
+
+        # Hardware acceleration for decoding (Apple Silicon)
+        if is_apple_silicon():
+            command.extend(['-hwaccel', 'videotoolbox'])
+
+        # Input: source video
+        command.extend(['-i', source_video])
+
+        # Input: overlay image sequence at specified FPS
+        command.extend([
+            '-framerate', str(fps),
+            '-i', os.path.join(overlay_frames_dir, 'frame_%06d.png'),
+        ])
+
+        # Filter: scale overlay to match source video, then overlay with alpha
+        if source_width and source_height:
+            filter_str = f'[1:v]scale={source_width}:{source_height}[ov];[0:v][ov]overlay=0:0:shortest=1'
+        else:
+            filter_str = '[0:v][1:v]overlay=0:0:shortest=1'
+        command.extend([
+            '-filter_complex', filter_str,
+        ])
+
+        # Encoder settings
+        if is_apple_silicon():
+            command.extend([
+                '-c:v', encoder,
+                '-allow_sw', '1',
+                '-b:v', bitrate,
+                '-profile:v', 'main',
+                '-pix_fmt', 'yuv420p',
+            ])
+            if codec == 'h265':
+                command.extend(['-tag:v', 'hvc1'])
+            else:
+                command.extend(['-tag:v', 'avc1'])
+        else:
+            command.extend([
+                '-c:v', encoder,
+                '-pix_fmt', 'yuv420p',
+            ])
+            if codec == 'h264':
+                command.extend(['-preset', 'medium', '-crf', '23'])
+            else:
+                command.extend(['-preset', 'medium', '-crf', '28', '-tag:v', 'hvc1'])
+
+        # Copy audio from source
+        command.extend(['-c:a', 'copy'])
+
+        command.append(output_file)
+
+        logging.info(f"FFmpeg composite command: {' '.join(command)}")
+
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+            bufsize=1
+        )
+
+        frame_pattern = re.compile(r'frame=\s*(\d+)')
+        error_output = []
+
+        while True:
+            line = process.stderr.readline()
+            if not line and process.poll() is not None:
+                break
+            error_output.append(line)
+            frame_match = frame_pattern.search(line)
+            if frame_match and progress_callback:
+                current_frame = int(frame_match.group(1))
+                progress_callback(current_frame, total_frames, 'video')
+
+        if process.returncode != 0:
+            error_msg = ''.join(error_output)
+            logging.error(f"FFmpeg composite error: {error_msg}")
+            raise Exception(f"FFmpeg composite failed: {error_msg}")
+
+        if progress_callback:
+            progress_callback(total_frames, total_frames, 'video')
+
+        return output_file
+
+    except Exception as e:
+        logging.error(f"Error creating composite video: {e}")
+        raise

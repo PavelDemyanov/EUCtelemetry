@@ -308,7 +308,8 @@ def create_frame(values,
                   output_path=None,
                   text_settings=None,
                   locale='en',
-                  static_box_widths=None):
+                  static_box_widths=None,
+                  background_mode="blue"):
     try:
         # Определяем разрешение и масштаб
         if resolution == "4k":
@@ -320,8 +321,11 @@ def create_frame(values,
             scale_factor = 1.0
             indicator_size = 500  # Стандартный размер для Full HD
 
-        # Создаем синий фон и прозрачный оверлей
-        background = Image.new('RGBA', (width, height), (0, 0, 255, 255))
+        # Create background based on mode
+        if background_mode == "transparent":
+            background = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        else:
+            background = Image.new("RGBA", (width, height), (0, 0, 255, 255))
         overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
         draw = ImageDraw.Draw(overlay)
 
@@ -356,19 +360,38 @@ def create_frame(values,
         # Only create and paste speed indicator if bottom elements are enabled
         if show_bottom_elements:
             loc = _LOCALIZATION.get(locale, _LOCALIZATION['en'])
+            show_bg_arc = text_settings.get('center_based_indicator', False)
+
+            # Video Editor: use smaller gauge (half of 4K default) for cleaner proportions
+            ve_indicator_size = indicator_size
+            ve_resolution = resolution
+            if show_bg_arc:  # center_based_indicator = Video Editor mode
+                ve_indicator_size = 500  # ~13% of 4K width (vs 26% default)
+                ve_resolution = 'fullhd'  # base_width=20 to match proportions
+
             speed_indicator = create_speed_indicator(
                 values['speed'],
-                size=indicator_size,
+                size=ve_indicator_size,
                 speed_offset=(0, speed_y_offset),
                 unit_offset=(0, unit_y_offset),
                 speed_size=speed_size,
                 unit_size=unit_size,
                 indicator_scale=indicator_scale,
-                resolution=resolution,
-                locale=locale)
+                resolution=ve_resolution,
+                locale=locale,
+                show_background_arc=show_bg_arc)
 
-            indicator_x = int((width - indicator_size) * indicator_x_percent / 100)
-            indicator_y = int((height - indicator_size) * indicator_y_percent / 100)
+            # Position indicator
+            if text_settings.get('center_based_indicator', False):
+                # Video Editor mode: percent = center of gauge (matching Canvas)
+                indicator_center_x = int(width * indicator_x_percent / 100)
+                indicator_center_y = int(height * indicator_y_percent / 100)
+                indicator_x = indicator_center_x - ve_indicator_size // 2
+                indicator_y = indicator_center_y - ve_indicator_size // 2
+            else:
+                # Classic mode: percent of available space (legacy formula)
+                indicator_x = int((width - indicator_size) * indicator_x_percent / 100)
+                indicator_y = int((height - indicator_size) * indicator_y_percent / 100)
             background.paste(speed_indicator, (indicator_x, indicator_y),
                               speed_indicator)
 
@@ -615,10 +638,13 @@ def create_frame(values,
         result = Image.alpha_composite(background, overlay)
 
         if output_path:
-            result.convert('RGB').save(output_path,
-                                        format='PNG',
-                                        quality=95,
-                                        optimize=True)
+            if background_mode == 'transparent':
+                result.save(output_path, format='PNG')
+            else:
+                result.convert('RGB').save(output_path,
+                                            format='PNG',
+                                            quality=95,
+                                            optimize=True)
             logging.debug(f"Saved frame to {output_path}")
 
         return result

@@ -1,156 +1,427 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="card">
-    <div class="card-header">
-        <h2 class="card-title">{{ _('Projects') }}</h2>
-    </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>{{ _('Name') }}</th>
-                        <th>{{ _('Created') }}</th>
-                        <th>{{ _('Type') }}</th>
-                        <th>{{ _('Status') }}</th>
-                        <th>{{ _('Frames') }}</th>
-                        <th>{{ _('FPS') }}</th>
-                        <th>{{ _('Resolution') }}</th>
-                        <th>{{ _('Codec') }}</th>
-                        <th>{{ _('Duration') }}</th>
-                        <th>{{ _('Proc. Time') }}</th>
-                        <th>{{ _('Expires In') }}</th>
-                        <th>{{ _('Actions') }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for project in projects.items %}
-                    <tr>
-                        <td>{{ project.name }}</td>
-                        <td data-timestamp="{{ project.created_at.timestamp() }}">
-                            {{ project.created_at.strftime('%Y-%m-%d %H:%M') }}
-                        </td>
-                        <td>{{ project.csv_type }}</td>
-                        <td>
-                            <span class="badge text-bg-{{ 
-                                'warning' if project.status == 'processing' else
-                                'success' if project.status == 'completed' else
-                                'danger' if project.status == 'error' else
-                                'secondary' 
-                            }}"
-                            data-project-id="{{ project.id }}"
-                            data-project-status="{{ project.status }}"
-                            {% if project.status == 'error' and project.error_message %}
-                            title="{{ project.error_message }}"
-                            {% endif %}
-                            >{{ _(project.status.capitalize()) }}
-                            {% if project.status == 'processing' %}
-                            ({{ "%d"|format(project.progress) }}%)
-                            {% endif %}
-                            </span>
-                        </td>
-                        <td>{{ project.frame_count }}</td>
-                        <td>{{ project.fps }}</td>
-                        <td>{{ project.resolution|upper if project.resolution else '-' }}</td>
-                        <td>{{ project.codec|upper if project.codec else '-' }}</td>
-                        <td>{{ project.get_duration_str() }}</td>
-                        <td>{{ project.get_processing_time_str() }}</td>
-                        <td>{{ project.time_until_expiry() }}</td>
-                        <td>
-                            <a href="{{ url_for('download_file', project_id=project.id, type='processed_csv') }}" 
-                               class="btn btn-sm btn-info">
-                                <i class="bi bi-download"></i> {{ _('CSV') }}
-                            </a>
-                            {% if project.status == 'completed' %}
-                            <a href="{{ url_for('download_file', project_id=project.id, type='png_archive') }}" 
-                               class="btn btn-sm btn-warning">
-                                <i class="bi bi-download"></i> {{ _('PNG') }}
-                            </a>
-                            {% endif %}
-                            {% if project.video_file %}
-                            <a href="{{ url_for('download_file', project_id=project.id, type='video') }}" 
-                               class="btn btn-sm btn-success">
-                                <i class="bi bi-download"></i> {{ _('Video') }}
-                            </a>
-                            {% endif %}
-                            {% if project.status == 'processing' %}
-                            <button onclick="stopProject({{ project.id }})" 
-                                    class="btn btn-sm btn-warning">
-                                <i class="bi bi-stop-circle"></i> {{ _('Stop') }}
-                            </button>
-                            {% else %}
-                            <button onclick="deleteProject({{ project.id }})" 
-                                    class="btn btn-sm btn-danger">
-                                <i class="bi bi-trash"></i> {{ _('Delete') }}
-                            </button>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+<style>
+/* ── Date Group Headers ── */
+.projects-date-group {
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #8b949e;
+    padding: 1.2rem 0 0.5rem;
+    border-bottom: 1px solid rgba(139,148,158,0.15);
+    margin-bottom: 0.8rem;
+}
+.projects-date-group:first-child {
+    padding-top: 0;
+}
+
+/* ── Projects Grid ── */
+.projects-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    }
+.projects-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+.projects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 1rem;
+    }
+
+/* ── Card ── */
+.project-card {
+    background: #1e2228;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.75rem;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.project-card:hover {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 1px var(--bs-primary);
+}
+
+/* Header bar */
+.project-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--bs-border-color);
+    gap: 0.5rem;
+}
+.project-card-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+.project-card-status {
+    flex-shrink: 0;
+}
+
+/* Body info */
+.project-card-body {
+    padding: 0.75rem 1rem;
+    flex: 1;
+}
+.project-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.3rem 1.25rem;
+}
+.project-info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 0.82rem;
+    line-height: 1.6;
+}
+.project-info-label {
+    color: var(--bs-secondary-color);
+    white-space: nowrap;
+    margin-right: 0.5rem;
+}
+.project-info-value {
+    font-weight: 500;
+    text-align: right;
+    white-space: nowrap;
+}
+
+/* Progress bar inside card */
+.project-progress-wrap {
+    padding: 0 1rem 0.5rem;
+}
+.project-progress-bar {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--bs-border-color);
+    overflow: hidden;
+}
+.project-progress-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--bs-warning);
+    transition: width 0.4s ease;
+}
+
+/* Error tooltip */
+.project-error-msg {
+    padding: 0 1rem 0.5rem;
+    font-size: 0.78rem;
+    color: var(--bs-danger);
+    word-break: break-word;
+}
+
+/* Footer actions */
+.project-card-foot {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.4rem;
+    padding: 0.6rem 1rem;
+    border-top: 1px solid var(--bs-border-color);
+    align-items: center;
+}
+.project-card-foot .btn {
+    font-size: 0.78rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 0.375rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    white-space: nowrap;
+}
+.project-card-foot .btn-delete {
+    margin-left: auto;
+}
+
+/* Expiry badge */
+.expiry-urgent {
+    color: var(--bs-danger) !important;
+    font-weight: 600 !important;
+}
+
+/* ── Responsive ── */
+@media (max-width: 576px) {
+    .projects-grid {
+        grid-template-columns: 1fr;
+    }
+    .project-info-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<div class="projects-header">
+    <h2>{{ _('Projects') }}</h2>
+</div>
+
+{% if projects.items %}
+<div id="projectsContainer" style="padding-bottom: 6rem;">
+    {% for project in projects.items %}
+    <div class="project-card" data-project-id="{{ project.id }}" data-created-ts="{{ project.created_at.timestamp() }}">
+
+        {# ── Header ── #}
+        <div class="project-card-head">
+            <span class="project-card-name" title="{{ project.name }}">{{ project.name }}</span>
+            <span class="project-card-status">
+                <span class="badge text-bg-{{
+                    'warning' if project.status == 'processing' else
+                    'info'    if project.status == 'pending' else
+                    'success' if project.status == 'completed' else
+                    'danger'  if project.status == 'error' else
+                    'secondary'
+                }}"
+                data-project-id="{{ project.id }}"
+                data-project-status="{{ project.status }}"
+                >
+                {%- if project.status == 'processing' -%}
+                    {{ _('Processing') }} {{ "%d"|format(project.progress) }}%
+                {%- elif project.status == 'completed' -%}
+                    {{ _('Completed') }}
+                {%- elif project.status == 'error' -%}
+                    {{ _('Error') }}
+                {%- elif project.status == 'stopped' -%}
+                    {{ _('Stopped') }}
+                {%- elif project.status == 'pending' -%}
+                    {{ _('Pending') }}
+                {%- else -%}
+                    {{ _(project.status.capitalize()) }}
+                {%- endif -%}
+                </span>
+            </span>
         </div>
 
-        {% if projects.pages > 1 %}
-        <nav aria-label="Project navigation" class="mt-4">
-            <ul class="pagination justify-content-center">
-                {% if projects.has_prev %}
-                <li class="page-item">
-                    <a class="page-link" href="{{ url_for('list_projects', page=projects.prev_num) }}">{{ _('Previous') }}</a>
-                </li>
-                {% endif %}
+        {# ── Body ── #}
+        <div class="project-card-body">
+            <div class="project-info-grid">
+                <div class="project-info-item">
+                    <span class="project-info-label">{{ _('Created') }}</span>
+                    <span class="project-info-value" data-timestamp="{{ project.created_at.timestamp() }}">
+                        {{ project.created_at.strftime('%d.%m.%Y %H:%M') }}
+                    </span>
+                </div>
+                <div class="project-info-item">
+                    <span class="project-info-label">{{ _('Duration') }}</span>
+                    <span class="project-info-value">{{ project.get_duration_str() }}</span>
+                </div>
+                <div class="project-info-item">
+                    <span class="project-info-label">{{ _('Frames') }}</span>
+                    <span class="project-info-value">{{ '{:,}'.format(project.frame_count).replace(',', ' ') if project.frame_count else '–' }}</span>
+                </div>
+                <div class="project-info-item">
+                    <span class="project-info-label">FPS</span>
+                    <span class="project-info-value">{{ project.fps }}</span>
+                </div>
+                <div class="project-info-item">
+                    <span class="project-info-label">{{ _('Resolution') }}</span>
+                    <span class="project-info-value">{{ project.get_resolution_display() }}</span>
+                </div>
+                <div class="project-info-item">
+                    <span class="project-info-label">{{ _('Codec') }}</span>
+                    <span class="project-info-value">{{ project.get_codec_display() }}</span>
+                </div>
+                <div class="project-info-item">
+                    <span class="project-info-label">{{ _('Proc. Time') }}</span>
+                    <span class="project-info-value">{{ project.get_processing_time_str() }}</span>
+                </div>
+                <div class="project-info-item">
+                    <span class="project-info-label">{{ _('Expires') }}</span>
+                    <span class="project-info-value {{ 'expiry-urgent' if project.hours_until_expiry() < 12 }}"
+                          data-expiry="{{ project.expiry_date.timestamp() if project.expiry_date else '' }}">
+                        {{ project.get_expiry_display() }}
+                    </span>
+                </div>
+            </div>
+        </div>
 
-                {# Always show first page #}
-                {% if projects.page > 2 %}
-                <li class="page-item">
-                    <a class="page-link" href="{{ url_for('list_projects', page=1) }}">1</a>
-                </li>
-                {% if projects.page > 3 %}
-                <li class="page-item disabled"><span class="page-link">...</span></li>
-                {% endif %}
-                {% endif %}
-
-                {# Show current page and adjacent pages #}
-                {% for page_num in range(projects.page - 1, projects.page + 2) %}
-                    {% if page_num > 0 and page_num <= projects.pages %}
-                    <li class="page-item {% if page_num == projects.page %}active{% endif %}">
-                        <a class="page-link" href="{{ url_for('list_projects', page=page_num) }}">{{ page_num }}</a>
-                    </li>
-                    {% endif %}
-                {% endfor %}
-
-                {# Always show last page #}
-                {% if projects.page < projects.pages - 1 %}
-                {% if projects.page < projects.pages - 2 %}
-                <li class="page-item disabled"><span class="page-link">...</span></li>
-                {% endif %}
-                <li class="page-item">
-                    <a class="page-link" href="{{ url_for('list_projects', page=projects.pages) }}">{{ projects.pages }}</a>
-                </li>
-                {% endif %}
-
-                {% if projects.has_next %}
-                <li class="page-item">
-                    <a class="page-link" href="{{ url_for('list_projects', page=projects.next_num) }}">{{ _('Next') }}</a>
-                </li>
-                {% endif %}
-            </ul>
-        </nav>
+        {# ── Progress bar (processing only) ── #}
+        {% if project.status == 'processing' %}
+        <div class="project-progress-wrap">
+            <div class="project-progress-bar">
+                <div class="project-progress-bar-fill" style="width:{{ project.progress }}%"></div>
+            </div>
+        </div>
         {% endif %}
+
+        {# ── Error message ── #}
+        {% if project.status == 'error' and project.error_message %}
+        <div class="project-error-msg" title="{{ project.error_message }}">
+            {{ project.error_message[:120] }}{% if project.error_message|length > 120 %}…{% endif %}
+        </div>
+        {% endif %}
+
+        {# ── Footer actions ── #}
+        <div class="project-card-foot">
+            <a href="{{ url_for('download_file', project_id=project.id, type='processed_csv') }}"
+               class="btn btn-sm btn-info">
+                <i class="bi bi-download"></i> CSV
+            </a>
+            {% if project.status == 'completed' %}
+            <a href="{{ url_for('download_file', project_id=project.id, type='png_archive') }}"
+               class="btn btn-sm btn-warning">
+                <i class="bi bi-images"></i> PNG
+            </a>
+            {% endif %}
+            {% if project.video_file %}
+            <a href="{{ url_for('download_file', project_id=project.id, type='video') }}"
+               class="btn btn-sm btn-success">
+                <i class="bi bi-camera-video"></i> {{ _('Video') }}
+            </a>
+            {% endif %}
+            {% if project.status == 'processing' %}
+            <button onclick="stopProject({{ project.id }})"
+                    class="btn btn-sm btn-outline-warning btn-delete">
+                <i class="bi bi-stop-circle"></i> {{ _('Stop') }}
+            </button>
+            {% else %}
+            <button onclick="deleteProject({{ project.id }})"
+                    class="btn btn-sm btn-outline-danger btn-delete">
+                <i class="bi bi-trash"></i> {{ _('Delete') }}
+            </button>
+            {% endif %}
+        </div>
+
     </div>
+    {% endfor %}
 </div>
+{% else %}
+<div class="text-center text-muted py-5">
+    <i class="bi bi-folder2-open" style="font-size: 3rem;"></i>
+    <p class="mt-3">{{ _('No projects yet') }}</p>
+</div>
+{% endif %}
+
+{# ── Pagination ── #}
+{% if projects.pages > 1 %}
+<nav aria-label="Project navigation" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if projects.has_prev %}
+        <li class="page-item">
+            <a class="page-link" href="{{ url_for('list_projects', page=projects.prev_num) }}">{{ _('Previous') }}</a>
+        </li>
+        {% endif %}
+
+        {% if projects.page > 2 %}
+        <li class="page-item">
+            <a class="page-link" href="{{ url_for('list_projects', page=1) }}">1</a>
+        </li>
+        {% if projects.page > 3 %}
+        <li class="page-item disabled"><span class="page-link">…</span></li>
+        {% endif %}
+        {% endif %}
+
+        {% for page_num in range(projects.page - 1, projects.page + 2) %}
+            {% if page_num > 0 and page_num <= projects.pages %}
+            <li class="page-item {% if page_num == projects.page %}active{% endif %}">
+                <a class="page-link" href="{{ url_for('list_projects', page=page_num) }}">{{ page_num }}</a>
+            </li>
+            {% endif %}
+        {% endfor %}
+
+        {% if projects.page < projects.pages - 1 %}
+        {% if projects.page < projects.pages - 2 %}
+        <li class="page-item disabled"><span class="page-link">…</span></li>
+        {% endif %}
+        <li class="page-item">
+            <a class="page-link" href="{{ url_for('list_projects', page=projects.pages) }}">{{ projects.pages }}</a>
+        </li>
+        {% endif %}
+
+        {% if projects.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="{{ url_for('list_projects', page=projects.next_num) }}">{{ _('Next') }}</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
 {% endblock %}
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Group projects by date (Today / Yesterday / Earlier)
+    (function() {
+        var container = document.getElementById('projectsContainer');
+        if (!container) return;
+        var cards = Array.from(container.querySelectorAll('.project-card[data-created-ts]'));
+        if (!cards.length) return;
+
+        var now = new Date();
+        var todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 1000;
+        var yesterdayStart = todayStart - 86400;
+
+        var groups = { today: [], yesterday: [], earlier: [] };
+        cards.forEach(function(card) {
+            var ts = parseFloat(card.dataset.createdTs);
+            if (ts >= todayStart) groups.today.push(card);
+            else if (ts >= yesterdayStart) groups.yesterday.push(card);
+            else groups.earlier.push(card);
+        });
+
+        container.innerHTML = '';
+        var labels = [
+            ['today', '{{ _("Today") }}'],
+            ['yesterday', '{{ _("Yesterday") }}'],
+            ['earlier', '{{ _("Earlier") }}']
+        ];
+        labels.forEach(function(pair) {
+            var key = pair[0], label = pair[1];
+            if (!groups[key].length) return;
+            var header = document.createElement('div');
+            header.className = 'projects-date-group';
+            header.textContent = label;
+            container.appendChild(header);
+            var grid = document.createElement('div');
+            grid.className = 'projects-grid';
+            groups[key].forEach(function(card) { grid.appendChild(card); });
+            container.appendChild(grid);
+        });
+    })();
+
     // Convert UTC timestamps to local time
-    document.querySelectorAll('td[data-timestamp]').forEach(function(td) {
-        const timestamp = parseFloat(td.dataset.timestamp);
-        const date = new Date(timestamp * 1000); // Convert to milliseconds
-        td.textContent = date.toLocaleString();
+    document.querySelectorAll('[data-timestamp]').forEach(function(el) {
+        var ts = parseFloat(el.dataset.timestamp);
+        if (!ts) return;
+        var d = new Date(ts * 1000);
+        el.textContent = d.toLocaleDateString(undefined, {day:'2-digit', month:'2-digit', year:'numeric'}) +
+                         ', ' + d.toLocaleTimeString(undefined, {hour:'2-digit', minute:'2-digit'});
+    });
+
+    // Convert expiry dates to local relative display
+    document.querySelectorAll('[data-expiry]').forEach(function(el) {
+        var ts = parseFloat(el.dataset.expiry);
+        if (!ts) return;
+        var now = Date.now() / 1000;
+        var diff = ts - now;
+        if (diff <= 0) {
+            el.textContent = '{{ _("expired") }}';
+            el.classList.add('expiry-urgent');
+            return;
+        }
+        var h = Math.floor(diff / 3600);
+        var m = Math.floor((diff % 3600) / 60);
+        if (h >= 24) {
+            var days = Math.floor(h / 24);
+            var remH = h % 24;
+            el.textContent = days + '{{ _("d") }} ' + remH + '{{ _("h") }}';
+        } else {
+            el.textContent = h + '{{ _("h") }} ' + m + '{{ _("m") }}';
+        }
+        if (h < 12) el.classList.add('expiry-urgent');
     });
 });
 </script>
