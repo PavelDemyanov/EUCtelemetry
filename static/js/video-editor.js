@@ -184,6 +184,23 @@
     syncTimelineScroll();
     resizeCanvases();
     window.addEventListener('resize', resizeCanvases);
+
+    // Mobile settings panel (bottom sheet)
+    var sidebar = document.querySelector('.ve-sidebar');
+    var sidebarBackdrop = document.getElementById('sidebarBackdrop');
+    var btnSettingsToggle = document.getElementById('btnSettingsToggle');
+    var btnMobileSettings = document.getElementById('btnMobileSettings');
+    function openSettings() {
+      if (sidebar) sidebar.classList.add('open');
+      if (sidebarBackdrop) sidebarBackdrop.classList.add('active');
+    }
+    function closeSettings() {
+      if (sidebar) sidebar.classList.remove('open');
+      if (sidebarBackdrop) sidebarBackdrop.classList.remove('active');
+    }
+    if (btnSettingsToggle) btnSettingsToggle.addEventListener('click', openSettings);
+    if (btnMobileSettings) btnMobileSettings.addEventListener('click', openSettings);
+    if (sidebarBackdrop) sidebarBackdrop.addEventListener('click', closeSettings);
   }
 
   // ===== SETTINGS BINDING =====
@@ -255,6 +272,23 @@
   // ===== BUTTON BINDINGS =====
   function bindButtons() {
     // Video upload
+    // Mobile action sheet for uploads
+    var actionSheet = document.getElementById('uploadActionSheet');
+    var btnMobileUpload = document.getElementById('btnMobileUpload');
+    function openActionSheet() { if (actionSheet) actionSheet.classList.add('open'); }
+    function closeActionSheet() { if (actionSheet) actionSheet.classList.remove('open'); }
+    if (btnMobileUpload) btnMobileUpload.addEventListener('click', openActionSheet);
+    if (actionSheet) {
+      actionSheet.querySelector('.ve-action-sheet-backdrop').addEventListener('click', closeActionSheet);
+      actionSheet.querySelector('.ve-action-cancel').addEventListener('click', closeActionSheet);
+    }
+    var mUploadVideo = document.getElementById('btnMobileUploadVideo');
+    var mUploadCSV = document.getElementById('btnMobileUploadCSV');
+    var mUploadVBO = document.getElementById('btnMobileUploadVBO');
+    if (mUploadVideo) mUploadVideo.addEventListener('click', function() { closeActionSheet(); dom.videoFileInput.click(); });
+    if (mUploadCSV) mUploadCSV.addEventListener('click', function() { closeActionSheet(); dom.csvFileInput.click(); });
+    if (mUploadVBO) mUploadVBO.addEventListener('click', function() { closeActionSheet(); dom.vboFileInput.click(); });
+
     dom.btnUploadVideo.addEventListener('click', function() {
       dom.videoFileInput.click();
     });
@@ -301,17 +335,53 @@
     dom.btnZoomIn.addEventListener('click', function() { zoomTimeline(1.5); });
     dom.btnZoomOut.addEventListener('click', function() { zoomTimeline(1 / 1.5); });
     dom.btnZoomFit.addEventListener('click', zoomFitAll);
+
+    // Mobile zoom controls (duplicated for the mobile bar)
+    var mZoomIn = document.getElementById('btnMobileZoomIn');
+    var mZoomOut = document.getElementById('btnMobileZoomOut');
+    var mZoomFit = document.getElementById('btnMobileZoomFit');
+    var mTrimToggle = document.getElementById('btnMobileTrimToggle');
+    if (mZoomIn) mZoomIn.addEventListener('click', function() { zoomTimeline(1.5); });
+    if (mZoomOut) mZoomOut.addEventListener('click', function() { zoomTimeline(1 / 1.5); });
+    if (mZoomFit) mZoomFit.addEventListener('click', zoomFitAll);
     if (dom.btnTrimCropLeft) dom.btnTrimCropLeft.addEventListener('click', function() { cropCSVLeft(); });
     if (dom.btnTrimCropRight) dom.btnTrimCropRight.addEventListener('click', function() { cropCSVRight(); });
     if (dom.vboBtnTrimCropLeft) dom.vboBtnTrimCropLeft.addEventListener('click', function() { cropVBOLeft(); });
     if (dom.vboBtnTrimCropRight) dom.vboBtnTrimCropRight.addEventListener('click', function() { cropVBORight(); });
     if (dom.btnTrimToggle) {
       dom.btnTrimToggle.addEventListener('click', function() {
+        // Also sync mobile trim button
+        var mBtn = document.getElementById('btnMobileTrimToggle');
+        if (mBtn) mBtn.classList.toggle('trim-active', !state.trimMode);
         state.trimMode = !state.trimMode;
         dom.btnTrimToggle.classList.toggle('trim-active', state.trimMode);
         updateTrimVisibility();
         updateTrimArrows();
       });
+    var mCropLeft = document.getElementById('btnMobileCropLeft');
+    var mCropRight = document.getElementById('btnMobileCropRight');
+    function updateMobileCropButtons() {
+      if (!mCropLeft || !mCropRight) return;
+      if (state.trimMode && state.csvData.length > 0) {
+        mCropLeft.style.display = state.csvTrimStart > 0.1 ? '' : 'none';
+        mCropRight.style.display = state.csvTrimEnd < state.csvDuration - 0.1 ? '' : 'none';
+      } else {
+        mCropLeft.style.display = 'none';
+        mCropRight.style.display = 'none';
+      }
+    }
+    if (mTrimToggle) {
+      mTrimToggle.addEventListener('click', function() {
+        state.trimMode = !state.trimMode;
+        mTrimToggle.classList.toggle('trim-active', state.trimMode);
+        if (dom.btnTrimToggle) dom.btnTrimToggle.classList.toggle('trim-active', state.trimMode);
+        updateTrimVisibility();
+        updateVboTrimVisibility();
+        updateMobileCropButtons();
+      });
+    }
+    if (mCropLeft) mCropLeft.addEventListener('click', function() { cropCSVLeft(); updateMobileCropButtons(); });
+    if (mCropRight) mCropRight.addEventListener('click', function() { cropCSVRight(); updateMobileCropButtons(); });
     }
     if (dom.btnFullscreen) dom.btnFullscreen.addEventListener('click', function() { if (dom.previewContainer.requestFullscreen) dom.previewContainer.requestFullscreen(); });
 
@@ -415,21 +485,68 @@
     dom.canvas.style.display = 'block';
     if (dom.placeholder) dom.placeholder.style.display = 'none';
 
+    var thumbsStarted = false;
+    function startThumbnails() {
+      if (thumbsStarted) return;
+      thumbsStarted = true;
+      dom.video.currentTime = 0.001;
+      dom.video.addEventListener('seeked', function onFirstSeek() {
+        dom.video.removeEventListener('seeked', onFirstSeek);
+        generateThumbnails();
+      }, {once: true});
+    }
+
     dom.video.addEventListener('loadedmetadata', function onMeta() {
       dom.video.removeEventListener('loadedmetadata', onMeta);
       state.videoMeta.duration = dom.video.duration;
       state.videoMeta.width = dom.video.videoWidth;
       state.videoMeta.height = dom.video.videoHeight;
-      // Estimate FPS (default 30)
       state.videoMeta.fps = 30;
       dom.totalTime.textContent = formatTime(dom.video.duration);
       resizeCanvases();
-      generateThumbnails();
-      // Full timeline refresh — recalculates pxPerSecond with correct video duration
-      // Fixes race condition when CSV was loaded before video metadata was ready
       refreshTimeline();
       renderOverlayOnce();
       checkExportReady();
+    });
+
+    // Try to force iOS Safari to load video data
+    // iOS won't preload until user interaction, so we do play+pause trick
+    dom.video.addEventListener('canplay', function onCanPlay() {
+      dom.video.removeEventListener('canplay', onCanPlay);
+      startThumbnails();
+    });
+
+    // Force load — iOS needs explicit load() + play/pause to buffer data
+    dom.video.load();
+    var playPromise = dom.video.play();
+    if (playPromise !== undefined) {
+      playPromise.then(function() {
+        dom.video.pause();
+        dom.video.currentTime = 0;
+        // If canplay already fired before play trick, start thumbnails
+        startThumbnails();
+      }).catch(function() {
+        // Autoplay blocked — try muted play
+        dom.video.muted = true;
+        var p2 = dom.video.play();
+        if (p2 !== undefined) {
+          p2.then(function() {
+            dom.video.pause();
+            dom.video.muted = false;
+            dom.video.currentTime = 0;
+            startThumbnails();
+          }).catch(function() {
+            // Both failed — thumbnails will start on first user play
+            console.warn('iOS autoplay blocked — thumbnails on first play');
+          });
+        }
+      });
+    }
+
+    // Fallback: if user presses play manually, generate thumbnails
+    dom.video.addEventListener('playing', function onFirstPlay() {
+      dom.video.removeEventListener('playing', onFirstPlay);
+      startThumbnails();
     });
 
     // Background upload to server — check disk space first
@@ -607,8 +724,8 @@
 
     function extractNext() {
       if (idx >= count) {
-        video.currentTime = 0;
-        // All thumbnails generated — update strip width to match actual video duration
+        // All thumbnails generated — seek to show first frame in viewer
+        video.currentTime = 0.001;
         updateVideoStrip();
         return;
       }
@@ -621,6 +738,7 @@
     video.addEventListener('seeked', function onSeeked() {
       if (idx >= count) {
         video.removeEventListener('seeked', onSeeked);
+        video.currentTime = 0.001;
         updateVideoStrip();
         return;
       }
@@ -1057,6 +1175,11 @@
       dom.btnTrimCropRight.classList.toggle('visible', show);
       dom.btnTrimCropRight.style.left = (rightPx - 34) + 'px';
     }
+    // Update mobile crop buttons
+    var mcl = document.getElementById('btnMobileCropLeft');
+    var mcr = document.getElementById('btnMobileCropRight');
+    if (mcl) mcl.style.display = (state.trimMode && state.csvTrimStart > 0.1) ? '' : 'none';
+    if (mcr) mcr.style.display = (state.trimMode && state.csvTrimEnd < state.csvDuration - 0.1) ? '' : 'none';
   }
 
   function updateTrimArrows() {
@@ -1217,9 +1340,108 @@
   }
 
   // ===== TIMELINE =====
+  // Helper: seek video from a clientX position relative to a bar element
+  function seekFromClientX(clientX, barEl) {
+    if (!dom.video.src || !barEl) return;
+    var rect = barEl.getBoundingClientRect();
+    var clickX = clientX - rect.left + barEl.scrollLeft;
+    var pps = getPxPerSecond();
+    var t = clickX / pps - state.timelineOrigin;
+    dom.video.currentTime = Math.max(0, Math.min(t, dom.video.duration || 0));
+  }
+
+  // Helper: handle all track drag movement (called from both mouse and touch)
+  function handleTrackDragMove(clientX) {
+    if (!state.dragging) return;
+    var pxPerSec = getPxPerSecond();
+    if (pxPerSec <= 0) return;
+    var dx = clientX - state.dragStartX;
+    var dtSec = dx / pxPerSec;
+
+    if (state.dragging === 'csv') {
+      state.timeOffset = state.dragStartOffset + dtSec;
+      updateCSVTrackPosition();
+      if (!state._dragRaf) {
+        state._dragRaf = requestAnimationFrame(function() {
+          state._dragRaf = null;
+          renderOverlayOnce();
+        });
+      }
+    } else if (state.dragging === 'trimLeft') {
+      var newStart = state.dragStartTrimStart + dtSec;
+      state.csvTrimStart = Math.max(0, Math.min(newStart, state.csvTrimEnd - 0.5));
+      updateTrimHandles(state.csvDuration * getPxPerSecond());
+      if (!state._dragRaf) {
+        state._dragRaf = requestAnimationFrame(function() {
+          state._dragRaf = null;
+          renderWaveform();
+        });
+      }
+    } else if (state.dragging === 'trimRight') {
+      var newEnd = state.dragStartTrimEnd + dtSec;
+      state.csvTrimEnd = Math.max(state.csvTrimStart + 0.5, Math.min(newEnd, state.csvDuration));
+      updateTrimHandles(state.csvDuration * getPxPerSecond());
+      if (!state._dragRaf) {
+        state._dragRaf = requestAnimationFrame(function() {
+          state._dragRaf = null;
+          renderWaveform();
+        });
+      }
+    } else if (state.dragging === 'vbo') {
+      state.vboTimeOffset = state.dragStartVboOffset + dtSec;
+      updateVBOTrackPosition();
+      if (!state._dragRaf) {
+        state._dragRaf = requestAnimationFrame(function() {
+          state._dragRaf = null;
+          renderOverlayOnce();
+        });
+      }
+    } else if (state.dragging === 'vboTrimLeft') {
+      var newVboStart = state.dragStartVboTrimStart + dtSec;
+      state.vboTrimStart = Math.max(0, Math.min(newVboStart, state.vboTrimEnd - 0.5));
+      updateVboTrimHandles();
+      if (!state._dragRaf) {
+        state._dragRaf = requestAnimationFrame(function() {
+          state._dragRaf = null;
+          renderVBOWaveform();
+        });
+      }
+    } else if (state.dragging === 'vboTrimRight') {
+      var newVboEnd = state.dragStartVboTrimEnd + dtSec;
+      state.vboTrimEnd = Math.max(state.vboTrimStart + 0.5, Math.min(newVboEnd, state.vboDuration));
+      updateVboTrimHandles();
+      if (!state._dragRaf) {
+        state._dragRaf = requestAnimationFrame(function() {
+          state._dragRaf = null;
+          renderVBOWaveform();
+        });
+      }
+    }
+  }
+
+  // Helper: handle drag end (called from both mouse and touch)
+  function handleTrackDragEnd() {
+    if (state.dragging) {
+      var wasDragging = state.dragging;
+      state.dragging = null;
+      if (state._frozenPps) {
+        var frozenPps = state._frozenPps;
+        state._frozenPps = null;
+        var newBase = getBasePxPerSecond();
+        if (newBase > 0) state.zoomLevel = frozenPps / newBase;
+      }
+      renderWaveform();
+      renderVBOWaveform();
+      updateVboTrimHandles();
+      renderOverlayOnce();
+    }
+  }
+
   function bindTimeline() {
     // Playhead dragging
     var phDragging = false;
+
+    // Mouse: playhead drag start
     document.querySelectorAll('.ve-playhead-handle, .ve-playhead-grab').forEach(function(h) {
       h.addEventListener('mousedown', function(e) {
         if (!dom.video.src) return;
@@ -1228,46 +1450,58 @@
         e.stopPropagation();
       });
     });
+    // Touch: playhead drag start
+    document.querySelectorAll('.ve-playhead-handle, .ve-playhead-grab').forEach(function(h) {
+      h.addEventListener('touchstart', function(e) {
+        if (!dom.video.src) return;
+        phDragging = true;
+        e.preventDefault();
+      }, {passive: false});
+    });
+
+    // Mouse: playhead drag move
     document.addEventListener('mousemove', function(e) {
       if (!phDragging) return;
-      // Use playhead bar for coordinate calculation (handle lives there)
-      var barEl = dom.playheadBarContent;
-      if (!barEl) return;
-      var rect = barEl.getBoundingClientRect();
-      var clickX = e.clientX - rect.left + barEl.scrollLeft;
-      var pps = getPxPerSecond();
-      var t = clickX / pps - state.timelineOrigin;
-      dom.video.currentTime = Math.max(0, Math.min(t, dom.video.duration || 0));
+      seekFromClientX(e.clientX, dom.playheadBarContent);
     });
+    // Touch: playhead drag move
+    document.addEventListener('touchmove', function(e) {
+      if (!phDragging) return;
+      seekFromClientX(e.touches[0].clientX, dom.playheadBarContent);
+    }, {passive: true});
+
+    // Mouse/Touch: playhead drag end
     document.addEventListener('mouseup', function() { phDragging = false; });
+    document.addEventListener('touchend', function() { phDragging = false; });
 
     // Click on playhead bar to seek
     if (dom.playheadBarContent) {
       dom.playheadBarContent.addEventListener('click', function(e) {
-        if (!dom.video.src) return;
-        var rect = dom.playheadBarContent.getBoundingClientRect();
-        var clickX = e.clientX - rect.left + dom.playheadBarContent.scrollLeft;
-        var pps = getPxPerSecond();
-        var t = clickX / pps - state.timelineOrigin;
-        dom.video.currentTime = Math.max(0, Math.min(t, dom.video.duration || 0));
+        seekFromClientX(e.clientX, dom.playheadBarContent);
       });
+      // Touch tap to seek on playhead bar
+      dom.playheadBarContent.addEventListener('touchstart', function(e) {
+        if (!dom.video.src) return;
+        seekFromClientX(e.touches[0].clientX, dom.playheadBarContent);
+      }, {passive: true});
     }
 
     // Click on video track to seek
     if (dom.videoTrackContent) {
       dom.videoTrackContent.addEventListener('click', function(e) {
-        if (!dom.video.src) return;
-        var rect = dom.videoTrackContent.getBoundingClientRect();
-        var clickX = e.clientX - rect.left + dom.videoTrackContent.scrollLeft;
-        var pps = getPxPerSecond();
-        var t = clickX / pps - state.timelineOrigin;
-        dom.video.currentTime = Math.max(0, Math.min(t, dom.video.duration));
+        seekFromClientX(e.clientX, dom.videoTrackContent);
       });
+      // Touch tap to seek on video track
+      dom.videoTrackContent.addEventListener('touchstart', function(e) {
+        if (!dom.video.src) return;
+        seekFromClientX(e.touches[0].clientX, dom.videoTrackContent);
+      }, {passive: true});
     }
 
-    // CSV track dragging
+    // CSV track dragging (mouse)
     if (dom.csvTrack) {
       dom.csvTrack.addEventListener('mousedown', function(e) {
+        if (e.target.closest('.ve-trim-scissors')) return;
         if (e.target === dom.trimLeft) {
           state.dragging = 'trimLeft';
           state.dragStartTrimStart = state.csvTrimStart;
@@ -1276,18 +1510,37 @@
           state.dragStartTrimEnd = state.csvTrimEnd;
         } else {
           state.dragging = 'csv';
-          state._frozenPps = getPxPerSecond(); // freeze scale during drag
+          state._frozenPps = getPxPerSecond();
         }
         state.dragStartX = e.clientX;
         state.dragStartOffset = state.timeOffset;
         e.preventDefault();
       });
+      // CSV track dragging (touch)
+      dom.csvTrack.addEventListener('touchstart', function(e) {
+        if (e.target.closest('.ve-trim-scissors')) return;
+        var touch = e.touches[0];
+        if (e.target === dom.trimLeft) {
+          state.dragging = 'trimLeft';
+          state.dragStartTrimStart = state.csvTrimStart;
+        } else if (e.target === dom.trimRight) {
+          state.dragging = 'trimRight';
+          state.dragStartTrimEnd = state.csvTrimEnd;
+        } else {
+          state.dragging = 'csv';
+          state._frozenPps = getPxPerSecond();
+        }
+        state.dragStartX = touch.clientX;
+        state.dragStartOffset = state.timeOffset;
+        e.preventDefault();
+      }, {passive: false});
     }
 
-    // VBO track dragging
+    // VBO track dragging (mouse)
     var vboTrackEl = document.getElementById('vboTrack');
     if (vboTrackEl) {
       vboTrackEl.addEventListener('mousedown', function(e) {
+        if (e.target.closest('.ve-trim-scissors')) return;
         if (e.target === dom.vboTrimLeft) {
           state.dragging = 'vboTrimLeft';
           state.dragStartVboTrimStart = state.vboTrimStart;
@@ -1296,115 +1549,46 @@
           state.dragStartVboTrimEnd = state.vboTrimEnd;
         } else {
           state.dragging = 'vbo';
-          state._frozenPps = getPxPerSecond(); // freeze scale during drag
+          state._frozenPps = getPxPerSecond();
         }
         state.dragStartX = e.clientX;
         state.dragStartVboOffset = state.vboTimeOffset;
         e.preventDefault();
       });
+      // VBO track dragging (touch)
+      vboTrackEl.addEventListener('touchstart', function(e) {
+        if (e.target.closest('.ve-trim-scissors')) return;
+        var touch = e.touches[0];
+        if (e.target === dom.vboTrimLeft) {
+          state.dragging = 'vboTrimLeft';
+          state.dragStartVboTrimStart = state.vboTrimStart;
+        } else if (e.target === dom.vboTrimRight) {
+          state.dragging = 'vboTrimRight';
+          state.dragStartVboTrimEnd = state.vboTrimEnd;
+        } else {
+          state.dragging = 'vbo';
+          state._frozenPps = getPxPerSecond();
+        }
+        state.dragStartX = touch.clientX;
+        state.dragStartVboOffset = state.vboTimeOffset;
+        e.preventDefault();
+      }, {passive: false});
     }
 
+    // Global drag move (mouse + touch)
     document.addEventListener('mousemove', function(e) {
-      if (!state.dragging) return;
-      var pxPerSec = getPxPerSecond();
-      if (pxPerSec <= 0) return;
-      var dx = e.clientX - state.dragStartX;
-      var dtSec = dx / pxPerSec;
-
-      if (state.dragging === 'csv') {
-        // Move entire CSV track — only position changes, never width
-        state.timeOffset = state.dragStartOffset + dtSec;
-        updateCSVTrackPosition();
-        // NOTE: don't call updatePlayheads() here — timeOffset change alters
-        // pxPerSecond which would make the playhead jump even though video time hasn't changed
-        // Throttle heavy overlay render to rAF
-        if (!state._dragRaf) {
-          state._dragRaf = requestAnimationFrame(function() {
-            state._dragRaf = null;
-            renderOverlayOnce();
-          });
-        }
-      } else if (state.dragging === 'trimLeft') {
-        var newStart = state.dragStartTrimStart + dtSec;
-        state.csvTrimStart = Math.max(0, Math.min(newStart, state.csvTrimEnd - 0.5));
-        // Throttle waveform redraw — only update trim handles immediately
-        updateTrimHandles(state.csvDuration * getPxPerSecond());
-        if (!state._dragRaf) {
-          state._dragRaf = requestAnimationFrame(function() {
-            state._dragRaf = null;
-            renderWaveform();
-          });
-        }
-      } else if (state.dragging === 'trimRight') {
-        var newEnd = state.dragStartTrimEnd + dtSec;
-        state.csvTrimEnd = Math.max(state.csvTrimStart + 0.5, Math.min(newEnd, state.csvDuration));
-        // Throttle waveform redraw — only update trim handles immediately
-        updateTrimHandles(state.csvDuration * getPxPerSecond());
-        if (!state._dragRaf) {
-          state._dragRaf = requestAnimationFrame(function() {
-            state._dragRaf = null;
-            renderWaveform();
-          });
-        }
-      } else if (state.dragging === 'vbo') {
-        state.vboTimeOffset = state.dragStartVboOffset + dtSec;
-        // Just move the track element, don't re-render waveform (like CSV updateCSVTrackPosition)
-        updateVBOTrackPosition();
-        if (!state._dragRaf) {
-          state._dragRaf = requestAnimationFrame(function() {
-            state._dragRaf = null;
-            renderOverlayOnce();
-          });
-        }
-      } else if (state.dragging === 'vboTrimLeft') {
-        var newVboStart = state.dragStartVboTrimStart + dtSec;
-        state.vboTrimStart = Math.max(0, Math.min(newVboStart, state.vboTrimEnd - 0.5));
-        updateVboTrimHandles();
-        if (!state._dragRaf) {
-          state._dragRaf = requestAnimationFrame(function() {
-            state._dragRaf = null;
-            renderVBOWaveform();
-          });
-        }
-      } else if (state.dragging === 'vboTrimRight') {
-        var newVboEnd = state.dragStartVboTrimEnd + dtSec;
-        state.vboTrimEnd = Math.max(state.vboTrimStart + 0.5, Math.min(newVboEnd, state.vboDuration));
-        updateVboTrimHandles();
-        if (!state._dragRaf) {
-          state._dragRaf = requestAnimationFrame(function() {
-            state._dragRaf = null;
-            renderVBOWaveform();
-          });
-        }
-      }
+      handleTrackDragMove(e.clientX);
     });
-
-    document.addEventListener('mouseup', function() {
+    document.addEventListener('touchmove', function(e) {
       if (state.dragging) {
-        var wasDragging = state.dragging;
-        state.dragging = null;
-        // Unfreeze pps: adjust zoomLevel to maintain the same visual scale
-        if (state._frozenPps) {
-          var frozenPps = state._frozenPps;
-          state._frozenPps = null;
-          var newBase = getBasePxPerSecond();
-          if (newBase > 0) state.zoomLevel = frozenPps / newBase;
-        }
-        // Only refresh waveforms, NOT timeline scale
-        if (wasDragging === 'csv' || wasDragging === 'vbo') {
-          renderWaveform();
-          renderVBOWaveform();
-          updateVboTrimHandles();
-          renderOverlayOnce();
-        } else {
-          // Trim handle drags — refresh waveforms
-          renderWaveform();
-          renderVBOWaveform();
-          updateVboTrimHandles();
-          renderOverlayOnce();
-        }
+        e.preventDefault();
+        handleTrackDragMove(e.touches[0].clientX);
       }
-    });
+    }, {passive: false});
+
+    // Global drag end (mouse + touch)
+    document.addEventListener('mouseup', handleTrackDragEnd);
+    document.addEventListener('touchend', handleTrackDragEnd);
   }
 
   function drawRuler() {
@@ -1424,27 +1608,39 @@
     var dur = getTimelineDuration();
     if (dur <= 0) return;
 
-    // Adaptive tick interval - ensure ~70px between labels
+    // Adaptive tick interval — pick interval so labels don't overlap
     var pxPerSec = w / dur;
     var tickSec = 1;
-    var cands = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600];
+    // Measure label width to determine min spacing
+    ctx.font = '10px sans-serif';
+    var sampleLabel = dur >= 3600 ? '00:00:00' : '00:00';
+    var labelW = ctx.measureText(sampleLabel).width + 16; // label + padding
+    var minGap = Math.max(labelW, 50); // at least label width or 50px
+    var cands = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 1800, 3600];
     for (var ci = 0; ci < cands.length; ci++) {
       tickSec = cands[ci];
-      if (cands[ci] * pxPerSec >= 70) break;
+      if (cands[ci] * pxPerSec >= minGap) break;
     }
 
+    // Short format for durations under 1 hour
+    var useShort = dur < 3600;
+
     ctx.fillStyle = '#8e959e';
-    ctx.font = '10px sans-serif';
     ctx.strokeStyle = '#4a5568';
     ctx.lineWidth = 1;
 
     for (var t = 0; t <= dur; t += tickSec) {
       var x = (t / dur) * w;
+      // Draw tick mark
       ctx.beginPath();
       ctx.moveTo(x, 16);
       ctx.lineTo(x, 24);
       ctx.stroke();
-      ctx.fillText(formatTime(t), x + 2, 14);
+      // Draw label — skip if too close to left edge (behind track labels)
+      if (x >= 4) {
+        var label = useShort ? formatTimeShort(t) : formatTime(t);
+        ctx.fillText(label, x + 2, 14);
+      }
     }
   }
 
@@ -1476,10 +1672,13 @@
     // Use playheadBarContent scroll to stay in sync with the ruler circle
     var phBar = document.getElementById('playheadBarContent');
     var scrollOff = phBar ? phBar.scrollLeft : (dom.videoTrackContent ? dom.videoTrackContent.scrollLeft : 0);
-    var pos = rulerLeft - scrollOff + 120;
+    // Dynamic label width (120px desktop, 50px mobile, 40px small mobile)
+    var labelEl = document.querySelector('.ve-track-label');
+    var labelW = labelEl ? labelEl.offsetWidth : 120;
+    var pos = rulerLeft - scrollOff + labelW;
     // Hide when playhead is outside the visible track area (behind labels or off-screen right)
     var tracksW = dom.playheadLine.parentElement ? dom.playheadLine.parentElement.clientWidth : 9999;
-    if (pos < 120 || pos > tracksW) {
+    if (pos < labelW || pos > tracksW) {
       dom.playheadLine.style.display = 'none';
     } else {
       dom.playheadLine.style.display = '';
@@ -2341,6 +2540,13 @@
   }
 
   function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+
+  function formatTimeShort(s) {
+    s = Math.max(0, Math.floor(s));
+    var m = Math.floor(s / 60);
+    var sec = s % 60;
+    return pad2(m) + ":" + pad2(sec);
+  }
 
   updateTrimVisibility();
 

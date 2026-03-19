@@ -257,8 +257,8 @@
 
 /* Timeline tracks area */
 .ve-tracks {
-  overflow-y: auto;
   overflow-x: hidden;
+  overflow-y: visible;
   position: relative;
 }
 
@@ -561,4 +561,424 @@ body:has(.video-editor-page) {
 .ve-zoom-controls .btn.trim-active {
   color: #ffa500 !important;
   background: rgba(255, 165, 0, 0.15);
+}
+
+/* ===== MOBILE SIDEBAR BACKDROP ===== */
+.ve-sidebar-backdrop {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 1040;
+}
+.ve-sidebar-backdrop.active {
+  display: block;
+}
+
+/* ===== RESPONSIVE: TABLETS & MOBILE (max-width: 768px) ===== */
+
+/* Action Sheet (iOS-style bottom sheet) */
+.ve-action-sheet {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 1100;
+}
+.ve-action-sheet.open {
+  display: block;
+}
+.ve-action-sheet-backdrop {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+}
+.ve-action-sheet-panel {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #1e2228;
+  border-radius: 16px 16px 0 0;
+  padding: 8px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+}
+.ve-action-sheet.open .ve-action-sheet-panel {
+  transform: translateY(0);
+}
+.ve-action-sheet-handle {
+  width: 36px;
+  height: 4px;
+  background: #484f58;
+  border-radius: 2px;
+  margin: 0 auto 12px;
+}
+.ve-action-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 12px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid #2d3238;
+  color: #e0e0e0;
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+.ve-action-item:last-child {
+  border-bottom: none;
+}
+.ve-action-item:active {
+  background: #2d3238;
+}
+.ve-action-item .bi {
+  font-size: 20px;
+  width: 28px;
+  text-align: center;
+}
+.ve-action-cancel {
+  color: #8b949e;
+  justify-content: center;
+  margin-top: 4px;
+  border-top: 1px solid #2d3238;
+  border-bottom: none;
+}
+
+
+.ve-mobile-zoom-sep {
+  width: 1px;
+  height: 20px;
+  background: #3d4248;
+  margin: 0 4px;
+}
+.ve-mobile-crop-btn {
+  color: #ffa500 !important;
+  font-size: 12px !important;
+  white-space: nowrap;
+}
+.ve-mobile-crop-btn:hover {
+  color: #ffbf40 !important;
+  background: rgba(255,165,0,0.1);
+}
+
+/* Sidebar backdrop */
+.ve-sidebar-backdrop {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: transparent;
+  z-index: 1040;
+}
+.ve-sidebar-backdrop.active {
+  display: block;
+}
+/* Mobile zoom controls - hidden on desktop */
+.ve-mobile-zoom {
+  display: none;
+}
+
+@media (max-width: 768px) {
+
+  /* -- Top Bar -- */
+  .ve-topbar {
+    gap: 5px;
+    padding: 6px 8px;
+    flex-wrap: nowrap;
+    overflow: visible;
+  }
+  .ve-topbar .btn {
+    padding: 4px 6px;
+    font-size: 13px;
+  }
+  /* Hide desktop upload buttons, show mobile button */
+  .ve-desktop-only {
+    display: none !important;
+  }
+  .ve-mobile-only {
+    display: inline-flex !important;
+  }
+  /* Hide VBO remove button on mobile */
+  #btnVboRemove {
+    display: none !important;
+  }
+  /* Settings button hidden on mobile — use zoom bar button instead */
+  .ve-settings-toggle {
+    display: none !important;
+  }
+  /* Hide upload limit text */
+  .ve-upload-limit {
+    display: none !important;
+  }
+  /* Reduce upload progress width */
+  .ve-upload-progress .progress {
+    width: 70px;
+  }
+  .ve-upload-progress .ve-upload-label {
+    font-size: 11px;
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* -- Sidebar as bottom panel on mobile -- */
+  .ve-sidebar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    min-width: 100%;
+    max-height: 40vh;
+    height: auto;
+    z-index: 1050;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+    border-top: 1px solid #3d4248;
+    border-right: none;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .ve-sidebar.open {
+    transform: translateY(0);
+  }
+  /* Handle bar at top of bottom sheet */
+  .ve-sidebar::before {
+    content: '';
+    display: block;
+    width: 36px;
+    height: 4px;
+    background: #484f58;
+    border-radius: 2px;
+    margin: 8px auto 4px;
+    flex-shrink: 0;
+  }
+  /* Hide hamburger in topbar — settings now in zoom bar */
+  .ve-settings-toggle {
+    display: none !important;
+  }
+
+  /* -- Preview area -- */
+  .ve-preview {
+    min-height: 200px;
+  }
+  .ve-main {
+    flex: 1;
+  }
+
+  /* -- Player controls -- */
+  .ve-controls {
+    padding: 4px 8px;
+    gap: 6px;
+  }
+  .ve-controls .btn {
+    padding: 6px 10px;
+    font-size: 16px;
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .ve-controls .ve-time {
+    font-size: 11px;
+  }
+
+  /* -- Timeline -- */
+  .ve-timeline {
+    max-height: 35vh;
+    padding-bottom: 70px; /* Safari mobile toolbar compensation */
+  }
+
+  /* Mobile zoom controls: separate row above tracks */
+  .ve-timeline-header .ve-ruler-label {
+    display: none;
+  }
+  .ve-mobile-zoom {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: #1a1d21;
+    border-bottom: 1px solid #2d3238;
+    flex-shrink: 0;
+  }
+  .ve-mobile-zoom .btn {
+    padding: 4px 8px;
+    font-size: 14px;
+    color: #8e959e;
+    min-width: 36px;
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .ve-mobile-zoom .btn:hover {
+    color: #fff;
+  }
+  .ve-mobile-zoom .btn.trim-active {
+    color: #ffa500 !important;
+    background: rgba(255, 165, 0, 0.15);
+  }
+
+  /* Track labels: compact, icon only */
+  .ve-track-label {
+    width: 50px;
+    min-width: 50px;
+    padding: 4px 6px;
+    font-size: 0;
+    justify-content: center;
+  }
+  .ve-track-label i {
+    font-size: 14px;
+  }
+  .ve-track-label .btn {
+    font-size: 10px;
+    padding: 0 2px;
+  }
+  /* Ruler label - just hide zoom buttons, keep the width */
+  .ve-ruler-label {
+    width: 50px;
+    min-width: 50px;
+  }
+  .ve-zoom-controls {
+    padding: 0;
+    gap: 0;
+  }
+  .ve-zoom-controls .btn {
+    padding: 1px 3px;
+    font-size: 10px;
+  }
+  /* Playhead bar label */
+  .ve-playhead-bar-label {
+    width: 50px;
+    min-width: 50px;
+  }
+
+  /* -- Playhead handle: bigger for touch -- */
+  .ve-playhead-ruler .ve-playhead-handle {
+    width: 20px;
+    height: 20px;
+  }
+  .ve-playhead-ruler .ve-playhead-grab {
+    width: 30px;
+  }
+
+  /* -- Trim handles: wider for touch -- */
+  .ve-trim-handle {
+    width: 20px;
+  }
+  .ve-trim-handle:hover,
+  .ve-trim-handle:active {
+    width: 22px;
+    background: rgba(255, 165, 0, 1);
+  }
+
+  /* -- Range sliders: taller for touch -- */
+  .ve-setting input[type="range"],
+  .ve-controls .ve-seek {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 8px;
+    background: #30363d;
+    border-radius: 4px;
+    outline: none;
+  }
+  .ve-setting input[type="range"]::-webkit-slider-thumb,
+  .ve-controls .ve-seek::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    background: #0d6efd;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+  .ve-setting input[type="range"]::-moz-range-thumb,
+  .ve-controls .ve-seek::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+    background: #0d6efd;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+  }
+
+  /* -- Export dropdown: full width -- */
+  .ve-export-settings {
+    min-width: 280px;
+    right: 0;
+  }
+
+  /* -- Trim scissors: bigger touch target -- */
+  .ve-trim-scissors {
+    padding: 4px 8px;
+    font-size: 14px;
+  }
+}
+
+
+/* ===== RESPONSIVE: VERY SMALL SCREENS (max-width: 480px) ===== */
+@media (max-width: 480px) {
+
+  .ve-topbar {
+    gap: 3px;
+    padding: 4px 6px;
+  }
+  .ve-topbar .btn {
+    padding: 3px 5px;
+  }
+  .ve-mobile-only .btn {
+    font-size: 12px;
+  }
+
+  /* Bottom sheet: same width on small screens */
+  .ve-sidebar {
+    max-height: 35vh;
+  }
+
+  /* Even more compact track labels */
+  .ve-track-label {
+    width: 40px;
+    min-width: 40px;
+    padding: 2px 4px;
+  }
+  .ve-ruler-label {
+    width: 40px;
+    min-width: 40px;
+  }
+  .ve-playhead-bar-label {
+    width: 40px;
+    min-width: 40px;
+  }
+
+  /* Player controls tighter */
+  .ve-controls {
+    padding: 3px 6px;
+    gap: 4px;
+  }
+  .ve-controls .ve-time {
+    font-size: 10px;
+  }
+
+  /* Smaller fonts */
+  .ve-setting label {
+    font-size: 11px;
+  }
+  .ve-setting .form-check {
+    font-size: 12px;
+  }
+
+  /* Export dropdown */
+  .ve-export-settings {
+    min-width: 250px;
+  }
 }

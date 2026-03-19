@@ -7,19 +7,34 @@
   <div class="ve-topbar">
 
     
-    <button class="btn btn-sm btn-outline-primary" id="btnUploadVideo">
+    <!-- Desktop: separate buttons -->
+    <button class="btn btn-sm btn-outline-primary ve-desktop-only" id="btnUploadVideo">
       <i class="bi bi-camera-video"></i> Upload Video
     </button>
-    <input type="file" id="videoFileInput" accept="video/*" style="display:none">
-    
-    <button class="btn btn-sm btn-outline-info" id="btnUploadCSV">
-      <i class="bi bi-filetype-csv"></i> Upload CSV
+    <button class="btn btn-sm btn-outline-info ve-desktop-only" id="btnUploadCSV">
+      <i class="bi bi-file-earmark-text"></i> Upload CSV
     </button>
-    <input type="file" id="csvFileInput" accept=".csv" style="display:none">
-
-    <button class="btn btn-sm btn-outline-warning" id="btnAddVBO" title="Add VBO (Dragy) speed data">
+    <button class="btn btn-sm btn-outline-warning ve-desktop-only" id="btnAddVBO" title="Add VBO (Dragy) speed data">
       <i class="bi bi-speedometer2"></i> VBO
     </button>
+
+    <!-- Mobile: upload button + bottom action sheet -->
+    <button class="btn btn-sm btn-outline-primary ve-mobile-only" id="btnMobileUpload" style="display:none;">
+      <i class="bi bi-plus-lg"></i> {{ _('Upload') }}
+    </button>
+    <div class="ve-action-sheet" id="uploadActionSheet">
+      <div class="ve-action-sheet-backdrop"></div>
+      <div class="ve-action-sheet-panel">
+        <div class="ve-action-sheet-handle"></div>
+        <button class="ve-action-item" id="btnMobileUploadVideo"><i class="bi bi-camera-video text-primary"></i> Upload Video</button>
+        <button class="ve-action-item" id="btnMobileUploadCSV"><i class="bi bi-file-earmark-text text-info"></i> Upload CSV</button>
+        <button class="ve-action-item" id="btnMobileUploadVBO"><i class="bi bi-speedometer2 text-warning"></i> VBO (Dragy)</button>
+        <button class="ve-action-item ve-action-cancel">{{ _('Cancel') }}</button>
+      </div>
+    </div>
+
+    <input type="file" id="videoFileInput" accept="video/*" style="display:none">
+    <input type="file" id="csvFileInput" accept=".csv" style="display:none">
     <input type="file" id="vboFileInput" accept=".vbo" style="display:none">
 
     <!-- Upload progress indicators -->
@@ -258,6 +273,9 @@
       </div>
     </div>
 
+    <!-- Mobile sidebar backdrop -->
+    <div class="ve-sidebar-backdrop" id="sidebarBackdrop"></div>
+
     <!-- Right: Video Preview -->
     <div class="ve-preview">
       <div class="ve-preview-container" id="previewContainer">
@@ -281,6 +299,18 @@
 
   <!-- Timeline -->
   <div class="ve-timeline">
+    <!-- Mobile zoom controls (shown only on mobile) -->
+    <div class="ve-mobile-zoom" id="mobileZoomBar">
+      <button class="btn btn-sm" id="btnMobileZoomOut" title="Zoom Out"><i class="bi bi-zoom-out"></i></button>
+      <button class="btn btn-sm" id="btnMobileZoomFit" title="Fit All"><i class="bi bi-arrows-angle-expand"></i></button>
+      <button class="btn btn-sm" id="btnMobileZoomIn" title="Zoom In"><i class="bi bi-zoom-in"></i></button>
+      <span class="ve-mobile-zoom-sep"></span>
+      <button class="btn btn-sm" id="btnMobileTrimToggle" title="Trim mode"><i class="bi bi-scissors"></i></button>
+      <button class="btn btn-sm ve-mobile-crop-btn" id="btnMobileCropLeft" title="Crop from start" style="display:none;"><i class="bi bi-skip-start-fill"></i> ✂</button>
+      <button class="btn btn-sm ve-mobile-crop-btn" id="btnMobileCropRight" title="Crop to end" style="display:none;">✂ <i class="bi bi-skip-end-fill"></i></button>
+      <span class="ve-mobile-zoom-sep"></span>
+      <button class="btn btn-sm" id="btnMobileSettings" title="Overlay Settings"><i class="bi bi-sliders"></i></button>
+    </div>
     <!-- Timeline header with zoom controls -->
     <div class="ve-timeline-header">
       <div class="ve-ruler-label">
@@ -396,7 +426,7 @@
 {% endblock %}
 
 {% block scripts %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/video-editor.css') }}?v=1773585846">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/video-editor.css') }}?v=1773585854">
 <script>window._isAdmin = {{ 'true' if current_user.is_admin else 'false' }};</script>
-<script src="{{ url_for('static', filename='js/video-editor.js') }}?v=1773585846"></script>
+<script src="{{ url_for('static', filename='js/video-editor.js') }}?v=1773585854"></script>
 {% endblock %}

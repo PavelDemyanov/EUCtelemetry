@@ -1003,8 +1003,9 @@ def check_processing_projects():
 @login_required
 def list_projects():
     page = request.args.get('page', 1, type=int)
+    from sqlalchemy import func
     projects = Project.query.filter_by(user_id=current_user.id)\
-        .order_by(Project.created_at.desc())\
+        .order_by(func.coalesce(Project.processing_completed_at, Project.created_at).desc())\
         .paginate(page=page, per_page=10, error_out=False)
     return render_template('projects.html', projects=projects)
 
