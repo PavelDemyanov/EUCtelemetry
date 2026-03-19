@@ -567,6 +567,18 @@
       });
   }
 
+  // Compute SHA-256 hash of first 2MB of file for deduplication
+  function computeFileHash(file) {
+    var HASH_SIZE = 2 * 1024 * 1024;
+    var slice = file.slice(0, Math.min(HASH_SIZE, file.size));
+    return slice.arrayBuffer().then(function(buffer) {
+      return crypto.subtle.digest('SHA-256', buffer);
+    }).then(function(hashBuffer) {
+      var hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+    });
+  }
+
   function uploadVideoToServer(file) {
     // File size limit: 20GB for regular users, unlimited for admin
     var MAX_SIZE = 20 * 1024 * 1024 * 1024; // 20GB
@@ -601,61 +613,69 @@
     state._currentUploadId = uploadToken;
     state._uploadAborted = false;
 
-    // Step 1: Initialize upload
-    fetch('/video-editor/upload-video-init', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        filename: file.name,
-        totalSize: file.size,
-        totalChunks: totalChunks
-      })
-    })
-    .then(function(resp) {
-      if (!resp.ok) return resp.json().then(function(d) { throw new Error(d.error || 'Init failed'); });
-      return resp.json();
-    })
-    .then(function(data) {
-      uploadId = data.upload_id;
-      // If a newer upload was started, abort this one
-      if (state._currentUploadId !== uploadToken) {
-        console.log('Upload ' + uploadId + ' superseded by newer upload, aborting');
-        state._uploadAborted = true;
-        throw new Error('__UPLOAD_SUPERSEDED__');
-      }
-      return sendChunk(0);
-    })
-    .then(function() {
-      return fetch('/video-editor/upload-video-complete', {
+    // Step 0: Compute file hash for dedup, then init upload
+    computeFileHash(file).catch(function() { return ''; }).then(function(fileHash) {
+
+      // Step 1: Initialize upload (server checks if file already exists by hash+size)
+      fetch('/video-editor/upload-video-init', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ upload_id: uploadId })
+        body: JSON.stringify({
+          filename: file.name,
+          totalSize: file.size,
+          totalChunks: totalChunks,
+          fileHash: fileHash
+        })
+      })
+      .then(function(resp) {
+        if (!resp.ok) return resp.json().then(function(d) { throw new Error(d.error || 'Init failed'); });
+        return resp.json();
+      })
+      .then(function(data) {
+        // Server found identical file already uploaded — skip chunked upload
+        if (data.existing) {
+          console.log('Video already on server, skipping upload. videoId=' + data.video_id);
+          return { video_id: data.video_id, skipped: true };
+        }
+        uploadId = data.upload_id;
+        if (state._currentUploadId !== uploadToken) {
+          console.log('Upload ' + uploadId + ' superseded by newer upload, aborting');
+          state._uploadAborted = true;
+          throw new Error('__UPLOAD_SUPERSEDED__');
+        }
+        return sendChunk(0).then(function() {
+          return fetch('/video-editor/upload-video-complete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ upload_id: uploadId })
+          });
+        }).then(function(resp) {
+          if (!resp.ok) throw new Error('Complete failed: ' + resp.status);
+          return resp.json();
+        });
+      })
+      .then(function(data) {
+        if (!data) return;
+        if (state._currentUploadId !== uploadToken) {
+          console.log('Upload completed but was superseded, ignoring');
+          return;
+        }
+        dom.videoUploadProgress.style.display = 'none';
+        state.videoId = data.video_id;
+        state.videoUploaded = true;
+        console.log('Video ' + (data.skipped ? 'reused from server' : 'uploaded') + ', videoId=' + data.video_id);
+        checkExportReady();
+      })
+      .catch(function(err) {
+        if (err.message === '__UPLOAD_SUPERSEDED__') {
+          console.log('Previous upload cancelled (superseded)');
+          return;
+        }
+        dom.videoUploadProgress.style.display = 'none';
+        alert('Video upload failed: ' + err.message);
       });
-    })
-    .then(function(resp) {
-      if (!resp.ok) throw new Error('Complete failed: ' + resp.status);
-      return resp.json();
-    })
-    .then(function(data) {
-      // Only accept this upload if it's still the current one
-      if (state._currentUploadId !== uploadToken) {
-        console.log('Upload ' + data.video_id + ' completed but was superseded, ignoring');
-        return;
-      }
-      dom.videoUploadProgress.style.display = 'none';
-      state.videoId = data.video_id;
-      state.videoUploaded = true;
-      console.log('Video upload complete, videoId=' + data.video_id);
-      checkExportReady();
-    })
-    .catch(function(err) {
-      if (err.message === '__UPLOAD_SUPERSEDED__') {
-        console.log('Previous upload cancelled (superseded)');
-        return;
-      }
-      dom.videoUploadProgress.style.display = 'none';
-      alert('Video upload failed: ' + err.message);
-    });
+
+    }); // end computeFileHash
 
     function sendChunk(index) {
       if (index >= totalChunks) return Promise.resolve();

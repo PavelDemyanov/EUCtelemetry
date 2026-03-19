@@ -2830,8 +2830,40 @@ def video_editor_upload_video_init():
     upload_dir = os.path.join('uploads', 'video_editor', str(current_user.id))
     os.makedirs(upload_dir, exist_ok=True)
 
+    file_hash = data.get('fileHash', '')
+    ext = os.path.splitext(filename)[1] or '.mp4'
+
+    # Check if identical file already exists (by hash + size)
+    hash_index_path = os.path.join(upload_dir, '_video_hashes.json')
+    if file_hash and total_size > 0:
+        try:
+            if os.path.exists(hash_index_path):
+                with open(hash_index_path, 'r') as hf:
+                    hash_index = json.load(hf)
+            else:
+                hash_index = {}
+
+            hash_key = f'{file_hash}_{total_size}'
+            if hash_key in hash_index:
+                existing_id = hash_index[hash_key]
+                # Verify file still exists on disk
+                existing_file = None
+                for f in os.listdir(upload_dir):
+                    if f.startswith(existing_id) and f.endswith(('.mp4', '.mov', '.avi', '.mkv', '.webm')):
+                        existing_file = os.path.join(upload_dir, f)
+                        break
+                if existing_file and os.path.exists(existing_file) and os.path.getsize(existing_file) == total_size:
+                    logging.info(f'Video dedup hit: {filename} matches existing {existing_id} (hash={file_hash[:16]}...)')
+                    return jsonify({'existing': True, 'video_id': existing_id, 'filename': filename})
+                else:
+                    # Stale entry, remove it
+                    del hash_index[hash_key]
+                    with open(hash_index_path, 'w') as hf:
+                        json.dump(hash_index, hf)
+        except Exception as e:
+            logging.warning(f'Hash dedup check failed: {e}')
+
     # Clean up old video files to prevent disk bloat
-    # Keep only CSV, VBO files and metadata; remove old .mp4 and chunk dirs
     import shutil as _shutil
     try:
         for old_file in os.listdir(upload_dir):
@@ -2847,8 +2879,14 @@ def video_editor_upload_video_init():
     except Exception as e:
         logging.warning(f'Error cleaning old uploads: {e}')
 
+    # Clear hash index since old videos were deleted
+    try:
+        if os.path.exists(hash_index_path):
+            os.remove(hash_index_path)
+    except Exception:
+        pass
+
     upload_id = str(int(time.time() * 1000))
-    ext = os.path.splitext(filename)[1] or '.mp4'
 
     # Store upload metadata in a temp JSON file
     meta = {
@@ -2861,6 +2899,7 @@ def video_editor_upload_video_init():
         'upload_dir': upload_dir,
         'final_path': os.path.join(upload_dir, upload_id + ext),
         'chunk_dir': os.path.join(upload_dir, upload_id + '_chunks'),
+        'file_hash': file_hash,
     }
     os.makedirs(meta['chunk_dir'], exist_ok=True)
 
@@ -2952,6 +2991,24 @@ def video_editor_upload_video_complete():
 
     file_size = os.path.getsize(final_path)
     logging.info(f'Video upload complete: {meta["filename"]} ({file_size} bytes) -> {final_path}')
+
+    # Save file hash to index for future dedup
+    file_hash = meta.get('file_hash', '')
+    if file_hash and file_size > 0:
+        try:
+            hash_index_path = os.path.join(upload_dir, '_video_hashes.json')
+            if os.path.exists(hash_index_path):
+                with open(hash_index_path, 'r') as hf:
+                    hash_index = json.load(hf)
+            else:
+                hash_index = {}
+            hash_key = f'{file_hash}_{file_size}'
+            hash_index[hash_key] = upload_id
+            with open(hash_index_path, 'w') as hf:
+                json.dump(hash_index, hf)
+            logging.info(f'Saved video hash: {hash_key[:32]}... -> {upload_id}')
+        except Exception as e:
+            logging.warning(f'Failed to save video hash: {e}')
 
     return jsonify({
         'video_id': upload_id,
