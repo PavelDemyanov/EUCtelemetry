@@ -285,6 +285,12 @@
                 <i class="bi bi-stop-circle"></i> {{ _('Stop') }}
             </button>
             {% else %}
+            {% if project.status in ('error', 'stopped') and project.csv_type == 'video_editor' and project.export_settings and 'video_file' in (project.export_settings or '') %}
+            <button onclick="retryProject({{ project.id }})"
+                    class="btn btn-sm btn-outline-info">
+                <i class="bi bi-arrow-clockwise"></i> {{ _('Retry') }}
+            </button>
+            {% endif %}
             <button onclick="deleteProject({{ project.id }})"
                     class="btn btn-sm btn-outline-danger btn-delete">
                 <i class="bi bi-trash"></i> {{ _('Delete') }}
@@ -352,6 +358,20 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 <script>
+function retryProject(id) {
+    if (!confirm('Retry this project?')) return;
+    fetch('/retry/' + id, { method: 'POST' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Retry failed: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(function(err) { alert('Error: ' + err.message); });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     // Group projects by date (Today / Yesterday / Earlier)
     (function() {

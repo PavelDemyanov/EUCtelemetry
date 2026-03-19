@@ -102,6 +102,7 @@ _LOCALIZATION = {
         'pwm': 'PWM',
         'power': 'Power',
         'time': 'Time',
+        'dragy_speed': 'Dragy',
         'units': {
             'speed': 'km/h',
             'voltage': 'V',
@@ -125,6 +126,7 @@ _LOCALIZATION = {
         'pwm': 'ШИМ',
         'power': 'Мощность',
         'time': 'Время',
+        'dragy_speed': 'Dragy',
         'units': {
             'speed': 'км/ч',
             'voltage': 'В',
@@ -343,6 +345,7 @@ def create_frame(values,
         show_power = text_settings.get('show_power', True)
         show_current = text_settings.get('show_current', True)  # Add current visibility setting
         show_time = text_settings.get('show_time', False)  # Add time visibility setting
+        show_dragy_speed = text_settings.get('show_dragy_speed', False)  # Dragy GPS speed from VBO
         show_bottom_elements = text_settings.get('show_bottom_elements', True)
         use_icons = text_settings.get('use_icons', False)  # Add icons setting
         vertical_layout = text_settings.get('vertical_layout', False)  # Add vertical layout setting
@@ -443,6 +446,9 @@ def create_frame(values,
             from datetime import datetime
             time_str = datetime.fromtimestamp(values['timestamp']).strftime('%H:%M:%S')
             params.append((loc['time'], time_str, ""))
+
+        if show_dragy_speed and 'dragy_speed' in values:
+            params.append((loc.get('dragy_speed', 'Dragy'), f"{int(values['dragy_speed'])}", loc['units']['speed']))
 
         if params:  # Only proceed if there are visible elements
             element_widths = []

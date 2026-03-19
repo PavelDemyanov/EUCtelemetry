@@ -5,7 +5,7 @@
 
   <!-- Top Bar -->
   <div class="ve-topbar">
-    <input type="text" id="projectName" placeholder="Project name" maxlength="7">
+
     
     <button class="btn btn-sm btn-outline-primary" id="btnUploadVideo">
       <i class="bi bi-camera-video"></i> Upload Video
@@ -23,13 +23,30 @@
     <input type="file" id="vboFileInput" accept=".vbo" style="display:none">
 
     <!-- Upload progress indicators -->
-    <div class="ve-upload-progress" id="videoUploadProgress">
-      <span>Uploading video...</span>
+    <div class="ve-upload-progress dropdown" id="videoUploadProgress">
+      <span class="ve-upload-label" data-bs-toggle="dropdown" aria-expanded="false" style="cursor:pointer;">
+        Uploading video... <i class="bi bi-info-circle" style="opacity:0.6;"></i>
+      </span>
       <div class="progress"><div class="progress-bar" role="progressbar" style="width:0%"></div></div>
       <span class="percent">0%</span>
+      <div class="dropdown-menu ve-upload-dropdown">
+        <div class="px-3 py-2" style="max-width:320px;">
+          <p class="mb-2" style="font-size:12px; color:#c9d1d9; line-height:1.5;">
+            <i class="bi bi-cloud-arrow-up" style="color:#58a6ff;"></i>
+            {{ _('Your video is being uploaded to the server in the background.') }}
+          </p>
+          <p class="mb-0" style="font-size:11px; color:#8b949e; line-height:1.4;">
+            {{ _('You can continue editing the timeline, adjusting CSV sync, and configuring overlay settings while the upload is in progress. The export button will become available once all files are uploaded.') }}
+          </p>
+        </div>
+      </div>
     </div>
 
     <div class="spacer"></div>
+
+    <span class="ve-upload-limit text-muted" style="font-size: 0.75rem; margin-right: 10px; opacity: 0.6;">
+      <i class="bi bi-cloud-upload"></i> {{ _('Video limit:') }} {% if current_user.is_admin %}∞{% else %}20 GB{% endif %}
+    </span>
 
     <!-- Export dropdown -->
     <div class="dropdown">
@@ -37,6 +54,11 @@
         <i class="bi bi-download"></i> Export
       </button>
       <div class="dropdown-menu dropdown-menu-end ve-export-settings">
+        <div class="mb-2">
+          <label>Project Name</label>
+          <input type="text" class="form-control form-control-sm" id="exportProjectName" placeholder="VE-XXXXXXX" style="background:#2d3238;border-color:#3d4248;color:#e0e0e0;">
+          <small class="text-muted">Leave empty for auto-name</small>
+        </div>
         <div class="mb-2">
           <label>Data FPS</label>
           <select class="form-select form-select-sm" id="exportDataFPS">
@@ -69,6 +91,15 @@
             <option value="fullhd">Full HD (1080p)</option>
             <option value="4k">4K (2160p)</option>
           </select>
+        </div>
+        <div class="mb-2">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="exportInterpolate" checked>
+            <label class="form-check-label" for="exportInterpolate" style="font-size:0.85rem;">
+              Interpolate Missing Values
+              <span class="badge text-bg-info" style="font-size:0.6rem;">Two-way</span>
+            </label>
+          </div>
         </div>
         <button class="btn btn-primary btn-sm w-100 mt-2" id="btnStartExport">
           <i class="bi bi-film"></i> Start Export
@@ -326,9 +357,46 @@
 
   </div>
 </div>
+<!-- Export Progress Modal -->
+<div class="modal fade" id="exportProgressModal" tabindex="-1" data-bs-backdrop="static" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:460px;">
+    <div class="modal-content" style="background:#1e2228;border:1px solid var(--bs-border-color);border-radius:0.75rem;color:#e0e0e0;">
+      <div class="modal-body p-0">
+        <!-- Project card (same style as projects page) -->
+        <div style="padding:0.75rem 1rem;border-bottom:1px solid var(--bs-border-color);display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-weight:600;font-size:0.95rem;" id="expModalName">—</span>
+          <span id="expModalStatus"><span class="badge text-bg-warning">Processing 0%</span></span>
+        </div>
+        <div style="padding:0.75rem 1rem;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.3rem 1.25rem;font-size:0.82rem;">
+            <div style="display:flex;justify-content:space-between;"><span style="color:var(--bs-secondary-color);">FPS</span><span style="font-weight:500;" id="expModalFps">—</span></div>
+            <div style="display:flex;justify-content:space-between;"><span style="color:var(--bs-secondary-color);">Codec</span><span style="font-weight:500;" id="expModalCodec">—</span></div>
+            <div style="display:flex;justify-content:space-between;"><span style="color:var(--bs-secondary-color);">Resolution</span><span style="font-weight:500;" id="expModalRes">—</span></div>
+            <div style="display:flex;justify-content:space-between;"><span style="color:var(--bs-secondary-color);">Progress</span><span style="font-weight:500;" id="expModalProgress">0%</span></div>
+          </div>
+        </div>
+        <!-- Progress bar -->
+        <div style="padding:0 1rem 0.75rem;">
+          <div style="height:4px;border-radius:2px;background:var(--bs-border-color);overflow:hidden;">
+            <div id="expModalBar" style="height:100%;border-radius:2px;background:var(--bs-warning);transition:width 0.4s ease;width:0%;"></div>
+          </div>
+        </div>
+      </div>
+      <div style="padding:0.75rem 1rem;border-top:1px solid var(--bs-border-color);text-align:center;">
+        <p style="font-size:0.8rem;color:#8b949e;margin:0 0 0.75rem;">Closing this window will not stop the export process</p>
+        <div style="display:flex;gap:0.5rem;justify-content:center;">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+          <a href="/projects" class="btn btn-sm btn-primary" target="_blank"><i class="bi bi-folder2-open"></i> Go to Projects</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/video-editor.css') }}?v=1773585846">
+<script>window._isAdmin = {{ 'true' if current_user.is_admin else 'false' }};</script>
 <script src="{{ url_for('static', filename='js/video-editor.js') }}?v=1773585846"></script>
 {% endblock %}

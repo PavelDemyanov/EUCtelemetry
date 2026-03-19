@@ -817,27 +817,20 @@ def upload_file():
                     os.remove(file_path)
                     return jsonify({'error': 'Invalid file encoding. Please ensure your CSV file is properly encoded.'}), 400
 
-            # Check for DarknessBot format
-            darkness_bot_columns = {'Date', 'Speed', 'GPS Speed', 'Voltage', 'Temperature', 
-                                      'Current', 'Battery level', 'Total mileage', 'PWM', 'Power'}
-            # Check for WheelLog format
-            wheellog_columns = {'date', 'speed', 'gps_speed', 'voltage', 'system_temp',
-                                  'current', 'battery_level', 'totaldistance', 'pwm', 'power'}
-
-            df_columns = set(df.columns)
-            is_darkness_bot = len(darkness_bot_columns.intersection(df_columns)) >= len(darkness_bot_columns) * 0.8
-            is_wheellog = len(wheellog_columns.intersection(df_columns)) >= len(wheellog_columns) * 0.8
-
-            if not (is_darkness_bot or is_wheellog):
+            # Validate CSV format using the centralized detect_csv_type function
+            from utils.csv_processor import detect_csv_type
+            try:
+                csv_type = detect_csv_type(df)
+                if csv_type == 'processed':
+                    csv_type = 'darnkessbot'
+            except ValueError:
                 os.remove(file_path)
-                return jsonify({'error': 'Invalid CSV format. Please upload a CSV file from DarknessBot or WheelLog.'}), 400
-
-            csv_type = 'darnkessbot' if is_darkness_bot else 'wheellog'
+                return jsonify({'error': 'Invalid CSV format. Please upload a CSV file from DarknessBot, WheelLog, or EUC World.'}), 400
 
         except Exception as e:
             logging.error(f"Error validating CSV format: {str(e)}")
             os.remove(file_path)
-            return jsonify({'error': 'Invalid CSV file. Please upload a CSV file from DarknessBot or WheelLog.'}), 400
+            return jsonify({'error': 'Invalid CSV file. Please upload a CSV file from DarknessBot, WheelLog, or EUC World.'}), 400
 
         # Create project with detected type and user_id
         project = Project(
@@ -956,7 +949,7 @@ def generate_project_frames(project_id):
         logging.info(f"Starting processing with settings: {text_settings}, interpolate_values: {interpolate_values}")
 
         # Update project settings immediately
-        project.fps = fps
+        project.fps = round(fps, 2) if fps else fps
         project.resolution = resolution
         project.codec = codec
         project.processing_started_at = datetime.now()
@@ -2142,25 +2135,11 @@ def analyze_csv():
             # Detect CSV type
             try:
                 csv_type = detect_csv_type(df)
+                if csv_type == 'processed':
+                    csv_type = 'darnkessbot'
                 logging.info(f"Detected CSV type: {csv_type}")
             except ValueError:
-                # Check for DarknessBot format
-                darkness_bot_columns = {'Date', 'Speed', 'GPS Speed', 'Voltage', 'Temperature', 
-                                    'Current', 'Battery level', 'Total mileage', 'PWM', 'Power'}
-                
-                # Check for WheelLog format - core columns (gps_speed is optional)
-                wheellog_core_columns = {'date', 'speed', 'voltage', 'system_temp',
-                                'current', 'battery_level', 'totaldistance', 'pwm', 'power'}
-                wheellog_all_columns = wheellog_core_columns.union({'gps_speed'})
-
-                df_columns = set(df.columns)
-                is_darkness_bot = len(darkness_bot_columns.intersection(df_columns)) >= len(darkness_bot_columns) * 0.8
-                is_wheellog = len(wheellog_core_columns.intersection(df_columns)) >= len(wheellog_core_columns) * 0.9
-
-                if not (is_darkness_bot or is_wheellog):
-                    return jsonify({'error': gettext('Invalid CSV format. Please upload a CSV file from DarknessBot or WheelLog.')}), 400
-
-                csv_type = 'darnkessbot' if is_darkness_bot else 'wheellog'
+                return jsonify({'error': gettext('Invalid CSV format. Please upload a CSV file from DarknessBot, WheelLog, or EUC World.')}), 400
             
             # Process the CSV file to get standardized data
             csv_type, processed_data = process_csv_file(temp_file_path, interpolate_values=True)
@@ -3257,9 +3236,15 @@ def process_video_editor_export(project_id, export_settings):
             )
 
             # Step 5: Complete
-            project.resolution = resolution
+            # Save actual output resolution (source video size), not overlay resolution
+            if src_height >= 2160:
+                project.resolution = '4k'
+            elif src_height >= 1080:
+                project.resolution = 'fullhd'
+            else:
+                project.resolution = f'{src_width}x{src_height}'
             project.codec = codec
-            project.fps = fps
+            project.fps = round(fps, 2)
             project.video_file = os.path.basename(output_file)
             project.status = 'completed'
             project.progress = 100

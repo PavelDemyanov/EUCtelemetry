@@ -432,14 +432,36 @@
       checkExportReady();
     });
 
-    // Background upload to server
-    uploadVideoToServer(file);
+    // Background upload to server — check disk space first
+    fetch('/api/disk-space')
+      .then(function(resp) { return resp.json(); })
+      .then(function(data) {
+        if (!data.enough) {
+          alert('The server is temporarily out of disk space. Please try again later.');
+          return;
+        }
+        uploadVideoToServer(file);
+      })
+      .catch(function() {
+        // If disk check fails, proceed with upload anyway
+        uploadVideoToServer(file);
+      });
   }
 
   function uploadVideoToServer(file) {
+    // File size limit: 20GB for regular users, unlimited for admin
+    var MAX_SIZE = 20 * 1024 * 1024 * 1024; // 20GB
+    if (!window._isAdmin && file.size > MAX_SIZE) {
+      var sizeMB = Math.round(file.size / 1024 / 1024);
+      var limitGB = 20;
+      alert('File size (' + sizeMB + ' MB) exceeds the ' + limitGB + ' GB limit.\nPlease reduce the video size and try again.');
+      return;
+    }
+
     var CHUNK_SIZE = 20 * 1024 * 1024; // 20MB chunks
     var totalChunks = Math.ceil(file.size / CHUNK_SIZE);
     var uploadId = null;
+    var MAX_RETRIES = 5;
 
     // Show progress
     dom.videoUploadProgress.style.display = 'flex';
@@ -466,16 +488,14 @@
       })
     })
     .then(function(resp) {
-      if (!resp.ok) throw new Error('Init failed: ' + resp.status);
+      if (!resp.ok) return resp.json().then(function(d) { throw new Error(d.error || 'Init failed'); });
       return resp.json();
     })
     .then(function(data) {
       uploadId = data.upload_id;
-      // Step 2: Send chunks sequentially
       return sendChunk(0);
     })
     .then(function() {
-      // Step 3: Complete upload
       return fetch('/video-editor/upload-video-complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -499,7 +519,10 @@
 
     function sendChunk(index) {
       if (index >= totalChunks) return Promise.resolve();
+      return sendChunkWithRetry(index, 0);
+    }
 
+    function sendChunkWithRetry(index, attempt) {
       var start = index * CHUNK_SIZE;
       var end = Math.min(start + CHUNK_SIZE, file.size);
       var blob = file.slice(start, end);
@@ -512,6 +535,7 @@
 
         var xhr = new XMLHttpRequest();
         xhr.open('POST', '/video-editor/upload-video-chunk', true);
+        xhr.timeout = 120000; // 2 min timeout per chunk
 
         xhr.upload.addEventListener('progress', function(e) {
           if (e.lengthComputable) {
@@ -531,9 +555,20 @@
           reject(new Error('Chunk ' + index + ' network error'));
         });
 
+        xhr.addEventListener('timeout', function() {
+          reject(new Error('Chunk ' + index + ' timeout'));
+        });
+
         xhr.send(formData);
       }).then(function() {
         return sendChunk(index + 1);
+      }).catch(function(err) {
+        if (attempt < MAX_RETRIES) {
+          console.warn('Chunk ' + index + ' failed (attempt ' + (attempt + 1) + '/' + MAX_RETRIES + '), retrying in 2s...', err.message);
+          return new Promise(function(resolve) { setTimeout(resolve, 2000); })
+            .then(function() { return sendChunkWithRetry(index, attempt + 1); });
+        }
+        throw err;
       });
     }
   }
@@ -699,9 +734,12 @@
   function detectCSVType(header) {
     // DarknessBot: Date, Speed, Voltage
     var hasDB = header.indexOf('Date') >= 0 && header.indexOf('Speed') >= 0 && header.indexOf('Voltage') >= 0;
+    // EUC World: datetime, speed, voltage, safety_margin
+    var hasEW = header.indexOf('datetime') >= 0 && header.indexOf('speed') >= 0 && header.indexOf('voltage') >= 0 && header.indexOf('safety_margin') >= 0;
     // WheelLog: date, speed, voltage
     var hasWL = header.indexOf('date') >= 0 && header.indexOf('speed') >= 0 && header.indexOf('voltage') >= 0;
     if (hasDB) return 'darknessbot';
+    if (hasEW) return 'eucworld';
     if (hasWL) return 'wheellog';
     return null;
   }
@@ -720,6 +758,19 @@
         point.pwm = safeFloat(row['PWM'] || 0);
         point.power = safeFloat(row['Power'] || 0);
         point.gps = safeFloat(row['GPS Speed'] || 0);
+      } else if (type === 'eucworld') {
+        // EUC World: ISO 8601 datetime with timezone
+        var dt = new Date(row['datetime']);
+        point.timestamp = dt.getTime() / 1000;
+        point.speed = safeFloat(row['speed']);
+        point.voltage = safeFloat(row['voltage']);
+        point.temperature = safeFloat(row['temp'] || 0);
+        point.current = safeFloat(row['current'] || 0);
+        point.battery = safeFloat(row['battery'] || 0);
+        point.mileage = safeFloat(row['distance_total'] || row['distance'] || 0);
+        point.pwm = 100 - safeFloat(row['safety_margin'] || 100);
+        point.power = safeFloat(row['power'] || 0);
+        point.gps = safeFloat(row['gps_speed'] || 0);
       } else if (type === 'wheellog') {
         point.timestamp = parseWheelLogTimestamp(row['date'], row['time']);
         point.speed = safeFloat(row['speed']);
@@ -1422,7 +1473,9 @@
   function updatePlayheadLine() {
     if (!dom.playheadLine || !dom.playheadRuler) return;
     var rulerLeft = parseFloat(dom.playheadRuler.style.left) || 0;
-    var scrollOff = dom.videoTrackContent ? dom.videoTrackContent.scrollLeft : 0;
+    // Use playheadBarContent scroll to stay in sync with the ruler circle
+    var phBar = document.getElementById('playheadBarContent');
+    var scrollOff = phBar ? phBar.scrollLeft : (dom.videoTrackContent ? dom.videoTrackContent.scrollLeft : 0);
     var pos = rulerLeft - scrollOff + 120;
     // Hide when playhead is outside the visible track area (behind labels or off-screen right)
     var tracksW = dom.playheadLine.parentElement ? dom.playheadLine.parentElement.clientWidth : 9999;
@@ -1898,15 +1951,31 @@
     if (dom.btnExport) dom.btnExport.disabled = !ready;
   }
 
+  function generateProjectName() {
+    var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    var id = '';
+    for (var i = 0; i < 7; i++) id += chars.charAt(Math.floor(Math.random() * chars.length));
+    return 'VE-' + id;
+  }
+
   function startExport() {
     if (!state.videoId || !state.csvId) {
       alert('Please upload both video and CSV first.');
       return;
     }
 
+    var nameInput = document.getElementById('exportProjectName');
+    var projectName = nameInput ? nameInput.value.trim() : '';
+    if (!projectName) projectName = generateProjectName();
+
+    var interpolateEl = document.getElementById('exportInterpolate');
+    var interpolate = interpolateEl ? interpolateEl.checked : true;
+
     var payload = {
       video_id: state.videoId,
       csv_id: state.csvId,
+      project_name: projectName,
+      interpolate_values: interpolate,
       time_offset: state.timeOffset,
       csv_trim_start: state.csvTrimStart,
       csv_trim_end: state.csvTrimEnd,
@@ -1936,8 +2005,7 @@
     })
     .then(function(data) {
       if (data.project_id) {
-        alert('Export started! Project ID: ' + data.project_id + '. Check the Projects page for progress.');
-        window.open('/projects', '_blank');
+        showExportProgress(data.project_id, projectName);
       } else {
         alert('Export failed: ' + (data.error || 'Unknown error'));
       }
@@ -1945,6 +2013,58 @@
     .catch(function(err) {
       alert('Export request failed: ' + err.message);
     });
+  }
+
+  function showExportProgress(projectId, projectName) {
+    // Fill modal with initial data
+    var fpsEl = document.getElementById('exportFPS');
+    var codecEl = document.getElementById('exportCodec');
+    var resEl = document.getElementById('exportResolution');
+
+    document.getElementById('expModalName').textContent = projectName;
+    document.getElementById('expModalFps').textContent = fpsEl ? fpsEl.options[fpsEl.selectedIndex].text : '—';
+    document.getElementById('expModalCodec').textContent = codecEl ? codecEl.options[codecEl.selectedIndex].text : '—';
+    document.getElementById('expModalRes').textContent = resEl ? resEl.options[resEl.selectedIndex].text : '—';
+    document.getElementById('expModalProgress').textContent = '0%';
+    document.getElementById('expModalBar').style.width = '0%';
+    document.getElementById('expModalStatus').innerHTML = '<span class="badge text-bg-warning">Processing 0%</span>';
+
+    // Show modal
+    var modal = new bootstrap.Modal(document.getElementById('exportProgressModal'));
+    modal.show();
+
+    // Poll progress
+    var pollInterval = setInterval(function() {
+      fetch('/project_status/' + projectId)
+        .then(function(r) { return r.json(); })
+        .then(function(st) {
+          var pct = (st.progress || 0).toFixed(1);
+          var status = st.status || 'processing';
+
+          document.getElementById('expModalProgress').textContent = pct + '%';
+          document.getElementById('expModalBar').style.width = pct + '%';
+
+          if (status === 'processing') {
+            document.getElementById('expModalStatus').innerHTML = '<span class="badge text-bg-warning">Processing ' + pct + '%</span>';
+          } else if (status === 'completed') {
+            document.getElementById('expModalStatus').innerHTML = '<span class="badge text-bg-success">Completed</span>';
+            document.getElementById('expModalBar').style.background = 'var(--bs-success)';
+            document.getElementById('expModalBar').style.width = '100%';
+            document.getElementById('expModalProgress').textContent = '100%';
+            clearInterval(pollInterval);
+          } else if (status === 'error') {
+            document.getElementById('expModalStatus').innerHTML = '<span class="badge text-bg-danger">Error</span>';
+            document.getElementById('expModalBar').style.background = 'var(--bs-danger)';
+            clearInterval(pollInterval);
+          }
+        })
+        .catch(function() {}); // ignore poll errors
+    }, 2000);
+
+    // Stop polling when modal closes
+    document.getElementById('exportProgressModal').addEventListener('hidden.bs.modal', function() {
+      clearInterval(pollInterval);
+    }, { once: true });
   }
 
 

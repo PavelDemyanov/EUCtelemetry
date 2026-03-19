@@ -46,6 +46,13 @@
   height: 6px;
 }
 .ve-upload-progress.active { display: flex; }
+.ve-upload-label:hover { color: #c9d1d9; }
+.ve-upload-dropdown {
+  background: #1e2228;
+  border: 1px solid #3d4248;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
 
 /* Main Layout — 3 panels */
 .ve-main {

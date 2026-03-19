@@ -62,25 +62,45 @@ def detect_csv_type(df):
     wheellog_optional_cols = ['time', 'totaldistance', 'battery_level', 'pwm', 
                            'current', 'power', 'system_temp', 'gps_speed']  # Optional columns
 
+    # EUC World detection
+    eucworld_required_cols = ['datetime', 'speed', 'voltage', 'battery', 'safety_margin']
+    eucworld_optional_cols = ['current', 'power', 'temp', 'temp_motor', 'distance',
+                             'distance_total', 'gps_speed', 'gps_lat', 'gps_lon',
+                             'tilt', 'roll', 'speed_max']
+
     # Calculate match percentages
     darnkessbot_required_match = sum(col in df.columns for col in darnkessbot_required_cols) / len(darnkessbot_required_cols)
     darnkessbot_optional_match = sum(col in df.columns for col in darnkessbot_optional_cols) / len(darnkessbot_optional_cols)
-    darnkessbot_total_match = (darnkessbot_required_match * 0.7) + (darnkessbot_optional_match * 0.3)  # Weight required columns more
+    darnkessbot_total_match = (darnkessbot_required_match * 0.7) + (darnkessbot_optional_match * 0.3)
     
     wheellog_required_match = sum(col in df.columns for col in wheellog_required_cols) / len(wheellog_required_cols)
     wheellog_optional_match = sum(col in df.columns for col in wheellog_optional_cols) / len(wheellog_optional_cols)
-    wheellog_total_match = (wheellog_required_match * 0.7) + (wheellog_optional_match * 0.3)  # Weight required columns more
+    wheellog_total_match = (wheellog_required_match * 0.7) + (wheellog_optional_match * 0.3)
+
+    eucworld_required_match = sum(col in df.columns for col in eucworld_required_cols) / len(eucworld_required_cols)
+    eucworld_optional_match = sum(col in df.columns for col in eucworld_optional_cols) / len(eucworld_optional_cols)
+    eucworld_total_match = (eucworld_required_match * 0.7) + (eucworld_optional_match * 0.3)
     
-    logging.info(f"CSV type detection results - DarknessBot: {darnkessbot_total_match:.2f}, WheelLog: {wheellog_total_match:.2f}")
+    logging.info(f"CSV type detection results - DarknessBot: {darnkessbot_total_match:.2f}, WheelLog: {wheellog_total_match:.2f}, EUC World: {eucworld_total_match:.2f}")
     
     # Check for a minimum required match threshold and all required columns
     is_darnkessbot = darnkessbot_required_match == 1.0 and darnkessbot_total_match >= 0.6
     is_wheellog = wheellog_required_match == 1.0 and wheellog_total_match >= 0.6
-    
-    if is_darnkessbot and (not is_wheellog or darnkessbot_total_match > wheellog_total_match):
-        return 'darnkessbot'
-    elif is_wheellog and (not is_darnkessbot or wheellog_total_match > darnkessbot_total_match):
-        return 'wheellog'
+    is_eucworld = eucworld_required_match == 1.0 and eucworld_total_match >= 0.6
+
+    # Build candidates list and pick the best match
+    candidates = []
+    if is_darnkessbot:
+        candidates.append(('darnkessbot', darnkessbot_total_match))
+    if is_wheellog:
+        candidates.append(('wheellog', wheellog_total_match))
+    if is_eucworld:
+        candidates.append(('eucworld', eucworld_total_match))
+
+    if candidates:
+        # Return the type with highest match score
+        candidates.sort(key=lambda x: x[1], reverse=True)
+        return candidates[0][0]
     else:
         # Log which required columns are missing for each type
         if not is_darnkessbot:
@@ -91,6 +111,10 @@ def detect_csv_type(df):
             missing_wheellog = [col for col in wheellog_required_cols if col not in df.columns]
             if missing_wheellog:
                 logging.info(f"Missing required WheelLog columns: {missing_wheellog}")
+        if not is_eucworld:
+            missing_eucworld = [col for col in eucworld_required_cols if col not in df.columns]
+            if missing_eucworld:
+                logging.info(f"Missing required EUC World columns: {missing_eucworld}")
         
         raise ValueError("CSV format not recognized - missing required columns or insufficient match")
 
@@ -514,6 +538,66 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
 
             if interpolate_values:
                 columns_to_interpolate = ['speed', 'gps', 'voltage', 'temperature', 'current', 
+                                         'battery', 'mileage', 'pwm', 'power']
+                raw_data = interpolate_numeric_data(raw_data, columns_to_interpolate)
+
+            processed_data = {
+                'timestamp': raw_data['timestamp'],
+                'speed': clean_numeric_column(pd.Series(raw_data['speed'])),
+                'gps': clean_numeric_column(pd.Series(raw_data['gps'])),
+                'voltage': clean_numeric_column(pd.Series(raw_data['voltage'])),
+                'temperature': clean_numeric_column(pd.Series(raw_data['temperature'])),
+                'current': clean_numeric_column(pd.Series(raw_data['current'])),
+                'battery': clean_numeric_column(pd.Series(raw_data['battery'])),
+                'mileage': process_mileage(pd.Series(raw_data['mileage']), csv_type),
+                'pwm': clean_numeric_column(pd.Series(raw_data['pwm'])),
+                'power': clean_numeric_column(pd.Series(raw_data['power']))
+            }
+
+        elif csv_type == 'eucworld':
+            # EUC World: ISO 8601 datetime with timezone, e.g. 2026-03-19T13:15:20.635+0300
+            df['timestamp'] = pd.to_datetime(df['datetime'], format='ISO8601', errors='coerce')
+            # Convert to Unix timestamp (seconds)
+            df['timestamp'] = df['timestamp'].astype('int64') // 10**9
+
+            # Filter rows with invalid timestamps
+            valid_timestamp_mask = df['timestamp'].notna() & (df['timestamp'] > 0)
+            df = df[valid_timestamp_mask]
+
+            # EUC World uses 'distance' (km, float) for trip mileage
+            # Convert to meters (* 1000) so process_mileage works uniformly
+            # Use distance_total (odometer, km) like DarknessBot's Total mileage
+            if 'distance_total' in df.columns:
+                mileage_series = pd.to_numeric(df['distance_total'], errors='coerce')
+            elif 'distance' in df.columns:
+                mileage_series = pd.to_numeric(df['distance'], errors='coerce')
+            else:
+                mileage_series = pd.Series([0] * len(df))
+
+            # PWM = 100 - safety_margin (safety_margin is inverted PWM)
+            safety_margin = pd.to_numeric(df['safety_margin'], errors='coerce').fillna(100)
+            pwm_series = 100 - safety_margin
+
+            raw_data = {
+                'timestamp': df['timestamp'],
+                'speed': pd.to_numeric(df['speed'], errors='coerce'),
+                'voltage': pd.to_numeric(df['voltage'], errors='coerce'),
+                'temperature': pd.to_numeric(df['temp'], errors='coerce') if 'temp' in df.columns else pd.Series([0] * len(df)),
+                'current': pd.to_numeric(df['current'], errors='coerce') if 'current' in df.columns else pd.Series([0] * len(df)),
+                'battery': pd.to_numeric(df['battery'], errors='coerce'),
+                'mileage': mileage_series,
+                'pwm': pwm_series,
+                'power': pd.to_numeric(df['power'], errors='coerce') if 'power' in df.columns else pd.Series([0] * len(df))
+            }
+
+            # Add GPS speed if available
+            if 'gps_speed' in df.columns:
+                raw_data['gps'] = pd.to_numeric(df['gps_speed'], errors='coerce')
+            else:
+                raw_data['gps'] = pd.Series([0] * len(df['timestamp']))
+
+            if interpolate_values:
+                columns_to_interpolate = ['speed', 'gps', 'voltage', 'temperature', 'current',
                                          'battery', 'mileage', 'pwm', 'power']
                 raw_data = interpolate_numeric_data(raw_data, columns_to_interpolate)
 

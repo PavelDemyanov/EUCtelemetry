@@ -71,6 +71,7 @@ class Project(db.Model):
     processing_started_at = db.Column(db.DateTime)  # When processing started
     processing_completed_at = db.Column(db.DateTime)  # When processing completed
     progress = db.Column(db.Float, default=0)  # Progress percentage from 0 to 100
+    export_settings = db.Column(db.Text)  # JSON export settings for retry (video editor)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
     def days_until_expiry(self):

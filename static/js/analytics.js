@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const crosshairPlugin = {
         id: 'crosshair',
         afterDraw: (chart, args, options) => {
-            if (!chart.tooltip._active || !chart.tooltip._active.length) return;
+            if (!chart.tooltip || !chart.tooltip._active || !chart.tooltip._active.length) return;
             const activePoint = chart.tooltip._active[0];
             const ctx = chart.ctx;
             const x = activePoint.element.x;
