@@ -2830,6 +2830,23 @@ def video_editor_upload_video_init():
     upload_dir = os.path.join('uploads', 'video_editor', str(current_user.id))
     os.makedirs(upload_dir, exist_ok=True)
 
+    # Clean up old video files to prevent disk bloat
+    # Keep only CSV, VBO files and metadata; remove old .mp4 and chunk dirs
+    import shutil as _shutil
+    try:
+        for old_file in os.listdir(upload_dir):
+            old_path = os.path.join(upload_dir, old_file)
+            if old_file.endswith(('.mp4', '.mov', '.avi', '.mkv', '.webm')):
+                os.remove(old_path)
+                logging.info(f'Cleaned up old video: {old_path}')
+            elif old_file.endswith('_chunks') and os.path.isdir(old_path):
+                _shutil.rmtree(old_path, ignore_errors=True)
+                logging.info(f'Cleaned up old chunks: {old_path}')
+            elif old_file.endswith('_meta.json'):
+                os.remove(old_path)
+    except Exception as e:
+        logging.warning(f'Error cleaning old uploads: {e}')
+
     upload_id = str(int(time.time() * 1000))
     ext = os.path.splitext(filename)[1] or '.mp4'
 
@@ -3040,6 +3057,9 @@ def video_editor_export():
         'codec': data.get('codec', 'h264'),
         'resolution': data.get('resolution', 'source'),
         'vbo_id': data.get('vbo_id', None),
+        'vbo_time_offset': data.get('vbo_time_offset', 0),
+        'vbo_trim_start': data.get('vbo_trim_start', 0),
+        'vbo_trim_end': data.get('vbo_trim_end', 0),
     }
     
     thread = threading.Thread(
@@ -3050,6 +3070,113 @@ def video_editor_export():
     thread.start()
     
     return jsonify({'project_id': project.id})
+
+
+def parse_vbo_file(filepath):
+    """Parse VBO (Dragy) file and return list of {t, speed} dicts."""
+    data = []
+    columns = []
+    in_data = False
+    in_header = False
+    velocity_is_kmh = False
+    first_time = None
+
+    with open(filepath, 'r', errors='ignore') as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+
+            if line == '[header]':
+                in_header = True
+                continue
+            if in_header and not line.startswith('['):
+                if 'velocity kmh' in line.lower() or 'velocity km' in line.lower():
+                    velocity_is_kmh = True
+                continue
+            if line.startswith('[') and in_header:
+                in_header = False
+
+            if line in ('[column names]', '[columns]'):
+                in_data = False
+                continue
+            if not columns and not in_data and not line.startswith('['):
+                # This might be the column names line
+                parts = line.split()
+                if any(p.lower() in ('time', 'utc', 'velocity', 'speed') for p in parts):
+                    columns = [c.lower() for c in parts]
+                    continue
+
+            if line == '[data]':
+                in_data = True
+                continue
+            if line.startswith('[') and line.endswith(']'):
+                if in_data:
+                    break
+                in_data = False
+                continue
+
+            if not in_data or not columns:
+                continue
+
+            parts = line.split()
+            if len(parts) < len(columns):
+                continue
+
+            row = {columns[j]: parts[j] for j in range(len(columns))}
+
+            # Parse time (HHMMSS.SS format)
+            time_str = row.get('time', row.get('utc', ''))
+            time_sec = 0.0
+            if len(time_str) >= 6:
+                try:
+                    hh = int(time_str[:2])
+                    mm = int(time_str[2:4])
+                    ss = float(time_str[4:])
+                    time_sec = hh * 3600 + mm * 60 + ss
+                except (ValueError, IndexError):
+                    continue
+
+            # Parse velocity
+            raw_vel = float(row.get('velocity', row.get('speed', 0)))
+            speed_kmh = raw_vel if velocity_is_kmh else raw_vel * 1.852
+
+            if first_time is None:
+                first_time = time_sec
+
+            data.append({'t': time_sec - first_time, 'speed': speed_kmh})
+
+    return data
+
+
+def get_vbo_speed_at_time(vbo_data, video_time, csv_time_offset, vbo_time_offset, vbo_trim_start, vbo_trim_end):
+    """Get interpolated Dragy speed at given video time."""
+    if not vbo_data:
+        return 0
+    # Same logic as frontend getDragySpeedAtTime
+    vbo_t = video_time - vbo_time_offset + csv_time_offset
+    if vbo_trim_end > 0 and (vbo_t < vbo_trim_start or vbo_t > vbo_trim_end):
+        return 0
+
+    # Binary search
+    lo, hi = 0, len(vbo_data) - 1
+    while lo < hi:
+        mid = (lo + hi) // 2
+        if vbo_data[mid]['t'] < vbo_t:
+            lo = mid + 1
+        else:
+            hi = mid
+
+    if lo == 0:
+        return vbo_data[0]['speed']
+    if lo >= len(vbo_data):
+        return vbo_data[-1]['speed']
+
+    a, b = vbo_data[lo - 1], vbo_data[lo]
+    if b['t'] == a['t']:
+        return a['speed']
+    frac = (vbo_t - a['t']) / (b['t'] - a['t'])
+    return a['speed'] + (b['speed'] - a['speed']) * frac
 
 
 def process_video_editor_export(project_id, export_settings):
@@ -3079,6 +3206,10 @@ def process_video_editor_export(project_id, export_settings):
             time_offset = float(export_settings.get('time_offset', 0))
             csv_trim_start = float(export_settings.get('csv_trim_start', 0))
             csv_trim_end = float(export_settings.get('csv_trim_end', 0))
+            vbo_id = export_settings.get('vbo_id', None)
+            vbo_time_offset = float(export_settings.get('vbo_time_offset', 0))
+            vbo_trim_start = float(export_settings.get('vbo_trim_start', 0))
+            vbo_trim_end = float(export_settings.get('vbo_trim_end', 0))
             text_settings = export_settings.get('text_settings', {})
             fps_setting = export_settings.get('fps', 'source')
             fps = None if fps_setting == 'source' else float(fps_setting)
@@ -3146,6 +3277,22 @@ def process_video_editor_export(project_id, export_settings):
             T_max = df['timestamp'].max()
             csv_duration = T_max - T_min
 
+            # Step 2b: Parse VBO file if present
+            vbo_data = None
+            if vbo_id:
+                user_id = None
+                with db.session.no_autoflush:
+                    proj = db.session.get(Project, project_id)
+                    if proj:
+                        user_id = proj.user_id
+                if user_id:
+                    vbo_path = os.path.join('uploads', 'video_editor', str(user_id), vbo_id + '.vbo')
+                    if os.path.exists(vbo_path):
+                        vbo_data = parse_vbo_file(vbo_path)
+                        logging.info(f'VBO data loaded: {len(vbo_data)} points')
+                    else:
+                        logging.warning(f'VBO file not found: {vbo_path}')
+
             # Resolve data_fps: default to 14.985 if not specified
             if data_fps is None:
                 data_fps = 14.985
@@ -3193,6 +3340,13 @@ def process_video_editor_export(project_id, export_settings):
                         empty.save(output_path, format='PNG')
                     else:
                         values = find_nearest_values(df, csv_time_abs, interpolate=True)
+                        # Add Dragy speed from VBO data if available
+                        if vbo_data and text_settings.get('show_dragy_speed', False):
+                            dragy_speed = get_vbo_speed_at_time(
+                                vbo_data, video_time, time_offset,
+                                vbo_time_offset, vbo_trim_start, vbo_trim_end
+                            )
+                            values['dragy_speed'] = dragy_speed
                         create_frame(
                             values,
                             resolution=resolution,

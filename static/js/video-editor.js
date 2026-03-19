@@ -11,6 +11,8 @@
     videoFile: null,
     videoId: null,          // from server after upload
     videoUploaded: false,
+    _currentUploadId: null,   // tracks which upload is active (to cancel stale ones)
+    _uploadAborted: false,    // flag to abort in-progress upload
     csvFile: null,
     csvId: null,
     csvData: [],            // [{t, speed, maxSpeed, voltage, temperature, current, battery, mileage, pwm, power, gps, timestamp}, ...]
@@ -594,6 +596,11 @@
       percentSpan.textContent = pct + '%';
     }
 
+    // Cancel any previous upload
+    var uploadToken = Date.now() + '_' + Math.random();
+    state._currentUploadId = uploadToken;
+    state._uploadAborted = false;
+
     // Step 1: Initialize upload
     fetch('/video-editor/upload-video-init', {
       method: 'POST',
@@ -610,6 +617,12 @@
     })
     .then(function(data) {
       uploadId = data.upload_id;
+      // If a newer upload was started, abort this one
+      if (state._currentUploadId !== uploadToken) {
+        console.log('Upload ' + uploadId + ' superseded by newer upload, aborting');
+        state._uploadAborted = true;
+        throw new Error('__UPLOAD_SUPERSEDED__');
+      }
       return sendChunk(0);
     })
     .then(function() {
@@ -624,12 +637,22 @@
       return resp.json();
     })
     .then(function(data) {
+      // Only accept this upload if it's still the current one
+      if (state._currentUploadId !== uploadToken) {
+        console.log('Upload ' + data.video_id + ' completed but was superseded, ignoring');
+        return;
+      }
       dom.videoUploadProgress.style.display = 'none';
       state.videoId = data.video_id;
       state.videoUploaded = true;
+      console.log('Video upload complete, videoId=' + data.video_id);
       checkExportReady();
     })
     .catch(function(err) {
+      if (err.message === '__UPLOAD_SUPERSEDED__') {
+        console.log('Previous upload cancelled (superseded)');
+        return;
+      }
       dom.videoUploadProgress.style.display = 'none';
       alert('Video upload failed: ' + err.message);
     });
@@ -640,6 +663,10 @@
     }
 
     function sendChunkWithRetry(index, attempt) {
+      // Abort if this upload was superseded
+      if (state._currentUploadId !== uploadToken) {
+        return Promise.reject(new Error('__UPLOAD_SUPERSEDED__'));
+      }
       var start = index * CHUNK_SIZE;
       var end = Math.min(start + CHUNK_SIZE, file.size);
       var blob = file.slice(start, end);
