@@ -3135,6 +3135,7 @@ def parse_vbo_file(filepath):
     columns = []
     in_data = False
     in_header = False
+    in_column_names = False
     velocity_is_kmh = False
     first_time = None
 
@@ -3146,6 +3147,7 @@ def parse_vbo_file(filepath):
 
             if line == '[header]':
                 in_header = True
+                in_column_names = False
                 continue
             if in_header and not line.startswith('['):
                 if 'velocity kmh' in line.lower() or 'velocity km' in line.lower():
@@ -3154,20 +3156,25 @@ def parse_vbo_file(filepath):
             if line.startswith('[') and in_header:
                 in_header = False
 
-            if line in ('[column names]', '[columns]'):
+            if line.lower() in ('[column names]', '[columns]'):
+                in_column_names = True
                 in_data = False
                 continue
-            if not columns and not in_data and not line.startswith('['):
-                # This might be the column names line
+
+            # Only parse column names right after [column names] section
+            if in_column_names and not line.startswith('['):
                 parts = line.split()
-                if any(p.lower() in ('time', 'utc', 'velocity', 'speed') for p in parts):
+                if parts:
                     columns = [c.lower() for c in parts]
-                    continue
+                    in_column_names = False
+                continue
 
             if line == '[data]':
                 in_data = True
+                in_column_names = False
                 continue
             if line.startswith('[') and line.endswith(']'):
+                in_column_names = False
                 if in_data:
                     break
                 in_data = False
@@ -3210,8 +3217,10 @@ def get_vbo_speed_at_time(vbo_data, video_time, csv_time_offset, vbo_time_offset
     """Get interpolated Dragy speed at given video time."""
     if not vbo_data:
         return 0
-    # Same logic as frontend getDragySpeedAtTime
-    vbo_t = video_time - vbo_time_offset + csv_time_offset
+    # Frontend: getDragySpeedAtTime(dp.t) where dp.t = videoTime - timeOffset
+    #   vboT = dp.t - vboTimeOffset + timeOffset = videoTime - vboTimeOffset
+    # So the correct formula is: vbo_t = video_time - vbo_time_offset
+    vbo_t = video_time - vbo_time_offset
     if vbo_trim_end > 0 and (vbo_t < vbo_trim_start or vbo_t > vbo_trim_end):
         return 0
 
@@ -3347,6 +3356,11 @@ def process_video_editor_export(project_id, export_settings):
                     if os.path.exists(vbo_path):
                         vbo_data = parse_vbo_file(vbo_path)
                         logging.info(f'VBO data loaded: {len(vbo_data)} points')
+                        if vbo_data:
+                            logging.info(f'VBO time range: {vbo_data[0]["t"]:.2f} - {vbo_data[-1]["t"]:.2f} sec')
+                            logging.info(f'VBO speed range: {min(d["speed"] for d in vbo_data):.1f} - {max(d["speed"] for d in vbo_data):.1f} km/h')
+                            logging.info(f'VBO params: vbo_time_offset={vbo_time_offset}, vbo_trim_start={vbo_trim_start}, vbo_trim_end={vbo_trim_end}')
+                            logging.info(f'CSV time_offset={time_offset}, show_dragy_speed={text_settings.get("show_dragy_speed", False)}')
                     else:
                         logging.warning(f'VBO file not found: {vbo_path}')
 
@@ -3404,6 +3418,9 @@ def process_video_editor_export(project_id, export_settings):
                                 vbo_time_offset, vbo_trim_start, vbo_trim_end
                             )
                             values['dragy_speed'] = dragy_speed
+                            if i < 5 or (i % 100 == 0):
+                                vbo_t_dbg = video_time - vbo_time_offset
+                                logging.info(f'Frame {i}: video_time={video_time:.3f}, vbo_t={vbo_t_dbg:.3f}, dragy_speed={dragy_speed:.1f}')
                         create_frame(
                             values,
                             resolution=resolution,
