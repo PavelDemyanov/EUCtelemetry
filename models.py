@@ -376,3 +376,35 @@ class Achievement(db.Model):
                 achievement = Achievement(**achievement_data)
                 db.session.add(achievement)
         db.session.commit()
+
+class SiteSetting(db.Model):
+    __tablename__ = 'site_settings'
+    key = db.Column(db.String(100), primary_key=True)
+    value = db.Column(db.String(500), nullable=False)
+    description = db.Column(db.String(500), nullable=True)
+
+    @staticmethod
+    def get(key, default=None):
+        s = SiteSetting.query.get(key)
+        return s.value if s else default
+
+    @staticmethod
+    def get_int(key, default=0):
+        v = SiteSetting.get(key)
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            return default
+
+    @staticmethod
+    def set(key, value, description=None):
+        from extensions import db
+        s = SiteSetting.query.get(key)
+        if s:
+            s.value = str(value)
+            if description:
+                s.description = description
+        else:
+            s = SiteSetting(key=key, value=str(value), description=description)
+            db.session.add(s)
+        db.session.commit()

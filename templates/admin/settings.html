@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex align-items-center mb-4">
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-secondary btn-sm me-3">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+        <h1 class="mb-0">Site Settings</h1>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-clock-history"></i> Project Retention</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                {% for cfg in settings_config %}
+                <div class="mb-3 row">
+                    <label class="col-sm-6 col-form-label">{{ cfg.label }}</label>
+                    <div class="col-sm-3">
+                        <div class="input-group">
+                            <input type="number" class="form-control" name="{{ cfg.key }}"
+                                   value="{{ current_values[cfg.key] }}" min="1" max="8760">
+                            <span class="input-group-text">h</span>
+                        </div>
+                        <small class="text-muted">Default: {{ cfg.default }}h</small>
+                    </div>
+                </div>
+                {% endfor %}
+                <hr>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-lg"></i> Save Settings
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

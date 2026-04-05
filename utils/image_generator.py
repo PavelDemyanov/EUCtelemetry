@@ -164,7 +164,7 @@ def _initialize_metal():
 
 _font_cache = {}
 
-def calculate_max_widths_for_static_boxes(df, text_settings, use_icons=False, locale='en', resolution='fullhd'):
+def calculate_max_widths_for_static_boxes(df, text_settings, use_icons=False, locale='en', resolution='fullhd', custom_width=None, custom_height=None):
     """Calculate maximum text width for each telemetry parameter to ensure static box sizes"""
     try:
         # Get localization
@@ -173,7 +173,10 @@ def calculate_max_widths_for_static_boxes(df, text_settings, use_icons=False, lo
         # Load fonts with resolution scaling
         base_font_size = text_settings.get('font_size', 26)
         # Apply resolution scaling
-        if resolution == '4k':
+        if custom_width and custom_height:
+            calc_scale = custom_width / 1920.0
+            font_size = int(base_font_size * calc_scale)
+        elif resolution == '4k':
             font_size = int(base_font_size * 2)  # 4K scaling factor
         else:
             font_size = base_font_size
@@ -311,10 +314,17 @@ def create_frame(values,
                   text_settings=None,
                   locale='en',
                   static_box_widths=None,
-                  background_mode="blue"):
+                  background_mode="blue",
+                  custom_width=None,
+                  custom_height=None):
     try:
         # Определяем разрешение и масштаб
-        if resolution == "4k":
+        if custom_width and custom_height:
+            width, height = custom_width, custom_height
+            # Scale based on WIDTH (not max) to match browser rendering proportions
+            scale_factor = width / 1920.0
+            indicator_size = int(500 * scale_factor)
+        elif resolution == "4k":
             width, height = 3840, 2160
             scale_factor = 2.0
             indicator_size = 1000  # Увеличенный размер для 4K
@@ -326,6 +336,13 @@ def create_frame(values,
         # Create background based on mode
         if background_mode == "transparent":
             background = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        elif background_mode == "blue":
+            background = Image.new("RGBA", (width, height), (0, 0, 255, 255))
+        elif isinstance(background_mode, str) and background_mode.startswith('#') and len(background_mode) >= 7:
+            r = int(background_mode[1:3], 16)
+            g = int(background_mode[3:5], 16)
+            b = int(background_mode[5:7], 16)
+            background = Image.new("RGBA", (width, height), (r, g, b, 255))
         else:
             background = Image.new("RGBA", (width, height), (0, 0, 255, 255))
         overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
@@ -365,12 +382,18 @@ def create_frame(values,
             loc = _LOCALIZATION.get(locale, _LOCALIZATION['en'])
             show_bg_arc = text_settings.get('center_based_indicator', False)
 
-            # Video Editor: use smaller gauge (half of 4K default) for cleaner proportions
+            # Video Editor: use smaller gauge scaled to canvas size
+            # JS: baseSize = 250 * sf * (indicator_scale/100) — includes indicator_scale
+            # We bake indicator_scale into image size so font/arc fit, then pass 100 to function
             ve_indicator_size = indicator_size
             ve_resolution = resolution
+            ve_scale_factor = None
+            ve_indicator_scale = indicator_scale
             if show_bg_arc:  # center_based_indicator = Video Editor mode
-                ve_indicator_size = 500  # ~13% of 4K width (vs 26% default)
-                ve_resolution = 'fullhd'  # base_width=20 to match proportions
+                ve_indicator_size = max(50, int(250 * scale_factor * indicator_scale / 100))
+                ve_indicator_scale = 100  # already baked into size
+                ve_resolution = 'fullhd'
+                ve_scale_factor = scale_factor
 
             speed_indicator = create_speed_indicator(
                 values['speed'],
@@ -379,10 +402,11 @@ def create_frame(values,
                 unit_offset=(0, unit_y_offset),
                 speed_size=speed_size,
                 unit_size=unit_size,
-                indicator_scale=indicator_scale,
+                indicator_scale=ve_indicator_scale,
                 resolution=ve_resolution,
                 locale=locale,
-                show_background_arc=show_bg_arc)
+                show_background_arc=show_bg_arc,
+                scale_factor=ve_scale_factor)
 
             # Position indicator
             if text_settings.get('center_based_indicator', False):
@@ -406,6 +430,12 @@ def create_frame(values,
         top_padding = int(text_settings.get('top_padding', 14) * scale_factor)
         box_height = int(text_settings.get('bottom_padding', 47) * scale_factor)
         spacing = int(text_settings.get('spacing', 10) * scale_factor)
+        text_vertical_offset = int(text_settings.get('text_vertical_offset', 0) * scale_factor)
+        box_opacity_pct = int(text_settings.get('box_opacity', 100))
+        # Classic mode (blue background): always use 100% opacity
+        if background_mode != 'transparent':
+            box_opacity_pct = 100
+        box_alpha = int(box_opacity_pct * 255 / 100)
         vertical_position = int(text_settings.get('vertical_position', 1))
         border_radius = int(text_settings.get('border_radius', 13) * scale_factor)
 
@@ -539,31 +569,37 @@ def create_frame(values,
                 text_baseline_y = box_vertical_center - (max_text_height // 2)
                 x_position = start_x
             for i, ((label, value, unit), element_width, text_width, static_content_width) in enumerate(zip(params, element_widths, text_widths, static_content_widths)):
-                box_color = (0, 0, 0, 255)  # Стандартный черный цвет
+                box_color = (0, 0, 0, box_alpha)  # Черный цвет с настраиваемой прозрачностью
                 text_color = (255, 255, 255, 255)  # Стандартный белый цвет
 
                 if label == loc['pwm']:
                     pwm_value = int(value)
                     if 80 <= pwm_value <= 90:
-                        box_color = (255, 255, 0, 255)  # Желтый цвет для PWM 80-90
+                        box_color = (255, 255, 0, 255)  # Желтый цвет для PWM 80-90, всегда 100%
                         text_color = (0, 0, 0, 255)  # Черный текст
                     elif pwm_value > 90:
-                        box_color = (255, 0, 0, 255)  # Красный цвет для PWM > 90
+                        box_color = (255, 0, 0, 255)  # Красный цвет для PWM > 90, всегда 100%
                         text_color = (0, 0, 0, 255)  # Черный текст
                 elif label == loc['battery']:
                     battery_value = int(value)
                     if 10 <= battery_value <= 30:
-                        box_color = (255, 255, 0, 255)  # Желтый цвет для Battery 10-30
+                        box_color = (255, 255, 0, 255)  # Желтый цвет для Battery 10-30, всегда 100%
                         text_color = (0, 0, 0, 255)  # Черный текст
                     elif battery_value < 10:
-                        box_color = (255, 0, 0, 255)  # Красный цвет для Battery < 10
+                        box_color = (255, 0, 0, 255)  # Красный цвет для Battery < 10, всегда 100%
                         text_color = (0, 0, 0, 255)  # Черный текст
 
                 box = create_rounded_box(element_width, box_height, border_radius)
-                if box_color != (0, 0, 0, 255):
-                    colored_box = Image.new('RGBA', box.size, box_color)
-                    colored_box.putalpha(box.split()[3])
-                    box = colored_box
+                # Apply box color and opacity
+                box_r, box_g, box_b, box_a = box_color
+                colored_box = Image.new('RGBA', box.size, (box_r, box_g, box_b, 255))
+                # Multiply shape alpha mask with target opacity
+                from PIL import ImageChops
+                shape_alpha = box.split()[3]  # rounded rect alpha mask (255 inside, 0 outside)
+                target_alpha = Image.new('L', box.size, box_a)  # desired opacity
+                final_alpha = ImageChops.multiply(shape_alpha, target_alpha)
+                colored_box.putalpha(final_alpha)
+                box = colored_box
 
                 overlay.paste(box, (x_position, y_position), box)
 
@@ -574,11 +610,11 @@ def create_frame(values,
                 if vertical_layout:
                     # В вертикальном режиме текст центрируется в каждой плашке
                     box_vertical_center = y_position + (box_height // 2)
-                    text_y = box_vertical_center - (max_text_height // 2) - int(max_text_height * 0.2)
+                    text_y = box_vertical_center - (max_text_height // 2) - int(max_text_height * 0.2) + text_vertical_offset
                 else:
                     # В горизонтальном режиме используем общую базовую линию
                     baseline_offset = int(max_text_height * 0.2)
-                    text_y = text_baseline_y - baseline_offset
+                    text_y = text_baseline_y - baseline_offset + text_vertical_offset
 
                 if use_icons:
                     # Draw with icon instead of text label

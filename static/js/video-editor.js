@@ -21,6 +21,7 @@
     timelineOrigin: 0,      // seconds: shift to keep all content at positive pixel positions
     csvTrimStart: 0,        // seconds from CSV start
     csvTrimEnd: 0,          // seconds from CSV start (=csvDuration initially)
+    csvCropOffset: 0,       // accumulated seconds cropped from CSV left side
     vboFile: null,
     vboId: null,
     vboData: null,
@@ -28,6 +29,7 @@
     vboTimeOffset: 0,
     vboTrimStart: 0,
     vboTrimEnd: 0,
+    vboCropOffset: 0,
     videoMeta: { duration: 0, width: 0, height: 0, fps: 30 },
     playing: false,
     animFrameId: null,
@@ -45,6 +47,12 @@
     thumbnails: [],
     // Icons cache
     iconImages: {},
+    // No-video (chroma key) mode
+    noVideoMode: false,
+    chromaBgColor: '#0000FF',
+    playbackTime: 0,
+    isPlaying: false,
+    _playbackTimer: null,
   };
 
   // ===== SETTINGS (mirrors Python text_settings) =====
@@ -53,6 +61,8 @@
     vertical_position: 1,
     horizontal_position: 50,
     top_padding: 14,
+    text_vertical_offset: 0,
+    box_opacity: 100,
     bottom_padding: 41,
     spacing: 10,
     border_radius: 13,
@@ -185,6 +195,7 @@
     bindTimeline();
     syncTimelineScroll();
     resizeCanvases();
+    initLocalExport();
     window.addEventListener('resize', resizeCanvases);
 
     // Mobile settings panel (bottom sheet)
@@ -213,6 +224,8 @@
       { id: 'verticalPosition', key: 'vertical_position', valId: 'valVertPos' },
       { id: 'horizontalPosition', key: 'horizontal_position', valId: 'valHorizPos' },
       { id: 'topPadding', key: 'top_padding', valId: 'valTopPad' },
+      { id: 'textVerticalOffset', key: 'text_vertical_offset', valId: 'valTextOffset' },
+      { id: 'boxOpacity', key: 'box_opacity', valId: 'valBoxOpacity' },
       { id: 'bottomPadding', key: 'bottom_padding', valId: 'valBotPad' },
       { id: 'spacing', key: 'spacing', valId: 'valSpacing' },
       { id: 'borderRadius', key: 'border_radius', valId: 'valRadius' },
@@ -235,6 +248,7 @@
       el.addEventListener('input', function() {
         settings[s.key] = parseFloat(this.value);
         if (valEl) valEl.textContent = this.value;
+        if (s.key === 'font_size') recalcStaticBoxWidths();
         renderOverlayOnce();
       });
     });
@@ -266,6 +280,7 @@
       el.checked = settings[c.key];
       el.addEventListener('change', function() {
         settings[c.key] = this.checked;
+        if (c.key === 'static_box_size' || c.key === 'use_icons') recalcStaticBoxWidths();
         renderOverlayOnce();
       });
     });
@@ -401,6 +416,14 @@
 
     // Seek bar
     dom.seekBar.addEventListener('input', function() {
+      if (state.noVideoMode) {
+        var dur = getNoVideoDuration();
+        state.playbackTime = (this.value / 1000) * dur;
+        renderOverlay();
+        updateTimeDisplay();
+        updatePlaybackCursor();
+        return;
+      }
       if (dom.video.src) {
         dom.video.currentTime = (this.value / 1000) * dom.video.duration;
       }
@@ -423,8 +446,24 @@
     document.addEventListener('keydown', function(e) {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
       if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
-      if (e.code === 'ArrowLeft') { e.preventDefault(); dom.video.currentTime = Math.max(0, dom.video.currentTime - 1 / state.videoMeta.fps); }
-      if (e.code === 'ArrowRight') { e.preventDefault(); dom.video.currentTime = Math.min(dom.video.duration, dom.video.currentTime + 1 / state.videoMeta.fps); }
+      if (e.code === 'ArrowLeft') {
+        e.preventDefault();
+        if (state.noVideoMode) {
+          state.playbackTime = Math.max(0, state.playbackTime - 1 / state.videoMeta.fps);
+          renderOverlay(); updateTimeDisplay(); updatePlaybackCursor();
+        } else {
+          dom.video.currentTime = Math.max(0, dom.video.currentTime - 1 / state.videoMeta.fps);
+        }
+      }
+      if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        if (state.noVideoMode) {
+          state.playbackTime = Math.min(getNoVideoDuration(), state.playbackTime + 1 / state.videoMeta.fps);
+          renderOverlay(); updateTimeDisplay(); updatePlaybackCursor();
+        } else {
+          dom.video.currentTime = Math.min(dom.video.duration, dom.video.currentTime + 1 / state.videoMeta.fps);
+        }
+      }
     });
   }
 
@@ -477,9 +516,117 @@
     }
   }
 
+  // ===== NO-VIDEO (CHROMA KEY) MODE =====
+  function enterNoVideoMode() {
+    state.noVideoMode = true;
+    // Hide placeholder, show canvas
+    if (dom.placeholder) dom.placeholder.style.display = 'none';
+    if (dom.canvas) dom.canvas.style.display = 'block';
+    // Set default canvas size (16:9)
+    if (dom.canvas) {
+      dom.canvas.width = 1920;
+      dom.canvas.height = 1080;
+    }
+    // Duration from CSV
+    state.videoMeta.duration = getNoVideoDuration();
+    state.playbackTime = 0;
+    // Set time display
+    if (dom.totalTime) dom.totalTime.textContent = formatTime(state.videoMeta.duration);
+    if (dom.currentTime) dom.currentTime.textContent = formatTime(0);
+    // Show chroma key color picker
+    var chromaSettings = document.getElementById('chromaKeySettings');
+    if (chromaSettings) chromaSettings.style.display = 'block';
+    // Hide "Source" option in FPS and Resolution (no source video)
+    _toggleSourceOptions(true);
+    renderOverlay();
+    checkExportReady();
+  }
+
+  function exitNoVideoMode() {
+    state.noVideoMode = false;
+    state.isPlaying = false;
+    if (state._playbackTimer) {
+      cancelAnimationFrame(state._playbackTimer);
+      state._playbackTimer = null;
+    }
+    // Hide chroma key color picker
+    var chromaSettings = document.getElementById('chromaKeySettings');
+    if (chromaSettings) chromaSettings.style.display = 'none';
+    // Restore "Source" options
+    _toggleSourceOptions(false);
+  }
+
+  function getNoVideoDuration() {
+    if (!state.csvData || state.csvData.length === 0) return 0;
+    var trimEnd = state.csvTrimEnd || state.csvDuration || 0;
+    // Right edge of CSV on timeline — CSV is always the duration limiter in no-video mode
+    var csvRightEdge = state.timeOffset + trimEnd;
+    return Math.max(0.1, csvRightEdge);
+  }
+
+  // Hide/show "Source" options in export dropdowns for no-video mode
+  function _toggleSourceOptions(hide) {
+    var fpsSelect = document.getElementById('exportFPS');
+    var resSelect = document.getElementById('exportResolution');
+    if (fpsSelect) {
+      var srcOpt = fpsSelect.querySelector('option[value="source"]');
+      if (srcOpt) srcOpt.style.display = hide ? 'none' : '';
+      if (hide && fpsSelect.value === 'source') fpsSelect.value = '29.97';
+    }
+    if (resSelect) {
+      var srcOpt2 = resSelect.querySelector('option[value="source"]');
+      if (srcOpt2) srcOpt2.style.display = hide ? 'none' : '';
+      if (hide && resSelect.value === 'source') resSelect.value = 'fullhd';
+    }
+  }
+
+  // Chroma key color picker handler
+  var _chromaPicker = document.getElementById('chromaBgColor');
+  if (_chromaPicker) {
+    _chromaPicker.addEventListener('input', function() {
+      state.chromaBgColor = this.value;
+      var label = document.getElementById('chromaBgColorLabel');
+      if (label) label.textContent = this.value.toUpperCase();
+      if (state.noVideoMode) renderOverlay();
+    });
+  }
+
+  function startNoVideoPlayback() {
+    if (!state.noVideoMode) return;
+    state.isPlaying = true;
+    var startWall = performance.now();
+    var startTime = state.playbackTime;
+    function tick() {
+      if (!state.isPlaying || !state.noVideoMode) return;
+      state.playbackTime = startTime + (performance.now() - startWall) / 1000;
+      var maxTime = getNoVideoDuration();
+      if (state.playbackTime >= maxTime) {
+        state.playbackTime = maxTime;
+        state.isPlaying = false;
+        var playBtn = document.getElementById('btnPlay');
+        if (playBtn) playBtn.innerHTML = '<i class="bi bi-play-fill"></i>';
+      }
+      renderOverlay();
+      updateTimeDisplay();
+      updatePlaybackCursor();
+      if (state.isPlaying) state._playbackTimer = requestAnimationFrame(tick);
+    }
+    state._playbackTimer = requestAnimationFrame(tick);
+  }
+
+  function stopNoVideoPlayback() {
+    state.isPlaying = false;
+    if (state._playbackTimer) {
+      cancelAnimationFrame(state._playbackTimer);
+      state._playbackTimer = null;
+    }
+  }
+
   // ===== VIDEO HANDLING =====
   function handleVideoFile(file) {
+    if (state.noVideoMode) exitNoVideoMode();
     state.videoFile = file;
+    checkExportReady();
     // Local playback immediately
     var url = URL.createObjectURL(file);
     dom.video.src = url;
@@ -885,6 +1032,14 @@
     state.csvDuration = data.length > 0 ? data[data.length - 1].t : 0;
     state.csvTrimStart = 0;
     state.csvTrimEnd = state.csvDuration;
+    state.csvCropOffset = 0;
+    recalcStaticBoxWidths();
+    checkExportReady();
+
+    // Auto-enter no-video mode if no video loaded
+    if (!state.videoFile && state.csvData.length > 0) {
+      enterNoVideoMode();
+    }
 
     // Show CSV track
     dom.csvTrack.style.display = 'block';
@@ -1018,6 +1173,12 @@
 
   // ===== TIMELINE HELPERS =====
   function getTimelineDuration() {
+    if (state.noVideoMode) {
+      // No video — timeline shows all content (CSV + VBO)
+      var csvEnd = state.csvDuration > 0 ? Math.max(0, state.timeOffset) + state.csvDuration : 0;
+      var vboEnd = state.vboDuration > 0 ? Math.max(0, state.vboTimeOffset) + state.vboDuration : 0;
+      return Math.max(csvEnd, vboEnd, 0.1);
+    }
     // Timeline must show ALL content — use actual right edges (with offsets)
     var videoDur = state.videoMeta.duration || 0;
     var csvEnd = state.csvDuration > 0 ? Math.max(0, state.timeOffset) + state.csvDuration : 0;
@@ -1043,7 +1204,7 @@
     if (state.zoomLevel === oldZoom) return;
 
     // Zoom anchored to playhead position (like DaVinci Resolve)
-    var videoTime = dom.video.currentTime || 0;
+    var videoTime = state.noVideoMode ? state.playbackTime : (dom.video.currentTime || 0);
     var origin = state.timelineOrigin;
     var basePps = getBasePxPerSecond();
     var oldPps = basePps * oldZoom;
@@ -1118,7 +1279,7 @@
     // Resize thumbnails to fill the strip evenly
     var thumbs = dom.videoStrip.querySelectorAll('.ve-thumb');
     if (thumbs.length > 0) {
-      var thumbW = videoWidth / thumbs.length;
+      var thumbW = Math.ceil(videoWidth / thumbs.length);
       for (var i = 0; i < thumbs.length; i++) {
         thumbs[i].style.width = thumbW + 'px';
         thumbs[i].style.objectFit = 'cover';
@@ -1131,20 +1292,42 @@
     if (!dom.csvWaveform || state.csvData.length === 0) return;
 
     var pxPerSec = getPxPerSecond();
-    var csvWidthPx = Math.max(20, state.csvDuration * pxPerSec);
+    var csvWidthPx = Math.max(1, state.csvDuration * pxPerSec);
     // Position CSV track (uses timelineOrigin to avoid negative positions)
     updateCSVTrackPosition();
     dom.csvTrack.style.width = csvWidthPx + 'px';
 
     var canvas = dom.csvWaveform;
     var dpr = window.devicePixelRatio || 1;
-    canvas.width = csvWidthPx * dpr;
+
+    // Virtual scrolling: canvas covers only visible portion + buffer
+    var parentScroll = dom.csvTrackContent ? dom.csvTrackContent.scrollLeft : 0;
+    var viewportW = dom.csvTrackContent ? dom.csvTrackContent.clientWidth : csvWidthPx;
+    var trackLeft = parseFloat(dom.csvTrack.style.left) || 0;
+    // Visible range in track-local coordinates
+    var visLeft = parentScroll - trackLeft;
+    var visRight = visLeft + viewportW;
+    var buffer = viewportW * 0.5;
+    var drawLeft = Math.max(0, visLeft - buffer);
+    var drawRight = Math.min(csvWidthPx, visRight + buffer);
+    var drawW = drawRight - drawLeft;
+    if (drawW < 20) drawW = Math.min(csvWidthPx, viewportW + 200);
+    if (drawW < 20) drawW = 20;
+    // Clamp to avoid exceeding canvas limits
+    var MAX_CANVAS_DIM = 8192;
+    if (drawW * dpr > MAX_CANVAS_DIM) drawW = MAX_CANVAS_DIM / dpr;
+
+    canvas.width = Math.ceil(drawW * dpr);
     canvas.height = 50 * dpr;
-    canvas.style.width = csvWidthPx + 'px';
+    canvas.style.width = drawW + 'px';
     canvas.style.height = '50px';
+    canvas.style.position = 'absolute';
+    canvas.style.left = drawLeft + 'px';
+    canvas.style.top = '0';
+
     var ctx = dom.csvWaveformCtx;
     ctx.scale(dpr, dpr);
-    ctx.clearRect(0, 0, csvWidthPx, 50);
+    ctx.clearRect(0, 0, drawW, 50);
 
     var h = 50;
     var data = state.csvData;
@@ -1155,6 +1338,11 @@
     }
     if (maxSpeed === 0) maxSpeed = 1;
 
+    // Convert time to track-local x, then to canvas-local x
+    function tToX(t) {
+      return (t / state.csvDuration) * csvWidthPx - drawLeft;
+    }
+
     // Draw trimmed regions (dimmed overlay)
     var trimLeftPx = (state.csvTrimStart / state.csvDuration) * csvWidthPx;
     var trimRightPx = (state.csvTrimEnd / state.csvDuration) * csvWidthPx;
@@ -1162,13 +1350,15 @@
     // Draw PWM as red filled area
     ctx.fillStyle = 'rgba(180, 40, 40, 0.6)';
     ctx.beginPath();
-    ctx.moveTo(0, h);
+    ctx.moveTo(tToX(data[0].t), h);
     for (var j = 0; j < data.length; j++) {
-      var x = (data[j].t / state.csvDuration) * csvWidthPx;
+      var x = tToX(data[j].t);
+      if (x < -10) continue;
+      if (x > drawW + 10) { ctx.lineTo(x, h - (Math.min(data[j].pwm, maxPWM) / maxPWM) * h); break; }
       var y = h - (Math.min(data[j].pwm, maxPWM) / maxPWM) * h;
       ctx.lineTo(x, y);
     }
-    ctx.lineTo(csvWidthPx, h);
+    ctx.lineTo(tToX(data[data.length - 1].t), h);
     ctx.closePath();
     ctx.fill();
 
@@ -1176,21 +1366,30 @@
     ctx.strokeStyle = 'rgba(60, 130, 255, 0.9)';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
+    var started = false;
     for (var k = 0; k < data.length; k++) {
-      var sx = (data[k].t / state.csvDuration) * csvWidthPx;
+      var sx = tToX(data[k].t);
+      if (sx < -10) continue;
+      if (sx > drawW + 10) {
+        var sy2 = h - (data[k].speed / maxSpeed) * h;
+        ctx.lineTo(sx, sy2);
+        break;
+      }
       var sy = h - (data[k].speed / maxSpeed) * h;
-      if (k === 0) ctx.moveTo(sx, sy);
+      if (!started) { ctx.moveTo(sx, sy); started = true; }
       else ctx.lineTo(sx, sy);
     }
     ctx.stroke();
 
-    // Dim trimmed-out regions
+    // Dim trimmed-out regions (in canvas-local coords)
     ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
-    if (trimLeftPx > 0) {
-      ctx.fillRect(0, 0, trimLeftPx, h);
+    var trimLeftLocal = trimLeftPx - drawLeft;
+    var trimRightLocal = trimRightPx - drawLeft;
+    if (trimLeftLocal > 0) {
+      ctx.fillRect(0, 0, trimLeftLocal, h);
     }
-    if (trimRightPx < csvWidthPx) {
-      ctx.fillRect(trimRightPx, 0, csvWidthPx - trimRightPx, h);
+    if (trimRightLocal < drawW) {
+      ctx.fillRect(trimRightLocal, 0, drawW - trimRightLocal, h);
     }
 
     // Update trim handles
@@ -1318,9 +1517,11 @@
     state.csvData = state.csvData.filter(function(d) { return d.t >= tStart; });
     state.csvData.forEach(function(d) { d.t -= tStart; });
     state.timeOffset += tStart;
+    state.csvCropOffset += tStart;
     state.csvDuration -= tStart;
     state.csvTrimEnd -= tStart;
     state.csvTrimStart = 0;
+    recalcStaticBoxWidths();
     preserveScaleAndRefresh(oldPps);
   }
 
@@ -1331,12 +1532,14 @@
     state.csvData = state.csvData.filter(function(d) { return d.t <= tEnd; });
     state.csvDuration = tEnd;
     state.csvTrimEnd = tEnd;
+    recalcStaticBoxWidths();
     preserveScaleAndRefresh(oldPps);
   }
 
   function cropVBOLeft() {
     if (!state.vboData || state.vboData.length === 0 || state.vboTrimStart <= 0) return;
     var tStart = state.vboTrimStart;
+    state.vboCropOffset += tStart;
     var oldPps = getPxPerSecond();
     state.vboData = state.vboData.filter(function(d) { return d.t >= tStart; });
     state.vboData.forEach(function(d) { d.t -= tStart; });
@@ -1379,6 +1582,7 @@
       newData[j].maxSpeed = runMax;
     }
     state.timeOffset = state.timeOffset + tStart;
+    state.csvCropOffset += tStart;
     state.csvData = newData;
     state.csvDuration = newData[newData.length - 1].t;
     state.csvTrimStart = 0;
@@ -1389,11 +1593,19 @@
   // ===== TIMELINE =====
   // Helper: seek video from a clientX position relative to a bar element
   function seekFromClientX(clientX, barEl) {
-    if (!dom.video.src || !barEl) return;
+    if (!state.noVideoMode && !dom.video.src) return;
+    if (!barEl) return;
     var rect = barEl.getBoundingClientRect();
     var clickX = clientX - rect.left + barEl.scrollLeft;
     var pps = getPxPerSecond();
     var t = clickX / pps - state.timelineOrigin;
+    if (state.noVideoMode) {
+      state.playbackTime = Math.max(0, Math.min(t, getNoVideoDuration()));
+      renderOverlay();
+      updateTimeDisplay();
+      updatePlaybackCursor();
+      return;
+    }
     dom.video.currentTime = Math.max(0, Math.min(t, dom.video.duration || 0));
   }
 
@@ -1407,6 +1619,10 @@
 
     if (state.dragging === 'csv') {
       state.timeOffset = state.dragStartOffset + dtSec;
+      if (state.noVideoMode) {
+        state.videoMeta.duration = getNoVideoDuration();
+        updateTimeDisplay();
+      }
       updateCSVTrackPosition();
       if (!state._dragRaf) {
         state._dragRaf = requestAnimationFrame(function() {
@@ -1417,6 +1633,7 @@
     } else if (state.dragging === 'trimLeft') {
       var newStart = state.dragStartTrimStart + dtSec;
       state.csvTrimStart = Math.max(0, Math.min(newStart, state.csvTrimEnd - 0.5));
+      if (state.noVideoMode) state.videoMeta.duration = getNoVideoDuration();
       updateTrimHandles(state.csvDuration * getPxPerSecond());
       if (!state._dragRaf) {
         state._dragRaf = requestAnimationFrame(function() {
@@ -1427,6 +1644,7 @@
     } else if (state.dragging === 'trimRight') {
       var newEnd = state.dragStartTrimEnd + dtSec;
       state.csvTrimEnd = Math.max(state.csvTrimStart + 0.5, Math.min(newEnd, state.csvDuration));
+      if (state.noVideoMode) state.videoMeta.duration = getNoVideoDuration();
       updateTrimHandles(state.csvDuration * getPxPerSecond());
       if (!state._dragRaf) {
         state._dragRaf = requestAnimationFrame(function() {
@@ -1641,49 +1859,62 @@
   function drawRuler() {
     if (!dom.rulerCanvas) return;
     var canvas = dom.rulerCanvas;
-    var viewportW = canvas.parentElement.clientWidth;
-    var w = viewportW * state.zoomLevel;
+    var parentEl = canvas.parentElement;
+    var viewportW = parentEl.clientWidth;
+    var totalW = viewportW * state.zoomLevel;
+    var scrollLeft = parentEl.scrollLeft || 0;
     var dpr = window.devicePixelRatio || 1;
-    canvas.width = w * dpr;
+
+    // Canvas covers only the visible viewport + buffer (avoids Chrome max canvas limit)
+    var drawW = Math.min(totalW, viewportW + 200);
+    canvas.width = drawW * dpr;
     canvas.height = 24 * dpr;
-    canvas.style.width = w + 'px';
+    canvas.style.width = drawW + 'px';
     canvas.style.height = '24px';
+    canvas.style.position = 'absolute';
+    canvas.style.left = scrollLeft + 'px';
+    // Spacer div to maintain scrollable width
+    if (!parentEl._spacer) {
+      parentEl._spacer = document.createElement('div');
+      parentEl._spacer.style.cssText = 'height:1px;pointer-events:none;position:absolute;top:0;left:0;';
+      parentEl.appendChild(parentEl._spacer);
+    }
+    parentEl._spacer.style.width = totalW + 'px';
+
     var ctx = dom.rulerCtx;
     ctx.scale(dpr, dpr);
-    ctx.clearRect(0, 0, w, 24);
+    ctx.clearRect(0, 0, drawW, 24);
 
     var dur = getTimelineDuration();
     if (dur <= 0) return;
 
-    // Adaptive tick interval — pick interval so labels don't overlap
-    var pxPerSec = w / dur;
+    var pxPerSec = totalW / dur;
     var tickSec = 1;
-    // Measure label width to determine min spacing
     ctx.font = '10px sans-serif';
     var sampleLabel = dur >= 3600 ? '00:00:00' : '00:00';
-    var labelW = ctx.measureText(sampleLabel).width + 16; // label + padding
-    var minGap = Math.max(labelW, 50); // at least label width or 50px
+    var labelW = ctx.measureText(sampleLabel).width + 16;
+    var minGap = Math.max(labelW, 50);
     var cands = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 1800, 3600];
     for (var ci = 0; ci < cands.length; ci++) {
       tickSec = cands[ci];
       if (cands[ci] * pxPerSec >= minGap) break;
     }
 
-    // Short format for durations under 1 hour
     var useShort = dur < 3600;
-
     ctx.fillStyle = '#8e959e';
     ctx.strokeStyle = '#4a5568';
     ctx.lineWidth = 1;
 
-    for (var t = 0; t <= dur; t += tickSec) {
-      var x = (t / dur) * w;
-      // Draw tick mark
+    // Only draw ticks in visible scroll window
+    var tStart = Math.max(0, Math.floor((scrollLeft / totalW) * dur / tickSec) - 1) * tickSec;
+    var tEnd = Math.min(dur, Math.ceil(((scrollLeft + drawW) / totalW) * dur / tickSec) + 1) * tickSec;
+
+    for (var t = tStart; t <= tEnd; t += tickSec) {
+      var x = (t / dur) * totalW - scrollLeft;
       ctx.beginPath();
       ctx.moveTo(x, 16);
       ctx.lineTo(x, 24);
       ctx.stroke();
-      // Draw label — skip if too close to left edge (behind track labels)
       if (x >= 4) {
         var label = useShort ? formatTimeShort(t) : formatTime(t);
         ctx.fillText(label, x + 2, 14);
@@ -1691,12 +1922,37 @@
     }
   }
 
+  function updateTimeDisplay() {
+    if (state.noVideoMode) {
+      var d = getNoVideoDuration();
+      // Clamp playback time to CSV duration
+      if (state.playbackTime > d) state.playbackTime = d;
+      if (state.playbackTime < 0) state.playbackTime = 0;
+      var t = state.playbackTime;
+      if (dom.currentTime) dom.currentTime.textContent = formatTime(t);
+      if (dom.totalTime) dom.totalTime.textContent = formatTime(d);
+      if (dom.seekBar) dom.seekBar.value = d > 0 ? Math.round((t / d) * 1000) : 0;
+    }
+  }
+
+  function updatePlaybackCursor() {
+    if (state.noVideoMode) {
+      var dur = getTimelineDuration();
+      if (dur <= 0) return;
+      var pxPerSec = getPxPerSecond();
+      var px = (state.playbackTime + state.timelineOrigin) * pxPerSec;
+      if (dom.playheadRuler) dom.playheadRuler.style.left = px + 'px';
+      updatePlayheadLine();
+    }
+  }
+
   function updatePlayheads() {
-    if (!dom.video.src) return;
+    if (!state.noVideoMode && !dom.video.src) return;
     var dur = getTimelineDuration();
     if (dur <= 0) return;
     var pxPerSec = getPxPerSecond();
-    var px = (dom.video.currentTime + state.timelineOrigin) * pxPerSec;
+    var ct = state.noVideoMode ? state.playbackTime : dom.video.currentTime;
+    var px = (ct + state.timelineOrigin) * pxPerSec;
 
     if (dom.playheadRuler) dom.playheadRuler.style.left = px + 'px';
     updatePlayheadLine();
@@ -1735,6 +1991,20 @@
 
   // ===== PLAYBACK =====
   function togglePlay() {
+    // No-video mode playback
+    if (state.noVideoMode) {
+      if (state.isPlaying) {
+        stopNoVideoPlayback();
+        state.playing = false;
+        dom.playIcon.className = 'bi bi-play-fill';
+      } else {
+        if (state.playbackTime >= getNoVideoDuration()) state.playbackTime = 0;
+        startNoVideoPlayback();
+        state.playing = true;
+        dom.playIcon.className = 'bi bi-pause-fill';
+      }
+      return;
+    }
     if (!dom.video.src) return;
     if (state.playing) {
       dom.video.pause();
@@ -1780,19 +2050,26 @@
   }
 
   function renderOverlay() {
-    if (!dom.ctx || !dom.video.src) return;
+    if (!dom.ctx) return;
+    if (!state.noVideoMode && !dom.video.src) return;
     var ctx = dom.ctx;
     var cw = dom.canvas.width;
     var ch = dom.canvas.height;
     ctx.clearRect(0, 0, cw, ch);
 
-    // Draw video frame onto canvas
-    ctx.drawImage(dom.video, 0, 0, cw, ch);
+    // Draw video frame or chroma background onto canvas
+    if (state.noVideoMode) {
+      ctx.fillStyle = state.chromaBgColor;
+      ctx.fillRect(0, 0, cw, ch);
+    } else {
+      ctx.drawImage(dom.video, 0, 0, cw, ch);
+    }
 
     if (state.csvData.length === 0) return;
 
     // Get data for current time
-    var dataPoint = getDataAtTime(dom.video.currentTime);
+    var currentTime = state.noVideoMode ? state.playbackTime : dom.video.currentTime;
+    var dataPoint = getDataAtTime(currentTime);
     if (!dataPoint) return;
 
     // Debug overlay (toggled via Elements > Debug Info checkbox)
@@ -1890,6 +2167,79 @@
 
   function lerp(a, b, t) { return a + (b - a) * t; }
 
+  // ===== STATIC BOX WIDTHS CACHE =====
+  var _staticBoxWidths = null;
+
+  function recalcStaticBoxWidths(overrideWidth) {
+    if (!settings.static_box_size || !state.csvData || state.csvData.length === 0) {
+      _staticBoxWidths = null;
+      return;
+    }
+    var measure = document.createElement('canvas').getContext('2d');
+    var sf = (overrideWidth || (dom.canvas ? dom.canvas.width : 1920)) / 1920;
+    var fontSize = settings.font_size * sf;
+    var normalFont = fontSize + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    var boldFont = 'bold ' + normalFont;
+    var iconSize = settings.use_icons ? Math.round(fontSize * 0.8) : 0;
+    var iconSpacing = settings.use_icons ? 8 * sf : 0;
+
+    var maxVals = { speed: 0, maxSpeed: 0, gps: 0, voltage: 0, temperature: 0,
+                    battery: 0, mileage: 0, pwm: 0, power: 0, current: 0 };
+    state.csvData.forEach(function(d) {
+      maxVals.speed = Math.max(maxVals.speed, Math.abs(d.speed || 0));
+      maxVals.maxSpeed = Math.max(maxVals.maxSpeed, Math.abs(d.maxSpeed || 0));
+      maxVals.gps = Math.max(maxVals.gps, Math.abs(d.gps || 0));
+      maxVals.voltage = Math.max(maxVals.voltage, Math.abs(d.voltage || 0));
+      maxVals.temperature = Math.max(maxVals.temperature, Math.abs(d.temperature || 0));
+      maxVals.battery = Math.max(maxVals.battery, Math.abs(d.battery || 0));
+      maxVals.mileage = Math.max(maxVals.mileage, Math.abs(d.mileage || 0));
+      maxVals.pwm = Math.max(maxVals.pwm, Math.abs(d.pwm || 0));
+      maxVals.power = Math.max(maxVals.power, Math.abs(d.power || 0));
+      maxVals.current = Math.max(maxVals.current, Math.abs(d.current || 0));
+    });
+
+    var paramDefs = [
+      { key: 'speed', label: LOC.speed, unit: LOC.units.speed, maxVal: maxVals.speed, round: true, cap3: true },
+      { key: 'max_speed', label: LOC.max_speed, unit: LOC.units.speed, maxVal: maxVals.maxSpeed, round: true, cap3: true },
+      { key: 'gps', label: LOC.gps, unit: LOC.units.speed, maxVal: maxVals.gps, round: true, cap3: true },
+      { key: 'voltage', label: LOC.voltage, unit: LOC.units.voltage, maxVal: maxVals.voltage, round: false },
+      { key: 'temperature', label: LOC.temp, unit: LOC.units.temp, maxVal: maxVals.temperature, round: true, cap3: true },
+      { key: 'battery', label: LOC.battery, unit: LOC.units.battery, maxVal: maxVals.battery, round: true, cap3: true },
+      { key: 'mileage', label: LOC.mileage, unit: LOC.units.mileage, maxVal: maxVals.mileage, round: true },
+      { key: 'pwm', label: LOC.pwm, unit: LOC.units.pwm, maxVal: maxVals.pwm, round: true, cap3: true },
+      { key: 'power', label: LOC.power, unit: LOC.units.power, maxVal: maxVals.power, round: true },
+      { key: 'current', label: LOC.current, unit: LOC.units.current, maxVal: maxVals.current, round: false },
+    ];
+
+    _staticBoxWidths = {};
+    paramDefs.forEach(function(pd) {
+      var maxStr = pd.round ? Math.round(pd.maxVal) + '' : pd.maxVal.toFixed(1);
+      if (pd.cap3) {
+        // Cap integer part to 3 digits
+        var intStr = Math.round(pd.maxVal) + '';
+        if (intStr.length > 3) intStr = intStr.substring(0, 3);
+        maxStr = pd.round ? intStr : intStr + '.0';
+      }
+      // Replace digits with '0' to get max-width test string (preserves dots, minus)
+      var testVal = maxStr.replace(/\d/g, '0');
+      if (testVal.length < 1) testVal = '0';
+
+      measure.font = boldFont;
+      var valueW = measure.measureText(testVal).width;
+      measure.font = normalFont;
+      var labelW = settings.use_icons ? 0 : measure.measureText(pd.label + ': ').width;
+      var unitW = measure.measureText(' ' + pd.unit).width;
+      _staticBoxWidths[pd.key] = (settings.use_icons ? iconSize + iconSpacing : labelW) + valueW + unitW;
+    });
+    measure.font = boldFont;
+    var timeValW = measure.measureText('00:00:00').width;
+    measure.font = normalFont;
+    var timeLabelW = settings.use_icons ? 0 : measure.measureText(LOC.time + ': ').width;
+    _staticBoxWidths['time'] = (settings.use_icons ? iconSize + iconSpacing : timeLabelW) + timeValW;
+    _staticBoxWidths['dragy_speed'] = _staticBoxWidths['speed'];
+  }
+
+
   // ===== TELEMETRY BOX RENDERING =====
   function drawTelemetryBoxes(ctx, cw, ch, dp) {
     // Scale factor: settings are in design units, backend always renders at 4K (3840x2160)
@@ -1908,24 +2258,24 @@
 
     // Build params array
     var params = [];
-    if (settings.show_speed) params.push({ label: LOC.speed, value: Math.round(dp.speed) + '', unit: LOC.units.speed, key: 'pwm_check_no' });
-    if (settings.show_max_speed) params.push({ label: LOC.max_speed, value: Math.round(dp.maxSpeed) + '', unit: LOC.units.speed });
-    if (settings.show_gps) params.push({ label: LOC.gps, value: Math.round(dp.gps) + '', unit: LOC.units.speed });
-    if (settings.show_voltage) params.push({ label: LOC.voltage, value: dp.voltage.toFixed(1), unit: LOC.units.voltage });
-    if (settings.show_temp) params.push({ label: LOC.temp, value: Math.round(dp.temperature) + '', unit: LOC.units.temp });
-    if (settings.show_battery) params.push({ label: LOC.battery, value: Math.round(dp.battery) + '', unit: LOC.units.battery, isBattery: true });
-    if (settings.show_mileage) params.push({ label: LOC.mileage, value: Math.round(dp.mileage) + '', unit: LOC.units.mileage });
-    if (settings.show_pwm) params.push({ label: LOC.pwm, value: Math.round(dp.pwm) + '', unit: LOC.units.pwm, isPWM: true });
-    if (settings.show_power) params.push({ label: LOC.power, value: Math.round(dp.power) + '', unit: LOC.units.power });
-    if (settings.show_current) params.push({ label: LOC.current, value: dp.current.toFixed(1), unit: LOC.units.current });
+    if (settings.show_speed) params.push({ label: LOC.speed, value: Math.round(dp.speed) + '', unit: LOC.units.speed, key: 'pwm_check_no', staticKey: 'speed' });
+    if (settings.show_max_speed) params.push({ label: LOC.max_speed, value: Math.round(dp.maxSpeed) + '', unit: LOC.units.speed, staticKey: 'max_speed' });
+    if (settings.show_gps) params.push({ label: LOC.gps, value: Math.round(dp.gps) + '', unit: LOC.units.speed, staticKey: 'gps' });
+    if (settings.show_voltage) params.push({ label: LOC.voltage, value: dp.voltage.toFixed(1), unit: LOC.units.voltage, staticKey: 'voltage' });
+    if (settings.show_temp) params.push({ label: LOC.temp, value: Math.round(dp.temperature) + '', unit: LOC.units.temp, staticKey: 'temperature' });
+    if (settings.show_battery) params.push({ label: LOC.battery, value: Math.round(dp.battery) + '', unit: LOC.units.battery, isBattery: true, staticKey: 'battery' });
+    if (settings.show_mileage) params.push({ label: LOC.mileage, value: Math.round(dp.mileage) + '', unit: LOC.units.mileage, staticKey: 'mileage' });
+    if (settings.show_pwm) params.push({ label: LOC.pwm, value: Math.round(dp.pwm) + '', unit: LOC.units.pwm, isPWM: true, staticKey: 'pwm' });
+    if (settings.show_power) params.push({ label: LOC.power, value: Math.round(dp.power) + '', unit: LOC.units.power, staticKey: 'power' });
+    if (settings.show_current) params.push({ label: LOC.current, value: dp.current.toFixed(1), unit: LOC.units.current, staticKey: 'current' });
     if (settings.show_time) {
       var d = new Date(dp.timestamp * 1000);
       var ts = pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds());
-      params.push({ label: LOC.time, value: ts, unit: '' });
+      params.push({ label: LOC.time, value: ts, unit: '', staticKey: 'time' });
     }
     if (settings.show_dragy_speed && state.vboData) {
       var dragySpeed = getDragySpeedAtTime(dp.t);
-      params.push({ label: LOC.dragy_speed, value: Math.round(dragySpeed) + '', unit: LOC.units.speed });
+      params.push({ label: LOC.dragy_speed, value: Math.round(dragySpeed) + '', unit: LOC.units.speed, staticKey: 'dragy_speed' });
     }
 
     if (params.length === 0) return;
@@ -1942,7 +2292,11 @@
       var valueW = ctx.measureText(p.value).width;
       ctx.font = font;
       var unitW = ctx.measureText(' ' + p.unit).width;
-      var textW = (settings.use_icons ? iconSize + iconSpacing : labelW) + valueW + unitW;
+      var dynamicTextW = (settings.use_icons ? iconSize + iconSpacing : labelW) + valueW + unitW;
+      var textW = dynamicTextW;
+      if (settings.static_box_size && _staticBoxWidths && p.staticKey && _staticBoxWidths[p.staticKey]) {
+        textW = Math.max(dynamicTextW, _staticBoxWidths[p.staticKey]);
+      }
       var boxW = textW + 2 * topPad;
       boxes.push({ param: p, textW: textW, boxW: boxW });
     });
@@ -1975,18 +2329,19 @@
 
   function drawSingleBox(ctx, x, y, w, h, radius, param, textW, topPad, fontSize, sf, iconSize, iconSpacing, boldFont, normalFont) {
     // Determine box color
-    var boxColor = 'rgba(0,0,0,0.7)';
+    var boxAlpha = (settings.box_opacity / 100).toFixed(2);
+    var boxColor = 'rgba(0,0,0,' + boxAlpha + ')';
     var textColor = '#ffffff';
 
     if (param.isPWM) {
       var pwm = parseInt(param.value);
-      if (pwm > 90) { boxColor = 'rgba(255,0,0,0.9)'; textColor = '#000000'; }
-      else if (pwm >= 80) { boxColor = 'rgba(255,255,0,0.9)'; textColor = '#000000'; }
+      if (pwm > 90) { boxColor = 'rgba(255,0,0,' + boxAlpha + ')'; textColor = '#000000'; }
+      else if (pwm >= 80) { boxColor = 'rgba(255,255,0,' + boxAlpha + ')'; textColor = '#000000'; }
     }
     if (param.isBattery) {
       var bat = parseInt(param.value);
-      if (bat < 10) { boxColor = 'rgba(255,0,0,0.9)'; textColor = '#000000'; }
-      else if (bat <= 30) { boxColor = 'rgba(255,255,0,0.9)'; textColor = '#000000'; }
+      if (bat < 10) { boxColor = 'rgba(255,0,0,' + boxAlpha + ')'; textColor = '#000000'; }
+      else if (bat <= 30) { boxColor = 'rgba(255,255,0,' + boxAlpha + ')'; textColor = '#000000'; }
     }
 
     // Draw rounded rectangle
@@ -2006,13 +2361,14 @@
 
     // Draw text
     var textX = x + topPad;
-    var textY = y + h / 2 + fontSize * 0.35;
+    var textVOffset = (settings.text_vertical_offset || 0) * sf;
+    var textY = y + h / 2 + fontSize * 0.35 + textVOffset;
 
     ctx.fillStyle = textColor;
 
     if (settings.use_icons) {
       // Draw icon placeholder (filled circle as placeholder)
-      var iconY = y + (h - iconSize) / 2;
+      var iconY = y + (h - iconSize) / 2 + textVOffset;
       ctx.fillStyle = textColor;
       ctx.beginPath();
       ctx.arc(textX + iconSize / 2, iconY + iconSize / 2, iconSize / 2 - 1, 0, Math.PI * 2);
@@ -2144,6 +2500,10 @@
         // Update playhead line position on scroll
         updatePlayheadLine();
         updateTrimArrows();
+        // Redraw canvases at new scroll position (virtual scrolling)
+        drawRuler();
+        renderWaveform();
+        renderVBOWaveform();
         syncing = false;
       });
     });
@@ -2193,8 +2553,15 @@
 
   // ===== EXPORT =====
   function checkExportReady() {
-    var ready = state.videoUploaded && state.csvId;
-    if (dom.btnExport) dom.btnExport.disabled = !ready;
+    // Server export: needs video uploaded + CSV processed on server
+    var serverReady = (state.videoUploaded || state.noVideoMode) && state.csvId;
+    if (dom.btnExport) dom.btnExport.disabled = !serverReady;
+    // Local export: just needs video file + CSV data in browser
+    var localBtn = document.getElementById('btnLocalExport');
+    if (localBtn) {
+      var localReady = (state.videoFile || state.noVideoMode) && state.csvData && state.csvData.length > 0;
+      localBtn.disabled = !localReady;
+    }
   }
 
   function generateProjectName() {
@@ -2205,8 +2572,12 @@
   }
 
   function startExport() {
-    if (!state.videoId || !state.csvId) {
-      alert('Please upload both video and CSV first.');
+    if (!state.noVideoMode && (!state.videoUploaded || !state.videoId)) {
+      alert('Video is still uploading to the server. Please wait or use Local Export (Browser).');
+      return;
+    }
+    if (!state.csvId) {
+      alert('CSV not uploaded to server yet.');
       return;
     }
 
@@ -2218,24 +2589,28 @@
     var interpolate = interpolateEl ? interpolateEl.checked : true;
 
     var payload = {
-      video_id: state.videoId,
+      video_id: state.noVideoMode ? null : state.videoId,
+      no_video_mode: state.noVideoMode || false,
+      chroma_color: state.chromaBgColor || '#0000FF',
       csv_id: state.csvId,
       project_name: projectName,
       interpolate_values: interpolate,
-      time_offset: state.timeOffset,
-      csv_trim_start: state.csvTrimStart,
-      csv_trim_end: state.csvTrimEnd,
+      time_offset: state.timeOffset - state.csvCropOffset,
+      csv_trim_start: state.csvTrimStart + state.csvCropOffset,
+      csv_trim_end: state.csvTrimEnd + state.csvCropOffset,
       settings: settings,
       fps: dom.exportFPS.value,
       data_fps: dom.exportDataFPS.value,
       codec: dom.exportCodec.value,
       resolution: dom.exportResolution.value,
+      quality: (document.getElementById('exportQuality') || {}).value || 'medium',
       vbo_id: state.vboId || null,
-      vbo_time_offset: state.vboTimeOffset,
-      vbo_trim_start: state.vboTrimStart,
-      vbo_trim_end: state.vboTrimEnd,
+      vbo_time_offset: state.vboTimeOffset - state.vboCropOffset,
+      vbo_trim_start: state.vboTrimStart + state.vboCropOffset,
+      vbo_trim_end: state.vboTrimEnd + state.vboCropOffset,
     };
 
+    console.log('EXPORT payload:', JSON.stringify({time_offset: payload.time_offset, csv_trim_start: payload.csv_trim_start, csv_trim_end: payload.csv_trim_end, csvCropOffset: state.csvCropOffset, vbo_time_offset: payload.vbo_time_offset, vbo_trim_start: payload.vbo_trim_start, vbo_trim_end: payload.vbo_trim_end, vboCropOffset: state.vboCropOffset, vbo_id: payload.vbo_id}));
     fetch('/video-editor/export', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -2410,7 +2785,8 @@
       }
 
       // Parse velocity - check if already in km/h or needs conversion from knots
-      var rawVelocity = parseFloat(row['velocity'] || row['speed'] || 0);
+      var velStr = (row['velocity'] || row['speed'] || '0').replace(',', '.');
+      var rawVelocity = parseFloat(velStr);
       var speedKmh = velocityIsKmh ? rawVelocity : rawVelocity * 1.852;
 
       if (firstTime === null) firstTime = timeSec;
@@ -2459,9 +2835,8 @@
     if (!state.vboData || !dom.vboWaveformCanvas) return;
 
     var pxPerSec = getPxPerSecond();
-    var vboWidthPx = Math.max(20, state.vboDuration * pxPerSec);
+    var vboWidthPx = Math.max(1, state.vboDuration * pxPerSec);
 
-    // Position VBO track like CSV: left = offset, width = duration
     updateVBOTrackPosition();
     var vboTrackEl = document.getElementById('vboTrack');
     if (vboTrackEl) {
@@ -2470,15 +2845,40 @@
 
     var canvas = dom.vboWaveformCanvas;
     var dpr = window.devicePixelRatio || 1;
-    var canvasW = Math.min(vboWidthPx, 8000);
-    var scaleRatio = canvasW / vboWidthPx; // for downscaled canvas
-    canvas.width = canvasW * dpr;
+
+    // Virtual scrolling: canvas covers only visible portion + buffer
+    var parentScroll = dom.vboTrackContent ? dom.vboTrackContent.scrollLeft : 0;
+    var viewportW = dom.vboTrackContent ? dom.vboTrackContent.clientWidth : vboWidthPx;
+    var trackLeft = parseFloat(vboTrackEl ? vboTrackEl.style.left : '0') || 0;
+    var visLeft = parentScroll - trackLeft;
+    var visRight = visLeft + viewportW;
+    var buffer = viewportW * 0.5;
+    var drawLeft, drawRight, drawW;
+    var MAX_CANVAS_DIM = 8192;
+    // If track fits in max canvas size, render it all (no virtual scrolling artifacts)
+    if (vboWidthPx * dpr <= MAX_CANVAS_DIM) {
+      drawLeft = 0;
+      drawW = vboWidthPx;
+    } else {
+      drawLeft = Math.max(0, visLeft - buffer);
+      drawRight = Math.min(vboWidthPx, visRight + buffer);
+      drawW = drawRight - drawLeft;
+      if (drawW < 20) drawW = Math.min(vboWidthPx, viewportW + 200);
+      if (drawW < 20) drawW = 20;
+      if (drawW * dpr > MAX_CANVAS_DIM) drawW = MAX_CANVAS_DIM / dpr;
+    }
+
+    canvas.width = Math.ceil(drawW * dpr);
     canvas.height = 50 * dpr;
-    canvas.style.width = vboWidthPx + 'px';
+    canvas.style.width = drawW + 'px';
     canvas.style.height = '50px';
+    canvas.style.position = 'absolute';
+    canvas.style.left = drawLeft + 'px';
+    canvas.style.top = '0';
+
     var ctx = canvas.getContext('2d');
     ctx.scale(dpr, dpr);
-    ctx.clearRect(0, 0, canvasW, 50);
+    ctx.clearRect(0, 0, drawW, 50);
 
     var h = 50;
     var data = state.vboData;
@@ -2488,18 +2888,24 @@
     }
     if (maxVal === 0) maxVal = 1;
 
+    function tToX(t) {
+      return (t / state.vboDuration) * vboWidthPx - drawLeft;
+    }
+
     var step = Math.max(1, Math.floor(data.length / 4000));
 
-    // Draw speed as filled area (yellow) — LOCAL coordinates (like CSV)
+    // Draw speed as filled area (yellow)
     ctx.fillStyle = 'rgba(255, 193, 7, 0.3)';
     ctx.beginPath();
-    ctx.moveTo(0, h);
+    ctx.moveTo(tToX(data[0].t), h);
     for (var i = 0; i < data.length; i += step) {
-      var x = (data[i].t / state.vboDuration) * canvasW;
+      var x = tToX(data[i].t);
+      if (x < -10) continue;
+      if (x > drawW + 10) { ctx.lineTo(x, h - (data[i].speed / maxVal) * h); break; }
       var y = h - (data[i].speed / maxVal) * h;
       ctx.lineTo(x, y);
     }
-    ctx.lineTo(canvasW, h);
+    ctx.lineTo(tToX(data[data.length - 1].t), h);
     ctx.closePath();
     ctx.fill();
 
@@ -2507,10 +2913,13 @@
     ctx.strokeStyle = '#ffc107';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
+    var started = false;
     for (var i = 0; i < data.length; i += step) {
-      var x = (data[i].t / state.vboDuration) * canvasW;
+      var x = tToX(data[i].t);
+      if (x < -10) continue;
+      if (x > drawW + 10) { ctx.lineTo(x, h - (data[i].speed / maxVal) * h); break; }
       var y = h - (data[i].speed / maxVal) * h;
-      if (i === 0) ctx.moveTo(x, y);
+      if (!started) { ctx.moveTo(x, y); started = true; }
       else ctx.lineTo(x, y);
     }
     ctx.stroke();
@@ -2518,13 +2927,12 @@
     // Dim trimmed-out regions
     if (state.vboTrimStart > 0 || state.vboTrimEnd < state.vboDuration) {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
-      var trimLeftX = (state.vboTrimStart / state.vboDuration) * canvasW;
-      var trimRightX = (state.vboTrimEnd / state.vboDuration) * canvasW;
-      if (trimLeftX > 0) ctx.fillRect(0, 0, trimLeftX, h);
-      if (trimRightX < canvasW) ctx.fillRect(trimRightX, 0, canvasW - trimRightX, h);
+      var trimLeftLocal = (state.vboTrimStart / state.vboDuration) * vboWidthPx - drawLeft;
+      var trimRightLocal = (state.vboTrimEnd / state.vboDuration) * vboWidthPx - drawLeft;
+      if (trimLeftLocal > 0) ctx.fillRect(0, 0, trimLeftLocal, h);
+      if (trimRightLocal < drawW) ctx.fillRect(trimRightLocal, 0, drawW - trimRightLocal, h);
     }
 
-    // Update VBO trim handles (like CSV updateTrimHandles)
     updateVboTrimHandles();
   }
 
@@ -2596,6 +3004,611 @@
   }
 
   updateTrimVisibility();
+
+
+  // ===== LOCAL EXPORT (WebCodecs + mp4-muxer) =====
+  var _localExport = {
+    active: false,
+    cancelled: false,
+    muxer: null,
+    videoEncoder: null,
+    audioEncoder: null,
+    resultBlob: null,
+  };
+
+  function isLocalExportSupported() {
+    return typeof VideoEncoder !== 'undefined' && typeof VideoFrame !== 'undefined' && typeof Mp4Muxer !== 'undefined';
+  }
+
+  function initLocalExport() {
+    var btn = document.getElementById('btnLocalExport');
+    if (!btn) return;
+    if (isLocalExportSupported()) {
+      btn.style.display = '';
+    } else {
+      btn.style.display = 'none';
+    }
+    btn.addEventListener('click', showLocalExportConfirm);
+    var btnStart = document.getElementById('btnLocalExportStart');
+    if (btnStart) btnStart.addEventListener('click', startLocalExport);
+    var btnCancel = document.getElementById('btnLocalExportCancel');
+    if (btnCancel) btnCancel.addEventListener('click', cancelLocalExport);
+    var btnDownload = document.getElementById('btnLocalExportDownload');
+    if (btnDownload) btnDownload.addEventListener('click', downloadLocalExport);
+  }
+
+  function showLocalExportConfirm() {
+    var srcW = state.videoMeta.width || 1920;
+    var srcH = state.videoMeta.height || 1080;
+    var srcFps = state.videoMeta.fps || 30;
+    var dur = state.noVideoMode ? getNoVideoDuration() : (state.videoMeta.duration || 0);
+
+    // Populate resolution select
+    var resSelect = document.getElementById('localExportRes');
+    if (resSelect) {
+      var srcOpt = resSelect.querySelector('option[value="source"]');
+      if (state.noVideoMode) {
+        if (srcOpt) srcOpt.style.display = 'none';
+        resSelect.value = '1920x1080';
+      } else {
+        if (srcOpt) { srcOpt.style.display = ''; srcOpt.textContent = srcW + '\u00d7' + srcH; }
+        resSelect.value = 'source';
+      }
+    }
+    // Populate FPS select
+    var fpsSelect = document.getElementById('localExportFps');
+    if (fpsSelect) {
+      var srcFpsOpt = fpsSelect.querySelector('option[value="source"]');
+      if (state.noVideoMode) {
+        if (srcFpsOpt) srcFpsOpt.style.display = 'none';
+        fpsSelect.value = '30';
+      } else {
+        if (srcFpsOpt) { srcFpsOpt.style.display = ''; srcFpsOpt.textContent = Math.round(srcFps) + ' fps'; }
+        fpsSelect.value = 'source';
+      }
+    }
+    document.getElementById('localExportInfoDur').textContent = formatTime(dur);
+    var modal = new bootstrap.Modal(document.getElementById('localExportConfirmModal'));
+    modal.show();
+  }
+
+  function updateLocalProgress(frame, total, stage, speed, eta) {
+    var pct = total > 0 ? Math.round(frame / total * 100) : 0;
+    var statusEl = document.getElementById('localExpStatus');
+    var barEl = document.getElementById('localExpBar');
+    var frameEl = document.getElementById('localExpFrame');
+    var speedEl = document.getElementById('localExpSpeed');
+    var etaEl = document.getElementById('localExpEta');
+    var stageEl = document.getElementById('localExpStage');
+    if (statusEl) statusEl.innerHTML = '<span class="badge text-bg-warning">Rendering ' + pct + '%</span>';
+    if (barEl) barEl.style.width = pct + '%';
+    if (frameEl) frameEl.textContent = frame + ' / ' + total;
+    if (speedEl) speedEl.textContent = speed || '\u2014';
+    if (etaEl) etaEl.textContent = eta || '\u2014';
+    if (stageEl) stageEl.textContent = stage || 'Rendering...';
+  }
+
+  function showLocalExportDone() {
+    var statusEl = document.getElementById('localExpStatus');
+    var barEl = document.getElementById('localExpBar');
+    var stageEl = document.getElementById('localExpStage');
+    var btnCancel = document.getElementById('btnLocalExportCancel');
+    var btnDownload = document.getElementById('btnLocalExportDownload');
+    var btnClose = document.getElementById('btnLocalExportClose');
+    var speedEl = document.getElementById('localExpSpeed');
+    var etaEl = document.getElementById('localExpEta');
+    if (statusEl) statusEl.innerHTML = '<span class="badge text-bg-success">Complete</span>';
+    if (barEl) { barEl.style.width = '100%'; barEl.style.background = 'linear-gradient(90deg,#28a745,#20c997)'; }
+    // Show total time and file size
+    var elapsed = _localExport.startTime ? ((performance.now() - _localExport.startTime) / 1000) : 0;
+    var sizeMB = _localExport.resultBlob ? (_localExport.resultBlob.size / (1024 * 1024)).toFixed(1) : '?';
+    if (stageEl) stageEl.textContent = 'Done! File size: ' + sizeMB + ' MB. Click Download to save.';
+    if (speedEl) speedEl.textContent = elapsed > 0 ? (elapsed < 60 ? elapsed.toFixed(1) + 's' : Math.floor(elapsed / 60) + 'm ' + Math.round(elapsed % 60) + 's') : '\u2014';
+    if (etaEl) etaEl.textContent = sizeMB + ' MB';
+    if (btnCancel) btnCancel.style.display = 'none';
+    if (btnDownload) btnDownload.style.display = '';
+    if (btnClose) btnClose.style.display = '';
+  }
+
+  function showLocalExportError(msg) {
+    var errEl = document.getElementById('localExpError');
+    var stageEl = document.getElementById('localExpStage');
+    var statusEl = document.getElementById('localExpStatus');
+    var btnCancel = document.getElementById('btnLocalExportCancel');
+    var btnClose = document.getElementById('btnLocalExportClose');
+    if (errEl) { errEl.textContent = msg; errEl.style.display = ''; }
+    if (stageEl) stageEl.textContent = 'Export failed';
+    if (statusEl) statusEl.innerHTML = '<span class="badge text-bg-danger">Error</span>';
+    if (btnCancel) btnCancel.style.display = 'none';
+    if (btnClose) btnClose.style.display = '';
+  }
+
+  function cancelLocalExport() {
+    _localExport.cancelled = true;
+    try { if (_localExport.videoEncoder && _localExport.videoEncoder.state !== 'closed') _localExport.videoEncoder.close(); } catch(e) {}
+    try { if (_localExport.audioEncoder && _localExport.audioEncoder.state !== 'closed') _localExport.audioEncoder.close(); } catch(e) {}
+    var modal = bootstrap.Modal.getInstance(document.getElementById('localExportProgressModal'));
+    if (modal) modal.hide();
+    _localExport.active = false;
+  }
+
+  function downloadLocalExport() {
+    if (!_localExport.resultBlob) return;
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(_localExport.resultBlob);
+    a.download = (document.getElementById('exportProjectName').value.trim() || 'local-export') + '.mp4';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function() { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+
+  async function startLocalExport() {
+    if (_localExport.active) return;
+    _localExport.active = true;
+    _localExport.cancelled = false;
+    _localExport.resultBlob = null;
+
+    var confirmModal = bootstrap.Modal.getInstance(document.getElementById('localExportConfirmModal'));
+    if (confirmModal) confirmModal.hide();
+
+    // Reset progress UI
+    document.getElementById('localExpBar').style.width = '0%';
+    document.getElementById('localExpBar').style.background = 'linear-gradient(90deg,#28a745,#20c997)';
+    document.getElementById('localExpStatus').innerHTML = '<span class="badge text-bg-warning">Rendering 0%</span>';
+    document.getElementById('localExpFrame').textContent = '0 / 0';
+    document.getElementById('localExpSpeed').textContent = '\u2014';
+    document.getElementById('localExpEta').textContent = '\u2014';
+    document.getElementById('localExpStage').textContent = 'Initializing...';
+    document.getElementById('localExpError').style.display = 'none';
+    document.getElementById('btnLocalExportCancel').style.display = '';
+    document.getElementById('btnLocalExportDownload').style.display = 'none';
+    document.getElementById('btnLocalExportClose').style.display = 'none';
+
+    // Show progress modal
+    setTimeout(function() {
+      var progressModal = new bootstrap.Modal(document.getElementById('localExportProgressModal'));
+      progressModal.show();
+    }, 300);
+
+    // Small delay to let modal render
+    await new Promise(function(r) { setTimeout(r, 500); });
+
+    try {
+      await doLocalExport();
+    } catch (e) {
+      console.error('Local export error:', e);
+      if (!_localExport.cancelled) {
+        showLocalExportError(e.message || 'Unknown error');
+      }
+    }
+    _localExport.active = false;
+  }
+
+  async function doLocalExport() {
+    var video = dom.video;
+
+    // Read user-selected resolution from modal
+    var resSelect = document.getElementById('localExportRes');
+    var resVal = resSelect ? resSelect.value : 'source';
+    var w, h;
+    if (resVal === '3840x2160') {
+      w = 3840; h = 2160;
+    } else if (resVal === '1920x1080') {
+      w = 1920; h = 1080;
+    } else if (state.noVideoMode) {
+      w = 1920; h = 1080;
+    } else {
+      w = state.videoMeta.width || video.videoWidth || 1920;
+      h = state.videoMeta.height || video.videoHeight || 1080;
+    }
+
+    // Read user-selected FPS from modal
+    var fpsSelect = document.getElementById('localExportFps');
+    var fpsVal = fpsSelect ? fpsSelect.value : 'source';
+    var fps;
+    if (fpsVal === '60') {
+      fps = 60;
+    } else if (fpsVal === '30') {
+      fps = 30;
+    } else {
+      fps = state.videoMeta.fps || 30;
+    }
+
+    var duration = state.noVideoMode ? getNoVideoDuration() : (state.videoMeta.duration || video.duration || 0);
+    var totalFrames = Math.ceil(duration * fps);
+
+    if (totalFrames <= 0) throw new Error('No video loaded or duration is 0');
+
+    _localExport.startTime = performance.now();
+    updateLocalProgress(0, totalFrames, 'Setting up encoder...', '\u2014', '\u2014');
+
+    // Offscreen canvas for compositing at original video resolution
+    var offCanvas = document.createElement('canvas');
+    offCanvas.width = w;
+    offCanvas.height = h;
+    var offCtx = offCanvas.getContext('2d');
+
+    if (_localExport.cancelled) return;
+
+    // Extract audio track from original video using mp4box.js (pure JS demux, no server)
+    var audioTrackInfo = null;
+    var audioSamples = [];
+    updateLocalProgress(0, totalFrames, 'Extracting audio from original...', '\u2014', '\u2014');
+    try {
+      if (!state.noVideoMode && state.videoFile && typeof MP4Box !== 'undefined') {
+        var extracted = await _extractAudioFromMP4(state.videoFile);
+        if (extracted) {
+          var aCodec = (extracted.info.codec || '').toLowerCase();
+          if (aCodec.indexOf('mp4a') === 0 || aCodec.indexOf('aac') >= 0) {
+            audioTrackInfo = extracted.info;
+            audioSamples = extracted.samples;
+            console.log('Local export: audio extracted, samples:', audioSamples.length,
+              'codec:', audioTrackInfo.codec, 'sampleRate:', audioTrackInfo.sampleRate,
+              'channels:', audioTrackInfo.channels);
+          } else {
+            console.warn('Local export: unsupported audio codec:', aCodec);
+            alert('Audio format  + aCodec +  is not supported for local export. The video will be exported without audio. Supported format: AAC.');
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Local export: audio extraction failed, exporting without audio:', e);
+    }
+
+    // Create muxer with audio if available
+    var muxerTarget = new Mp4Muxer.ArrayBufferTarget();
+    var muxerOpts = {
+      target: muxerTarget,
+      video: { codec: 'avc', width: w, height: h },
+      fastStart: 'in-memory',
+    };
+    if (audioTrackInfo) {
+      muxerOpts.audio = {
+        codec: 'aac',
+        numberOfChannels: audioTrackInfo.channels,
+        sampleRate: audioTrackInfo.sampleRate,
+      };
+      console.log('Local export: muxer with audio:', muxerOpts.audio);
+    }
+    var muxer = new Mp4Muxer.Muxer(muxerOpts);
+    _localExport.muxer = muxer;
+
+    // Video encoder
+    var videoEncoder = new VideoEncoder({
+      output: function(chunk, meta) { muxer.addVideoChunk(chunk, meta); },
+      error: function(e) { console.error('VideoEncoder error:', e); }
+    });
+    _localExport.videoEncoder = videoEncoder;
+
+    var bitrate = 8000000;
+    if (w >= 3840) bitrate = 30000000;
+    else if (w >= 1920) bitrate = 12000000;
+    else if (w >= 1280) bitrate = 8000000;
+
+    videoEncoder.configure({
+      codec: 'avc1.640028',
+      width: w,
+      height: h,
+      bitrate: bitrate,
+      framerate: fps,
+      hardwareAcceleration: 'prefer-hardware',
+      avc: { format: 'avc' },
+    });
+
+    updateLocalProgress(0, totalFrames, 'Rendering frames...', '\u2014', '\u2014');
+    video.pause();
+
+    var startTime = performance.now();
+    var keyframeInterval = Math.round(fps * 2);
+
+    // Recalculate static box widths at export resolution (viewport canvas is smaller)
+    recalcStaticBoxWidths(w);
+
+    // Frame-by-frame rendering
+    for (var frameIdx = 0; frameIdx < totalFrames; frameIdx++) {
+      if (_localExport.cancelled) break;
+
+      var t = frameIdx / fps;
+
+      // Seek video or draw chroma background
+      if (state.noVideoMode) {
+        offCtx.fillStyle = state.chromaBgColor;
+        offCtx.fillRect(0, 0, w, h);
+      } else {
+        video.currentTime = t;
+        await new Promise(function(resolve) {
+          function onSeeked() { video.removeEventListener('seeked', onSeeked); resolve(); }
+          video.addEventListener('seeked', onSeeked);
+          setTimeout(resolve, 500);
+        });
+        offCtx.drawImage(video, 0, 0, w, h);
+      }
+
+      var dataPoint = getDataAtTime(t);
+      if (dataPoint) {
+        if (state.vboData && state.vboData.length > 0) {
+          dataPoint.dragySpeed = getDragySpeedAtTime(t);
+        }
+        drawTelemetryBoxes(offCtx, w, h, dataPoint);
+        if (settings.show_bottom_elements) {
+          drawSpeedGauge(offCtx, w, h, dataPoint.speed);
+        }
+      }
+
+      // Encode frame
+      var frame = new VideoFrame(offCanvas, {
+        timestamp: Math.round(t * 1000000),
+        duration: Math.round(1000000 / fps),
+      });
+      videoEncoder.encode(frame, { keyFrame: frameIdx % keyframeInterval === 0 });
+      frame.close();
+
+      // Backpressure: wait if encoder queue is building up
+      while (videoEncoder.encodeQueueSize > 10) {
+        await new Promise(function(r) { setTimeout(r, 1); });
+      }
+
+      // Update progress every 3 frames
+      if (frameIdx % 3 === 0 || frameIdx === totalFrames - 1) {
+        var elapsed = (performance.now() - startTime) / 1000;
+        var fpsRate = frameIdx > 0 ? (frameIdx / elapsed) : 0;
+        var remaining = fpsRate > 0 ? ((totalFrames - frameIdx) / fpsRate) : 0;
+        var speedTxt = fpsRate > 0 ? (fpsRate.toFixed(1) + ' fps (' + (fpsRate / fps).toFixed(1) + 'x)') : '\u2014';
+        var etaTxt = remaining > 0 ? formatTime(Math.round(remaining)) : '\u2014';
+        updateLocalProgress(frameIdx + 1, totalFrames, 'Rendering frames...', speedTxt, etaTxt);
+        await new Promise(function(r) { setTimeout(r, 0); });
+      }
+    }
+
+    if (_localExport.cancelled) { videoEncoder.close(); return; }
+
+    // Flush video
+    updateLocalProgress(totalFrames, totalFrames, 'Flushing video encoder...', '\u2014', '\u2014');
+    await videoEncoder.flush();
+    videoEncoder.close();
+
+    if (_localExport.cancelled) return;
+
+    // Add extracted audio samples to muxer
+    if (audioTrackInfo && audioSamples.length > 0) {
+      updateLocalProgress(totalFrames, totalFrames, 'Muxing audio...', '\u2014', '\u2014');
+      console.log('Local export: adding', audioSamples.length, 'audio samples to muxer');
+      for (var ai = 0; ai < audioSamples.length; ai++) {
+        var sample = audioSamples[ai];
+        // Limit audio to video duration
+        if (sample.timestamp > duration * 1000000) break;
+        muxer.addAudioChunkRaw(
+          sample.data,
+          sample.isKeyframe ? 'key' : 'delta',
+          sample.timestamp,
+          sample.duration,
+          audioTrackInfo.decoderConfig ? { decoderConfig: audioTrackInfo.decoderConfig } : undefined
+        );
+      }
+      console.log('Local export: audio samples added');
+    }
+
+    // Finalize MP4
+    updateLocalProgress(totalFrames, totalFrames, 'Finalizing MP4...', '\u2014', '\u2014');
+    muxer.finalize();
+
+    _localExport.resultBlob = new Blob([muxerTarget.buffer], { type: 'video/mp4' });
+    // Restore static box widths for viewport
+    recalcStaticBoxWidths();
+    showLocalExportDone();
+    console.log('Local export complete, size:', (_localExport.resultBlob.size / (1024 * 1024)).toFixed(1), 'MB');
+  }
+
+  async function _encodeAudioForExport(muxer, audioBuffer, videoDuration) {
+    var sampleRate = audioBuffer.sampleRate;
+    var numberOfChannels = audioBuffer.numberOfChannels;
+    var totalSamples = Math.min(audioBuffer.length, Math.ceil(videoDuration * sampleRate));
+    console.log('Local export audio: starting encode, samples:', totalSamples, 'channels:', numberOfChannels, 'sampleRate:', sampleRate);
+
+    var audioChunksAdded = 0;
+    var audioEncoder = new AudioEncoder({
+      output: function(chunk, meta) { muxer.addAudioChunk(chunk, meta); audioChunksAdded++; },
+      error: function(e) { console.error('AudioEncoder error:', e); }
+    });
+    _localExport.audioEncoder = audioEncoder;
+
+    // Check supported codec
+    var codecToUse = 'mp4a.40.2';
+    try {
+      var support = await AudioEncoder.isConfigSupported({
+        codec: 'mp4a.40.2',
+        sampleRate: sampleRate,
+        numberOfChannels: numberOfChannels,
+        bitrate: 128000,
+      });
+      console.log('Local export audio: mp4a.40.2 supported:', support.supported);
+      if (!support.supported) {
+        // Try opus as fallback (won't work in mp4 muxer but let's see)
+        codecToUse = 'opus';
+        console.log('Local export audio: falling back to opus');
+      }
+    } catch(e) {
+      console.warn('Local export audio: isConfigSupported failed:', e);
+    }
+
+    audioEncoder.configure({
+      codec: codecToUse,
+      sampleRate: sampleRate,
+      numberOfChannels: numberOfChannels,
+      bitrate: 128000,
+    });
+    console.log('Local export audio: encoder configured with codec:', codecToUse);
+
+    var chunkSize = 1024;
+    var encodedChunks = 0;
+    for (var offset = 0; offset < totalSamples; offset += chunkSize) {
+      if (_localExport.cancelled) break;
+      var len = Math.min(chunkSize, totalSamples - offset);
+
+      var data = new Float32Array(len * numberOfChannels);
+      for (var ch = 0; ch < numberOfChannels; ch++) {
+        var chData = audioBuffer.getChannelData(ch);
+        var dstOff = ch * len;
+        for (var i = 0; i < len; i++) {
+          var srcIdx = offset + i;
+          data[dstOff + i] = srcIdx < chData.length ? chData[srcIdx] : 0;
+        }
+      }
+
+      try {
+        var audioData = new AudioData({
+          format: 'f32-planar',
+          sampleRate: sampleRate,
+          numberOfFrames: len,
+          numberOfChannels: numberOfChannels,
+          timestamp: Math.round(offset / sampleRate * 1000000),
+          data: data,
+        });
+        audioEncoder.encode(audioData);
+        audioData.close();
+        encodedChunks++;
+      } catch(e) {
+        console.error('Local export audio: encode error at offset', offset, e);
+        break;
+      }
+
+      while (audioEncoder.encodeQueueSize > 20) {
+        await new Promise(function(r) { setTimeout(r, 1); });
+      }
+
+      if (offset % (chunkSize * 100) === 0) {
+        var audioPct = Math.round(offset / totalSamples * 100);
+        updateLocalProgress(0, 0, 'Encoding audio... ' + audioPct + '%', '\u2014', '\u2014');
+        await new Promise(function(r) { setTimeout(r, 0); });
+      }
+    }
+
+    console.log('Local export audio: flushing encoder, encoded chunks:', encodedChunks, 'output chunks to muxer:', audioChunksAdded);
+    await audioEncoder.flush();
+    console.log('Local export audio: flush done, total muxer chunks:', audioChunksAdded);
+    audioEncoder.close();
+  }
+
+
+  // Extract raw audio samples from MP4 using mp4box.js (no encoding/decoding)
+  function _extractAudioFromMP4(file) {
+    return new Promise(function(resolve, reject) {
+      var mp4box = MP4Box.createFile();
+      var audioTrack = null;
+      var audioSamples = [];
+      var decoderConfig = null;
+      var totalExpected = 0;
+      var resolved = false;
+
+      function tryResolve() {
+        if (resolved) return;
+        if (!audioTrack) { resolved = true; resolve(null); return; }
+        // Resolve when we got all expected samples (or close enough)
+        if (audioSamples.length >= totalExpected) {
+          resolved = true;
+          console.log('Local export: all audio samples collected:', audioSamples.length);
+          resolve({
+            info: {
+              codec: audioTrack.codec,
+              sampleRate: audioTrack.audio.sample_rate,
+              channels: audioTrack.audio.channel_count,
+              decoderConfig: decoderConfig,
+            },
+            samples: audioSamples,
+          });
+        }
+      }
+
+      mp4box.onReady = function(info) {
+        for (var i = 0; i < info.tracks.length; i++) {
+          if (info.tracks[i].type === 'audio') {
+            audioTrack = info.tracks[i];
+            break;
+          }
+        }
+        if (!audioTrack) {
+          console.log('Local export: no audio track found in MP4');
+          tryResolve();
+          return;
+        }
+        totalExpected = audioTrack.nb_samples;
+        console.log('Local export: found audio track, id:', audioTrack.id,
+          'codec:', audioTrack.codec, 'sampleRate:', audioTrack.audio.sample_rate,
+          'channels:', audioTrack.audio.channel_count, 'samples:', totalExpected);
+
+        // Get AudioSpecificConfig for AAC descriptor
+        var trak = mp4box.getTrackById(audioTrack.id);
+        if (trak && trak.mdia && trak.mdia.minf && trak.mdia.minf.stbl && trak.mdia.minf.stbl.stsd) {
+          var entry = trak.mdia.minf.stbl.stsd.entries[0];
+          if (entry && entry.esds && entry.esds.esd && entry.esds.esd.descs) {
+            var descs = entry.esds.esd.descs;
+            for (var d = 0; d < descs.length; d++) {
+              if (descs[d].tag === 0x05 && descs[d].data) {
+                decoderConfig = { description: new Uint8Array(descs[d].data) };
+                console.log('Local export: got AudioSpecificConfig, length:', decoderConfig.description.length);
+                break;
+              }
+            }
+          }
+        }
+
+        mp4box.setExtractionOptions(audioTrack.id, null, { nbSamples: 5000 });
+        mp4box.start();
+      };
+
+      mp4box.onSamples = function(trackId, user, samples) {
+        for (var i = 0; i < samples.length; i++) {
+          var s = samples[i];
+          audioSamples.push({
+            data: new Uint8Array(s.data),
+            timestamp: Math.round(s.cts * 1000000 / s.timescale),
+            duration: Math.round(s.duration * 1000000 / s.timescale),
+            isKeyframe: s.is_sync,
+          });
+        }
+        console.log('Local export: got samples batch, total so far:', audioSamples.length, '/', totalExpected);
+        tryResolve();
+      };
+
+      mp4box.onError = function(e) {
+        console.error('mp4box error:', e);
+        if (!resolved) { resolved = true; reject(e); }
+      };
+
+      // Safety timeout — if samples don't arrive within 15s, resolve with what we have
+      setTimeout(function() {
+        if (!resolved) {
+          console.warn('Local export: audio extraction timeout, got', audioSamples.length, '/', totalExpected);
+          resolved = true;
+          if (audioTrack && audioSamples.length > 0) {
+            resolve({
+              info: {
+                codec: audioTrack.codec,
+                sampleRate: audioTrack.audio.sample_rate,
+                channels: audioTrack.audio.channel_count,
+                decoderConfig: decoderConfig,
+              },
+              samples: audioSamples,
+            });
+          } else {
+            resolve(null);
+          }
+        }
+      }, 15000);
+
+      // Read file and feed to mp4box
+      var reader = new FileReader();
+      reader.onload = function() {
+        var buf = reader.result;
+        buf.fileStart = 0;
+        mp4box.appendBuffer(buf);
+        mp4box.flush();
+      };
+      reader.onerror = function() { if (!resolved) { resolved = true; reject(reader.error); } };
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
 
   // ===== START =====
   if (document.readyState === 'loading') {

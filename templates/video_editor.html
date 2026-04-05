@@ -40,7 +40,7 @@
     <!-- Upload progress indicators -->
     <div class="ve-upload-progress dropdown" id="videoUploadProgress">
       <span class="ve-upload-label" data-bs-toggle="dropdown" aria-expanded="false" style="cursor:pointer;">
-        Uploading video... <i class="bi bi-info-circle" style="opacity:0.6;"></i>
+        Uploading... <i class="bi bi-info-circle" style="opacity:0.6;"></i>
       </span>
       <div class="progress"><div class="progress-bar" role="progressbar" style="width:0%"></div></div>
       <span class="percent">0%</span>
@@ -63,10 +63,14 @@
       <i class="bi bi-cloud-upload"></i> {{ _('Video limit:') }} {% if current_user.is_admin %}∞{% else %}20 GB{% endif %}
     </span>
 
-    <!-- Export dropdown -->
+    <!-- Local Export button (separate) -->
+    <button class="btn btn-sm btn-success" id="btnLocalExport" style="display:none;" title="Export in browser without server">
+      <i class="bi bi-pc-display"></i> <span class="ve-desktop-only">Local Export</span>
+    </button>
+    <!-- Server Export dropdown -->
     <div class="dropdown">
       <button class="btn btn-sm btn-primary dropdown-toggle" type="button" id="btnExport" data-bs-toggle="dropdown" disabled>
-        <i class="bi bi-download"></i> Export
+        <i class="bi bi-download"></i> <span class="ve-desktop-only">Export</span>
       </button>
       <div class="dropdown-menu dropdown-menu-end ve-export-settings">
         <div class="mb-2">
@@ -108,6 +112,14 @@
           </select>
         </div>
         <div class="mb-2">
+          <label>Quality</label>
+          <select class="form-select form-select-sm" id="exportQuality">
+            <option value="low">Low (4 Mbps)</option>
+            <option value="medium" selected>Medium (8 Mbps)</option>
+            <option value="high">High (16 Mbps)</option>
+          </select>
+        </div>
+        <div class="mb-2">
           <div class="form-check">
             <input class="form-check-input" type="checkbox" id="exportInterpolate" checked>
             <label class="form-check-label" for="exportInterpolate" style="font-size:0.85rem;">
@@ -116,8 +128,8 @@
             </label>
           </div>
         </div>
-        <button class="btn btn-primary btn-sm w-100 mt-2" id="btnStartExport">
-          <i class="bi bi-film"></i> Start Export
+        <button class="btn btn-primary btn-sm w-100" id="btnStartExport">
+          <i class="bi bi-cloud-upload"></i> Start Server Export
         </button>
       </div>
     </div>
@@ -156,12 +168,16 @@
             <input type="range" id="horizontalPosition" min="0" max="100" value="50">
           </div>
           <div class="ve-setting">
-            <label>Top Padding <span class="value" id="valTopPad">14</span></label>
+            <label>Box Padding <span class="value" id="valTopPad">14</span></label>
             <input type="range" id="topPadding" min="0" max="100" value="14">
           </div>
           <div class="ve-setting">
             <label>Bottom Padding <span class="value" id="valBotPad">41</span></label>
             <input type="range" id="bottomPadding" min="0" max="100" value="41">
+          </div>
+          <div class="ve-setting">
+            <label>Text Offset <span class="value" id="valTextOffset">0</span></label>
+            <input type="range" id="textVerticalOffset" min="-20" max="20" value="0">
           </div>
           <div class="ve-setting">
             <label>Spacing <span class="value" id="valSpacing">10</span></label>
@@ -170,6 +186,10 @@
           <div class="ve-setting">
             <label>Border Radius <span class="value" id="valRadius">13</span></label>
             <input type="range" id="borderRadius" min="0" max="30" value="13">
+          </div>
+          <div class="ve-setting">
+            <label>Box Opacity <span class="value" id="valBoxOpacity">70</span>%</label>
+            <input type="range" id="boxOpacity" min="0" max="100" value="100">
           </div>
           <div class="ve-setting">
             <div class="form-check">
@@ -268,6 +288,17 @@
           <hr style="border-color:#2d3238;margin:8px 0">
           <div class="ve-setting">
             <div class="form-check"><input class="form-check-input" type="checkbox" id="debugOverlay"><label class="form-check-label" for="debugOverlay">Debug Info</label></div>
+          </div>
+          <!-- Chroma Key Background (visible only in no-video mode) -->
+          <div id="chromaKeySettings" style="display:none">
+            <hr style="border-color:#2d3238;margin:8px 0">
+            <label class="ve-label" style="margin-bottom:6px"><i class="bi bi-palette"></i> Chroma Key Background</label>
+            <div class="d-flex align-items-center gap-2">
+              <input type="color" id="chromaBgColor" value="#0000FF" class="form-control form-control-color" style="width:40px;height:32px;padding:2px;background:#1a1d21;border-color:#2d3238;">
+              <span id="chromaBgColorLabel" style="color:#8b949e;font-size:0.8rem">#0000FF</span>
+              <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('chromaBgColor').value='#0000FF';document.getElementById('chromaBgColor').dispatchEvent(new Event('input'));" style="font-size:0.7rem;padding:1px 6px">Blue</button>
+              <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('chromaBgColor').value='#00FF00';document.getElementById('chromaBgColor').dispatchEvent(new Event('input'));" style="font-size:0.7rem;padding:1px 6px">Green</button>
+            </div>
           </div>
         </div>
       </div>
@@ -423,10 +454,113 @@
   </div>
 </div>
 
+<!-- Local Export Confirmation Modal -->
+<div class="modal fade" id="localExportConfirmModal" tabindex="-1" data-bs-backdrop="static" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:520px;">
+    <div class="modal-content" style="background:#1e2228;border:1px solid var(--bs-border-color);border-radius:0.75rem;color:#e0e0e0;">
+      <div class="modal-header" style="border-bottom:1px solid var(--bs-border-color);padding:1rem 1.25rem;">
+        <h5 class="modal-title" style="font-size:1rem;font-weight:600;">
+          <i class="bi bi-pc-display text-success"></i> Local Export (Browser Rendering)
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" style="padding:1.25rem;">
+        <div class="alert alert-warning" style="background:rgba(255,193,7,0.1);border-color:rgba(255,193,7,0.3);color:#ffc107;font-size:0.85rem;margin-bottom:1rem;">
+          <i class="bi bi-exclamation-triangle-fill"></i> <strong>Important — please read before starting</strong>
+        </div>
+        <ul style="font-size:0.85rem;color:#c9d1d9;padding-left:1.25rem;margin-bottom:1rem;">
+          <li style="margin-bottom:0.5rem;"><strong>Do not close the browser tab</strong> — rendering happens in your browser. Closing the tab will cancel the export.</li>
+          <li style="margin-bottom:0.5rem;"><strong>Do not switch away for long</strong> — some browsers throttle background tabs, which may slow down rendering.</li>
+          <li style="margin-bottom:0.5rem;"><strong>Hardware requirements</strong> — for smooth rendering, your device should have at least 4 GB RAM and a modern processor. Long videos (30+ min) or 4K will require more.</li>
+          <li style="margin-bottom:0.5rem;"><strong>Output format</strong> — MP4 (H.264) with original audio, downloaded directly to your device.</li>
+          <li style="margin-bottom:0.5rem;"><strong>Speed</strong> — typically 3-10x faster than real-time, depending on your hardware.</li>
+        </ul>
+        <div style="display:flex;gap:0.5rem;font-size:0.8rem;color:#8b949e;margin-bottom:1rem;">
+          <div style="flex:1;background:#161b22;border-radius:6px;padding:0.5rem 0.75rem;text-align:center;">
+            <div style="font-size:0.7rem;color:#6e7681;">Resolution</div>
+            <select id="localExportRes" class="form-select form-select-sm" style="background:#0d1117;color:#e0e0e0;border-color:#30363d;font-size:0.8rem;padding:2px 6px;text-align:center;">
+              <option value="source" selected>Source</option>
+              <option value="1920x1080">1920×1080</option>
+              <option value="3840x2160">3840×2160</option>
+            </select>
+          </div>
+          <div style="flex:1;background:#161b22;border-radius:6px;padding:0.5rem 0.75rem;text-align:center;">
+            <div style="font-size:0.7rem;color:#6e7681;">FPS</div>
+            <select id="localExportFps" class="form-select form-select-sm" style="background:#0d1117;color:#e0e0e0;border-color:#30363d;font-size:0.8rem;padding:2px 6px;text-align:center;">
+              <option value="source" selected>Source</option>
+              <option value="30">30</option>
+              <option value="60">60</option>
+            </select>
+          </div>
+          <div style="flex:1;background:#161b22;border-radius:6px;padding:0.5rem 0.75rem;text-align:center;">
+            <div style="font-size:0.7rem;color:#6e7681;">Duration</div>
+            <div style="font-weight:600;color:#e0e0e0;" id="localExportInfoDur">—</div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="border-top:1px solid var(--bs-border-color);padding:0.75rem 1.25rem;justify-content:flex-end;">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-sm btn-success" id="btnLocalExportStart">
+          <i class="bi bi-play-fill"></i> Start Rendering
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Local Export Progress Modal -->
+<div class="modal fade" id="localExportProgressModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:480px;">
+    <div class="modal-content" style="background:#1e2228;border:1px solid var(--bs-border-color);border-radius:0.75rem;color:#e0e0e0;">
+      <div class="modal-body" style="padding:1.25rem;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+          <span style="font-weight:600;font-size:0.95rem;">
+            <i class="bi bi-pc-display text-success"></i> Local Export
+          </span>
+          <span id="localExpStatus"><span class="badge text-bg-warning">Rendering 0%</span></span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;margin-bottom:1rem;">
+          <div style="background:#161b22;border-radius:6px;padding:0.5rem;text-align:center;">
+            <div style="font-size:0.65rem;color:#6e7681;">Frame</div>
+            <div style="font-weight:600;font-size:0.85rem;" id="localExpFrame">0 / 0</div>
+          </div>
+          <div style="background:#161b22;border-radius:6px;padding:0.5rem;text-align:center;">
+            <div style="font-size:0.65rem;color:#6e7681;">Speed</div>
+            <div style="font-weight:600;font-size:0.85rem;" id="localExpSpeed">—</div>
+          </div>
+          <div style="background:#161b22;border-radius:6px;padding:0.5rem;text-align:center;">
+            <div style="font-size:0.65rem;color:#6e7681;">ETA</div>
+            <div style="font-weight:600;font-size:0.85rem;" id="localExpEta">—</div>
+          </div>
+        </div>
+        <!-- Progress bar -->
+        <div style="height:6px;border-radius:3px;background:var(--bs-border-color);overflow:hidden;margin-bottom:0.75rem;">
+          <div id="localExpBar" style="height:100%;border-radius:3px;background:linear-gradient(90deg,#28a745,#20c997);transition:width 0.3s ease;width:0%;"></div>
+        </div>
+        <div style="font-size:0.75rem;color:#6e7681;text-align:center;" id="localExpStage">Initializing...</div>
+      </div>
+      <div style="padding:0.75rem 1.25rem;border-top:1px solid var(--bs-border-color);text-align:center;">
+        <div class="alert alert-danger" style="font-size:0.75rem;padding:0.4rem 0.75rem;margin-bottom:0.75rem;display:none;" id="localExpError"></div>
+        <button type="button" class="btn btn-sm btn-danger" id="btnLocalExportCancel">
+          <i class="bi bi-x-circle"></i> Cancel
+        </button>
+        <button type="button" class="btn btn-sm btn-primary" id="btnLocalExportDownload" style="display:none;">
+          <i class="bi bi-download"></i> Download MP4
+        </button>
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal" id="btnLocalExportClose" style="display:none;">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/video-editor.css') }}?v=1773585854">
 <script>window._isAdmin = {{ 'true' if current_user.is_admin else 'false' }};</script>
+<script src="{{ url_for('static', filename='js/mp4box.all.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/mp4-muxer.min.js') }}"></script>
 <script src="{{ url_for('static', filename='js/video-editor.js') }}?v=1773585854"></script>
 {% endblock %}

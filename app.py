@@ -31,7 +31,7 @@ from forms import (LoginForm, RegistrationForm, ProfileForm,
                   ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm, DeleteAccountForm, 
                   NewsForm, EmailCampaignForm, ResendConfirmationForm, EmailTestForm, AchievementForm, 
                   generate_math_captcha)
-from models import User, Project, EmailCampaign, News, Preset, RegistrationAttempt, Achievement
+from models import User, Project, EmailCampaign, News, Preset, RegistrationAttempt, Achievement, SiteSetting
 import markdown
 from sqlalchemy import desc
 
@@ -57,7 +57,7 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_pre_ping': True,
 }
 app.config['UPLOAD_FOLDER'] = 'uploads'
-app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max per request (video uploaded in 20MB chunks)
+app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024  # 2GB max (local export merge needs large uploads)
 app.config['WTF_CSRF_ENABLED'] = True
 app.config['BABEL_DEFAULT_LOCALE'] = 'en'
 
@@ -838,7 +838,7 @@ def upload_file():
             csv_file=filename,
             csv_type=csv_type,
             created_at=datetime.now(),
-            expiry_date=datetime.now() + timedelta(hours=48),
+            expiry_date=datetime.now() + timedelta(hours=SiteSetting.get_int("upload_expiry_hours", 24)),
             status='pending',
             folder_number=Project.get_next_folder_number(),
             user_id=current_user.id
@@ -1675,6 +1675,142 @@ def cleanup_storage():
             'success': False,
             'error': str(e)
         }), 500
+
+
+@app.route('/admin/cleanup-ve-uploads', methods=['POST'])
+@login_required
+@admin_required
+def cleanup_ve_uploads():
+    """Clean up abandoned video editor uploads: orphan chunks, duplicate CSVs/VBOs, old videos"""
+    try:
+        deleted_count = 0
+        deleted_files = []
+        freed_bytes = 0
+        ve_dir = os.path.join('uploads', 'video_editor')
+        if not os.path.exists(ve_dir):
+            return jsonify({'success': True, 'deleted_count': 0, 'freed_mb': 0, 'deleted_files': []})
+
+        now = datetime.now().timestamp()
+        max_age_hours = 24  # Files older than 24h with no associated project
+
+        for user_dir_name in os.listdir(ve_dir):
+            user_path = os.path.join(ve_dir, user_dir_name)
+            if not os.path.isdir(user_path):
+                continue
+            for item in os.listdir(user_path):
+                item_path = os.path.join(user_path, item)
+                # Delete orphan chunk directories
+                if item.endswith('_chunks') and os.path.isdir(item_path):
+                    size = sum(os.path.getsize(os.path.join(dp, f)) for dp, dn, fnames in os.walk(item_path) for f in fnames)
+                    shutil.rmtree(item_path)
+                    deleted_files.append(f'video_editor/{user_dir_name}/{item}')
+                    deleted_count += 1
+                    freed_bytes += size
+                    continue
+                # Skip hash index
+                if item == '_video_hashes.json':
+                    continue
+                # Check age of regular files
+                if os.path.isfile(item_path):
+                    age_hours = (now - os.path.getmtime(item_path)) / 3600
+                    if age_hours > max_age_hours:
+                        size = os.path.getsize(item_path)
+                        os.remove(item_path)
+                        deleted_files.append(f'video_editor/{user_dir_name}/{item}')
+                        deleted_count += 1
+                        freed_bytes += size
+
+        return jsonify({
+            'success': True,
+            'deleted_count': deleted_count,
+            'freed_mb': round(freed_bytes / 1024 / 1024, 1),
+            'deleted_files': deleted_files
+        })
+    except Exception as e:
+        logging.error(f"VE cleanup error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/admin/cleanup-old-projects', methods=['POST'])
+@login_required
+@admin_required
+def cleanup_old_projects():
+    """Delete all completed projects older than N days and their files"""
+    try:
+        days = int(request.json.get('days', 7))
+        cutoff = datetime.now() - timedelta(days=days)
+        projects = Project.query.filter(Project.created_at < cutoff).all()
+
+        deleted_count = 0
+        freed_bytes = 0
+
+        for project in projects:
+            # Delete associated files
+            paths_to_delete = []
+            if project.csv_file:
+                paths_to_delete.append(os.path.join('uploads', project.csv_file))
+            if project.video_file:
+                paths_to_delete.append(os.path.join('videos', project.video_file))
+            if project.png_archive_file:
+                paths_to_delete.append(os.path.join('archives', project.png_archive_file))
+            # Frames folder
+            frame_dir = os.path.join('frames', f'project_{project.folder_number}')
+            if os.path.isdir(frame_dir):
+                for dp, dn, fnames in os.walk(frame_dir):
+                    for f in fnames:
+                        freed_bytes += os.path.getsize(os.path.join(dp, f))
+                shutil.rmtree(frame_dir)
+            # Processed data
+            if project.csv_file:
+                pd_file = os.path.join('processed_data', f'project_{project.folder_number}_{os.path.basename(project.csv_file)}')
+                paths_to_delete.append(pd_file)
+            # Preview
+            paths_to_delete.append(os.path.join('previews', f'{project.id}_preview.png'))
+
+            for p in paths_to_delete:
+                if os.path.isfile(p):
+                    freed_bytes += os.path.getsize(p)
+                    os.remove(p)
+
+            db.session.delete(project)
+            deleted_count += 1
+
+        db.session.commit()
+        return jsonify({
+            'success': True,
+            'deleted_count': deleted_count,
+            'freed_mb': round(freed_bytes / 1024 / 1024, 1),
+        })
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Old projects cleanup error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/admin/storage-stats', methods=['GET'])
+@login_required
+@admin_required
+def storage_stats():
+    """Get storage usage breakdown"""
+    dirs = {
+        'uploads': 'uploads',
+        'uploads/video_editor': os.path.join('uploads', 'video_editor'),
+        'videos': 'videos',
+        'frames': 'frames',
+        'archives': 'archives',
+        'processed_data': 'processed_data',
+        'previews': 'previews',
+    }
+    result = {}
+    for name, path in dirs.items():
+        if os.path.exists(path):
+            total = sum(os.path.getsize(os.path.join(dp, f)) for dp, dn, fnames in os.walk(path) for f in fnames)
+            result[name] = round(total / 1024 / 1024, 1)
+        else:
+            result[name] = 0
+    result['total'] = round(sum(result.values()), 1)
+    return jsonify(result)
+
 
 @app.route('/set_language/<lang>')
 def set_language(lang):
@@ -2562,6 +2698,28 @@ def send_test_email():
     return render_template('admin/send_test_email.html', form=form)
 
 
+@app.route('/admin/settings', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def admin_settings():
+    settings_config = [
+        {'key': 'upload_expiry_hours', 'label': 'Upload project expiry (hours)', 'type': 'int', 'default': 24},
+        {'key': 've_expiry_hours_user', 'label': 'Video Editor expiry — regular users (hours)', 'type': 'int', 'default': 12},
+        {'key': 've_expiry_hours_admin', 'label': 'Video Editor expiry — admins (hours)', 'type': 'int', 'default': 48},
+    ]
+    if request.method == 'POST':
+        for cfg in settings_config:
+            val = request.form.get(cfg['key'], '')
+            if val.strip():
+                SiteSetting.set(cfg['key'], val.strip(), cfg.get('label'))
+        flash('Settings saved', 'success')
+        return redirect(url_for('admin_settings'))
+    current_values = {}
+    for cfg in settings_config:
+        current_values[cfg['key']] = SiteSetting.get(cfg['key'], str(cfg['default']))
+    return render_template('admin/settings.html', settings_config=settings_config, current_values=current_values)
+
+
 @app.route('/admin/achievements')
 @admin_required
 def admin_achievements():
@@ -3055,6 +3213,81 @@ def video_editor_upload_vbo():
     return jsonify({'vbo_id': vbo_id, 'filename': filename, 'path': save_path})
 
 
+@app.route('/video-editor/merge-audio', methods=['POST'])
+@login_required
+def video_editor_merge_audio():
+    """Merge audio from original uploaded video into a client-rendered video-only MP4."""
+    import subprocess, tempfile, os
+
+    if 'video_file' not in request.files:
+        return 'No video file', 400
+    original_video_id = request.form.get('original_video_id')
+    if not original_video_id:
+        return 'No original_video_id', 400
+
+    # Find original video file
+    upload_dir = os.path.join(app.root_path, 'uploads')
+    original_path = None
+    for fname in os.listdir(upload_dir):
+        if fname.startswith(str(original_video_id)):
+            original_path = os.path.join(upload_dir, fname)
+            break
+
+    if not original_path or not os.path.exists(original_path):
+        return 'Original video not found', 404
+
+    # Save client-rendered video to temp file
+    client_video = request.files['video_file']
+    with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as tmp_in:
+        client_video.save(tmp_in)
+        tmp_in_path = tmp_in.name
+
+    # Output temp file
+    tmp_out_path = tmp_in_path.replace('.mp4', '_merged.mp4')
+
+    try:
+        # FFmpeg: take video from client MP4, audio from original, copy both
+        cmd = [
+            'ffmpeg', '-y',
+            '-i', tmp_in_path,       # client-rendered video (no audio)
+            '-i', original_path,      # original video (has audio)
+            '-map', '0:v:0',          # video from first input
+            '-map', '1:a:0?',         # audio from second input (optional)
+            '-c:v', 'copy',           # no re-encoding video
+            '-c:a', 'aac',            # re-encode audio to AAC
+            '-b:a', '192k',
+            '-shortest',              # match shorter duration
+            '-movflags', '+faststart',
+            tmp_out_path,
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+
+        if result.returncode != 0:
+            app.logger.error(f'merge-audio ffmpeg error: {result.stderr[:500]}')
+            # Fallback: return video-only
+            return send_file(tmp_in_path, mimetype='video/mp4', as_attachment=False)
+
+        return send_file(tmp_out_path, mimetype='video/mp4', as_attachment=False)
+
+    except Exception as e:
+        app.logger.error(f'merge-audio error: {e}')
+        # Fallback: return video-only
+        return send_file(tmp_in_path, mimetype='video/mp4', as_attachment=False)
+
+    finally:
+        # Cleanup temp files (delayed to allow send_file to complete)
+        import threading
+        def cleanup():
+            import time
+            time.sleep(30)
+            for p in [tmp_in_path, tmp_out_path]:
+                try:
+                    os.unlink(p)
+                except:
+                    pass
+        threading.Thread(target=cleanup, daemon=True).start()
+
+
 @app.route('/video-editor/export', methods=['POST'])
 @login_required
 def video_editor_export():
@@ -3064,23 +3297,27 @@ def video_editor_export():
     
     video_id = data.get('video_id')
     csv_id = data.get('csv_id')
-    if not video_id or not csv_id:
-        return jsonify({'error': 'Missing video_id or csv_id'}), 400
+    no_video_mode = data.get('no_video_mode', False)
     
-    # Find video file
+    if not csv_id:
+        return jsonify({'error': 'Missing csv_id'}), 400
+    if not video_id and not no_video_mode:
+        return jsonify({'error': 'Missing video_id'}), 400
+    
+    # Find video file (optional in no_video_mode)
     upload_dir = os.path.join('uploads', 'video_editor', str(current_user.id))
     video_file = None
-    for fname in os.listdir(upload_dir):
-        if fname.startswith(video_id) and not fname.endswith(('.json', '_chunks')):
-            fpath = os.path.join(upload_dir, fname)
-            if os.path.isfile(fpath):
-                video_file = fpath
-                break
+    if video_id:
+        for fname in os.listdir(upload_dir):
+            if fname.startswith(video_id) and not fname.endswith(('.json', '_chunks')):
+                fpath = os.path.join(upload_dir, fname)
+                if os.path.isfile(fpath):
+                    video_file = fpath
+                    break
+        if not video_file or not os.path.exists(video_file):
+            return jsonify({'error': 'Video file not found'}), 404
     
     csv_file = os.path.join(upload_dir, csv_id + '.csv')
-    
-    if not video_file or not os.path.exists(video_file):
-        return jsonify({'error': 'Video file not found'}), 404
     if not os.path.exists(csv_file):
         return jsonify({'error': 'CSV file not found'}), 404
     
@@ -3096,7 +3333,7 @@ def video_editor_export():
         status='processing',
         progress=0,
         folder_number=Project.query.count() + 1,
-        expiry_date=datetime.now() + timedelta(days=30),
+        expiry_date=datetime.now() + timedelta(hours=SiteSetting.get_int("ve_expiry_hours_admin", 48) if current_user.is_admin else SiteSetting.get_int("ve_expiry_hours_user", 12)),
     )
     db.session.add(project)
     db.session.commit()
@@ -3105,6 +3342,8 @@ def video_editor_export():
     export_settings = {
         'video_file': video_file,
         'csv_file': csv_file,
+        'no_video_mode': no_video_mode,
+        'chroma_color': data.get('chroma_color', '#0000FF'),
         'time_offset': data.get('time_offset', 0),
         'csv_trim_start': data.get('csv_trim_start', 0),
         'csv_trim_end': data.get('csv_trim_end', 0),
@@ -3113,6 +3352,7 @@ def video_editor_export():
         'data_fps': data.get('data_fps', '14.985'),
         'codec': data.get('codec', 'h264'),
         'resolution': data.get('resolution', 'source'),
+        'quality': data.get('quality', 'medium'),
         'vbo_id': data.get('vbo_id', None),
         'vbo_time_offset': data.get('vbo_time_offset', 0),
         'vbo_trim_start': data.get('vbo_trim_start', 0),
@@ -3201,8 +3441,9 @@ def parse_vbo_file(filepath):
                 except (ValueError, IndexError):
                     continue
 
-            # Parse velocity
-            raw_vel = float(row.get('velocity', row.get('speed', 0)))
+            # Parse velocity (handle European comma decimal separator)
+            vel_str = row.get('velocity', row.get('speed', '0'))
+            raw_vel = float(str(vel_str).replace(',', '.'))
             speed_kmh = raw_vel if velocity_is_kmh else raw_vel * 1.852
 
             if first_time is None:
@@ -3254,7 +3495,7 @@ def process_video_editor_export(project_id, export_settings):
             from models import Project
             from utils.csv_processor import process_csv_file
             from utils.image_generator import create_frame, find_nearest_values, calculate_max_widths_for_static_boxes
-            from utils.video_creator import create_composite_video
+            from utils.video_creator import create_composite_video, create_video_from_frames
             import pandas as pd
             import numpy as np
 
@@ -3284,51 +3525,77 @@ def process_video_editor_export(project_id, export_settings):
             codec = export_settings.get('codec', 'h264')
             resolution_mode = export_settings.get('resolution', 'source')
 
-            logging.info(f'Video editor export settings: fps={fps}, codec={codec}, resolution={resolution_mode}')
+            no_video_mode = export_settings.get('no_video_mode', False)
+            chroma_color = export_settings.get('chroma_color', '#0000FF')
+
+            logging.info(f'Video editor export settings: fps={fps}, codec={codec}, resolution={resolution_mode}, no_video={no_video_mode}')
             logging.info(f'Video editor text_settings: {text_settings}')
             logging.info(f'Video editor time_offset={time_offset}, trim_start={csv_trim_start}, trim_end={csv_trim_end}')
 
-            # Step 1: Get source video info via ffprobe
             import subprocess as sp
-            probe_cmd = [
-                '/opt/homebrew/bin/ffprobe', '-v', 'quiet', '-print_format', 'json',
-                '-show_streams', '-show_format', video_file
-            ]
-            probe_result = sp.run(probe_cmd, capture_output=True, text=True)
-            probe_data = json.loads(probe_result.stdout)
 
-            video_stream = None
-            for s in probe_data.get('streams', []):
-                if s.get('codec_type') == 'video':
-                    video_stream = s
-                    break
-
-            if not video_stream:
-                raise ValueError('No video stream found in source file')
-
-            src_width = int(video_stream['width'])
-            src_height = int(video_stream['height'])
-            src_duration = float(probe_data.get('format', {}).get('duration', 0))
-
-            # Detect actual source FPS for logging
-            r_frame_rate = video_stream.get('r_frame_rate', '30/1')
-            if '/' in str(r_frame_rate):
-                num, den = r_frame_rate.split('/')
-                src_fps = float(num) / float(den)
+            if no_video_mode:
+                # No source video — use defaults
+                if resolution_mode == '4k':
+                    src_width, src_height = 3840, 2160
+                else:
+                    src_width, src_height = 1920, 1080
+                src_duration = 0  # will be determined from CSV
+                if fps is None:
+                    fps = 30.0
+                logging.info(f'Video editor NO VIDEO mode: {src_width}x{src_height}, fps={fps}, chroma={chroma_color}')
+                out_width, out_height = src_width, src_height
             else:
-                src_fps = float(r_frame_rate)
-            # If fps is "source", use the source video FPS
-            if fps is None:
-                fps = src_fps
-            # data_fps resolved later after CSV is parsed
+                # Step 1: Get source video info via ffprobe
+                probe_cmd = [
+                    '/opt/homebrew/bin/ffprobe', '-v', 'quiet', '-print_format', 'json',
+                    '-show_streams', '-show_format', video_file
+                ]
+                probe_result = sp.run(probe_cmd, capture_output=True, text=True)
+                probe_data = json.loads(probe_result.stdout)
 
+                video_stream = None
+                for s in probe_data.get('streams', []):
+                    if s.get('codec_type') == 'video':
+                        video_stream = s
+                        break
 
-            logging.info(f'Video editor export: source={src_width}x{src_height} @ {src_fps:.2f}fps, {src_duration:.1f}s | output overlay fps={fps}')
+                if not video_stream:
+                    raise ValueError('No video stream found in source file')
 
-            # Video Editor: ALWAYS render overlay at 4K, FFmpeg scales to match source
-            out_width, out_height = 3840, 2160
-            resolution = '4k'
-            logging.info(f'Video editor: overlay always 4K ({out_width}x{out_height}), source is {src_width}x{src_height}')
+                src_width = int(video_stream['width'])
+                src_height = int(video_stream['height'])
+                src_duration = float(probe_data.get('format', {}).get('duration', 0))
+
+                # Detect actual source FPS for logging
+                r_frame_rate = video_stream.get('r_frame_rate', '30/1')
+                if '/' in str(r_frame_rate):
+                    num, den = r_frame_rate.split('/')
+                    src_fps = float(num) / float(den)
+                else:
+                    src_fps = float(r_frame_rate)
+                if fps is None:
+                    fps = src_fps
+
+                logging.info(f'Video editor export: source={src_width}x{src_height} @ {src_fps:.2f}fps, {src_duration:.1f}s | output overlay fps={fps}')
+
+                # Video Editor: render overlay matching source aspect ratio, max dimension 3840px
+                src_aspect = src_width / src_height
+                if src_width >= src_height:
+                    out_width = 3840
+                    out_height = int(3840 / src_aspect)
+                else:
+                    out_height = 3840
+                    out_width = int(3840 * src_aspect)
+                # FFmpeg requires even dimensions
+                out_width = out_width + (out_width % 2)
+                out_height = out_height + (out_height % 2)
+            resolution = 'custom'
+            if no_video_mode:
+                logging.info(f'Video editor NO VIDEO: output {out_width}x{out_height}, chroma={chroma_color}')
+            else:
+                src_aspect_log = src_width / src_height
+                logging.info(f'Video editor: overlay {out_width}x{out_height} (aspect={src_aspect_log:.3f}), source is {src_width}x{src_height}')
 
             project.progress = 10
             db.session.commit()
@@ -3384,7 +3651,12 @@ def process_video_editor_export(project_id, export_settings):
                 shutil.rmtree(overlay_dir)
             os.makedirs(overlay_dir, exist_ok=True)
 
-            total_frames = int(src_duration * fps)
+            # In no_video_mode, duration comes from trimmed CSV, not source video
+            if no_video_mode:
+                trimmed_csv_duration = (trim_T_max - trim_T_min)
+                src_duration = trimmed_csv_duration
+                logging.info(f'No-video mode: using CSV duration={src_duration:.2f}s')
+            total_frames = max(1, int(src_duration * fps))
             # Calculate frame interval for data_fps optimization
             frame_interval = max(1, round(fps / data_fps)) if data_fps < fps else 1
             unique_frames = total_frames // frame_interval + (1 if total_frames % frame_interval else 0)
@@ -3393,12 +3665,13 @@ def process_video_editor_export(project_id, export_settings):
             static_box_widths = None
             if text_settings.get('static_box_size', False):
                 use_icons = text_settings.get('use_icons', False)
-                static_box_widths = calculate_max_widths_for_static_boxes(df, text_settings, use_icons, 'en', resolution)
+                static_box_widths = calculate_max_widths_for_static_boxes(df, text_settings, use_icons, 'en', resolution, custom_width=out_width, custom_height=out_height)
 
             from PIL import Image
             import shutil as _shutil
 
             last_frame_path = None
+            logging.info(f'Frame gen: T_min={T_min}, T_max={T_max}, time_offset={time_offset}, trim_T_min={trim_T_min}, trim_T_max={trim_T_max}')
             for i in range(total_frames):
                 output_path = os.path.join(overlay_dir, f'frame_{i:06d}.png')
                 video_time = i / fps
@@ -3409,8 +3682,12 @@ def process_video_editor_export(project_id, export_settings):
                     if csv_time_abs < trim_T_min or csv_time_abs > trim_T_max:
                         empty = Image.new('RGBA', (out_width, out_height), (0, 0, 0, 0))
                         empty.save(output_path, format='PNG')
+                        if i < 5:
+                            logging.info(f'Frame {i}: video_time={video_time:.3f}, csv_time_abs={csv_time_abs:.3f}, OUT OF TRIM RANGE')
                     else:
                         values = find_nearest_values(df, csv_time_abs, interpolate=True)
+                        if i < 10 or (i % 300 == 0):
+                            logging.info(f'Frame {i}: video_time={video_time:.3f}, csv_time_abs={csv_time_abs:.3f}, csv_rel={csv_time_abs-T_min:.3f}, speed={values.get("speed",0)}, pwm={values.get("pwm",0)}')
                         # Add Dragy speed from VBO data if available
                         if vbo_data and text_settings.get('show_dragy_speed', False):
                             dragy_speed = get_vbo_speed_at_time(
@@ -3421,6 +3698,7 @@ def process_video_editor_export(project_id, export_settings):
                             if i < 5 or (i % 100 == 0):
                                 vbo_t_dbg = video_time - vbo_time_offset
                                 logging.info(f'Frame {i}: video_time={video_time:.3f}, vbo_t={vbo_t_dbg:.3f}, dragy_speed={dragy_speed:.1f}')
+                        bg_mode = chroma_color if no_video_mode else 'transparent'
                         create_frame(
                             values,
                             resolution=resolution,
@@ -3428,7 +3706,9 @@ def process_video_editor_export(project_id, export_settings):
                             text_settings=text_settings,
                             locale='en',
                             static_box_widths=static_box_widths,
-                            background_mode='transparent'
+                            background_mode=bg_mode,
+                            custom_width=out_width,
+                            custom_height=out_height
                         )
                     last_frame_path = output_path
                 else:
@@ -3443,8 +3723,11 @@ def process_video_editor_export(project_id, export_settings):
             project.progress = 65
             db.session.commit()
 
-            # Step 4: Composite with FFmpeg
-            logging.info('Video editor export: compositing video')
+            # Step 4: Create video with FFmpeg
+            quality = export_settings.get('quality', 'medium')
+            bitrate_map = {'low': '4M', 'medium': '8M', 'high': '16M'}
+            bitrate = bitrate_map.get(quality, '8M')
+            logging.info(f'Video editor export: creating video (quality={quality}, bitrate={bitrate})')
             output_file = os.path.join('videos', f'project_{project.folder_number}.mp4')
             os.makedirs('videos', exist_ok=True)
 
@@ -3453,16 +3736,31 @@ def process_video_editor_export(project_id, export_settings):
                 project.progress = min(progress, 95)
                 db.session.commit()
 
-            create_composite_video(
-                source_video=video_file,
-                overlay_frames_dir=overlay_dir,
-                output_file=output_file,
-                fps=fps,
-                codec=codec,
-                progress_callback=update_video_progress,
-                source_width=src_width,
-                source_height=src_height
-            )
+            if no_video_mode:
+                # No source video — assemble frames directly into video
+                create_video_from_frames(
+                    frames_dir=overlay_dir,
+                    output_file=output_file,
+                    fps=fps,
+                    codec=codec,
+                    width=out_width,
+                    height=out_height,
+                    progress_callback=update_video_progress,
+                    bitrate=bitrate
+                )
+            else:
+                # Composite overlay onto source video
+                create_composite_video(
+                    source_video=video_file,
+                    overlay_frames_dir=overlay_dir,
+                    output_file=output_file,
+                    fps=fps,
+                    codec=codec,
+                    progress_callback=update_video_progress,
+                    source_width=src_width,
+                    source_height=src_height,
+                    bitrate=bitrate
+                )
 
             # Step 5: Complete
             # Save actual output resolution (source video size), not overlay resolution
@@ -3473,12 +3771,12 @@ def process_video_editor_export(project_id, export_settings):
             else:
                 project.resolution = f'{src_width}x{src_height}'
             project.codec = codec
-            project.fps = round(fps, 2)
+            project.fps = float(round(fps, 2))
             project.video_file = os.path.basename(output_file)
             project.status = 'completed'
             project.progress = 100
             project.frame_count = total_frames
-            project.video_duration = src_duration
+            project.video_duration = float(src_duration)
             project.processing_completed_at = datetime.now()
             db.session.commit()
 
@@ -3489,7 +3787,9 @@ def process_video_editor_export(project_id, export_settings):
             shutil.rmtree(overlay_dir, ignore_errors=True)
 
         except Exception as e:
+            import traceback
             logging.error(f'Video editor export error for project {project_id}: {e}')
+            logging.error(traceback.format_exc())
             try:
                 project = db.session.get(Project, project_id)
                 if project:

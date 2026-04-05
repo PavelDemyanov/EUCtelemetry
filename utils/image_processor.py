@@ -26,7 +26,8 @@ def create_speed_indicator(speed,
                            indicator_scale=100,
                            resolution='fullhd',
                            locale='en',
-                           show_background_arc=False):
+                           show_background_arc=False,
+                           scale_factor=None):
     """
     Создает индикатор скорости в виде полукруглой дуги
     :param speed: Скорость (0-100 км/ч)
@@ -57,9 +58,17 @@ def create_speed_indicator(speed,
     end_angle = 30  # Конечный угол (100 км/ч)
 
     # Масштабируем толщину дуги в зависимости от разрешения
-    base_width = 20  # Базовая толщина для Full HD
-    if resolution == '4k':
-        base_width *= 2  # Удваиваем толщину для 4K
+    # VE mode: size already includes indicator_scale (baked in by caller)
+    # size = 250 * scale_factor * indicator_scale/100, so size/25 = 10*sf*is/100
+    # indicator_scale passed as 100, so arc_width = base_width * 1.0
+    if show_background_arc and scale_factor is not None:
+        base_width = max(1, size // 25)
+    elif scale_factor is not None:
+        base_width = int(20 * scale_factor)
+    elif resolution == '4k':
+        base_width = 40
+    else:
+        base_width = 20
 
     arc_width = int(base_width * indicator_scale /
                     100)  # Применяем масштаб пользователя
@@ -154,10 +163,12 @@ def create_speed_indicator(speed,
     draw = ImageDraw.Draw(final_image)
 
     # Масштабируем базовые размеры шрифта в зависимости от разрешения
-    resolution_scale = 1.0  #Always 1.0 now
-    base_speed_font_size = int(
-        (size // 4) * speed_size / 100 * resolution_scale)
-    base_unit_font_size = int((size // 8) * unit_size / 100 * resolution_scale)
+    # VE mode: size already includes indicator_scale (baked in by caller, passed as 100)
+    # So font = size/4 directly matches JS: baseSize/4
+    resolution_scale = 1.0  # kept for classic mode offset calculations
+    base_speed_font_size = max(8, int(
+        (size / 4) * speed_size / 100))
+    base_unit_font_size = max(6, int((size / 8) * unit_size / 100))
 
     try:
         speed_font = ImageFont.truetype("fonts/sf-ui-display-bold.otf",
@@ -184,10 +195,10 @@ def create_speed_indicator(speed,
 
     if show_background_arc:
         # Video Editor mode: match Canvas positioning exactly
-        # Frontend uses offset * sf where sf = canvasWidth/1920
-        # Gauge image is size px, equivalent to baseSize=250 at sf=1
-        # So offset_scale = size / 250.0 to match frontend proportions
-        offset_scale = size / 250.0
+        # JS offset = speed_y * sf where sf = canvasWidth/1920
+        # scale_factor = overlay_width/1920, FFmpeg scales overlay→source
+        # So offset * scale_factor / FFmpeg_scale = offset * source_width/1920 = offset * sf ✓
+        offset_scale = scale_factor if scale_factor is not None else size / 250.0
         scaled_speed_y = int(speed_offset[1] * offset_scale)
         scaled_unit_y = int(unit_offset[1] * offset_scale)
 
