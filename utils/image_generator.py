@@ -428,7 +428,7 @@ def create_frame(values,
         icon_vertical_offset = int(text_settings.get('icon_vertical_offset', 5))  # Icon vertical offset in pixels
         icon_horizontal_spacing = int(text_settings.get('icon_horizontal_spacing', 10))  # Icon horizontal spacing in pixels
         top_padding = int(text_settings.get('top_padding', 14) * scale_factor)
-        box_height = max(4, int(text_settings.get('bottom_padding', 47) * scale_factor))
+        box_height = max(int(10 * scale_factor), int(text_settings.get('bottom_padding', 47) * scale_factor))
         spacing = int(text_settings.get('spacing', 10) * scale_factor)
         text_vertical_offset = int(text_settings.get('text_vertical_offset', 0) * scale_factor)
         box_opacity_pct = int(text_settings.get('box_opacity', 100))

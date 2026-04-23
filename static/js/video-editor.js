@@ -2246,7 +2246,7 @@
     var sf = cw / 1920;
     var fontSize = settings.font_size * sf;
     var topPad = settings.top_padding * sf;
-    var boxH = settings.bottom_padding * sf;
+    var boxH = Math.max(10, settings.bottom_padding) * sf;
     var spacing = settings.spacing * sf;
     var radius = settings.border_radius * sf;
     var vertPos = settings.vertical_position;
