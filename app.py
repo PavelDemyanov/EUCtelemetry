@@ -1015,6 +1015,7 @@ def _stream_file_with_range(file_path, download_name=None, mimetype=None):
     from flask import Response, request
     import mimetypes as mt
     file_size = os.path.getsize(file_path)
+    logging.info(f"[DOWNLOAD] Started: {file_path} ({file_size} bytes) Range={request.headers.get('Range','none')} UA={request.headers.get('User-Agent','?')[:60]}")
     if mimetype is None:
         mimetype = mt.guess_type(file_path)[0] or 'application/octet-stream'
     range_header = request.headers.get('Range', None)
@@ -1042,11 +1043,16 @@ def _stream_file_with_range(file_path, download_name=None, mimetype=None):
             headers['Content-Range'] = f'bytes {start}-{end}/{file_size}'
     def generate():
         bytes_sent = 0
+        # Small chunks to prevent overwhelming the tunnel's TCP send buffer.
+        # Reported issue: downloads stall around 2-4MB — likely because the Keenetic
+        # tunnel between Mac Mini and the public proxy (192.168.100.2) has limited
+        # throughput and drops connections when a large burst fills the send buffer.
+        chunk_size = 32 * 1024  # 32KB chunks
         try:
+            import gevent
             with open(file_path, 'rb') as f:
                 f.seek(start)
                 remaining = end - start + 1
-                chunk_size = 256 * 1024  # 256KB chunks
                 while remaining > 0:
                     read_size = min(chunk_size, remaining)
                     data = f.read(read_size)
@@ -1055,6 +1061,9 @@ def _stream_file_with_range(file_path, download_name=None, mimetype=None):
                     remaining -= len(data)
                     bytes_sent += len(data)
                     yield data
+                    # Yield to gevent event loop to allow TCP ACKs to be processed
+                    # and prevent filling the send buffer too quickly
+                    gevent.sleep(0)
             logging.info(f"Download completed: {file_path} ({bytes_sent} bytes sent, range={start}-{end})")
         except GeneratorExit:
             logging.warning(f"Download aborted by client: {file_path} ({bytes_sent}/{end-start+1} bytes, range={start}-{end})")
