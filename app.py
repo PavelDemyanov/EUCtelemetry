@@ -1022,11 +1022,12 @@ def _stream_file_with_range(file_path, download_name=None, mimetype=None):
     end = file_size - 1
     status = 200
     headers = {
-        'Content-Type': mimetype,
         'Accept-Ranges': 'bytes',
         'Content-Length': str(file_size),
+        'Cache-Control': 'no-cache',
     }
     if download_name:
+        # ASCII-safe filename (RFC 5987 fallback not needed since we use latin names)
         headers['Content-Disposition'] = f'attachment; filename="{download_name}"'
     if range_header:
         m = re.match(r'bytes=(\d+)-(\d*)', range_header)
@@ -1040,17 +1041,27 @@ def _stream_file_with_range(file_path, download_name=None, mimetype=None):
             headers['Content-Length'] = str(end - start + 1)
             headers['Content-Range'] = f'bytes {start}-{end}/{file_size}'
     def generate():
-        with open(file_path, 'rb') as f:
-            f.seek(start)
-            remaining = end - start + 1
-            chunk_size = 64 * 1024  # 64KB chunks
-            while remaining > 0:
-                read_size = min(chunk_size, remaining)
-                data = f.read(read_size)
-                if not data:
-                    break
-                remaining -= len(data)
-                yield data
+        bytes_sent = 0
+        try:
+            with open(file_path, 'rb') as f:
+                f.seek(start)
+                remaining = end - start + 1
+                chunk_size = 256 * 1024  # 256KB chunks
+                while remaining > 0:
+                    read_size = min(chunk_size, remaining)
+                    data = f.read(read_size)
+                    if not data:
+                        break
+                    remaining -= len(data)
+                    bytes_sent += len(data)
+                    yield data
+            logging.info(f"Download completed: {file_path} ({bytes_sent} bytes sent, range={start}-{end})")
+        except GeneratorExit:
+            logging.warning(f"Download aborted by client: {file_path} ({bytes_sent}/{end-start+1} bytes, range={start}-{end})")
+            raise
+        except Exception as e:
+            logging.error(f"Download error for {file_path} at byte {bytes_sent}: {e}")
+            raise
     return Response(generate(), status=status, headers=headers, mimetype=mimetype, direct_passthrough=True)
 
 
