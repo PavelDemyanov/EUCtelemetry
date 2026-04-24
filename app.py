@@ -1009,63 +1009,6 @@ def list_projects():
         .paginate(page=page, per_page=10, error_out=False)
     return render_template('projects.html', projects=projects)
 
-def _stream_file_with_range(file_path, download_name=None, mimetype=None):
-    """Stream a file with Range request support for resumable downloads.
-    Works better than send_file for large files over slow connections with gevent workers."""
-    from flask import Response, request
-    import mimetypes as mt
-    file_size = os.path.getsize(file_path)
-    logging.info(f"[DOWNLOAD] Started: {file_path} ({file_size} bytes) Range={request.headers.get('Range','none')} UA={request.headers.get('User-Agent','?')[:60]}")
-    if mimetype is None:
-        mimetype = mt.guess_type(file_path)[0] or 'application/octet-stream'
-    range_header = request.headers.get('Range', None)
-    start = 0
-    end = file_size - 1
-    status = 200
-    headers = {
-        'Accept-Ranges': 'bytes',
-        'Content-Length': str(file_size),
-        'Cache-Control': 'no-cache',
-    }
-    if download_name:
-        # ASCII-safe filename (RFC 5987 fallback not needed since we use latin names)
-        headers['Content-Disposition'] = f'attachment; filename="{download_name}"'
-    if range_header:
-        m = re.match(r'bytes=(\d+)-(\d*)', range_header)
-        if m:
-            start = int(m.group(1))
-            if m.group(2):
-                end = int(m.group(2))
-            if start >= file_size:
-                return Response(status=416, headers={'Content-Range': f'bytes */{file_size}'})
-            status = 206
-            headers['Content-Length'] = str(end - start + 1)
-            headers['Content-Range'] = f'bytes {start}-{end}/{file_size}'
-    def generate():
-        bytes_sent = 0
-        chunk_size = 1024 * 1024  # 1MB chunks — gevent handles I/O yielding automatically
-        try:
-            with open(file_path, 'rb') as f:
-                f.seek(start)
-                remaining = end - start + 1
-                while remaining > 0:
-                    read_size = min(chunk_size, remaining)
-                    data = f.read(read_size)
-                    if not data:
-                        break
-                    remaining -= len(data)
-                    bytes_sent += len(data)
-                    yield data
-            logging.info(f"Download completed: {file_path} ({bytes_sent} bytes sent, range={start}-{end})")
-        except GeneratorExit:
-            logging.warning(f"Download aborted by client: {file_path} ({bytes_sent}/{end-start+1} bytes, range={start}-{end})")
-            raise
-        except Exception as e:
-            logging.error(f"Download error for {file_path} at byte {bytes_sent}: {e}")
-            raise
-    return Response(generate(), status=status, headers=headers, mimetype=mimetype, direct_passthrough=True)
-
-
 @app.route('/download/<int:project_id>/<type>')
 @login_required
 def download_file(project_id, type):
@@ -1075,7 +1018,7 @@ def download_file(project_id, type):
 
     if type == 'video' and project.video_file:
         video_path = os.path.join('videos', project.video_file)
-        return _stream_file_with_range(video_path, download_name=os.path.basename(video_path), mimetype='video/mp4')
+        return send_file(video_path, as_attachment=True, conditional=True)
     elif type == 'png_archive':
         # Create PNG archive if it doesn't exist
         if not project.png_archive_file:
@@ -1090,7 +1033,7 @@ def download_file(project_id, type):
         # Download existing archive
         archive_path = os.path.join('archives', project.png_archive_file)
         if os.path.exists(archive_path):
-            return _stream_file_with_range(archive_path, download_name=f'{project.name}_frames.zip', mimetype='application/zip')
+            return send_file(archive_path, as_attachment=True, download_name=f'{project.name}_frames.zip', conditional=True)
         else:
             return jsonify({'error': 'Archive file not found'}), 404
     elif type == 'frames':
