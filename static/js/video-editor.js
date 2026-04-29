@@ -3273,6 +3273,10 @@
     var muxerOpts = {
       target: muxerTarget,
       video: { codec: 'avc', width: w, height: h },
+      // Must be set explicitly in mp4-muxer 5.x (validator rejects undefined).
+      // false => moov atom at end of file, no internal buffering. Result is
+      // a normal non-streaming MP4 that plays once fully downloaded.
+      fastStart: false,
     };
     if (audioTrackInfo) {
       muxerOpts.audio = {
