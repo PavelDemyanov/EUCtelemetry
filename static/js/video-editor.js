@@ -3255,12 +3255,24 @@
       console.warn('Local export: audio extraction failed, exporting without audio:', e);
     }
 
-    // Create muxer with audio if available
-    var muxerTarget = new Mp4Muxer.ArrayBufferTarget();
+    // Create muxer with audio if available.
+    // StreamTarget + chunk accumulation: avoids "Array buffer allocation failed"
+    // for large videos. ArrayBufferTarget required the entire MP4 in one contiguous
+    // buffer, which V8 cannot allocate for ~1GB+ files (esp. with fastStart doubling).
+    // Without fastStart, moov atom is placed at the end of the file — fine for a
+    // downloaded file (player reads from end). For browser streaming we'd need
+    // fastStart, but here the result is downloaded as a Blob.
+    var muxerChunks = [];
+    var muxerTarget = new Mp4Muxer.StreamTarget({
+      onData: function(data, position) {
+        // slice() to copy: mp4-muxer may reuse the underlying buffer
+        muxerChunks.push(data.slice());
+      },
+    });
+    _localExport.muxerChunks = muxerChunks;
     var muxerOpts = {
       target: muxerTarget,
       video: { codec: 'avc', width: w, height: h },
-      fastStart: 'in-memory',
     };
     if (audioTrackInfo) {
       muxerOpts.audio = {
@@ -3316,10 +3328,27 @@
         offCtx.fillRect(0, 0, w, h);
       } else {
         video.currentTime = t;
+        // Wait for the actual decoded frame to be ready, not just for the seeked event.
+        // requestVideoFrameCallback fires when a NEW frame is presented for compositing
+        // (the most reliable signal). Fallback: 'seeked' event. Timeout 10s — was 500ms,
+        // which on slow seeks (large GOP / non-keyframe target / poorly indexed mp4)
+        // resolved early and drew the previous frame, causing visible "frozen frame"
+        // segments while telemetry overlay continued moving.
         await new Promise(function(resolve) {
-          function onSeeked() { video.removeEventListener('seeked', onSeeked); resolve(); }
-          video.addEventListener('seeked', onSeeked);
-          setTimeout(resolve, 500);
+          var done = false;
+          function finish() { if (!done) { done = true; resolve(); } }
+          if (typeof video.requestVideoFrameCallback === 'function') {
+            video.requestVideoFrameCallback(function() { finish(); });
+          } else {
+            var onSeeked = function() { video.removeEventListener('seeked', onSeeked); finish(); };
+            video.addEventListener('seeked', onSeeked);
+          }
+          setTimeout(function() {
+            if (!done) {
+              console.warn('Local export: frame ready timeout at frame', frameIdx, 't=', t.toFixed(3));
+              finish();
+            }
+          }, 10000);
         });
         offCtx.drawImage(video, 0, 0, w, h);
       }
@@ -3392,7 +3421,9 @@
     updateLocalProgress(totalFrames, totalFrames, 'Finalizing MP4...', '\u2014', '\u2014');
     muxer.finalize();
 
-    _localExport.resultBlob = new Blob([muxerTarget.buffer], { type: 'video/mp4' });
+    // Blob from accumulated chunks. Blob can hold many GB (may spill to disk),
+    // unlike ArrayBuffer which has a hard ~2GB-per-tab ceiling in Chromium.
+    _localExport.resultBlob = new Blob(muxerChunks, { type: 'video/mp4' });
     // Restore static box widths for viewport
     recalcStaticBoxWidths();
     showLocalExportDone();
