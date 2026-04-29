@@ -3273,10 +3273,26 @@
     var muxerOpts = {
       target: muxerTarget,
       video: { codec: 'avc', width: w, height: h },
-      // Must be set explicitly in mp4-muxer 5.x (validator rejects undefined).
-      // false => moov atom at end of file, no internal buffering. Result is
-      // a normal non-streaming MP4 that plays once fully downloaded.
-      fastStart: false,
+      // 'fragmented' => fragmented MP4 (fmp4): file is ftyp + moov(init) +
+      // sequence of (moof + mdat) fragments. EVERY size is known when the
+      // fragment is written, so there is NO random-access seekback during
+      // finalize — perfect for StreamTarget which only appends.
+      //
+      // We CANNOT use:
+      //   - 'in-memory' : doubles memory, hits "Array buffer allocation
+      //     failed" on ~1GB+ outputs.
+      //   - false       : muxer writes ftyp + mdat-with-placeholder-size
+      //     and at finalize seeks back to position 0 to patch the mdat
+      //     header AND appends moov at end. StreamTarget.onData is
+      //     called with position=N for the patches; if the consumer just
+      //     appends data ignoring position, the file gets a broken
+      //     mdat header (largesize=0x10 stub) and no moov — exactly
+      //     the corruption we just saw.
+      //
+      // Fragmented MP4 plays in QuickTime (macOS Mojave+), Safari, Chrome,
+      // Firefox, VLC, ffmpeg. Editing apps may prefer non-fragmented but
+      // for download+play it's universally supported.
+      fastStart: 'fragmented',
     };
     if (audioTrackInfo) {
       muxerOpts.audio = {
