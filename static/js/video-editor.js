@@ -3332,25 +3332,35 @@
         offCtx.fillRect(0, 0, w, h);
       } else {
         video.currentTime = t;
-        // Wait for the actual decoded frame to be ready, not just for the seeked event.
-        // requestVideoFrameCallback fires when a NEW frame is presented for compositing
-        // (the most reliable signal). Fallback: 'seeked' event. Timeout 10s — was 500ms,
-        // which on slow seeks (large GOP / non-keyframe target / poorly indexed mp4)
-        // resolved early and drew the previous frame, causing visible "frozen frame"
-        // segments while telemetry overlay continued moving.
+        // Wait for new frame to be both decoded AND painted by the browser.
+        // We listen to BOTH signals in parallel and take whichever fires first:
+        //   - 'seeked' event: works reliably in Safari (which doesn't fire rVFC
+        //     on paused videos)
+        //   - requestVideoFrameCallback: fires more precisely on Chrome
+        // After either signal we still wait one requestAnimationFrame so the
+        // browser actually paints the new frame before we drawImage from it.
+        // Safety timeout 10s — should never trigger if either signal works.
         await new Promise(function(resolve) {
           var done = false;
-          function finish() { if (!done) { done = true; resolve(); } }
+          function finish() {
+            if (done) return;
+            done = true;
+            // Wait one paint frame so the video element actually shows the new frame
+            requestAnimationFrame(function() { resolve(); });
+          }
+          var onSeeked = function() {
+            video.removeEventListener('seeked', onSeeked);
+            finish();
+          };
+          video.addEventListener('seeked', onSeeked);
           if (typeof video.requestVideoFrameCallback === 'function') {
             video.requestVideoFrameCallback(function() { finish(); });
-          } else {
-            var onSeeked = function() { video.removeEventListener('seeked', onSeeked); finish(); };
-            video.addEventListener('seeked', onSeeked);
           }
           setTimeout(function() {
             if (!done) {
               console.warn('Local export: frame ready timeout at frame', frameIdx, 't=', t.toFixed(3));
-              finish();
+              done = true;
+              resolve();
             }
           }, 10000);
         });
