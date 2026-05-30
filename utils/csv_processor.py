@@ -5,6 +5,14 @@ import os
 import numpy as np
 
 def parse_timestamp_darnkessbot(date_str):
+    """Парсит дату из CSV с раскладкой колонок DarknessBot.
+
+    Поддерживает два формата даты, использующих идентичный набор колонок:
+      * DarknessBot (классический): '02.05.2026 15:03:58.057'   (DD.MM.YYYY HH:MM:SS.fff)
+      * EUC World (экспорт с iOS):  '2026-05-30T15:47:30.631221' (ISO 8601, микросекунды)
+
+    Возвращает Unix-время (float, секунды) либо None, если строка не распознана.
+    """
     try:
         # Check if input is float
         if isinstance(date_str, float):
@@ -12,15 +20,53 @@ def parse_timestamp_darnkessbot(date_str):
 
         # Convert to string if needed
         date_str = str(date_str).strip()
+        if not date_str:
+            return None
 
-        # Try to parse the date string
-        dt = datetime.strptime(date_str, '%d.%m.%Y %H:%M:%S.%f')
-        return dt.timestamp()
-    except (ValueError, TypeError) as e:
+        # Формат 1 — DarknessBot (классический). Пробуем первым: он строгий
+        # и однозначный, поэтому никогда не перехватит ISO-строку по ошибке.
+        try:
+            return datetime.strptime(date_str, '%d.%m.%Y %H:%M:%S.%f').timestamp()
+        except ValueError:
+            pass
+
+        # Формат 2 — EUC World (iOS). datetime.fromisoformat (Python 3.11+)
+        # принимает разделитель 'T', микро/миллисекунды и опциональный
+        # часовой пояс (смещение или 'Z').
+        try:
+            return datetime.fromisoformat(date_str).timestamp()
+        except ValueError:
+            return None
+    except (ValueError, TypeError):
         # Don't log every error when processing large files (would create too many log entries)
-        # Only log first occurrence or when debugging specific issues
-        # logging.error(f"Error parsing darnkessbot timestamp: {e}")
         return None
+
+
+def parse_darknessbot_dates_vectorized(date_series):
+    """Векторизованный парсинг колонки 'Date' (раскладка DarknessBot) в Unix-секунды.
+
+    Двухпроходная схема, дающая тот же результат, что и parse_timestamp_darnkessbot,
+    но на порядки быстрее для больших файлов:
+      * проход 1 — строгий формат DarknessBot (DD.MM.YYYY HH:MM:SS.fff);
+      * проход 2 — для всех нераспознанных строк пробуем ISO 8601 (EUC World iOS).
+
+    Нераспознанные строки становятся NaN, чтобы вызывающий код мог отфильтровать
+    их через .notna(). Проход 2 выполняется только при наличии нераспознанных
+    строк — для «чистых» файлов DarknessBot накладных расходов нет.
+    """
+    # Проход 1: строгий формат DarknessBot.
+    dt = pd.to_datetime(date_series, format='%d.%m.%Y %H:%M:%S.%f', errors='coerce')
+
+    # Проход 2: то, что не распозналось, пробуем как ISO 8601.
+    if dt.isna().any():
+        dt_iso = pd.to_datetime(date_series, format='ISO8601', errors='coerce')
+        dt = dt.fillna(dt_iso)
+
+    # int64-наносекунды -> int64-секунды (точно), затем во float с NaT -> NaN.
+    unix_seconds = dt.astype('int64') // 10**9
+    result = unix_seconds.astype('float64')
+    result[dt.isna()] = np.nan
+    return result
 
 def parse_timestamp_wheellog(date_str, time_str):
     try:
@@ -499,13 +545,11 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
             csv_type = 'darnkessbot'
 
         elif csv_type == 'darnkessbot':
-            # Для больших файлов используем векторизованный парсинг
+            # Парсинг даты. Поддерживаются оба формата с раскладкой колонок
+            # DarknessBot: классический (DD.MM.YYYY HH:MM:SS.fff) и EUC World iOS
+            # (ISO 8601). Для больших файлов — быстрый векторизованный путь.
             if file_size_mb > 20:
-                df['timestamp'] = pd.to_datetime(
-                    df['Date'], 
-                    format='%d.%m.%Y %H:%M:%S.%f', 
-                    errors='coerce'
-                ).astype('int64') // 10**9
+                df['timestamp'] = parse_darknessbot_dates_vectorized(df['Date'])
                 invalid_dates = df[df['timestamp'].isna()]['Date']
                 if not invalid_dates.empty:
                     logging.warning(f"Найдено {len(invalid_dates)} некорректных дат, например: {invalid_dates.iloc[0]}")

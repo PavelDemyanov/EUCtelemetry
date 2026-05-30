@@ -1112,18 +1112,37 @@
 
   function parseDarknessBotTimestamp(dateStr) {
     if (!dateStr) return null;
-    // Format: DD.MM.YYYY HH:MM:SS.fff
+    // Формат 1 — DarknessBot (классический): DD.MM.YYYY HH:MM:SS.fff
+    // (дата и время разделены пробелом, дата через точки).
     var parts = dateStr.split(' ');
-    if (parts.length < 2) return null;
-    var dp = parts[0].split('.');
-    var tp = parts[1].split(':');
-    if (dp.length < 3 || tp.length < 3) return null;
-    var secParts = tp[2].split('.');
-    var sec = parseInt(secParts[0]);
-    var ms = secParts.length > 1 ? parseInt(secParts[1]) : 0;
-    var d = new Date(parseInt(dp[2]), parseInt(dp[1]) - 1, parseInt(dp[0]),
-                     parseInt(tp[0]), parseInt(tp[1]), sec, ms);
-    return d.getTime() / 1000;
+    if (parts.length >= 2) {
+      var dp = parts[0].split('.');
+      var tp = parts[1].split(':');
+      if (dp.length < 3 || tp.length < 3) return null;
+      var secParts = tp[2].split('.');
+      var sec = parseInt(secParts[0]);
+      var ms = secParts.length > 1 ? parseInt(secParts[1]) : 0;
+      var d = new Date(parseInt(dp[2]), parseInt(dp[1]) - 1, parseInt(dp[0]),
+                       parseInt(tp[0]), parseInt(tp[1]), sec, ms);
+      var t = d.getTime() / 1000;
+      return isNaN(t) ? null : t;
+    }
+    // Формат 2 — EUC World (экспорт с iOS): ISO 8601 без пробела,
+    // например 2026-05-30T15:47:30.631221 (микросекунды, опциональный TZ).
+    return parseISOTimestamp(dateStr);
+  }
+
+  function parseISOTimestamp(s) {
+    if (!s) return null;
+    s = String(s).trim();
+    if (!s) return null;
+    // JS Date понимает только миллисекунды, а 6-значные микросекунды разные
+    // движки парсят по-разному. Обрезаем дробную часть до 3 знаков, сохраняя
+    // возможный часовой пояс (Z или ±HH:MM) после неё.
+    var normalized = s.replace(/(\.\d{3})\d+/, '$1');
+    var d = new Date(normalized);
+    var t = d.getTime();
+    return isNaN(t) ? null : t / 1000;
   }
 
   function parseWheelLogTimestamp(dateStr, timeStr) {
