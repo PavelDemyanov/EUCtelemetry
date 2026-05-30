@@ -1021,6 +1021,10 @@
       data.push(point);
     }
 
+    // Заполнить пропуски так же, как сервер (классика): ведущие пустые строки
+    // EUC World берут первое валидное значение, иначе первый кадр был бы нулевым.
+    fillMissingValues(data, ['speed','voltage','temperature','current','battery','mileage','pwm','power','gps']);
+
     // Compute running max speed
     var runMax = 0;
     for (var k = 0; k < data.length; k++) {
@@ -1065,45 +1069,51 @@
   }
 
   function extractDataPoint(row, type) {
-    var point = { timestamp: 0, speed: 0, voltage: 0, temperature: 0, current: 0, battery: 0, mileage: 0, pwm: 0, power: 0, gps: 0 };
+    // ВАЖНО: пропущенные/пустые значения оставляем как null (а не 0), чтобы их
+    // потом заполнить так же, как делает сервер (интерполяция + edge-fill).
+    // Иначе ведущие пустые строки EUC World давали бы "нулевой" первый кадр.
+    var point = { timestamp: 0, speed: null, voltage: null, temperature: null, current: null, battery: null, mileage: null, pwm: null, power: null, gps: null };
     try {
       if (type === 'darknessbot') {
         point.timestamp = parseDarknessBotTimestamp(row['Date']);
-        point.speed = safeFloat(row['Speed']);
-        point.voltage = safeFloat(row['Voltage']);
-        point.temperature = safeFloat(row['Temperature'] || 0);
-        point.current = safeFloat(row['Current'] || 0);
-        point.battery = safeFloat(row['Battery level'] || 0);
-        point.mileage = safeFloat(row['Total mileage'] || 0);
-        point.pwm = safeFloat(row['PWM'] || 0);
-        point.power = safeFloat(row['Power'] || 0);
-        point.gps = safeFloat(row['GPS Speed'] || 0);
+        point.speed = numOrNull(row['Speed']);
+        point.voltage = numOrNull(row['Voltage']);
+        point.temperature = numOrNull(row['Temperature']);
+        point.current = numOrNull(row['Current']);
+        point.battery = numOrNull(row['Battery level']);
+        point.mileage = numOrNull(row['Total mileage']);
+        point.pwm = numOrNull(row['PWM']);
+        point.power = numOrNull(row['Power']);
+        point.gps = numOrNull(row['GPS Speed']);
       } else if (type === 'eucworld') {
         // EUC World: ISO 8601 datetime with timezone
         var dt = new Date(row['datetime']);
         point.timestamp = dt.getTime() / 1000;
-        point.speed = safeFloat(row['speed']);
-        point.voltage = safeFloat(row['voltage']);
-        point.temperature = safeFloat(row['temp'] || 0);
-        point.current = safeFloat(row['current'] || 0);
-        point.battery = safeFloat(row['battery'] || 0);
-        point.mileage = safeFloat(row['distance_total'] || row['distance'] || 0);
-        point.pwm = 100 - safeFloat(row['safety_margin'] || 100);
-        point.power = safeFloat(row['power'] || 0);
-        point.gps = safeFloat(row['gps_speed'] || 0);
+        point.speed = numOrNull(row['speed']);
+        point.voltage = numOrNull(row['voltage']);
+        point.temperature = numOrNull(row['temp']);
+        point.current = numOrNull(row['current']);
+        point.battery = numOrNull(row['battery']);
+        point.mileage = numOrNull(row['distance_total']);
+        if (point.mileage === null) point.mileage = numOrNull(row['distance']);
+        var sm = numOrNull(row['safety_margin']);
+        point.pwm = (sm === null) ? null : (100 - sm);
+        point.power = numOrNull(row['power']);
+        point.gps = numOrNull(row['gps_speed']);
       } else if (type === 'wheellog') {
         point.timestamp = parseWheelLogTimestamp(row['date'], row['time']);
-        point.speed = safeFloat(row['speed']);
-        point.voltage = safeFloat(row['voltage']);
-        point.temperature = safeFloat(row['system_temp'] || 0);
-        point.current = safeFloat(row['current'] || 0);
-        point.battery = safeFloat(row['battery_level'] || 0);
-        point.mileage = safeFloat(row['totaldistance'] || 0) / 1000;
-        point.pwm = safeFloat(row['pwm'] || 0);
-        point.power = safeFloat(row['power'] || 0);
-        point.gps = safeFloat(row['gps_speed'] || 0);
+        point.speed = numOrNull(row['speed']);
+        point.voltage = numOrNull(row['voltage']);
+        point.temperature = numOrNull(row['system_temp']);
+        point.current = numOrNull(row['current']);
+        point.battery = numOrNull(row['battery_level']);
+        var td = numOrNull(row['totaldistance']);
+        point.mileage = (td === null) ? null : (td / 1000);
+        point.pwm = numOrNull(row['pwm']);
+        point.power = numOrNull(row['power']);
+        point.gps = numOrNull(row['gps_speed']);
       }
-      if (isNaN(point.timestamp) || point.timestamp === null) return null;
+      if (point.timestamp === null || isNaN(point.timestamp)) return null;
       return point;
     } catch (e) {
       return null;
@@ -1188,6 +1198,48 @@
   function safeFloat(val) {
     var n = parseFloat(val);
     return isNaN(n) ? 0 : n;
+  }
+
+  // Число или null, если значение пустое/не парсится.
+  // ВАЖНО: реальный "0"/"0.0" остаётся нулём — это НЕ пропуск.
+  function numOrNull(val) {
+    if (val === null || val === undefined) return null;
+    var s = String(val).trim();
+    if (s === '') return null;
+    var n = parseFloat(s);
+    return isNaN(n) ? null : n;
+  }
+
+  // Заполняет пропуски (null) по каждому полю так же, как сервер
+  // (pandas interpolate(method='linear', limit_direction='both') + fillna(0)):
+  //  - ведущие пропуски  -> значение первой валидной точки (back-fill);
+  //  - концевые пропуски  -> значение последней валидной точки (forward-fill);
+  //  - внутренние         -> линейная интерполяция по индексу строк;
+  //  - полностью пустое поле -> 0.
+  function fillMissingValues(data, fields) {
+    if (!data || data.length === 0) return;
+    var n = data.length;
+    function isMissing(v) { return v === null || v === undefined || (typeof v === 'number' && isNaN(v)); }
+    fields.forEach(function(f) {
+      var i = 0;
+      while (i < n) {
+        if (!isMissing(data[i][f])) { i++; continue; }
+        var j = i + 1;
+        while (j < n && isMissing(data[j][f])) j++;
+        var prev = i - 1;
+        if (prev < 0 && j < n) {
+          for (var a = i; a < j; a++) data[a][f] = data[j][f];            // ведущие
+        } else if (j >= n && prev >= 0) {
+          for (var b = i; b < n; b++) data[b][f] = data[prev][f];          // концевые
+        } else if (prev >= 0 && j < n) {
+          var v0 = data[prev][f], v1 = data[j][f], span = j - prev;        // внутренние
+          for (var c = i; c < j; c++) data[c][f] = v0 + (v1 - v0) * ((c - prev) / span);
+        } else {
+          for (var e = i; e < n; e++) data[e][f] = 0;                      // всё пусто
+        }
+        i = j;
+      }
+    });
   }
 
   // ===== TIMELINE HELPERS =====
