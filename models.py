@@ -408,3 +408,33 @@ class SiteSetting(db.Model):
             s = SiteSetting(key=key, value=str(value), description=description)
             db.session.add(s)
         db.session.commit()
+
+
+class Coauthor(db.Model):
+    """Соавтор / contributor проекта — отображается на странице About под информацией о создателе."""
+    __tablename__ = 'coauthor'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    role = db.Column(db.String(120), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    # Путь к файлу относительно static/, например "uploads/coauthors/abc123.jpg".
+    # NULL означает "нет фото — отрисуем плейсхолдер с инициалами".
+    photo = db.Column(db.String(255), nullable=True)
+    # Порядок отображения; меньшее значение — выше в списке.
+    display_order = db.Column(db.Integer, nullable=False, default=0, index=True)
+    # Флаг видимости — позволяет временно скрыть без удаления.
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def get_initials(self):
+        """Получить инициалы для плейсхолдера (если фото нет)."""
+        if not self.name:
+            return '?'
+        parts = [p for p in self.name.strip().split() if p]
+        if len(parts) >= 2:
+            return (parts[0][0] + parts[1][0]).upper()
+        return parts[0][0].upper() if parts else '?'
+
+    def __repr__(self):
+        return f'<Coauthor {self.id} {self.name!r}>'

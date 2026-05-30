@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">
+                        <i class="bi bi-person-plus"></i> {{ title }}
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        {{ form.hidden_tag() }}
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.name.label(class="form-label") }}
+                                {{ form.name(class="form-control" + (' is-invalid' if form.name.errors else '')) }}
+                                {% for err in form.name.errors %}
+                                    <div class="invalid-feedback">{{ err }}</div>
+                                {% endfor %}
+                                <div class="form-text">{{ _('Full name as it will appear on the About page') }}</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.role.label(class="form-label") }}
+                                {{ form.role(class="form-control" + (' is-invalid' if form.role.errors else ''),
+                                             placeholder=_('e.g. Designer, Tester, Developer')) }}
+                                {% for err in form.role.errors %}
+                                    <div class="invalid-feedback">{{ err }}</div>
+                                {% endfor %}
+                                <div class="form-text">{{ _('Short label describing how this person contributes') }}</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.description.label(class="form-label") }}
+                            {{ form.description(class="form-control" + (' is-invalid' if form.description.errors else ''),
+                                                placeholder=_('What did this person help with?')) }}
+                            {% for err in form.description.errors %}
+                                <div class="invalid-feedback">{{ err }}</div>
+                            {% endfor %}
+                            <div class="form-text">{{ _('Up to 2000 characters. Plain text.') }}</div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.photo.label(class="form-label") }}
+                            <div class="d-flex align-items-center gap-3">
+                                <div>
+                                    {% if coauthor and coauthor.photo %}
+                                        <img id="coauthor-photo-preview"
+                                             src="{{ url_for('static', filename=coauthor.photo) }}"
+                                             alt="{{ coauthor.name }}"
+                                             class="rounded-circle"
+                                             style="width: 96px; height: 96px; object-fit: cover; border: 3px solid #f0f0f0;">
+                                    {% else %}
+                                        <div id="coauthor-photo-placeholder"
+                                             class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
+                                             style="width: 96px; height: 96px; background: #6c757d; font-size: 28px;">
+                                            {% if coauthor %}{{ coauthor.get_initials() }}{% else %}?{% endif %}
+                                        </div>
+                                        <img id="coauthor-photo-preview" alt="" class="rounded-circle d-none"
+                                             style="width: 96px; height: 96px; object-fit: cover; border: 3px solid #f0f0f0;">
+                                    {% endif %}
+                                </div>
+                                <div class="flex-grow-1">
+                                    {{ form.photo(class="form-control" + (' is-invalid' if form.photo.errors else ''),
+                                                  accept="image/jpeg,image/png,image/webp,image/gif",
+                                                  onchange="previewCoauthorPhoto(event)") }}
+                                    {% for err in form.photo.errors %}
+                                        <div class="invalid-feedback">{{ err }}</div>
+                                    {% endfor %}
+                                    <div class="form-text">{{ _('JPG, PNG, WebP or GIF. Will be displayed in a circle.') }}</div>
+
+                                    {% if coauthor and coauthor.photo %}
+                                    <div class="form-check mt-2">
+                                        {{ form.remove_photo(class="form-check-input") }}
+                                        {{ form.remove_photo.label(class="form-check-label text-danger") }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.display_order.label(class="form-label") }}
+                                {{ form.display_order(class="form-control" + (' is-invalid' if form.display_order.errors else '')) }}
+                                {% for err in form.display_order.errors %}
+                                    <div class="invalid-feedback">{{ err }}</div>
+                                {% endfor %}
+                                <div class="form-text">{{ _('Lower values appear higher in the list (0 is top)') }}</div>
+                            </div>
+                            <div class="col-md-6 mb-3 d-flex align-items-end">
+                                <div class="form-check">
+                                    {{ form.is_active(class="form-check-input") }}
+                                    {{ form.is_active.label(class="form-check-label") }}
+                                    <div class="form-text">{{ _('Inactive coauthors are hidden from the About page') }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{{ url_for('admin_coauthors') }}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> {{ _('Back to Coauthors') }}
+                            </a>
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Локальное превью загружаемого фото без обращения к серверу.
+function previewCoauthorPhoto(event) {
+    var file = event.target.files && event.target.files[0];
+    if (!file) return;
+    var img = document.getElementById('coauthor-photo-preview');
+    var ph = document.getElementById('coauthor-photo-placeholder');
+    var url = URL.createObjectURL(file);
+    if (img) {
+        img.src = url;
+        img.classList.remove('d-none');
+    }
+    if (ph) {
+        ph.classList.add('d-none');
+    }
+}
+</script>
+{% endblock %}

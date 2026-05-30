@@ -1,6 +1,7 @@
 from flask_wtf import FlaskForm
+from flask_wtf.file import FileField, FileAllowed
 from wtforms import StringField, PasswordField, SubmitField, TextAreaField, BooleanField, HiddenField, IntegerField
-from wtforms.validators import DataRequired, Email, Length, EqualTo, ValidationError
+from wtforms.validators import DataRequired, Email, Length, EqualTo, ValidationError, Optional, NumberRange
 from flask_babel import lazy_gettext as _l
 import requests
 import os
@@ -155,7 +156,37 @@ class AchievementForm(FlaskForm):
         DataRequired(),
         Length(min=1, max=100, message='Icon file must be between 1 and 100 characters')
     ])
-    formula = TextAreaField('Formula', validators=[DataRequired()], 
+    formula = TextAreaField('Formula', validators=[DataRequired()],
                            render_kw={'rows': 5, 'placeholder': 'Enter Python expression (e.g., max_speed >= 130)'})
     is_active = BooleanField('Active')
     submit = SubmitField('Save Achievement')
+
+
+class CoauthorForm(FlaskForm):
+    """Форма для создания/редактирования соавтора (admin)."""
+    name = StringField(_l('Name'), validators=[
+        DataRequired(),
+        Length(min=1, max=120, message=_l('Name must be between 1 and 120 characters'))
+    ])
+    role = StringField(_l('Role'), validators=[
+        DataRequired(),
+        Length(min=1, max=120, message=_l('Role must be between 1 and 120 characters'))
+    ])
+    description = TextAreaField(_l('Description'), validators=[
+        DataRequired(),
+        Length(min=1, max=2000, message=_l('Description is too long (max 2000 characters)'))
+    ], render_kw={'rows': 4})
+    photo = FileField(_l('Photo'), validators=[
+        Optional(),
+        FileAllowed(
+            ['jpg', 'jpeg', 'png', 'webp', 'gif'],
+            _l('Only JPG, PNG, WebP, GIF images are allowed')
+        )
+    ])
+    remove_photo = BooleanField(_l('Remove current photo'))
+    display_order = IntegerField(_l('Display Order'), validators=[
+        Optional(),
+        NumberRange(min=0, max=10000, message=_l('Display Order must be between 0 and 10000'))
+    ], default=0, render_kw={'min': 0})
+    is_active = BooleanField(_l('Active'), default=True)
+    submit = SubmitField(_l('Save Coauthor'))

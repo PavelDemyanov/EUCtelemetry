@@ -27,11 +27,11 @@ from utils.video_creator import create_video
 from utils.background_processor import process_project, stop_project_processing
 from utils.env_setup import setup_env_variables
 from utils.email_sender import send_email, test_smtp_connection
-from forms import (LoginForm, RegistrationForm, ProfileForm, 
-                  ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm, DeleteAccountForm, 
-                  NewsForm, EmailCampaignForm, ResendConfirmationForm, EmailTestForm, AchievementForm, 
-                  generate_math_captcha)
-from models import User, Project, EmailCampaign, News, Preset, RegistrationAttempt, Achievement, SiteSetting
+from forms import (LoginForm, RegistrationForm, ProfileForm,
+                  ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm, DeleteAccountForm,
+                  NewsForm, EmailCampaignForm, ResendConfirmationForm, EmailTestForm, AchievementForm,
+                  CoauthorForm, generate_math_captcha)
+from models import User, Project, EmailCampaign, News, Preset, RegistrationAttempt, Achievement, SiteSetting, Coauthor
 import markdown
 from sqlalchemy import desc
 
@@ -778,7 +778,11 @@ def home():
 
 @app.route('/about')
 def about():
-    return render_template('about.html')
+    # Активные соавторы, отсортированные по display_order, затем по имени.
+    coauthors = Coauthor.query.filter_by(is_active=True).order_by(
+        Coauthor.display_order.asc(), Coauthor.name.asc()
+    ).all()
+    return render_template('about.html', coauthors=coauthors)
 
 @app.route('/upload', methods=['POST'])
 @login_required
@@ -2873,8 +2877,201 @@ def admin_achievements_refresh():
         db.session.rollback()
         logging.error(f"Error refreshing achievements: {str(e)}")
         flash(f'Error refreshing achievements: {str(e)}', 'danger')
-    
+
     return redirect(url_for('admin_achievements'))
+
+
+# =====================================================================
+# Coauthors management (admin)
+# =====================================================================
+
+# Подкаталог в static/, куда складываются загруженные фото соавторов.
+COAUTHORS_UPLOAD_SUBDIR = os.path.join('uploads', 'coauthors')
+
+
+def _coauthors_upload_dir():
+    """Абсолютный путь к каталогу для фото соавторов; создаёт его при необходимости."""
+    abs_dir = os.path.join(app.static_folder, COAUTHORS_UPLOAD_SUBDIR)
+    os.makedirs(abs_dir, exist_ok=True)
+    return abs_dir
+
+
+def _save_coauthor_photo(file_storage):
+    """
+    Сохраняет загруженный файл фото соавтора.
+    Возвращает путь относительно static/ (для записи в БД и url_for('static', filename=...)).
+    """
+    import uuid
+    original = secure_filename(file_storage.filename or '')
+    ext = os.path.splitext(original)[1].lower() or '.jpg'
+    # Разрешённые расширения дублируем (FileAllowed уже проверила, но на всякий случай).
+    if ext not in ('.jpg', '.jpeg', '.png', '.webp', '.gif'):
+        ext = '.jpg'
+    fname = f"{uuid.uuid4().hex}{ext}"
+    abs_path = os.path.join(_coauthors_upload_dir(), fname)
+    file_storage.save(abs_path)
+    # Путь для БД — относительно static/, с прямыми слэшами (для url_for).
+    return f"{COAUTHORS_UPLOAD_SUBDIR.replace(os.sep, '/')}/{fname}"
+
+
+def _delete_coauthor_photo(rel_path):
+    """Безопасно удаляет файл фото соавтора с диска (если он внутри static/uploads/coauthors)."""
+    if not rel_path:
+        return
+    try:
+        # Приводим к абсолютному пути и проверяем, что он внутри ожидаемой папки —
+        # защита от path traversal, если в БД случайно окажется чужой путь.
+        abs_path = os.path.realpath(os.path.join(app.static_folder, rel_path))
+        upload_dir = os.path.realpath(_coauthors_upload_dir())
+        if abs_path.startswith(upload_dir + os.sep) and os.path.isfile(abs_path):
+            os.remove(abs_path)
+    except Exception as e:
+        logging.warning(f"Could not delete coauthor photo {rel_path}: {e}")
+
+
+@app.route('/admin/coauthors')
+@admin_required
+def admin_coauthors():
+    """Список соавторов с возможностью CRUD."""
+    coauthors = Coauthor.query.order_by(
+        Coauthor.display_order.asc(), Coauthor.name.asc()
+    ).all()
+    return render_template('admin/coauthors.html', coauthors=coauthors)
+
+
+@app.route('/admin/coauthors/new', methods=['GET', 'POST'])
+@admin_required
+def admin_coauthor_new():
+    """Создать нового соавтора."""
+    form = CoauthorForm()
+    if form.validate_on_submit():
+        try:
+            coauthor = Coauthor(
+                name=form.name.data.strip(),
+                role=form.role.data.strip(),
+                description=form.description.data.strip(),
+                display_order=form.display_order.data or 0,
+                is_active=bool(form.is_active.data),
+            )
+            # Сохраняем фото, если загружено
+            file = form.photo.data
+            if file and getattr(file, 'filename', ''):
+                coauthor.photo = _save_coauthor_photo(file)
+
+            db.session.add(coauthor)
+            db.session.commit()
+            flash(_('Coauthor "%(name)s" created successfully', name=coauthor.name), 'success')
+            return redirect(url_for('admin_coauthors'))
+        except Exception as e:
+            db.session.rollback()
+            logging.error(f"Error creating coauthor: {e}")
+            flash(_('Error creating coauthor: %(err)s', err=str(e)), 'danger')
+
+    return render_template('admin/coauthor_form.html',
+                           form=form, coauthor=None,
+                           title=_('New Coauthor'))
+
+
+@app.route('/admin/coauthors/<int:coauthor_id>/edit', methods=['GET', 'POST'])
+@admin_required
+def admin_coauthor_edit(coauthor_id):
+    """Редактировать соавтора."""
+    coauthor = Coauthor.query.get_or_404(coauthor_id)
+    form = CoauthorForm(obj=coauthor)
+    if form.validate_on_submit():
+        try:
+            coauthor.name = form.name.data.strip()
+            coauthor.role = form.role.data.strip()
+            coauthor.description = form.description.data.strip()
+            coauthor.display_order = form.display_order.data or 0
+            coauthor.is_active = bool(form.is_active.data)
+
+            # 1) Если запросили удалить текущее фото
+            if form.remove_photo.data and coauthor.photo:
+                _delete_coauthor_photo(coauthor.photo)
+                coauthor.photo = None
+
+            # 2) Если загружено новое фото — заменяем старое
+            file = form.photo.data
+            if file and getattr(file, 'filename', ''):
+                old = coauthor.photo
+                coauthor.photo = _save_coauthor_photo(file)
+                if old:
+                    _delete_coauthor_photo(old)
+
+            coauthor.updated_at = datetime.utcnow()
+            db.session.commit()
+            flash(_('Coauthor "%(name)s" updated successfully', name=coauthor.name), 'success')
+            return redirect(url_for('admin_coauthors'))
+        except Exception as e:
+            db.session.rollback()
+            logging.error(f"Error updating coauthor: {e}")
+            flash(_('Error updating coauthor: %(err)s', err=str(e)), 'danger')
+
+    return render_template('admin/coauthor_form.html',
+                           form=form, coauthor=coauthor,
+                           title=_('Edit Coauthor: %(name)s', name=coauthor.name))
+
+
+@app.route('/admin/coauthors/<int:coauthor_id>/delete', methods=['POST'])
+@admin_required
+def admin_coauthor_delete(coauthor_id):
+    """Удалить соавтора (вместе с файлом фото)."""
+    coauthor = Coauthor.query.get_or_404(coauthor_id)
+    try:
+        name = coauthor.name
+        photo = coauthor.photo
+        db.session.delete(coauthor)
+        db.session.commit()
+        # Файл удаляем только после успешного коммита.
+        if photo:
+            _delete_coauthor_photo(photo)
+        flash(_('Coauthor "%(name)s" deleted successfully', name=name), 'success')
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Error deleting coauthor: {e}")
+        flash(_('Error deleting coauthor: %(err)s', err=str(e)), 'danger')
+    return redirect(url_for('admin_coauthors'))
+
+
+@app.route('/admin/coauthors/<int:coauthor_id>/move/<direction>', methods=['POST'])
+@admin_required
+def admin_coauthor_move(coauthor_id, direction):
+    """
+    Сдвинуть соавтора вверх/вниз в списке (свопает display_order с соседом).
+    Удобно для быстрой перестановки без ручного ввода числа.
+    """
+    if direction not in ('up', 'down'):
+        abort(400)
+    current = Coauthor.query.get_or_404(coauthor_id)
+    try:
+        if direction == 'up':
+            neighbor = Coauthor.query.filter(
+                (Coauthor.display_order < current.display_order) |
+                ((Coauthor.display_order == current.display_order) & (Coauthor.id < current.id))
+            ).order_by(Coauthor.display_order.desc(), Coauthor.id.desc()).first()
+        else:
+            neighbor = Coauthor.query.filter(
+                (Coauthor.display_order > current.display_order) |
+                ((Coauthor.display_order == current.display_order) & (Coauthor.id > current.id))
+            ).order_by(Coauthor.display_order.asc(), Coauthor.id.asc()).first()
+
+        if neighbor:
+            # Если у соседа такой же display_order — просто увеличиваем/уменьшаем у текущего
+            # на 1 или -1, чтобы он действительно сместился. Иначе свопаем значения.
+            if neighbor.display_order == current.display_order:
+                if direction == 'up':
+                    current.display_order = max(0, current.display_order - 1)
+                else:
+                    current.display_order += 1
+            else:
+                current.display_order, neighbor.display_order = neighbor.display_order, current.display_order
+            db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Error reordering coauthor {coauthor_id}: {e}")
+        flash(_('Error reordering: %(err)s', err=str(e)), 'danger')
+    return redirect(url_for('admin_coauthors'))
 
 
 @app.route('/admin/test-campaign', methods=['POST'])

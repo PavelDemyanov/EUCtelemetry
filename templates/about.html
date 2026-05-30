@@ -60,6 +60,44 @@
                             </a>
                         </div>
                     </div>
+
+                    {% if coauthors %}
+                    <hr class="my-4">
+                    <div class="mb-2">
+                        <h5 class="mb-3">{{ _('Coauthors') }}</h5>
+                        <p class="text-muted mb-4">
+                            {{ _('Special thanks to these people who help make EUCtelemetry better:') }}
+                        </p>
+                        <div class="row g-4">
+                            {% for c in coauthors %}
+                            <div class="col-12 col-md-6">
+                                <div class="d-flex align-items-start">
+                                    <div class="flex-shrink-0 me-3">
+                                        {% if c.photo %}
+                                        <img src="{{ url_for('static', filename=c.photo) }}"
+                                             alt="{{ c.name }}"
+                                             class="rounded-circle"
+                                             style="width: 80px; height: 80px; object-fit: cover; border: 3px solid #f0f0f0;">
+                                        {% else %}
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
+                                             style="width: 80px; height: 80px; background: #6c757d; font-size: 26px; border: 3px solid #f0f0f0;">
+                                            {{ c.get_initials() }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">{{ c.name }}</h6>
+                                        <div class="text-muted small mb-2">
+                                            <i class="bi bi-bookmark"></i> {{ c.role }}
+                                        </div>
+                                        <p class="mb-0 small" style="white-space: pre-line;">{{ c.description }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
