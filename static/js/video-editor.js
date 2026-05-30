@@ -1025,6 +1025,17 @@
     // EUC World берут первое валидное значение, иначе первый кадр был бы нулевым.
     fillMissingValues(data, ['speed','voltage','temperature','current','battery','mileage','pwm','power','gps']);
 
+    // Пробег показываем как дистанцию ПОЕЗДКИ от нуля — как классика на сервере
+    // (utils/csv_processor.py::process_mileage): из всех значений вычитается
+    // стартовое показание одометра. Колесо может иметь общий пробег 10150 км,
+    // но в ролике он должен идти с 0 и накапливаться за поездку.
+    if (data.length > 0) {
+      var mileageStart = data[0].mileage || 0;
+      for (var mi = 0; mi < data.length; mi++) {
+        data[mi].mileage = (data[mi].mileage || 0) - mileageStart;
+      }
+    }
+
     // Compute running max speed
     var runMax = 0;
     for (var k = 0; k < data.length; k++) {
