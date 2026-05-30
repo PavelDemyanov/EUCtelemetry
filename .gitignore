@@ -12,3 +12,10 @@ previews/
 frames/
 attached_assets/
 archives/
+# Конфиденциальная документация для Claude Code (НЕ пушить: пароли/IP)
+CLAUDE.md
+
+# Python-кеш и бэкапы правок
+__pycache__/
+*.bak
+*.bak.*
