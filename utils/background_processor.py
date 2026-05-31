@@ -102,6 +102,23 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     locale
                 )
 
+                # Защита: если из CSV не вышло ни одного кадра (нулевая длительность /
+                # в записи нет изменений телеметрии — например, колесо стояло на месте),
+                # НЕ запускаем FFmpeg с пустой папкой кадров — он падает с непонятным
+                # дампом. Вместо этого отдаём пользователю ясное локализованное сообщение.
+                if not frame_count or int(frame_count) < 1:
+                    if str(locale) == 'ru':
+                        raise ValueError(
+                            'Недостаточно данных для создания видео: в записи нет '
+                            'изменений телеметрии (похоже, колесо стояло на месте) '
+                            'или запись слишком короткая. Загрузите лог реальной поездки.'
+                        )
+                    raise ValueError(
+                        'Not enough data to build a video: the log has no telemetry '
+                        'changes (the wheel appears to have been stationary) or it is '
+                        'too short. Please upload a log from an actual ride.'
+                    )
+
                 with app.app_context():
                     project = db.session.get(Project, project_id)
                     if project.status == 'stopped':
