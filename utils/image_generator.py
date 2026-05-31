@@ -900,7 +900,9 @@ def find_nearest_values(df, timestamp, interpolate=True):
     # Calculate interpolation factor
     t0 = df.loc[before_idx, 'timestamp']
     t1 = df.loc[after_idx, 'timestamp']
-    factor = (timestamp - t0) / (t1 - t0)
+    # Защита от деления на ноль: у соседних точек может совпадать timestamp
+    # (например, при огрублении времени до целых секунд) -> берём фактор 0.
+    factor = (timestamp - t0) / (t1 - t0) if (t1 - t0) else 0.0
 
     # Interpolate all numeric values
     result = {}

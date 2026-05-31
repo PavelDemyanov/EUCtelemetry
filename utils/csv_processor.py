@@ -601,8 +601,12 @@ def process_csv_file(file_path, folder_number=None, existing_csv_type=None, inte
         elif csv_type == 'eucworld':
             # EUC World: ISO 8601 datetime with timezone, e.g. 2026-03-19T13:15:20.635+0300
             df['timestamp'] = pd.to_datetime(df['datetime'], format='ISO8601', errors='coerce')
-            # Convert to Unix timestamp (seconds)
-            df['timestamp'] = df['timestamp'].astype('int64') // 10**9
+            # Convert to Unix timestamp in SECONDS, СОХРАНЯЯ доли секунды.
+            # ВАЖНО: делим на 1e9 (float), а не // 10**9 (целые секунды). EUC World
+            # пишет ~3-4 строки в секунду; при огрублении до целых секунд у соседних
+            # точек совпадал timestamp -> деление на ноль при интерполяции кадров
+            # (create_preview_frame падал с "cannot convert float NaN to integer").
+            df['timestamp'] = df['timestamp'].astype('int64') / 1e9
 
             # Filter rows with invalid timestamps
             valid_timestamp_mask = df['timestamp'].notna() & (df['timestamp'] > 0)
