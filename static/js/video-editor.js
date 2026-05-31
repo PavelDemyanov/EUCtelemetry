@@ -46,7 +46,8 @@
     // Thumbnails
     thumbnails: [],
     // Icons cache
-    iconImages: {},
+    iconImages: {},      // name -> HTMLImageElement | null (loading) | false (failed)
+    iconTintCache: {},   // name+'|'+color -> перекрашенный offscreen-canvas
     // No-video (chroma key) mode
     noVideoMode: false,
     chromaBgColor: '#0000FF',
@@ -196,6 +197,7 @@
     syncTimelineScroll();
     resizeCanvases();
     initLocalExport();
+    preloadIcons();
     window.addEventListener('resize', resizeCanvases);
 
     // Mobile settings panel (bottom sheet)
@@ -2449,19 +2451,16 @@
     ctx.fillStyle = textColor;
 
     if (settings.use_icons) {
-      // Draw icon placeholder (filled circle as placeholder)
+      // Иконку перекрашиваем в цвет текста (белый, либо чёрный для красных/жёлтых
+      // боксов) — как в классике (image_generator.load_icon инвертирует чёрный PNG).
+      // Никакого кружка-плейсхолдера: рисуем только саму иконку.
       var iconY = y + (h - iconSize) / 2 + textVOffset;
-      ctx.fillStyle = textColor;
-      ctx.beginPath();
-      ctx.arc(textX + iconSize / 2, iconY + iconSize / 2, iconSize / 2 - 1, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Try loading actual icon
       var iconName = LABEL_TO_ICON[param.label];
-      if (iconName && state.iconImages[iconName]) {
-        ctx.drawImage(state.iconImages[iconName], textX, iconY, iconSize, iconSize);
-      } else if (iconName && !state.iconImages[iconName]) {
-        loadIconImage(iconName);
+      if (iconName) {
+        var tintedIcon = getTintedIcon(iconName, textColor);
+        if (tintedIcon) {
+          ctx.drawImage(tintedIcon, textX, iconY, iconSize, iconSize);
+        }
       }
 
       textX += iconSize + iconSpacing;
@@ -2485,13 +2484,49 @@
   }
 
   function loadIconImage(name) {
+    if (state.iconImages[name] !== undefined) return; // уже грузится/загружена/ошибка
+    state.iconImages[name] = null; // null = загрузка в процессе
     var img = new Image();
     img.onload = function() {
       state.iconImages[name] = img;
+      if (!state.playing) renderOverlayOnce(); // иконка пришла асинхронно — обновим превью
+    };
+    img.onerror = function() {
+      state.iconImages[name] = false; // больше не пытаемся грузить
     };
     img.src = '/static/icons/icons_telemetry/' + name + '.png';
-    // Set placeholder to prevent re-loading
-    state.iconImages[name] = null;
+  }
+
+  // Возвращает иконку, перекрашенную в нужный цвет (аналог load_icon в классике),
+  // с кэшированием. PNG-иконки — чёрные силуэты на прозрачном фоне; через
+  // composite 'source-in' заливаем форму цветом текста (белым на обычном боксе,
+  // чёрным на красном/жёлтом). Пока сырой PNG не загружен — возвращаем null.
+  function getTintedIcon(name, color) {
+    var raw = state.iconImages[name];
+    if (raw === undefined) { loadIconImage(name); return null; }
+    if (!raw) return null; // null (грузится) или false (ошибка)
+    var key = name + '|' + color;
+    var cached = state.iconTintCache[key];
+    if (cached) return cached;
+    var w = raw.naturalWidth || 64, h = raw.naturalHeight || 64;
+    var c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    var cx = c.getContext('2d');
+    cx.drawImage(raw, 0, 0, w, h);
+    cx.globalCompositeOperation = 'source-in';
+    cx.fillStyle = color;
+    cx.fillRect(0, 0, w, h);
+    state.iconTintCache[key] = c;
+    return c;
+  }
+
+  // Предзагрузка всех иконок телеметрии, чтобы они были готовы к экспорту
+  // (Local Export кодирует кадры сразу, без ожидания сети).
+  function preloadIcons() {
+    Object.keys(LABEL_TO_ICON).forEach(function(label) {
+      var n = LABEL_TO_ICON[label];
+      if (n) loadIconImage(n);
+    });
   }
 
   // ===== SPEED GAUGE =====
