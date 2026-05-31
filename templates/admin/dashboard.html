@@ -144,6 +144,9 @@
                         <button type="button" class="btn btn-sm btn-outline-danger" id="bulk-delete-btn" disabled>
                             <i class="fas fa-trash"></i> Удалить найденных
                         </button>
+                        <button type="button" class="btn btn-sm btn-danger ms-auto" id="delete-selected-btn" disabled>
+                            <i class="fas fa-trash"></i> Удалить выбранные (<span id="selected-count">0</span>)
+                        </button>
                     </div>
                 </div>
             </div>
@@ -158,6 +161,7 @@
                 <table class="table table-hover" id="users-table">
                     <thead>
                         <tr>
+                            <th style="width:1%"><input type="checkbox" id="select-all-users" title="Выбрать всех на странице"></th>
                             <th>Name</th>
                             <th>Email</th>
                             <th>Registration Date</th>
@@ -170,6 +174,7 @@
                     <tbody>
                         {% for user in users.items %}
                         <tr>
+                            <td><input type="checkbox" class="user-select" value="{{ user.id }}"{% if user.is_admin %} disabled{% endif %}></td>
                             <td>
                                 {{ user.name }}
                                 {% if user.created_at.date() == today %}
@@ -761,6 +766,7 @@ function renderUsersTable() {
     // Render table
     tbody.innerHTML = filteredUsers.map(user => `
         <tr${!user.is_active ? ' class="deactivated-user"' : ''}>
+            <td><input type="checkbox" class="user-select" value="${user.id}" ${user.is_admin ? 'disabled' : ''}></td>
             <td>
                 ${user.name}
                 ${user.is_new ? '<span class="badge bg-success muted text-white">New User</span>' : ''}
@@ -798,6 +804,8 @@ function renderUsersTable() {
     `).join('');
 
     updatePagination('users', usersData);
+    // Восстановить отметки чекбоксов после перерисовки (она бывает каждые 5 сек)
+    if (window.restoreUserSelection) window.restoreUserSelection();
 }
 
 function updateProjectsTable(projects) {
@@ -1311,6 +1319,87 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Ошибка при удалении пользователей');
         });
     });
+
+    // ===== Выбор аккаунтов чекбоксами + удаление выбранных =====
+    // Выбор хранится в Set по id (а не в DOM), чтобы переживать перерисовку
+    // таблицы (она происходит каждые 5 сек и при пагинации/фильтре).
+    const selectedUserIds = new Set();
+
+    function updateSelectedUsersUI() {
+        const cnt = document.getElementById('selected-count');
+        const btn = document.getElementById('delete-selected-btn');
+        if (cnt) cnt.textContent = selectedUserIds.size;
+        if (btn) btn.disabled = selectedUserIds.size === 0;
+        // Состояние галочки "выбрать всех" — по видимым на странице строкам
+        const boxes = document.querySelectorAll('#users-table tbody .user-select:not(:disabled)');
+        const selectAll = document.getElementById('select-all-users');
+        if (selectAll) {
+            const total = boxes.length;
+            const checked = Array.from(boxes).filter(b => b.checked).length;
+            selectAll.checked = total > 0 && checked === total;
+            selectAll.indeterminate = checked > 0 && checked < total;
+        }
+    }
+
+    // Восстанавливает отметки после перерисовки tbody (зовётся из renderUsersTable)
+    window.restoreUserSelection = function() {
+        document.querySelectorAll('#users-table tbody .user-select').forEach(function(box) {
+            box.checked = selectedUserIds.has(parseInt(box.value, 10));
+        });
+        updateSelectedUsersUI();
+    };
+
+    // Делегированный обработчик на постоянной таблице (строки пересоздаются)
+    const usersTableEl = document.getElementById('users-table');
+    if (usersTableEl) {
+        usersTableEl.addEventListener('change', function(e) {
+            if (!e.target.classList.contains('user-select')) return;
+            const id = parseInt(e.target.value, 10);
+            if (e.target.checked) selectedUserIds.add(id); else selectedUserIds.delete(id);
+            updateSelectedUsersUI();
+        });
+    }
+
+    const selectAllBox = document.getElementById('select-all-users');
+    if (selectAllBox) {
+        selectAllBox.addEventListener('change', function() {
+            document.querySelectorAll('#users-table tbody .user-select:not(:disabled)').forEach(function(box) {
+                box.checked = selectAllBox.checked;
+                const id = parseInt(box.value, 10);
+                if (selectAllBox.checked) selectedUserIds.add(id); else selectedUserIds.delete(id);
+            });
+            updateSelectedUsersUI();
+        });
+    }
+
+    const deleteSelectedBtn = document.getElementById('delete-selected-btn');
+    if (deleteSelectedBtn) {
+        deleteSelectedBtn.addEventListener('click', function() {
+            if (selectedUserIds.size === 0) return;
+            const ids = Array.from(selectedUserIds);
+            if (!confirm(`Удалить выбранные аккаунты (${ids.length})? Действие необратимо!`)) return;
+            fetch('/admin/bulk-delete-users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_ids: ids })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert(`Удалено ${data.deleted_count} аккаунтов`);
+                    selectedUserIds.clear();
+                    updateSelectedUsersUI();
+                    updateLists(currentUserPage, currentProjectPage);
+                } else {
+                    alert('Ошибка при удалении: ' + (data.error || 'неизвестная ошибка'));
+                }
+            })
+            .catch(err => {
+                console.error('Error deleting selected users:', err);
+                alert('Ошибка при удалении выбранных аккаунтов');
+            });
+        });
+    }
 
     // Initial load of data
     updateData();
