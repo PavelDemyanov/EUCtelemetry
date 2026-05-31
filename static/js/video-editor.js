@@ -2163,14 +2163,7 @@
       var dbgFs = Math.max(16, Math.round(28 * dbgSf));
       var ln = Math.round(dbgFs * 1.4);
       ctx.font = 'bold ' + dbgFs + 'px monospace';
-      var dbY = ch - ln * 4.5;
-      // Background for readability
-      ctx.fillStyle = 'rgba(0,0,0,0.6)';
-      ctx.fillRect(0, dbY - dbgFs, cw, ln * 4.5 + 4);
-      ctx.fillStyle = '#ffff00';
-      ctx.fillText('videoTime=' + dom.video.currentTime.toFixed(2) + '  timeOffset=' + state.timeOffset.toFixed(2) + '  csvTime=' + (dom.video.currentTime - state.timeOffset).toFixed(2), 8, dbY);
-      ctx.fillText('speed=' + dataPoint.speed.toFixed(1) + '  pwm=' + dataPoint.pwm.toFixed(1) + '  t=' + dataPoint.t.toFixed(2) + '  csvDur=' + state.csvDuration.toFixed(1), 8, dbY + ln);
-      ctx.fillText('idx=' + (dataPoint._dbgLo || 0) + '/' + (dataPoint._dbgTotal || 0) + '  lo.spd=' + (dataPoint._dbgLoSpeed != null ? dataPoint._dbgLoSpeed.toFixed(1) : '?') + '  hi.spd=' + (dataPoint._dbgHiSpeed != null ? dataPoint._dbgHiSpeed.toFixed(1) : '?'), 8, dbY + ln * 2);
+
       // Find nearest non-zero speed when current speed is ~0
       var nnzInfo = '';
       if (dataPoint.speed < 0.5 && state.csvData.length > 0) {
@@ -2183,7 +2176,34 @@
         }
         if (!nnzInfo) nnzInfo = 'no speed>0 in next 500pts';
       }
-      ctx.fillText('trimS=' + state.csvTrimStart.toFixed(1) + ' trimE=' + state.csvTrimEnd.toFixed(1) + ' zoom=' + state.zoomLevel.toFixed(2) + '  ' + nnzInfo, 8, dbY + ln * 3);
+
+      // Собираем строки дебага в массив (число строк зависит от наличия VBO)
+      var dbgLines = [
+        'videoTime=' + dom.video.currentTime.toFixed(2) + '  timeOffset=' + state.timeOffset.toFixed(2) + '  csvTime=' + (dom.video.currentTime - state.timeOffset).toFixed(2),
+        'speed=' + dataPoint.speed.toFixed(1) + '  pwm=' + dataPoint.pwm.toFixed(1) + '  t=' + dataPoint.t.toFixed(2) + '  csvDur=' + state.csvDuration.toFixed(1),
+        'idx=' + (dataPoint._dbgLo || 0) + '/' + (dataPoint._dbgTotal || 0) + '  lo.spd=' + (dataPoint._dbgLoSpeed != null ? dataPoint._dbgLoSpeed.toFixed(1) : '?') + '  hi.spd=' + (dataPoint._dbgHiSpeed != null ? dataPoint._dbgHiSpeed.toFixed(1) : '?'),
+        'trimS=' + state.csvTrimStart.toFixed(1) + ' trimE=' + state.csvTrimEnd.toFixed(1) + ' zoom=' + state.zoomLevel.toFixed(2) + '  ' + nnzInfo
+      ];
+
+      // Диагностика VBO (Dragy) — добавляется только если трек загружен
+      if (state.vboData && state.vboData.length > 0) {
+        var vboT = dataPoint.t - state.vboTimeOffset + state.timeOffset;
+        var vboIn = (vboT >= state.vboTrimStart && vboT <= state.vboTrimEnd);
+        var dragyNow = getDragySpeedAtTime(dataPoint.t);
+        dbgLines.push('VBO pts=' + state.vboData.length + ' dur=' + state.vboDuration.toFixed(1) + ' off=' + state.vboTimeOffset.toFixed(2) + ' trim=' + state.vboTrimStart.toFixed(1) + '-' + state.vboTrimEnd.toFixed(1));
+        dbgLines.push('VBO vboT=' + vboT.toFixed(2) + ' ' + (vboIn ? 'inRange' : 'OUT-OF-RANGE') + ' dragy=' + dragyNow.toFixed(1) + ' ' + LOC.units.speed);
+      }
+
+      // Блок по вертикальному ЦЕНТРУ экрана, чтобы не перекрывать спидометр внизу
+      var dbgN = dbgLines.length;
+      var dbgBgH = ln * dbgN + 4;
+      var dbY = Math.round(ch / 2 - dbgBgH / 2 + dbgFs);
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx.fillRect(0, dbY - dbgFs, cw, dbgBgH);
+      ctx.fillStyle = '#ffff00';
+      for (var _dl = 0; _dl < dbgN; _dl++) {
+        ctx.fillText(dbgLines[_dl], 8, dbY + ln * _dl);
+      }
       ctx.restore();
     }
 
