@@ -151,6 +151,21 @@
     font-weight: 600 !important;
 }
 
+/* Истёкший проект: пояснение вместо кнопок скачивания */
+.project-expired-note {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.78rem;
+    line-height: 1.2;
+    color: var(--bs-secondary-color, #9aa0a6);
+    font-style: italic;
+}
+.project-expired-note .bi {
+    color: var(--bs-warning);
+    font-style: normal;
+}
+
 /* ── Responsive: Tablet ── */
 @media (max-width: 768px) {
     .projects-grid {
@@ -335,6 +350,17 @@
 
         {# ── Footer actions ── #}
         <div class="project-card-foot">
+            {% if project.is_expired() %}
+            {# Срок хранения истёк — файлы удаляются фоновой очисткой, скачивание недоступно #}
+            <div class="project-expired-note">
+                <i class="bi bi-clock-history"></i>
+                {{ _('Storage period expired — files removed, download unavailable') }}
+            </div>
+            <button onclick="deleteProject({{ project.id }})"
+                    class="btn btn-sm btn-outline-danger btn-delete">
+                <i class="bi bi-trash"></i> {{ _('Delete') }}
+            </button>
+            {% else %}
             <a href="{{ url_for('download_file', project_id=project.id, type='processed_csv') }}"
                class="btn btn-sm btn-info">
                 <i class="bi bi-download"></i> CSV
@@ -367,6 +393,7 @@
                     class="btn btn-sm btn-outline-danger btn-delete">
                 <i class="bi bi-trash"></i> {{ _('Delete') }}
             </button>
+            {% endif %}
             {% endif %}
         </div>
 

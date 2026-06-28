@@ -13,6 +13,10 @@
     videoUploaded: false,
     _currentUploadId: null,   // tracks which upload is active (to cancel stale ones)
     _uploadAborted: false,    // flag to abort in-progress upload
+    _uploadActive: false,     // an upload is in progress (pause button usable)
+    uploadPaused: false,      // user paused the chunked upload
+    _uploadXhr: null,         // current in-flight chunk XHR (aborted on pause)
+    _uploadResume: null,      // resolve() that un-blocks the paused chunk loop
     csvFile: null,
     csvId: null,
     csvData: [],            // [{t, speed, maxSpeed, voltage, temperature, current, battery, mileage, pwm, power, gps, timestamp}, ...]
@@ -30,6 +34,23 @@
     vboTrimStart: 0,
     vboTrimEnd: 0,
     vboCropOffset: 0,
+    // Track minimap (built from VBO GPS lat/long)
+    trackMapReady: false,    // true when projected path is built
+    trackMapClosed: false,   // auto-detected closed loop (start≈finish)
+    trackMapPath: null,      // downsampled [{mx,my}] (0..1, north up) for the static line
+    trackMapCache: null,     // offscreen canvas with the static track pre-rendered
+    trackMapCacheKey: '',    // px-size|closed|len key — rebuild cache when it changes
+    trackMapDrag: null,      // {dx,dy} offset from widget center while dragging
+    // Lap analysis
+    trackGateIdx: 0,         // start/finish gate = index into vboData
+    trackLaps: null,         // [{i0,i1,t,avg,max}] detected laps
+    trackLapMedian: 0,       // median lap time (s)
+    trackAvgPath: null,      // [{mx,my}] averaged clean-lap centerline (closed)
+    trackGateDrag: false,    // true while dragging the gate handle
+    overlayDrag: null,       // {type:'telem'|'gauge', sx, sy, a, b} while dragging those elements
+    _telemBounds: null,      // {x,y,w,h} last-drawn telemetry strip bounds (preview)
+    _gaugeBounds: null,      // {cx,cy,r} last-drawn speed gauge bounds (preview)
+    _lapBoardBounds: null,   // {x,y,w,h} last-drawn lap board bounds (preview)
     videoMeta: { duration: 0, width: 0, height: 0, fps: 30 },
     playing: false,
     animFrameId: null,
@@ -94,6 +115,21 @@
     use_icons: false,
     debug_overlay: false,
     center_based_indicator: true,
+    // Track minimap (VBO GPS) — position/size as fractions of the frame
+    show_track_map: false,
+    track_map_x: 0.84,       // widget center X / frame width
+    track_map_y: 0.24,       // widget center Y / frame height
+    track_map_size: 0.24,    // widget side / min(frame w, h)
+    show_lap_table: false,   // on-video lap timing widget (below the map)
+    track_map_opacity: 100,  // background-panel opacity (%) for the map + lap board
+    nav_heading_up: false,   // route mode: heading-up navigator (future path up, rider lower-1/3)
+    show_raw_track: false,   // circuit: show the faint raw-GPS bundle behind the averaged lap
+    raw_track_opacity: 20,   // opacity (%) of that raw-GPS bundle
+    lap_board_above: false,  // reverse growth: vertical → up, horizontal → left
+    lap_board_horizontal: false, // lay laps in a horizontal row instead of a vertical column
+    lap_board_x: 0.77,       // lap board anchor X (fraction of frame) — LAP 1 corner
+    lap_board_y: 0.40,       // lap board anchor Y (fraction of frame)
+    lap_board_match_map: false, // tie lap plaque width to the map's width
   };
 
   // ===== LOCALIZATION (EN only for MVP) =====
@@ -198,6 +234,10 @@
     resizeCanvases();
     initLocalExport();
     preloadIcons();
+    bindTrackMapInteraction();
+    updateLapUIVisibility();
+    var btnUploadPause = document.getElementById('btnUploadPause');
+    if (btnUploadPause) btnUploadPause.addEventListener('click', togglePauseUpload);
     window.addEventListener('resize', resizeCanvases);
 
     // Mobile settings panel (bottom sheet)
@@ -239,6 +279,8 @@
       { id: 'unitSize', key: 'unit_size', valId: 'valUnitSize' },
       { id: 'speedY', key: 'speed_y', valId: 'valSpeedY' },
       { id: 'unitY', key: 'unit_y', valId: 'valUnitY' },
+      { id: 'trackMapOpacity', key: 'track_map_opacity', valId: 'valTrackMapOpacity' },
+      { id: 'rawTrackOpacity', key: 'raw_track_opacity', valId: 'valRawTrackOpacity' },
     ];
 
     sliders.forEach(function(s) {
@@ -274,6 +316,13 @@
       { id: 'showBottomElements', key: 'show_bottom_elements' },
       { id: 'useIcons', key: 'use_icons' },
       { id: 'debugOverlay', key: 'debug_overlay' },
+      { id: 'showTrackMap', key: 'show_track_map' },
+      { id: 'showLapTable', key: 'show_lap_table' },
+      { id: 'navHeadingUp', key: 'nav_heading_up' },
+      { id: 'showRawTrack', key: 'show_raw_track' },
+      { id: 'lapBoardAbove', key: 'lap_board_above' },
+      { id: 'lapBoardHorizontal', key: 'lap_board_horizontal' },
+      { id: 'lapBoardMatchMap', key: 'lap_board_match_map' },
     ];
 
     checks.forEach(function(c) {
@@ -283,6 +332,7 @@
       el.addEventListener('change', function() {
         settings[c.key] = this.checked;
         if (c.key === 'static_box_size' || c.key === 'use_icons') recalcStaticBoxWidths();
+        if (c.key === 'show_track_map') { updateTrackMapInteractivity(); renderLapTable(); }
         renderOverlayOnce();
       });
     });
@@ -339,6 +389,15 @@
         state.vboTimeOffset = 0;
         state.vboTrimStart = 0;
         state.vboTrimEnd = 0;
+        state.trackMapReady = false;
+        state.trackMapPath = null;
+        state.trackMapCache = null;
+        state.trackMapCacheKey = '';
+        state.trackLaps = null;
+        state.trackAvgPath = null;
+        updateTrackMapInteractivity();
+        renderLapTable();
+        updateLapUIVisibility();
         state.vboId = null;
         settings.show_dragy_speed = false;
         var el = document.getElementById('showDragySpeed');
@@ -728,6 +787,31 @@
     });
   }
 
+  // Toggle the upload pause button look (⏸ ↔ ▶) and the status text.
+  function setUploadPauseUI(paused) {
+    var btn = document.getElementById('btnUploadPause');
+    if (btn) {
+      btn.innerHTML = paused ? '<i class="bi bi-play-fill"></i>' : '<i class="bi bi-pause-fill"></i>';
+      btn.title = paused ? 'Resume upload' : 'Pause upload';
+    }
+    var txt = document.getElementById('uploadStateText');
+    if (txt) txt.textContent = paused ? 'Paused' : 'Uploading...';
+  }
+
+  // Pause/resume the server upload (lets users skip it when they only need Local Export).
+  function togglePauseUpload() {
+    if (!state._uploadActive) return;
+    if (state.uploadPaused) {
+      state.uploadPaused = false;
+      setUploadPauseUI(false);
+      if (state._uploadResume) { var r = state._uploadResume; state._uploadResume = null; r(); }
+    } else {
+      state.uploadPaused = true;
+      setUploadPauseUI(true);
+      if (state._uploadXhr) { try { state._uploadXhr.abort(); } catch (_) {} }   // stop traffic now
+    }
+  }
+
   function uploadVideoToServer(file) {
     // File size limit: 20GB for regular users, unlimited for admin
     var MAX_SIZE = 20 * 1024 * 1024 * 1024; // 20GB
@@ -757,10 +841,15 @@
       percentSpan.textContent = pct + '%';
     }
 
-    // Cancel any previous upload
+    // Cancel any previous upload (also un-block it if it was paused, so it can exit cleanly)
     var uploadToken = Date.now() + '_' + Math.random();
     state._currentUploadId = uploadToken;
     state._uploadAborted = false;
+    state.uploadPaused = false;
+    if (state._uploadResume) { var _r = state._uploadResume; state._uploadResume = null; _r(); }
+    if (state._uploadXhr) { try { state._uploadXhr.abort(); } catch (_) {} state._uploadXhr = null; }
+    state._uploadActive = true;
+    setUploadPauseUI(false);
 
     // Step 0: Compute file hash for dedup, then init upload
     computeFileHash(file).catch(function() { return ''; }).then(function(fileHash) {
@@ -810,6 +899,8 @@
           return;
         }
         dom.videoUploadProgress.style.display = 'none';
+        state._uploadActive = false;
+        state.uploadPaused = false;
         state.videoId = data.video_id;
         state.videoUploaded = true;
         console.log('Video ' + (data.skipped ? 'reused from server' : 'uploaded') + ', videoId=' + data.video_id);
@@ -820,15 +911,27 @@
           console.log('Previous upload cancelled (superseded)');
           return;
         }
+        state._uploadActive = false;
+        state.uploadPaused = false;
         dom.videoUploadProgress.style.display = 'none';
         alert('Video upload failed: ' + err.message);
       });
 
     }); // end computeFileHash
 
+    // Resolves immediately unless the user paused the upload — then waits for resume.
+    function waitWhilePaused() {
+      if (!state.uploadPaused) return Promise.resolve();
+      return new Promise(function(resolve) { state._uploadResume = resolve; });
+    }
+
     function sendChunk(index) {
       if (index >= totalChunks) return Promise.resolve();
-      return sendChunkWithRetry(index, 0);
+      if (state._currentUploadId !== uploadToken) return Promise.reject(new Error('__UPLOAD_SUPERSEDED__'));
+      return waitWhilePaused().then(function() {
+        if (state._currentUploadId !== uploadToken) throw new Error('__UPLOAD_SUPERSEDED__');
+        return sendChunkWithRetry(index, 0);
+      });
     }
 
     function sendChunkWithRetry(index, attempt) {
@@ -847,6 +950,7 @@
         formData.append('chunk', blob, 'chunk_' + index);
 
         var xhr = new XMLHttpRequest();
+        state._uploadXhr = xhr;
         xhr.open('POST', '/video-editor/upload-video-chunk', true);
         xhr.timeout = 120000; // 2 min timeout per chunk
 
@@ -857,6 +961,7 @@
         });
 
         xhr.addEventListener('load', function() {
+          state._uploadXhr = null;
           if (xhr.status === 200) {
             resolve();
           } else {
@@ -865,17 +970,33 @@
         });
 
         xhr.addEventListener('error', function() {
+          state._uploadXhr = null;
           reject(new Error('Chunk ' + index + ' network error'));
         });
 
         xhr.addEventListener('timeout', function() {
+          state._uploadXhr = null;
           reject(new Error('Chunk ' + index + ' timeout'));
+        });
+
+        // Pausing aborts the in-flight chunk → re-sent from the start after resume (no wasted bytes).
+        xhr.addEventListener('abort', function() {
+          state._uploadXhr = null;
+          reject(new Error('__UPLOAD_PAUSED__'));
         });
 
         xhr.send(formData);
       }).then(function() {
         return sendChunk(index + 1);
       }).catch(function(err) {
+        if (err.message === '__UPLOAD_PAUSED__') {
+          // Wait until the user resumes, then re-send THIS chunk from scratch.
+          return waitWhilePaused().then(function() {
+            if (state._currentUploadId !== uploadToken) throw new Error('__UPLOAD_SUPERSEDED__');
+            return sendChunkWithRetry(index, 0);
+          });
+        }
+        if (err.message === '__UPLOAD_SUPERSEDED__') throw err;
         if (attempt < MAX_RETRIES) {
           console.warn('Chunk ' + index + ' failed (attempt ' + (attempt + 1) + '/' + MAX_RETRIES + '), retrying in 2s...', err.message);
           return new Promise(function(resolve) { setTimeout(resolve, 2000); })
@@ -996,6 +1117,7 @@
     // Detect CSV type
     var type = detectCSVType(header);
     if (!type) { alert('Unrecognized CSV format'); return; }
+    state.csvType = type;  // запоминаем источник телеметрии для статистики Local Export
 
     var data = [];
     var firstTimestamp = null;
@@ -1027,10 +1149,21 @@
     // EUC World берут первое валидное значение, иначе первый кадр был бы нулевым.
     fillMissingValues(data, ['speed','voltage','temperature','current','battery','mileage','pwm','power','gps']);
 
-    // Пробег показываем как дистанцию ПОЕЗДКИ от нуля — как классика на сервере
-    // (utils/csv_processor.py::process_mileage): из всех значений вычитается
-    // стартовое показание одометра. Колесо может иметь общий пробег 10150 км,
-    // но в ролике он должен идти с 0 и накапливаться за поездку.
+    // ===== ПОЛНЫЙ ПАРИТЕТ С КЛАССИКОЙ (utils/csv_processor.py) =====
+    // Классика: interpolate_numeric_data округляет ВСЕ телеметрии до int → потом
+    // process_mileage (одометр уже int) вычитает старт → потом remove_consecutive_duplicates.
+    // Повторяем ровно этот порядок, чтобы превью/Local Export совпадали с серверным
+    // экспортом, а интерполяция между разреженными точками была плавной (рампа, не «полка+скачок»).
+    var INT_FIELDS = ['speed','gps','voltage','temperature','current','battery','mileage','pwm','power'];
+    for (var ri = 0; ri < data.length; ri++) {
+      for (var fi = 0; fi < INT_FIELDS.length; fi++) {
+        var fk = INT_FIELDS[fi];
+        data[ri][fk] = Math.round(data[ri][fk] || 0);
+      }
+    }
+
+    // Пробег = дистанция поездки от нуля: round(odometer[i]) - round(odometer[0]).
+    // Одометр уже округлён выше, поэтому это вычитание двух int — как в классике.
     if (data.length > 0) {
       var mileageStart = data[0].mileage || 0;
       for (var mi = 0; mi < data.length; mi++) {
@@ -1038,7 +1171,22 @@
       }
     }
 
-    // Compute running max speed
+    // Удаляем подряд идущие дубли (remove_consecutive_duplicates): строка выкидывается,
+    // если ВСЕ 9 полей совпали с предыдущей. Именно это даёт плавность — getDataAtTime
+    // потом интерполирует между РАЗНЫМИ значениями через весь интервал между ними.
+    if (data.length > 1) {
+      var deduped = [data[0]];
+      for (var di = 1; di < data.length; di++) {
+        var pr = deduped[deduped.length - 1], same = true;
+        for (var fj = 0; fj < INT_FIELDS.length; fj++) {
+          if (data[di][INT_FIELDS[fj]] !== pr[INT_FIELDS[fj]]) { same = false; break; }
+        }
+        if (!same) deduped.push(data[di]);
+      }
+      data = deduped;
+    }
+
+    // Compute running max speed (после дедупа, на целочисленной скорости)
     var runMax = 0;
     for (var k = 0; k < data.length; k++) {
       if (data[k].speed > runMax) runMax = data[k].speed;
@@ -1052,6 +1200,7 @@
     state.csvCropOffset = 0;
     recalcStaticBoxWidths();
     checkExportReady();
+    updateTrackMapInteractivity();   // CSV loaded → telemetry/gauge become draggable on the canvas
 
     // Auto-enter no-video mode if no video loaded
     if (!state.videoFile && state.csvData.length > 0) {
@@ -1631,6 +1780,7 @@
     state.vboDuration -= tStart;
     state.vboTrimEnd -= tStart;
     state.vboTrimStart = 0;
+    buildTrackMap(state.vboData);
     preserveScaleAndRefresh(oldPps);
   }
 
@@ -1641,6 +1791,7 @@
     state.vboData = state.vboData.filter(function(d) { return d.t <= tEnd; });
     state.vboDuration = tEnd;
     state.vboTrimEnd = tEnd;
+    buildTrackMap(state.vboData);
     preserveScaleAndRefresh(oldPps);
   }
 
@@ -2140,6 +2291,10 @@
     var cw = dom.canvas.width;
     var ch = dom.canvas.height;
     ctx.clearRect(0, 0, cw, ch);
+    // Invalidate draggable-element bounds each frame (re-captured only if the element draws)
+    state._telemBounds = null;
+    state._gaugeBounds = null;
+    state._lapBoardBounds = null;
 
     // Draw video frame or chroma background onto canvas
     if (state.noVideoMode) {
@@ -2208,11 +2363,27 @@
     }
 
     // Draw telemetry boxes
-    drawTelemetryBoxes(ctx, cw, ch, dataPoint);
+    drawTelemetryBoxes(ctx, cw, ch, dataPoint, true);
 
     // Draw speed indicator
     if (settings.show_bottom_elements) {
-      drawSpeedGauge(ctx, cw, ch, dataPoint.speed);
+      drawSpeedGauge(ctx, cw, ch, dataPoint.speed, true);
+    }
+
+    // Draw VBO track minimap (+ moving rider dot)
+    drawTrackMap(ctx, cw, ch, dataPoint, true);
+    drawLapTimer(ctx, cw, ch, dataPoint, true);
+
+    // Drag highlight for telemetry / gauge
+    var od = state.overlayDrag;
+    if (od && od.type === 'telem' && state._telemBounds) {
+      var tb = state._telemBounds;
+      ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 2;
+      ctx.setLineDash([6, 4]); ctx.strokeRect(tb.x - 3, tb.y - 3, tb.w + 6, tb.h + 6); ctx.restore();
+    } else if (od && od.type === 'gauge' && state._gaugeBounds) {
+      var gb = state._gaugeBounds;
+      ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 2;
+      ctx.setLineDash([6, 4]); ctx.beginPath(); ctx.arc(gb.cx, gb.cy, gb.r, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
     }
   }
 
@@ -2237,20 +2408,21 @@
     } else if (csvTime >= data[hi].t) {
       result = clonePoint(data[hi]);
     } else {
-      // Linear interpolation
+      // Linear interpolation. Округляем результат до int per-frame — ровно как классика
+      // (find_nearest_values: int(round(v0 + factor*(v1-v0)))). timestamp оставляем float.
       var factor = (csvTime - data[lo].t) / (data[hi].t - data[lo].t);
       result = {
         t: csvTime,
-        speed: lerp(data[lo].speed, data[hi].speed, factor),
+        speed: Math.round(lerp(data[lo].speed, data[hi].speed, factor)),
         maxSpeed: Math.max(data[lo].maxSpeed, data[hi].maxSpeed),
-        voltage: lerp(data[lo].voltage, data[hi].voltage, factor),
-        temperature: lerp(data[lo].temperature, data[hi].temperature, factor),
-        current: lerp(data[lo].current, data[hi].current, factor),
-        battery: lerp(data[lo].battery, data[hi].battery, factor),
-        mileage: lerp(data[lo].mileage, data[hi].mileage, factor),
-        pwm: lerp(data[lo].pwm, data[hi].pwm, factor),
-        power: lerp(data[lo].power, data[hi].power, factor),
-        gps: lerp(data[lo].gps, data[hi].gps, factor),
+        voltage: Math.round(lerp(data[lo].voltage, data[hi].voltage, factor)),
+        temperature: Math.round(lerp(data[lo].temperature, data[hi].temperature, factor)),
+        current: Math.round(lerp(data[lo].current, data[hi].current, factor)),
+        battery: Math.round(lerp(data[lo].battery, data[hi].battery, factor)),
+        mileage: Math.round(lerp(data[lo].mileage, data[hi].mileage, factor)),
+        pwm: Math.round(lerp(data[lo].pwm, data[hi].pwm, factor)),
+        power: Math.round(lerp(data[lo].power, data[hi].power, factor)),
+        gps: Math.round(lerp(data[lo].gps, data[hi].gps, factor)),
         timestamp: lerp(data[lo].timestamp, data[hi].timestamp, factor),
       };
     }
@@ -2306,13 +2478,13 @@
       { key: 'speed', label: LOC.speed, unit: LOC.units.speed, maxVal: maxVals.speed, round: true, cap3: true },
       { key: 'max_speed', label: LOC.max_speed, unit: LOC.units.speed, maxVal: maxVals.maxSpeed, round: true, cap3: true },
       { key: 'gps', label: LOC.gps, unit: LOC.units.speed, maxVal: maxVals.gps, round: true, cap3: true },
-      { key: 'voltage', label: LOC.voltage, unit: LOC.units.voltage, maxVal: maxVals.voltage, round: false },
+      { key: 'voltage', label: LOC.voltage, unit: LOC.units.voltage, maxVal: maxVals.voltage, round: true },
       { key: 'temperature', label: LOC.temp, unit: LOC.units.temp, maxVal: maxVals.temperature, round: true, cap3: true },
       { key: 'battery', label: LOC.battery, unit: LOC.units.battery, maxVal: maxVals.battery, round: true, cap3: true },
       { key: 'mileage', label: LOC.mileage, unit: LOC.units.mileage, maxVal: maxVals.mileage, round: true },
       { key: 'pwm', label: LOC.pwm, unit: LOC.units.pwm, maxVal: maxVals.pwm, round: true, cap3: true },
       { key: 'power', label: LOC.power, unit: LOC.units.power, maxVal: maxVals.power, round: true },
-      { key: 'current', label: LOC.current, unit: LOC.units.current, maxVal: maxVals.current, round: false },
+      { key: 'current', label: LOC.current, unit: LOC.units.current, maxVal: maxVals.current, round: true },
     ];
 
     _staticBoxWidths = {};
@@ -2345,7 +2517,7 @@
 
 
   // ===== TELEMETRY BOX RENDERING =====
-  function drawTelemetryBoxes(ctx, cw, ch, dp) {
+  function drawTelemetryBoxes(ctx, cw, ch, dp, isPreview) {
     // Scale factor: settings are in design units, backend always renders at 4K (3840x2160)
     var sf = cw / 1920;
     var fontSize = settings.font_size * sf;
@@ -2365,13 +2537,13 @@
     if (settings.show_speed) params.push({ label: LOC.speed, value: Math.round(dp.speed) + '', unit: LOC.units.speed, key: 'pwm_check_no', staticKey: 'speed' });
     if (settings.show_max_speed) params.push({ label: LOC.max_speed, value: Math.round(dp.maxSpeed) + '', unit: LOC.units.speed, staticKey: 'max_speed' });
     if (settings.show_gps) params.push({ label: LOC.gps, value: Math.round(dp.gps) + '', unit: LOC.units.speed, staticKey: 'gps' });
-    if (settings.show_voltage) params.push({ label: LOC.voltage, value: dp.voltage.toFixed(1), unit: LOC.units.voltage, staticKey: 'voltage' });
+    if (settings.show_voltage) params.push({ label: LOC.voltage, value: Math.round(dp.voltage) + '', unit: LOC.units.voltage, staticKey: 'voltage' });
     if (settings.show_temp) params.push({ label: LOC.temp, value: Math.round(dp.temperature) + '', unit: LOC.units.temp, staticKey: 'temperature' });
     if (settings.show_battery) params.push({ label: LOC.battery, value: Math.round(dp.battery) + '', unit: LOC.units.battery, isBattery: true, staticKey: 'battery' });
     if (settings.show_mileage) params.push({ label: LOC.mileage, value: Math.round(dp.mileage) + '', unit: LOC.units.mileage, staticKey: 'mileage' });
     if (settings.show_pwm) params.push({ label: LOC.pwm, value: Math.round(dp.pwm) + '', unit: LOC.units.pwm, isPWM: true, staticKey: 'pwm' });
     if (settings.show_power) params.push({ label: LOC.power, value: Math.round(dp.power) + '', unit: LOC.units.power, staticKey: 'power' });
-    if (settings.show_current) params.push({ label: LOC.current, value: dp.current.toFixed(1), unit: LOC.units.current, staticKey: 'current' });
+    if (settings.show_current) params.push({ label: LOC.current, value: Math.round(dp.current) + '', unit: LOC.units.current, staticKey: 'current' });
     if (settings.show_time) {
       var d = new Date(dp.timestamp * 1000);
       var ts = pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds());
@@ -2410,6 +2582,8 @@
 
     if (settings.vertical_layout) {
       var totalH = params.length * boxH + (params.length - 1) * spacing;
+      var maxBoxW = 0;
+      boxes.forEach(function(b) { if (b.boxW > maxBoxW) maxBoxW = b.boxW; });
       yPos = (ch * vertPos / 100) - totalH / 2;
       xPos = (cw * horizPos / 100);
 
@@ -2417,17 +2591,21 @@
         var by = yPos + i * (boxH + spacing);
         drawSingleBox(ctx, xPos, by, b.boxW, boxH, radius, b.param, b.textW, topPad, fontSize, sf, iconSize, iconSpacing, boldFont, font);
       });
+      if (isPreview) state._telemBounds = { x: xPos, y: yPos, w: maxBoxW, h: totalH };
     } else {
       var totalW = 0;
       boxes.forEach(function(b) { totalW += b.boxW; });
       totalW += (boxes.length - 1) * spacing;
-      xPos = (cw - totalW) / 2;
+      // horizontal_position = row CENTRE as % of width (50 → centred, fully back-compatible)
+      xPos = (cw * horizPos / 100) - totalW / 2;
       yPos = ch * vertPos / 100;
+      var x0 = xPos;
 
       boxes.forEach(function(b) {
         drawSingleBox(ctx, xPos, yPos, b.boxW, boxH, radius, b.param, b.textW, topPad, fontSize, sf, iconSize, iconSpacing, boldFont, font);
         xPos += b.boxW + spacing;
       });
+      if (isPreview) state._telemBounds = { x: x0, y: yPos, w: totalW, h: boxH };
     }
   }
 
@@ -2550,12 +2728,13 @@
   }
 
   // ===== SPEED GAUGE =====
-  function drawSpeedGauge(ctx, cw, ch, speed) {
+  function drawSpeedGauge(ctx, cw, ch, speed, isPreview) {
     var sf = cw / 1920;
     var baseSize = 250 * sf * (settings.indicator_scale / 100);
     var centerX = cw * settings.indicator_x / 100;
     var centerY = ch * settings.indicator_y / 100;
     var radius = baseSize / 2 - 10 * sf;
+    if (isPreview) state._gaugeBounds = { cx: centerX, cy: centerY, r: Math.max(20, baseSize / 2) };
     var arcWidth = 10 * sf * (settings.indicator_scale / 100);
 
     // Background arc (dark)
@@ -2745,6 +2924,9 @@
       vbo_time_offset: state.vboTimeOffset - state.vboCropOffset,
       vbo_trim_start: state.vboTrimStart + state.vboCropOffset,
       vbo_trim_end: state.vboTrimEnd + state.vboCropOffset,
+      // Start/finish gate as a physical point (lat/lon) so the server reproduces the same laps
+      track_gate_lat: (state.trackMapReady && state.vboData && state.vboData[state.trackGateIdx]) ? state.vboData[state.trackGateIdx].lat : null,
+      track_gate_lon: (state.trackMapReady && state.vboData && state.vboData[state.trackGateIdx]) ? state.vboData[state.trackGateIdx].lon : null,
     };
 
     console.log('EXPORT payload:', JSON.stringify({time_offset: payload.time_offset, csv_trim_start: payload.csv_trim_start, csv_trim_end: payload.csv_trim_end, csvCropOffset: state.csvCropOffset, vbo_time_offset: payload.vbo_time_offset, vbo_trim_start: payload.vbo_trim_start, vbo_trim_end: payload.vbo_trim_end, vboCropOffset: state.vboCropOffset, vbo_id: payload.vbo_id}));
@@ -2928,10 +3110,19 @@
 
       if (firstTime === null) firstTime = timeSec;
 
+      // GPS lat/long — RaceLogic VBO stores them in MINUTES.
+      // deg = minutes / 60. Longitude sign is West-positive → invert for East-positive.
+      var latRaw = parseFloat((row['lat'] || row['latitude'] || '').replace(',', '.'));
+      var lonRaw = parseFloat((row['long'] || row['longitude'] || row['lon'] || '').replace(',', '.'));
+      var headRaw = parseFloat((row['heading'] || '0').replace(',', '.'));
+
       data.push({
         t: timeSec - firstTime,
         timestamp: timeSec,
-        speed: speedKmh
+        speed: speedKmh,
+        lat: isNaN(latRaw) ? null : latRaw / 60,
+        lon: isNaN(lonRaw) ? null : -lonRaw / 60,
+        heading: isNaN(headRaw) ? 0 : headRaw
       });
     }
 
@@ -2942,6 +3133,8 @@
     state.vboDuration = data[data.length - 1].t;
     state.vboTrimStart = 0;
     state.vboTrimEnd = state.vboDuration;
+    buildTrackMap(data);  // project GPS → minimap path + closed-loop detection
+    updateTrackMapInteractivity();
     console.log('parseVBO: duration=' + state.vboDuration + 's, showing track...');
 
     // Show VBO track
@@ -3122,6 +3315,776 @@
     return a.speed + (b.speed - a.speed) * frac;
   }
 
+  // ===== TRACK MINIMAP (from VBO GPS) =====
+  // Project all GPS fixes into a normalized, aspect-correct unit square (north up),
+  // mutating each VBO point with .mx/.my in [0,1]; build a downsampled static path;
+  // auto-detect whether the track is a closed loop (start ≈ finish).
+  function buildTrackMap(data) {
+    state.trackMapReady = false;
+    state.trackMapPath = null;
+    state.trackMapCache = null;
+    state.trackMapCacheKey = '';
+    if (!data || data.length < 2) return;
+
+    // First valid fix = projection origin
+    var lat0 = null, lon0 = null;
+    for (var i = 0; i < data.length; i++) {
+      if (data[i].lat != null && data[i].lon != null) { lat0 = data[i].lat; lon0 = data[i].lon; break; }
+    }
+    if (lat0 == null) return; // no GPS in this VBO
+    var cosLat = Math.cos(lat0 * Math.PI / 180);
+    var MPD = 111320; // metres per degree (approx)
+
+    // Equirectangular metres relative to origin + bounding box
+    var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (var i = 0; i < data.length; i++) {
+      var p = data[i];
+      if (p.lat == null || p.lon == null) { p._gx = null; continue; }
+      var gx = (p.lon - lon0) * cosLat * MPD;
+      var gy = (p.lat - lat0) * MPD;
+      p._gx = gx; p._gy = gy;
+      if (gx < minX) minX = gx; if (gx > maxX) maxX = gx;
+      if (gy < minY) minY = gy; if (gy > maxY) maxY = gy;
+    }
+    var rangeX = Math.max(1e-6, maxX - minX);
+    var rangeY = Math.max(1e-6, maxY - minY);
+    var scale = 1 / Math.max(rangeX, rangeY);          // larger axis spans full [0,1]
+    state.trackMapMetersPerUnit = Math.max(rangeX, rangeY);  // 1 normalized unit = this many metres (for navigator zoom)
+    var contentW = rangeX * scale, contentH = rangeY * scale;
+    var offX = (1 - contentW) / 2, offY = (1 - contentH) / 2; // centre in unit square
+
+    // Normalised coords on every point (carry last valid forward across GPS gaps)
+    var lastMx = 0.5, lastMy = 0.5;
+    for (var i = 0; i < data.length; i++) {
+      var p = data[i];
+      if (p._gx == null) { p.mx = lastMx; p.my = lastMy; continue; }
+      var nx = offX + (p._gx - minX) * scale;
+      var ny = offY + (p._gy - minY) * scale;
+      p.mx = nx;
+      p.my = 1 - ny;              // flip Y so north is up on screen
+      lastMx = p.mx; lastMy = p.my;
+      delete p._gx; delete p._gy;
+    }
+
+    // Downsample static path to ~1500 vertices (plenty at minimap scale)
+    var maxPts = 1500;
+    var step = Math.max(1, Math.floor(data.length / maxPts));
+    var path = [];
+    for (var i = 0; i < data.length; i += step) path.push({ mx: data[i].mx, my: data[i].my });
+    var lp = data[data.length - 1];
+    path.push({ mx: lp.mx, my: lp.my });
+    state.trackMapPath = path;
+
+    // Closed-loop detection: haversine(first, last) < max(30 m, 5% of bbox diagonal)
+    var a = null, b = null;
+    for (var i = 0; i < data.length; i++) { if (data[i].lat != null) { a = data[i]; break; } }
+    for (var i = data.length - 1; i >= 0; i--) { if (data[i].lat != null) { b = data[i]; break; } }
+    var closed = false;
+    if (a && b && a !== b) {
+      var diagM = Math.sqrt(rangeX * rangeX + rangeY * rangeY);
+      var R = 6371000;
+      var dLat = (b.lat - a.lat) * Math.PI / 180, dLon = (b.lon - a.lon) * Math.PI / 180;
+      var la1 = a.lat * Math.PI / 180, la2 = b.lat * Math.PI / 180;
+      var hv = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+               Math.cos(la1) * Math.cos(la2) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      var dist = 2 * R * Math.asin(Math.min(1, Math.sqrt(hv)));
+      closed = dist < Math.max(30, diagM * 0.05);
+    }
+    state.trackMapClosed = closed;
+    state.trackMapReady = true;
+    console.log('buildTrackMap: pts=' + data.length + ' path=' + path.length + ' closed=' + closed);
+
+    // Auto-place the start/finish gate at the most-visited point, then detect laps + average.
+    state.trackGateIdx = findAutoGate();
+    recomputeLaps();
+  }
+
+  // ===== LAP ANALYSIS (start/finish gate → laps → averaged centerline) =====
+  var LAP_GATE_T = 0.03;     // gate capture radius in normalized track units (~7m on a 230m track)
+
+  // Distance (normalized units) between two VBO points.
+  function vboDist(i, j) {
+    var d = state.vboData;
+    return Math.sqrt((d[i].mx - d[j].mx) * (d[i].mx - d[j].mx) + (d[i].my - d[j].my) * (d[i].my - d[j].my));
+  }
+
+  // Count how many times the path passes within T of point gi (debounced by minLap seconds).
+  function countGatePasses(gi, T, minLap) {
+    var data = state.vboData, gx = data[gi].mx, gy = data[gi].my;
+    var inZone = false, bestD = 9, bestI = -1, last = -9e9, n = 0;
+    for (var i = 0; i < data.length; i++) {
+      var dx = data[i].mx - gx, dy = data[i].my - gy, d = Math.sqrt(dx * dx + dy * dy);
+      if (d < T) { inZone = true; if (d < bestD) { bestD = d; bestI = i; } }
+      else if (inZone) { if (data[bestI].t - last >= minLap) { n++; last = data[bestI].t; } inZone = false; bestD = 9; bestI = -1; }
+    }
+    return n;
+  }
+
+  // Pick the most-visited sampled point as the default gate (a point that lies ON the lap loop,
+  // unlike the GPS start which is often an out-lap / approach).
+  function findAutoGate() {
+    var data = state.vboData, best = 0, bestN = -1;
+    for (var gi = 0; gi < data.length; gi += 500) {
+      var n = countGatePasses(gi, LAP_GATE_T, 5);
+      if (n > bestN) { bestN = n; best = gi; }
+    }
+    return best;
+  }
+
+  // Closest-approach lap detection around the current gate. Two-pass: rough median → adaptive debounce.
+  function detectLaps(gateIdx) {
+    var data = state.vboData;
+    if (!data || data.length < 2) return { crossings: [], laps: [], median: 0 };
+    var gx = data[gateIdx].mx, gy = data[gateIdx].my;
+    function pass(minLap) {
+      var inZone = false, bestD = 9, bestI = -1, last = -9e9, cr = [];
+      for (var i = 0; i < data.length; i++) {
+        var dx = data[i].mx - gx, dy = data[i].my - gy, d = Math.sqrt(dx * dx + dy * dy);
+        if (d < LAP_GATE_T) { inZone = true; if (d < bestD) { bestD = d; bestI = i; } }
+        else if (inZone) { if (data[bestI].t - last >= minLap) { cr.push(bestI); last = data[bestI].t; } inZone = false; bestD = 9; bestI = -1; }
+      }
+      if (inZone && bestI >= 0 && data[bestI].t - last >= minLap) cr.push(bestI);
+      return cr;
+    }
+    function lapsFrom(cr) {
+      var laps = [];
+      for (var k = 1; k < cr.length; k++) {
+        var a = cr[k - 1], b = cr[k], mx = 0, sum = 0, cnt = 0;
+        for (var i = a; i <= b; i++) { if (data[i].speed > mx) mx = data[i].speed; sum += data[i].speed; cnt++; }
+        laps.push({ i0: a, i1: b, t: data[b].t - data[a].t, avg: cnt ? sum / cnt : 0, max: mx });
+      }
+      return laps;
+    }
+    var cr0 = pass(5), lp0 = lapsFrom(cr0);
+    var med0 = lp0.length ? lp0.map(function (l) { return l.t; }).sort(function (a, b) { return a - b; })[lp0.length >> 1] : 0;
+    var cr = pass(Math.max(5, 0.4 * med0)), laps = lapsFrom(cr);
+    var med = laps.length ? laps.map(function (l) { return l.t; }).sort(function (a, b) { return a - b; })[laps.length >> 1] : 0;
+    return { crossings: cr, laps: laps, median: med };
+  }
+
+  // Resample one lap's path to N points equally spaced by cumulative distance.
+  function resampleLap(lap, N) {
+    var data = state.vboData, pts = [];
+    for (var i = lap.i0; i <= lap.i1; i++) pts.push([data[i].mx, data[i].my]);
+    if (pts.length < 2) return null;
+    var dist = [0];
+    for (var i = 1; i < pts.length; i++) dist.push(dist[i - 1] + Math.sqrt((pts[i][0] - pts[i - 1][0]) * (pts[i][0] - pts[i - 1][0]) + (pts[i][1] - pts[i - 1][1]) * (pts[i][1] - pts[i - 1][1])));
+    var total = dist[dist.length - 1];
+    if (total <= 0) return null;
+    var out = [];
+    for (var k = 0; k < N; k++) {
+      var target = total * k / (N - 1), j = 0;
+      while (j < dist.length - 1 && dist[j + 1] < target) j++;
+      if (j >= pts.length - 1) { out.push([pts[pts.length - 1][0], pts[pts.length - 1][1]]); continue; }
+      var seg = dist[j + 1] - dist[j], f = seg > 0 ? (target - dist[j]) / seg : 0;
+      out.push([pts[j][0] + (pts[j + 1][0] - pts[j][0]) * f, pts[j][1] + (pts[j + 1][1] - pts[j][1]) * f]);
+    }
+    return out;
+  }
+
+  // Average the "clean" laps (time within 0.6..1.5 × median) into one smooth centerline.
+  function computeAveragedPath() {
+    var laps = state.trackLaps, med = state.trackLapMedian;
+    state.trackAvgPath = null;
+    if (!laps || laps.length < 2 || med <= 0) return;
+    var N = 240, res = [];
+    for (var k = 0; k < laps.length; k++) {
+      if (laps[k].t < 0.6 * med || laps[k].t > 1.5 * med) continue;
+      var r = resampleLap(laps[k], N);
+      if (r) res.push(r);
+    }
+    if (res.length === 0) return;
+    var avg = [];
+    for (var i = 0; i < N; i++) {
+      var sx = 0, sy = 0;
+      for (var j = 0; j < res.length; j++) { sx += res[j][i][0]; sy += res[j][i][1]; }
+      avg.push({ mx: sx / res.length, my: sy / res.length });
+    }
+    avg.push({ mx: avg[0].mx, my: avg[0].my }); // close the loop
+    state.trackAvgPath = avg;
+  }
+
+  // Recompute laps + averaged path for the current gate; refresh table + cached line.
+  // skipTable=true during gate drag (table is refreshed once on release).
+  function recomputeLaps(skipTable) {
+    if (!state.trackMapReady || !state.vboData) { state.trackLaps = null; state.trackAvgPath = null; return; }
+    var r = detectLaps(state.trackGateIdx);
+    state.trackLaps = r.laps;
+    state.trackLapMedian = r.median;
+    computeAveragedPath();
+    state.trackMapCache = null;           // line changed → rebuild offscreen cache
+    if (!skipTable && typeof renderLapTable === 'function') renderLapTable();
+    if (typeof updateLapUIVisibility === 'function') updateLapUIVisibility();
+  }
+
+  // Show lap-timing controls only for circuits; show the heading-up navigator toggle
+  // only for routes (non-circuit). Hide both when no VBO track is loaded.
+  function updateLapUIVisibility() {
+    var hasTrack = !!state.trackMapReady;
+    var isCircuit = hasTrack && state.trackLaps && state.trackLaps.length >= 2 && state.trackAvgPath;
+    function rowOf(id) { var el = document.getElementById(id); return (el && el.closest) ? el.closest('.ve-setting') : null; }
+    var lapRow = rowOf('showLapTable');
+    if (lapRow) lapRow.style.display = isCircuit ? '' : 'none';
+    var navRow = rowOf('navHeadingUp');
+    if (navRow) navRow.style.display = (hasTrack && !isCircuit) ? '' : 'none';
+    // Raw-GPS-trace controls only make sense on a circuit (where the bundle is drawn)
+    var rawRow = rowOf('showRawTrack');
+    if (rawRow) rawRow.style.display = isCircuit ? '' : 'none';
+    var rawOpRow = rowOf('rawTrackOpacity');
+    if (rawOpRow) rawOpRow.style.display = isCircuit ? '' : 'none';
+    var aboveRow = rowOf('lapBoardAbove');          // lap board direction/layout: circuits only
+    if (aboveRow) aboveRow.style.display = isCircuit ? '' : 'none';
+    var horizRow = rowOf('lapBoardHorizontal');
+    if (horizRow) horizRow.style.display = isCircuit ? '' : 'none';
+    var matchRow = rowOf('lapBoardMatchMap');
+    if (matchRow) matchRow.style.display = isCircuit ? '' : 'none';
+  }
+
+  // Which lap is active at video-relative time t, and seconds elapsed within it.
+  function getCurrentLap(t) {
+    if (!state.trackLaps || !state.trackLaps.length) return null;
+    var vboT = t - state.vboTimeOffset + state.timeOffset;
+    var laps = state.trackLaps, data = state.vboData;
+    for (var k = 0; k < laps.length; k++) {
+      var t0 = data[laps[k].i0].t, t1 = data[laps[k].i1].t;
+      if (vboT >= t0 && vboT <= t1) return { idx: k, elapsed: vboT - t0, lap: laps[k] };
+    }
+    return null;
+  }
+
+  // Interpolated rider position {mx,my} on the minimap for video-relative time t,
+  // or null when t is outside the VBO range. Same time-mapping as getDragySpeedAtTime.
+  function getVBOPointAtTime(t) {
+    if (!state.vboData || state.vboData.length === 0 || !state.trackMapReady) return null;
+    var vboT = t - state.vboTimeOffset + state.timeOffset;
+    if (vboT < state.vboTrimStart || vboT > state.vboTrimEnd) return null;
+    var data = state.vboData;
+    var lo = 0, hi = data.length - 1;
+    while (lo < hi) {
+      var mid = (lo + hi) >> 1;
+      if (data[mid].t < vboT) lo = mid + 1; else hi = mid;
+    }
+    if (lo === 0) return { mx: data[0].mx, my: data[0].my };
+    if (lo >= data.length) { var L = data[data.length - 1]; return { mx: L.mx, my: L.my }; }
+    var a = data[lo - 1], b = data[lo];
+    if (b.t === a.t) return { mx: a.mx, my: a.my };
+    var frac = (vboT - a.t) / (b.t - a.t);
+    return { mx: a.mx + (b.mx - a.mx) * frac, my: a.my + (b.my - a.my) * frac };
+  }
+
+  // Square widget rect (canvas px) from the fractional settings.
+  function getTrackMapRect(w, h) {
+    var ref = Math.min(w, h);
+    var S = Math.max(40, settings.track_map_size * ref);
+    return { x: settings.track_map_x * w - S / 2, y: settings.track_map_y * h - S / 2, S: S };
+  }
+
+  function roundRectPath(ctx, x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  // Pre-render the static track line to an offscreen canvas of side S.
+  // Main line = averaged centerline (clean) when available; faint raw bundle behind for context.
+  function buildTrackMapCache(S, pad) {
+    var inner = S - 2 * pad;
+    var oc = document.createElement('canvas');
+    oc.width = Math.round(S); oc.height = Math.round(S);
+    var c = oc.getContext('2d');
+    c.lineJoin = 'round'; c.lineCap = 'round';
+
+    // raw-GPS bundle behind the clean line — optional (Elements ▸ Raw GPS trace) + adjustable opacity
+    var raw = state.trackMapPath;
+    var rawOp = (settings.raw_track_opacity != null ? settings.raw_track_opacity : 20) / 100;
+    if (settings.show_raw_track && rawOp > 0 && raw && raw.length > 1) {
+      c.strokeStyle = 'rgba(150,160,170,' + rawOp.toFixed(3) + ')'; c.lineWidth = Math.max(1, S * 0.012);
+      c.beginPath();
+      for (var i = 0; i < raw.length; i++) {
+        var px = pad + raw[i].mx * inner, py = pad + raw[i].my * inner;
+        if (i === 0) c.moveTo(px, py); else c.lineTo(px, py);
+      }
+      if (state.trackMapClosed) c.closePath();
+      c.stroke();
+    }
+
+    // main line: averaged centerline if available, else the raw path
+    var path = state.trackAvgPath || raw;
+    var avgClosed = !!state.trackAvgPath;   // averaged path is already closed
+    if (path && path.length > 1) {
+      function trace() {
+        c.beginPath();
+        for (var i = 0; i < path.length; i++) {
+          var px = pad + path[i].mx * inner, py = pad + path[i].my * inner;
+          if (i === 0) c.moveTo(px, py); else c.lineTo(px, py);
+        }
+        if (!avgClosed && state.trackMapClosed) c.closePath();
+      }
+      c.strokeStyle = 'rgba(0,0,0,0.55)'; c.lineWidth = Math.max(2.5, S * 0.05); trace(); c.stroke();
+      c.strokeStyle = 'rgba(255,255,255,0.95)'; c.lineWidth = Math.max(1.4, S * 0.024); trace(); c.stroke();
+    }
+    return oc;
+  }
+
+  // Gate anchor position {mx,my} + perpendicular unit vector {px,py} in normalized track space.
+  function getGateInfo() {
+    if (!state.vboData || !state.trackMapReady) return null;
+    var data = state.vboData, gi = state.trackGateIdx || 0;
+    if (gi < 0 || gi >= data.length) return null;
+    var a = Math.max(0, gi - 30), b = Math.min(data.length - 1, gi + 30);
+    var tx = data[b].mx - data[a].mx, ty = data[b].my - data[a].my;
+    var L = Math.sqrt(tx * tx + ty * ty) || 1;
+    return { mx: data[gi].mx, my: data[gi].my, px: -ty / L, py: tx / L };
+  }
+
+  // Draw the minimap: averaged track + start/finish gate + moving rider dot.
+  // Called from preview (isPreview=true → shows the gate grab handle) AND local export.
+  function drawTrackMap(ctx, w, h, dataPoint, isPreview) {
+    if (!settings.show_track_map || !state.trackMapReady) return;
+    var r = getTrackMapRect(w, h);
+    var S = r.S, pad = Math.max(6, S * 0.10), inner = S - 2 * pad;
+    var rad = Math.max(6, S * 0.06);
+    var bgOp = (settings.track_map_opacity != null ? settings.track_map_opacity : 100) / 100;
+
+    ctx.save();
+    // background panel — opacity is absolute (100% = solid black, like Box Opacity)
+    ctx.fillStyle = 'rgba(0,0,0,' + bgOp.toFixed(3) + ')';
+    roundRectPath(ctx, r.x, r.y, S, S, rad);
+    ctx.fill();
+    if (state.trackMapDrag) {            // highlight while dragging the whole widget
+      ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 2;
+      roundRectPath(ctx, r.x, r.y, S, S, rad); ctx.stroke();
+    }
+
+    // Circuit (laps recognized) → whole averaged track + gate.  Otherwise → navigator view.
+    var isCircuit = !!(state.trackLaps && state.trackLaps.length >= 2 && state.trackAvgPath);
+
+    if (!isCircuit) {
+      drawTrackNavigator(ctx, r, S, pad, inner, rad, dataPoint);
+      ctx.restore();
+      return;
+    }
+
+    // static track (cached; key includes size + averaged-path length so it rebuilds on change)
+    var key = Math.round(S) + '|' + (state.trackMapClosed ? 1 : 0) + '|' + (state.trackAvgPath ? state.trackAvgPath.length : 0) + '|' + (state.trackMapPath ? state.trackMapPath.length : 0) + '|' + (settings.show_raw_track ? 1 : 0) + '|' + settings.raw_track_opacity;
+    if (!state.trackMapCache || state.trackMapCacheKey !== key) {
+      state.trackMapCache = buildTrackMapCache(S, pad);
+      state.trackMapCacheKey = key;
+    }
+    if (state.trackMapCache) ctx.drawImage(state.trackMapCache, r.x, r.y);
+
+    // start/finish gate ("палочка") — only on lap circuits (laps detected); perpendicular line + (preview) handle
+    var gi = (state.trackLaps && state.trackLaps.length) ? getGateInfo() : null;
+    if (gi) {
+      var gx = r.x + pad + gi.mx * inner, gy = r.y + pad + gi.my * inner;
+      var half = Math.max(6, S * 0.075), ex = gi.px * half, ey = gi.py * half;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.lineWidth = Math.max(3, S * 0.05);
+      ctx.beginPath(); ctx.moveTo(gx - ex, gy - ey); ctx.lineTo(gx + ex, gy + ey); ctx.stroke();
+      ctx.strokeStyle = '#ff3b30'; ctx.lineWidth = Math.max(2, S * 0.03);
+      ctx.beginPath(); ctx.moveTo(gx - ex, gy - ey); ctx.lineTo(gx + ex, gy + ey); ctx.stroke();
+      if (isPreview) {
+        var hr = Math.max(3, S * 0.045);
+        ctx.beginPath(); ctx.arc(gx, gy, hr, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffd23b'; ctx.fill();
+        ctx.lineWidth = Math.max(1, S * 0.012); ctx.strokeStyle = 'rgba(0,0,0,0.7)'; ctx.stroke();
+      }
+    }
+
+    // rider dot (real GPS position, not snapped to the averaged line)
+    var pos = dataPoint ? getVBOPointAtTime(dataPoint.t) : null;
+    if (pos) {
+      var dx = r.x + pad + pos.mx * inner, dy = r.y + pad + pos.my * inner;
+      var dotR = Math.max(3, S * 0.045);
+      ctx.beginPath(); ctx.arc(dx, dy, dotR + Math.max(1, S * 0.012), 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fill();
+      ctx.beginPath(); ctx.arc(dx, dy, dotR, 0, Math.PI * 2);
+      ctx.fillStyle = '#3ba8ff'; ctx.fill();
+      ctx.lineWidth = Math.max(1, S * 0.01); ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  var NAV_WINDOW_M = 250;   // metres shown across the navigator box (non-circuit rides)
+
+  // Like getVBOPointAtTime but also returns the route index (for the navigator window).
+  function getVBOIndexAtTime(t) {
+    if (!state.vboData || !state.vboData.length || !state.trackMapReady) return null;
+    var vboT = t - state.vboTimeOffset + state.timeOffset;
+    if (vboT < state.vboTrimStart || vboT > state.vboTrimEnd) return null;
+    var data = state.vboData, lo = 0, hi = data.length - 1;
+    while (lo < hi) { var mid = (lo + hi) >> 1; if (data[mid].t < vboT) lo = mid + 1; else hi = mid; }
+    if (lo === 0) return { mx: data[0].mx, my: data[0].my, idx: 0 };
+    if (lo >= data.length) { var L = data[data.length - 1]; return { mx: L.mx, my: L.my, idx: data.length - 1 }; }
+    var a = data[lo - 1], b = data[lo];
+    var f = (b.t === a.t) ? 0 : (vboT - a.t) / (b.t - a.t);
+    return { mx: a.mx + (b.mx - a.mx) * f, my: a.my + (b.my - a.my) * f, idx: lo };
+  }
+
+  // Navigator: rider stays centred, the local route scrolls through, clipped to the box.
+  // Smoothed forward direction at a route index: chord from ~5 m behind to ~22 m ahead
+  // (look-ahead bias anticipates turns; the long baseline averages out GPS jitter).
+  function navForward(data, idx, mpu) {
+    var behindN = 5 / mpu, aheadN = 22 / mpu;
+    var ox = data[idx].mx, oy = data[idx].my, ib = idx, ia = idx;
+    while (ib > 0 && Math.hypot(data[ib].mx - ox, data[ib].my - oy) < behindN) ib--;
+    while (ia < data.length - 1 && Math.hypot(data[ia].mx - ox, data[ia].my - oy) < aheadN) ia++;
+    var fx = data[ia].mx - data[ib].mx, fy = data[ia].my - data[ib].my;
+    var L = Math.hypot(fx, fy) || 1;
+    return { fx: fx / L, fy: fy / L };
+  }
+
+  // Navigator (non-circuit). North-up: rider centred. Heading-up (settings.nav_heading_up):
+  // future path points up, rider in the lower 1/3, with smoothed rotation.
+  function drawTrackNavigator(ctx, r, S, pad, inner, rad, dataPoint) {
+    var pos = dataPoint ? getVBOIndexAtTime(dataPoint.t) : null;
+    if (!pos) return;
+    var data = state.vboData;
+    var mpu = state.trackMapMetersPerUnit || 1;
+    var pxPerUnit = inner / (NAV_WINDOW_M / mpu);     // inner px span = NAV_WINDOW_M metres
+    var headingUp = !!settings.nav_heading_up;
+    var cx = r.x + S / 2;
+    var anchorY = headingUp ? (r.y + S * 0.66) : (r.y + S / 2);   // lower-1/3 vs centre
+    var cosA = 1, sinA = 0;
+    if (headingUp) {
+      var fwd = navForward(data, pos.idx, mpu);
+      var ang = (-Math.PI / 2) - Math.atan2(fwd.fy, fwd.fx);      // rotate forward → screen up
+      cosA = Math.cos(ang); sinA = Math.sin(ang);
+    }
+    // distance-bounded local window (contiguous in time), capped for safety
+    var winR = NAV_WINDOW_M / mpu, CAP = 6000;
+    var i0 = pos.idx, i1 = pos.idx;
+    while (i0 > 0 && (pos.idx - i0) < CAP && Math.hypot(data[i0 - 1].mx - pos.mx, data[i0 - 1].my - pos.my) < winR) i0--;
+    while (i1 < data.length - 1 && (i1 - pos.idx) < CAP && Math.hypot(data[i1 + 1].mx - pos.mx, data[i1 + 1].my - pos.my) < winR) i1++;
+
+    function P(i) {
+      var dx = (data[i].mx - pos.mx) * pxPerUnit, dy = (data[i].my - pos.my) * pxPerUnit;
+      return [cx + (dx * cosA - dy * sinA), anchorY + (dx * sinA + dy * cosA)];
+    }
+    ctx.save();
+    roundRectPath(ctx, r.x, r.y, S, S, rad);
+    ctx.clip();
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    function trace() {
+      ctx.beginPath();
+      for (var i = i0; i <= i1; i++) { var p = P(i); if (i === i0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]); }
+    }
+    ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.lineWidth = Math.max(2.5, S * 0.05); trace(); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.lineWidth = Math.max(1.4, S * 0.024); trace(); ctx.stroke();
+    ctx.restore();
+
+    // rider dot at the anchor (centre, or lower-1/3 in heading-up)
+    var dotR = Math.max(3, S * 0.045);
+    ctx.beginPath(); ctx.arc(cx, anchorY, dotR + Math.max(1, S * 0.012), 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fill();
+    ctx.beginPath(); ctx.arc(cx, anchorY, dotR, 0, Math.PI * 2);
+    ctx.fillStyle = '#3ba8ff'; ctx.fill();
+    ctx.lineWidth = Math.max(1, S * 0.01); ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.stroke();
+  }
+
+  // On-video lap board — its OWN draggable widget (independent of the map). Each lap is a
+  // telemetry-styled black plaque. Vertical column (default) or horizontal row; grows away
+  // from the LAP-1 anchor (lap_board_x/y). "Reverse" flips growth (vertical→up, horizontal→left).
+  function drawLapTimer(ctx, w, h, dataPoint, isPreview) {
+    if (!settings.show_lap_table || !state.trackLaps || state.trackLaps.length < 2 || !dataPoint) return;
+    var laps = state.trackLaps, data = state.vboData, med = state.trackLapMedian;
+    var vboT = dataPoint.t - state.vboTimeOffset + state.timeOffset;
+
+    // Rows for laps that have started by now: completed → frozen time, current → ticking.
+    var rows = [];
+    for (var i = 0; i < laps.length; i++) {
+      var t0 = data[laps[i].i0].t, t1 = data[laps[i].i1].t;
+      if (vboT < t0) break;                                   // not started yet
+      if (vboT >= t1) rows.push({ num: i + 1, time: laps[i].t, done: true });
+      else { rows.push({ num: i + 1, time: vboT - t0, done: false }); break; }   // current lap (ticking)
+    }
+    if (rows.length === 0) rows.push({ num: null, time: NaN, done: false });     // "LAP —" before 1st crossing
+
+    // Fastest completed clean lap so far → green.
+    var bestT = 1e9, bestIdx = -1;
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i].done && rows[i].time >= 0.6 * med && rows[i].time <= 1.5 * med && rows[i].time < bestT) { bestT = rows[i].time; bestIdx = i; }
+    }
+
+    var horiz = !!settings.lap_board_horizontal;
+    var rev = !!settings.lap_board_above;            // vertical → up, horizontal → left
+    var sf = w / 1920;
+    var fontSize0 = settings.font_size * sf, boxH0 = Math.max(10, settings.bottom_padding) * sf,
+        spacing0 = settings.spacing * sf, topPad0 = settings.top_padding * sf, radius0 = settings.border_radius * sf;
+    var margin = 6 * sf;
+    var ax = settings.lap_board_x * w, ay = settings.lap_board_y * h;   // anchor = LAP 1 top-left corner
+    var N = rows.length;
+
+    // widest box at full size. Measure with digits replaced by '0' so the ticking current-lap
+    // time (proportional digit widths) does NOT change the box width frame-to-frame (no jitter).
+    var font0 = fontSize0 + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', boldFont0 = 'bold ' + font0;
+    var gapX0 = fontSize0 * 0.9, boxW0 = 0;
+    function zeroDigits(s) { return s.replace(/[0-9]/g, '0'); }
+    for (var i = 0; i < N; i++) {
+      ctx.font = font0; var lw = ctx.measureText(zeroDigits('LAP ' + (rows[i].num != null ? rows[i].num : '—'))).width;
+      ctx.font = boldFont0; var tw = ctx.measureText(zeroDigits(isFinite(rows[i].time) ? fmtLap(rows[i].time) : '—')).width;
+      boxW0 = Math.max(boxW0, topPad0 * 2 + lw + gapX0 + tw);
+    }
+
+    // optionally tie the plaque width to the map's side
+    var matchMap = !!settings.lap_board_match_map;
+    var mapS = matchMap ? getTrackMapRect(w, h).S : 0;
+
+    // growth axis + available room → shrink only if it doesn't fit
+    var primary0 = horiz ? (matchMap ? mapS : boxW0) : boxH0;
+    var total0 = N * primary0 + (N - 1) * spacing0;
+    var avail = horiz ? (rev ? ax - margin : w - ax - margin) : (rev ? ay - margin : h - ay - margin);
+    avail = Math.max(primary0, avail);
+    // map-width boxes can't shrink in width (locked to the map) → keep scale 1 horizontally, cap rows
+    var scale = (matchMap && horiz) ? 1 : (total0 <= avail ? 1 : Math.max(0.4, avail / total0));
+    var fontSize = fontSize0 * scale, boxH = boxH0 * scale,
+        spacing = spacing0 * scale, topPad = topPad0 * scale, radius = radius0 * scale;
+    var boxW = matchMap ? mapS : (boxW0 * scale);
+
+    // cap rows if it still doesn't fit (keep most recent → current visible)
+    var primary = horiz ? boxW : boxH, step = primary + spacing;
+    if (N * primary + (N - 1) * spacing > avail) {
+      var maxRows = Math.max(1, Math.floor((avail + spacing) / step));
+      var startRow = Math.max(0, N - maxRows);
+      rows = rows.slice(startRow); bestIdx -= startRow; N = rows.length;
+    }
+    var totalLen = N * primary + (N - 1) * spacing;
+
+    var font = fontSize + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', boldFont = 'bold ' + font;
+    var boxAlpha = (settings.box_opacity / 100).toFixed(2);
+    var textVOffset = (settings.text_vertical_offset || 0) * sf * scale;
+
+    // bounding box (drag hit-test): extends from the anchor in the growth direction
+    var bbX = (horiz && rev) ? ax - (N - 1) * step : ax;
+    var bbY = (!horiz && rev) ? ay - (N - 1) * step : ay;
+    if (isPreview) state._lapBoardBounds = { x: bbX, y: bbY, w: horiz ? totalLen : boxW, h: horiz ? boxH : totalLen };
+
+    ctx.save();
+    ctx.textBaseline = 'alphabetic';
+    for (var i = 0; i < N; i++) {
+      var rr = rows[i], bx, by;
+      if (horiz) { bx = rev ? (ax - i * step) : (ax + i * step); by = ay; }
+      else       { bx = ax; by = rev ? (ay - i * step) : (ay + i * step); }
+      ctx.fillStyle = 'rgba(0,0,0,' + boxAlpha + ')';
+      roundRectPath(ctx, bx, by, boxW, boxH, radius);
+      ctx.fill();
+      var ty = by + boxH / 2 + fontSize * 0.35 + textVOffset;
+      ctx.fillStyle = (i === bestIdx) ? '#36d36b' : '#ffffff';
+      ctx.textAlign = 'left'; ctx.font = font;
+      ctx.fillText('LAP ' + (rr.num != null ? rr.num : '—'), bx + topPad, ty);
+      ctx.textAlign = 'right'; ctx.font = boldFont;
+      ctx.fillText(isFinite(rr.time) ? fmtLap(rr.time) : '—', bx + boxW - topPad, ty);
+    }
+    ctx.restore();
+  }
+
+  // Pointer drag (move) + wheel (resize) for the minimap widget on the preview canvas.
+  function bindTrackMapInteraction() {
+    var cv = dom.canvas;
+    if (!cv) return;
+    function canvasPos(e) {
+      var rect = cv.getBoundingClientRect();
+      var sx = rect.width ? cv.width / rect.width : 1;
+      var sy = rect.height ? cv.height / rect.height : 1;
+      return { x: (e.clientX - rect.left) * sx, y: (e.clientY - rect.top) * sy };
+    }
+    function insideMap(p) {
+      if (!settings.show_track_map || !state.trackMapReady) return false;
+      var r = getTrackMapRect(cv.width, cv.height);
+      return p.x >= r.x && p.x <= r.x + r.S && p.y >= r.y && p.y <= r.y + r.S;
+    }
+    // Is the pointer over the gate grab handle? (checked before the map-box drag)
+    function gateHit(p) {
+      if (!settings.show_track_map || !state.trackMapReady) return false;
+      var gi = getGateInfo(); if (!gi) return false;
+      var r = getTrackMapRect(cv.width, cv.height);
+      var pad = Math.max(6, r.S * 0.10), inner = r.S - 2 * pad;
+      var gx = r.x + pad + gi.mx * inner, gy = r.y + pad + gi.my * inner;
+      return Math.sqrt((p.x - gx) * (p.x - gx) + (p.y - gy) * (p.y - gy)) <= Math.max(9, r.S * 0.10);
+    }
+    // Move the gate to the VBO track vertex nearest the pointer, then recompute laps.
+    function setGateFromPointer(p) {
+      var r = getTrackMapRect(cv.width, cv.height);
+      var pad = Math.max(6, r.S * 0.10), inner = r.S - 2 * pad;
+      var mx = (p.x - r.x - pad) / inner, my = (p.y - r.y - pad) / inner;
+      var data = state.vboData, best = -1, bestD = 1e9;
+      for (var i = 0; i < data.length; i += 2) {
+        var dx = data[i].mx - mx, dy = data[i].my - my, d = dx * dx + dy * dy;
+        if (d < bestD) { bestD = d; best = i; }
+      }
+      if (best >= 0 && best !== state.trackGateIdx) { state.trackGateIdx = best; recomputeLaps(true); }
+    }
+    // Hit-tests for the speed gauge (circle) and the telemetry strip (rect), from last preview draw.
+    function gaugeHit(p) {
+      if (!settings.show_bottom_elements) return false;
+      var b = state._gaugeBounds; if (!b) return false;
+      return Math.sqrt((p.x - b.cx) * (p.x - b.cx) + (p.y - b.cy) * (p.y - b.cy)) <= b.r;
+    }
+    function telemHit(p) {
+      var b = state._telemBounds; if (!b) return false;
+      return p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h;
+    }
+    function lapBoardHit(p) {
+      var b = state._lapBoardBounds; if (!b) return false;
+      return p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h;
+    }
+    cv.addEventListener('pointerdown', function(e) {
+      var p = canvasPos(e);
+      if (gateHit(p)) {                      // gate handle takes priority over map-box drag
+        state.trackGateDrag = true;
+        try { cv.setPointerCapture(e.pointerId); } catch (_) {}
+        cv.style.cursor = 'grabbing';
+        e.preventDefault();
+        return;
+      }
+      if (insideMap(p)) {
+        var r = getTrackMapRect(cv.width, cv.height);
+        state.trackMapDrag = { dx: p.x - (r.x + r.S / 2), dy: p.y - (r.y + r.S / 2) };
+        try { cv.setPointerCapture(e.pointerId); } catch (_) {}
+        cv.style.cursor = 'grabbing';
+        e.preventDefault();
+        renderOverlayOnce();
+        return;
+      }
+      // Lap board / speed gauge / telemetry strip — delta drag
+      if (lapBoardHit(p)) {
+        state.overlayDrag = { type: 'lapboard', sx: p.x, sy: p.y, a: settings.lap_board_x, b: settings.lap_board_y };
+      } else if (gaugeHit(p)) {
+        state.overlayDrag = { type: 'gauge', sx: p.x, sy: p.y, a: settings.indicator_x, b: settings.indicator_y };
+      } else if (telemHit(p)) {
+        state.overlayDrag = { type: 'telem', sx: p.x, sy: p.y, a: settings.horizontal_position, b: settings.vertical_position };
+      } else { return; }
+      try { cv.setPointerCapture(e.pointerId); } catch (_) {}
+      cv.style.cursor = 'grabbing';
+      e.preventDefault();
+      renderOverlayOnce();
+    });
+    cv.addEventListener('pointermove', function(e) {
+      var p = canvasPos(e);
+      if (state.trackGateDrag) {
+        setGateFromPointer(p);
+        renderOverlayOnce();
+        e.preventDefault();
+      } else if (state.trackMapDrag) {
+        settings.track_map_x = Math.min(0.98, Math.max(0.02, (p.x - state.trackMapDrag.dx) / cv.width));
+        settings.track_map_y = Math.min(0.98, Math.max(0.02, (p.y - state.trackMapDrag.dy) / cv.height));
+        renderOverlayOnce();
+        e.preventDefault();
+      } else if (state.overlayDrag) {
+        var od = state.overlayDrag;
+        if (od.type === 'lapboard') {                 // fraction-of-frame anchor (like the map)
+          settings.lap_board_x = Math.min(0.98, Math.max(0.0, od.a + (p.x - od.sx) / cv.width));
+          settings.lap_board_y = Math.min(0.98, Math.max(0.0, od.b + (p.y - od.sy) / cv.height));
+        } else {
+          var ddx = (p.x - od.sx) / cv.width * 100, ddy = (p.y - od.sy) / cv.height * 100;
+          if (od.type === 'gauge') {
+            settings.indicator_x = clampPct(od.a + ddx); settings.indicator_y = clampPct(od.b + ddy);
+            syncSliderUI('indicator_x'); syncSliderUI('indicator_y');
+          } else {
+            settings.horizontal_position = clampPct(od.a + ddx); settings.vertical_position = clampPct(od.b + ddy);
+            syncSliderUI('horizontal_position'); syncSliderUI('vertical_position');
+          }
+        }
+        renderOverlayOnce();
+        e.preventDefault();
+      } else {
+        cv.style.cursor = (gateHit(p)) ? 'grab' : (insideMap(p) || gaugeHit(p) || telemHit(p) || lapBoardHit(p) ? 'move' : '');
+      }
+    });
+    function endDrag(e) {
+      if (state.trackGateDrag) {
+        state.trackGateDrag = false;
+        try { cv.releasePointerCapture(e.pointerId); } catch (_) {}
+        cv.style.cursor = '';
+        if (typeof renderLapTable === 'function') renderLapTable();   // final table refresh
+        renderOverlayOnce();
+        return;
+      }
+      if (state.overlayDrag) {
+        state.overlayDrag = null;
+        try { cv.releasePointerCapture(e.pointerId); } catch (_) {}
+        cv.style.cursor = '';
+        renderOverlayOnce();
+        return;
+      }
+      if (!state.trackMapDrag) return;
+      state.trackMapDrag = null;
+      try { cv.releasePointerCapture(e.pointerId); } catch (_) {}
+      cv.style.cursor = '';
+      renderOverlayOnce();
+    }
+    cv.addEventListener('pointerup', endDrag);
+    cv.addEventListener('pointercancel', endDrag);
+    cv.addEventListener('wheel', function(e) {
+      if (!insideMap(canvasPos(e))) return;       // let the page scroll elsewhere
+      e.preventDefault();
+      var f = e.deltaY < 0 ? 1.08 : 1 / 1.08;
+      settings.track_map_size = Math.min(0.6, Math.max(0.08, settings.track_map_size * f));
+      state.trackMapCache = null;                 // size changed → rebuild cache
+      renderOverlayOnce();
+    }, { passive: false });
+    updateTrackMapInteractivity();
+  }
+
+  // The preview canvas is `pointer-events:none` in CSS (passive overlay). Enable
+  // pointer events whenever there is a draggable overlay (track map, or the telemetry
+  // strip / speed gauge that exist once CSV is loaded); otherwise keep click-through.
+  function updateTrackMapInteractivity() {
+    if (!dom.canvas) return;
+    var interactive = (settings.show_track_map && state.trackMapReady) || (state.csvData && state.csvData.length > 0);
+    dom.canvas.style.pointerEvents = interactive ? 'auto' : 'none';
+  }
+
+  // Reflect a drag-changed position setting back onto its panel slider + value label.
+  var SLIDER_DOM = {
+    vertical_position: ['verticalPosition', 'valVertPos'],
+    horizontal_position: ['horizontalPosition', 'valHorizPos'],
+    indicator_x: ['indicatorX', 'valIndX'],
+    indicator_y: ['indicatorY', 'valIndY']
+  };
+  function syncSliderUI(key) {
+    var m = SLIDER_DOM[key]; if (!m) return;
+    var el = document.getElementById(m[0]), v = document.getElementById(m[1]);
+    if (el) el.value = settings[key];
+    if (v) v.textContent = settings[key];
+  }
+  function clampPct(v) { return Math.max(0, Math.min(100, Math.round(v))); }
+
+  // m:ss.s lap-time formatter
+  function fmtLap(s) {
+    if (!isFinite(s) || s < 0) return '—';
+    var m = Math.floor(s / 60), sec = s - m * 60;
+    return m + ':' + (sec < 10 ? '0' : '') + sec.toFixed(2);   // m:ss.ZZ (hundredths)
+  }
+
+  // Fill the sidebar lap table from state.trackLaps (best lap highlighted, outliers dimmed).
+  function renderLapTable() {
+    var section = document.getElementById('lapTableSection');
+    var tbody = document.querySelector('#lapTable tbody');
+    var summary = document.getElementById('lapSummary');
+    if (!section || !tbody) return;
+    var laps = state.trackLaps;
+    if (!state.trackMapReady || !laps || laps.length < 2) { section.style.display = 'none'; return; }
+    section.style.display = '';
+    var med = state.trackLapMedian, bestIdx = -1, bestT = 1e9;
+    for (var i = 0; i < laps.length; i++) {
+      if (laps[i].t >= 0.6 * med && laps[i].t <= 1.5 * med && laps[i].t < bestT) { bestT = laps[i].t; bestIdx = i; }
+    }
+    var rows = '';
+    for (var i = 0; i < laps.length; i++) {
+      var l = laps[i], outlier = (l.t < 0.6 * med || l.t > 1.5 * med);
+      var cls = (i === bestIdx) ? ' class="lap-best"' : (outlier ? ' class="lap-out"' : '');
+      rows += '<tr' + cls + '><td>' + (i + 1) + '</td><td>' + fmtLap(l.t) + '</td><td>' + Math.round(l.avg) + '</td><td>' + Math.round(l.max) + '</td></tr>';
+    }
+    tbody.innerHTML = rows;
+    if (summary) summary.textContent = laps.length + ' laps · best ' + (bestIdx >= 0 ? fmtLap(bestT) : '—');
+  }
+
   // ===== UTILITIES =====
   function formatTime(seconds) {
     if (isNaN(seconds) || seconds < 0) return '00:00:00';
@@ -3245,6 +4208,28 @@
     if (btnCancel) btnCancel.style.display = 'none';
     if (btnDownload) btnDownload.style.display = '';
     if (btnClose) btnClose.style.display = '';
+
+    // Beacon-статистика: Local Export целиком в браузере и иначе не виден серверу.
+    // keepalive — чтобы событие ушло даже если пользователь сразу закроет вкладку.
+    try {
+      var _isCircuit = !!(state.trackLaps && state.trackLaps.length >= 2 && state.trackAvgPath);
+      var _hasTrack = !!(settings.show_track_map && state.trackMapReady && state.vboData);
+      fetch('/video-editor/track-local-export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        keepalive: true,
+        body: JSON.stringify({
+          csv_source: state.csvType || null,
+          resolution: (_localExport.expW && _localExport.expH) ? (_localExport.expW + 'x' + _localExport.expH) : null,
+          codec: 'h264',
+          duration_sec: _localExport.expDuration || null,
+          frame_count: _localExport.expFrames || null,
+          has_track_map: _hasTrack,
+          has_laps: _isCircuit,
+          success: true
+        })
+      }).catch(function () {});
+    } catch (e) {}
   }
 
   function showLocalExportError(msg) {
@@ -3355,6 +4340,10 @@
     var totalFrames = Math.ceil(duration * fps);
 
     if (totalFrames <= 0) throw new Error('No video loaded or duration is 0');
+
+    // Параметры для beacon-статистики (читаются в showLocalExportComplete)
+    _localExport.expW = w; _localExport.expH = h; _localExport.expFps = fps;
+    _localExport.expDuration = duration; _localExport.expFrames = totalFrames;
 
     _localExport.startTime = performance.now();
     updateLocalProgress(0, totalFrames, 'Setting up encoder...', '\u2014', '\u2014');
@@ -3525,10 +4514,12 @@
         if (state.vboData && state.vboData.length > 0) {
           dataPoint.dragySpeed = getDragySpeedAtTime(t);
         }
-        drawTelemetryBoxes(offCtx, w, h, dataPoint);
+        drawTelemetryBoxes(offCtx, w, h, dataPoint, false);
         if (settings.show_bottom_elements) {
-          drawSpeedGauge(offCtx, w, h, dataPoint.speed);
+          drawSpeedGauge(offCtx, w, h, dataPoint.speed, false);
         }
+        drawTrackMap(offCtx, w, h, dataPoint, false);
+        drawLapTimer(offCtx, w, h, dataPoint, false);
       }
 
       // Encode frame

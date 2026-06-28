@@ -153,7 +153,16 @@ class Project(db.Model):
         elif minutes > 0:
             return f"{minutes}m"
         else:
-            return 'expiring' 
+            return 'expiring'
+
+    def is_expired(self):
+        """True, если срок хранения проекта истёк.
+
+        Сравнение с utcnow — ровно та же база, что у cleanup_expired_projects и
+        get_expiry_display(). Поэтому карточка показывает «истёк» синхронно с тем,
+        как фоновая очистка начинает физически удалять файлы проекта. В UI для таких
+        проектов прячем кнопки скачивания (CSV/PNG/Video) — файлы уже удаляются."""
+        return bool(self.expiry_date and self.expiry_date <= datetime.utcnow())
 
     @classmethod
     def get_next_folder_number(cls):
@@ -438,3 +447,82 @@ class Coauthor(db.Model):
 
     def __repr__(self):
         return f'<Coauthor {self.id} {self.name!r}>'
+
+
+class UsageEvent(db.Model):
+    """Несгораемое событие создания видео — для продуктовой статистики админки.
+
+    В отличие от Project (который автоочистка физически удаляет через 12-48 ч),
+    UsageEvent живёт вечно и пишется ОДИН раз на каждый успешный экспорт из всех
+    трёх путей: классический рендер, серверный экспорт редактора и Local Export
+    (последний — через beacon из браузера, т.к. иначе не оставляет следов на сервере).
+    """
+    __tablename__ = 'usage_event'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    # Режим создания: 'classic' | 'editor_server' | 'editor_local'
+    mode = db.Column(db.String(20), nullable=False, index=True)
+    # Источник телеметрии: 'darknessbot' | 'wheellog' | 'eucworld' | None
+    csv_source = db.Column(db.String(20))
+    resolution = db.Column(db.String(20))   # 'fullhd' | '4k' | 'WxH' | 'source'
+    codec = db.Column(db.String(10))        # 'h264' | 'h265'
+    quality = db.Column(db.String(20))      # 'low' | 'medium' | 'high' | 'superhigh' | None
+    duration_sec = db.Column(db.Float)      # длительность результирующего видео, сек
+    frame_count = db.Column(db.Integer)
+    has_track_map = db.Column(db.Boolean, default=False)  # включена VBO трек-карта
+    has_laps = db.Column(db.Boolean, default=False)       # включена доска кругов
+    success = db.Column(db.Boolean, default=True, index=True)
+
+    # Отношение для удобного доступа к юзеру (без обратной ссылки, чтобы не плодить backref)
+    user = db.relationship('User', foreign_keys=[user_id])
+
+    @staticmethod
+    def log(**kwargs):
+        """Записать событие, НИКОГДА не роняя основной поток обработки.
+
+        Любая ошибка БД (например, таблица ещё не создана при первом старте) глотается
+        и откатывается — статистика не должна ломать сам экспорт видео.
+        """
+        from extensions import db
+        try:
+            ev = UsageEvent(**kwargs)
+            db.session.add(ev)
+            db.session.commit()
+            return ev
+        except Exception:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+            return None
+
+
+class SystemMetric(db.Model):
+    """Минутный замер загрузки железа (CPU/RAM/Disk/GPU) — персистентно в БД.
+
+    Заменяет старый in-memory dict: графики System Resources теперь переживают
+    рестарт gunicorn и согласованы между всеми 8 воркерами (раньше у каждого
+    воркера была своя копия в памяти). Дедуп между воркерами — через PK `ts`
+    (начало минуты, UTC) + UPSERT. Retention ~3 дня; используется для 1 Hour / 1 Day.
+    """
+    __tablename__ = 'system_metric'
+    ts = db.Column(db.DateTime, primary_key=True)  # начало минуты, UTC
+    cpu = db.Column(db.Float, default=0)
+    memory = db.Column(db.Float, default=0)
+    disk = db.Column(db.Float, default=0)
+    gpu = db.Column(db.Float, default=0)
+
+
+class SystemMetricDaily(db.Model):
+    """Дневное среднее загрузки железа — для длинных периодов (Week / Month / Year).
+
+    Пересчитывается из минутных SystemMetric за текущий день. Хранится ~год
+    (retention 400 дней), поэтому недельный/месячный/годовой графики реально
+    наполняются, а не показывают только последние сутки."""
+    __tablename__ = 'system_metric_daily'
+    day = db.Column(db.Date, primary_key=True)  # календарный день, UTC
+    cpu = db.Column(db.Float, default=0)
+    memory = db.Column(db.Float, default=0)
+    disk = db.Column(db.Float, default=0)
+    gpu = db.Column(db.Float, default=0)

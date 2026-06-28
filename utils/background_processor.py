@@ -14,7 +14,7 @@ stop_flags = {}
 def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', text_settings=None, interpolate_values=True, locale='en'):
     """Process project in background thread"""
     from app import app, db
-    from models import Project
+    from models import Project, UsageEvent
     from utils.csv_processor import process_csv_file
     from utils.image_generator import generate_frames
     from utils.video_creator import create_video
@@ -155,6 +155,21 @@ def process_project(project_id, resolution='fullhd', fps=29.97, codec='h264', te
                     project.processing_completed_at = datetime.now()
                     db.session.commit()
                     logging.info(f"Project {project_id} completed successfully")
+
+                    # Несгораемое событие статистики (классический рендер)
+                    UsageEvent.log(
+                        user_id=project.user_id,
+                        mode='classic',
+                        csv_source=project.csv_type,
+                        resolution=project.resolution or resolution,
+                        codec=project.codec or codec,
+                        quality=None,
+                        duration_sec=project.video_duration,
+                        frame_count=project.frame_count,
+                        has_track_map=False,
+                        has_laps=False,
+                        success=True,
+                    )
 
             except Exception as e:
                 logging.error(f"Error creating video: {e}")

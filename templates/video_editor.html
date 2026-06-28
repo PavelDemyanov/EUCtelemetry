@@ -40,18 +40,26 @@
     <!-- Upload progress indicators -->
     <div class="ve-upload-progress dropdown" id="videoUploadProgress">
       <span class="ve-upload-label" data-bs-toggle="dropdown" aria-expanded="false" style="cursor:pointer;">
-        Uploading... <i class="bi bi-info-circle" style="opacity:0.6;"></i>
+        <span id="uploadStateText">Uploading...</span> <i class="bi bi-info-circle" style="opacity:0.6;"></i>
       </span>
       <div class="progress"><div class="progress-bar" role="progressbar" style="width:0%"></div></div>
       <span class="percent">0%</span>
+      <button type="button" id="btnUploadPause" title="Pause upload"
+        style="margin-left:8px;background:rgba(255,255,255,0.14);border:none;color:#fff;border-radius:5px;width:26px;height:26px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;">
+        <i class="bi bi-pause-fill"></i>
+      </button>
       <div class="dropdown-menu ve-upload-dropdown">
         <div class="px-3 py-2" style="max-width:320px;">
           <p class="mb-2" style="font-size:12px; color:#c9d1d9; line-height:1.5;">
             <i class="bi bi-cloud-arrow-up" style="color:#58a6ff;"></i>
             {{ _('Your video is being uploaded to the server in the background.') }}
           </p>
-          <p class="mb-0" style="font-size:11px; color:#8b949e; line-height:1.4;">
+          <p class="mb-2" style="font-size:11px; color:#8b949e; line-height:1.4;">
             {{ _('You can continue editing the timeline, adjusting CSV sync, and configuring overlay settings while the upload is in progress. The export button will become available once all files are uploaded.') }}
+          </p>
+          <p class="mb-0" style="font-size:11px; color:#8b949e; line-height:1.4;">
+            <i class="bi bi-pause-circle" style="color:#58a6ff;"></i>
+            {{ _('Only need Local Export? Pause the upload to save traffic — the server upload is only required for server-side Export.') }}
           </p>
         </div>
       </div>
@@ -117,6 +125,7 @@
             <option value="low">Low (4 Mbps)</option>
             <option value="medium" selected>Medium (8 Mbps)</option>
             <option value="high">High (16 Mbps)</option>
+            <option value="superhigh">Super High (50 Mbps)</option>
           </select>
         </div>
         <div class="mb-2">
@@ -284,6 +293,58 @@
           </div>
           <div class="ve-setting">
             <div class="form-check"><input class="form-check-input" type="checkbox" id="useIcons"><label class="form-check-label" for="useIcons">Use Icons</label></div>
+          </div>
+          <div class="ve-setting">
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="showTrackMap"><label class="form-check-label" for="showTrackMap">Track Map (VBO GPS)</label></div>
+            <div class="ve-hint" style="font-size:11px;color:#8b9098;margin-top:2px">Drag map to move · scroll to resize · drag the yellow handle to set start/finish</div>
+          </div>
+          <div class="ve-setting" style="display:none">
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="showLapTable"><label class="form-check-label" for="showLapTable">Lap timing on video</label></div>
+          </div>
+          <div class="ve-setting" style="display:none">
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="lapBoardHorizontal"><label class="form-check-label" for="lapBoardHorizontal">Lap list horizontal</label></div>
+            <div class="ve-hint" style="font-size:11px;color:#8b9098;margin-top:2px">Lay laps in a row instead of a column</div>
+          </div>
+          <div class="ve-setting" style="display:none">
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="lapBoardMatchMap"><label class="form-check-label" for="lapBoardMatchMap">Plaque width = map width</label></div>
+          </div>
+          <div class="ve-setting" style="display:none">
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="lapBoardAbove"><label class="form-check-label" for="lapBoardAbove">Reverse lap direction</label></div>
+            <div class="ve-hint" style="font-size:11px;color:#8b9098;margin-top:2px">Grow up (column) or left (row) · drag the board to move it</div>
+          </div>
+          <div class="ve-setting" style="display:none">
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="navHeadingUp"><label class="form-check-label" for="navHeadingUp">Heading-up navigator</label></div>
+            <div class="ve-hint" style="font-size:11px;color:#8b9098;margin-top:2px">Routes only: future path points up, rider in the lower third</div>
+          </div>
+          <div class="ve-setting">
+            <label>Map Opacity <span class="value" id="valTrackMapOpacity">100</span>%</label>
+            <input type="range" id="trackMapOpacity" min="0" max="100" value="100">
+          </div>
+          <div class="ve-setting" style="display:none">
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="showRawTrack"><label class="form-check-label" for="showRawTrack">Raw GPS trace</label></div>
+            <div class="ve-hint" style="font-size:11px;color:#8b9098;margin-top:2px">Circuit only: faint raw GPS behind the averaged lap</div>
+          </div>
+          <div class="ve-setting" style="display:none">
+            <label>Raw Trace Opacity <span class="value" id="valRawTrackOpacity">20</span>%</label>
+            <input type="range" id="rawTrackOpacity" min="0" max="100" value="20">
+          </div>
+          <style>
+            .lap-table{width:100%;border-collapse:collapse;font-size:12px}
+            .lap-table th,.lap-table td{padding:2px 6px;text-align:right;border-bottom:1px solid #2d3238}
+            .lap-table th:first-child,.lap-table td:first-child{text-align:left}
+            .lap-table thead th{color:#8b9098;font-weight:600;position:sticky;top:0;background:#1a1d21}
+            .lap-table .lap-best td{color:#36d36b;font-weight:600}
+            .lap-table .lap-out td{color:#6b7178}
+          </style>
+          <div class="ve-setting" id="lapTableSection" style="display:none">
+            <div style="font-weight:600;margin-bottom:4px">Laps <span id="lapSummary" style="color:#8b9098;font-weight:400;font-size:11px"></span></div>
+            <div style="max-height:220px;overflow:auto">
+              <table class="lap-table" id="lapTable">
+                <thead><tr><th>#</th><th>Time</th><th>Avg</th><th>Max</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <div class="ve-hint" style="font-size:10px;color:#6b7178;margin-top:2px">Avg/Max = GPS km/h · best lap green</div>
           </div>
           <hr style="border-color:#2d3238;margin:8px 0">
           <div class="ve-setting">
@@ -562,5 +623,5 @@
 <script>window._isAdmin = {{ 'true' if current_user.is_admin else 'false' }};</script>
 <script src="{{ url_for('static', filename='js/mp4box.all.min.js') }}"></script>
 <script src="{{ url_for('static', filename='js/mp4-muxer.min.js') }}"></script>
-<script src="{{ url_for('static', filename='js/video-editor.js') }}?v=1780256524"></script>
+<script src="{{ url_for('static', filename='js/video-editor.js') }}?v=1780403210"></script>
 {% endblock %}

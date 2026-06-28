@@ -31,7 +31,7 @@ from forms import (LoginForm, RegistrationForm, ProfileForm,
                   ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm, DeleteAccountForm,
                   NewsForm, EmailCampaignForm, ResendConfirmationForm, EmailTestForm, AchievementForm,
                   CoauthorForm, generate_math_captcha)
-from models import User, Project, EmailCampaign, News, Preset, RegistrationAttempt, Achievement, SiteSetting, Coauthor
+from models import User, Project, EmailCampaign, News, Preset, RegistrationAttempt, Achievement, SiteSetting, Coauthor, UsageEvent, SystemMetric, SystemMetricDaily
 import markdown
 from sqlalchemy import desc
 
@@ -155,6 +155,13 @@ def cleanup_project_files(project):
             shutil.rmtree(frames_dir)
             logging.info(f"Deleted frames directory: {frames_dir}")
 
+        # Delete overlay frames directory (video editor server export leaves these,
+        # especially on a failed export — they were never cleaned up before and piled up).
+        overlay_dir = f'frames/project_{project.folder_number}_overlay'
+        if os.path.exists(overlay_dir):
+            shutil.rmtree(overlay_dir)
+            logging.info(f"Deleted overlay frames directory: {overlay_dir}")
+
         # Delete processed CSV file
         if project.csv_file:
             processed_csv = os.path.join('processed_data', f'project_{project.folder_number}_{os.path.basename(project.csv_file)}')
@@ -166,6 +173,52 @@ def cleanup_project_files(project):
     except Exception as e:
         logging.error(f"Error cleaning up project files: {str(e)}")
         return False
+
+def _cleanup_ve_uploads_files(max_age_hours=24):
+    """Удалить заброшенные video-editor загрузки: orphan chunk-директории + файлы
+    старше max_age_hours. Общая логика для админ-кнопки (/admin/cleanup-ve-uploads)
+    и для часового фонового таймера. Исходные видео грузятся в
+    uploads/video_editor/<user>/ и НЕ привязаны к Project (Local Export вообще не
+    создаёт проект), поэтому раньше чистились ТОЛЬКО вручную и копились гигабайтами."""
+    import time as _time
+    deleted_count = 0
+    freed_bytes = 0
+    deleted_files = []
+    ve_dir = os.path.join('uploads', 'video_editor')
+    if not os.path.exists(ve_dir):
+        return {'deleted_count': 0, 'freed_bytes': 0, 'deleted_files': []}
+    now = _time.time()
+    for user_dir_name in os.listdir(ve_dir):
+        user_path = os.path.join(ve_dir, user_dir_name)
+        if not os.path.isdir(user_path):
+            continue
+        for item in os.listdir(user_path):
+            item_path = os.path.join(user_path, item)
+            try:
+                # Orphan chunk directories — всегда мусор
+                if item.endswith('_chunks') and os.path.isdir(item_path):
+                    size = sum(os.path.getsize(os.path.join(dp, f)) for dp, dn, fnames in os.walk(item_path) for f in fnames)
+                    shutil.rmtree(item_path)
+                    deleted_files.append(f'video_editor/{user_dir_name}/{item}')
+                    deleted_count += 1
+                    freed_bytes += size
+                    continue
+                # Hash index — индекс дедупликации, не трогаем
+                if item == '_video_hashes.json':
+                    continue
+                # Обычные файлы старше порога
+                if os.path.isfile(item_path):
+                    age_hours = (now - os.path.getmtime(item_path)) / 3600
+                    if age_hours > max_age_hours:
+                        size = os.path.getsize(item_path)
+                        os.remove(item_path)
+                        deleted_files.append(f'video_editor/{user_dir_name}/{item}')
+                        deleted_count += 1
+                        freed_bytes += size
+            except Exception as e:
+                logging.error(f"VE cleanup error on {item_path}: {e}")
+    return {'deleted_count': deleted_count, 'freed_bytes': freed_bytes, 'deleted_files': deleted_files}
+
 
 def cleanup_expired_projects():
     """Check and remove expired projects"""
@@ -189,6 +242,15 @@ def cleanup_expired_projects():
                         logging.error(f"Failed to clean up files for project {project.id}")
 
                 db.session.commit()
+
+            # Также чистим заброшенные video-editor загрузки (>24ч) — раньше копились,
+            # т.к. очистка была только ручной кнопкой в админке.
+            try:
+                ve = _cleanup_ve_uploads_files(max_age_hours=24)
+                if ve['deleted_count']:
+                    logging.info(f"VE auto-cleanup: removed {ve['deleted_count']} items, freed {ve['freed_bytes']/1024/1024:.1f} MB")
+            except Exception as e:
+                logging.error(f"VE auto-cleanup error: {e}")
 
         except Exception as e:
             logging.error(f"Error in cleanup task: {str(e)}")
@@ -274,35 +336,59 @@ def get_system_stats():
     }
 
 
-# Global variable for storing statistics
-system_stats_history = {
-    'cpu': defaultdict(list),
-    'memory': defaultdict(list),
-    'disk': defaultdict(list),
-    'gpu': defaultdict(list)
-}
-
-stats_lock = threading.Lock()
-
 def collect_system_stats():
-    """Background thread to collect system statistics"""
+    """Background thread: пишет загрузку железа в БД (персистентно, общо для воркеров).
+
+    Раньше история жила в памяти каждого из 8 воркеров — терялась при рестарте и
+    «прыгала» между воркерами. Теперь:
+      • минутная точка -> system_metric (retention ~3 дня; для графиков 1 Hour / 1 Day);
+      • дневное среднее -> system_metric_daily (retention ~400 дней; для Week / Month / Year).
+    Дедуп между воркерами — UPSERT по ключу (минута / день): 8 воркеров пишут одно и
+    то же в одну минуту, последний просто перезаписывает. Ошибки БД глотаются, чтобы
+    фоновый поток не падал.
+    """
+    from sqlalchemy.dialects.postgresql import insert as pg_insert
+    from sqlalchemy import func
     while True:
-        stats = get_system_stats()
-        current_time = datetime.utcnow()
-
-        with stats_lock:
-            # Store stats with timestamp
-            for resource in ['cpu', 'memory', 'disk', 'gpu']:
-                system_stats_history[resource][current_time.strftime('%Y-%m-%d %H:%M')] = stats[f'{resource}_percent']
-
-            # Clean up old data (keep last 24 hours)
-            cleanup_time = current_time - timedelta(hours=24)
-            for resource in system_stats_history:
-                system_stats_history[resource] = {
-                    k: v for k, v in system_stats_history[resource].items()
-                    if datetime.strptime(k, '%Y-%m-%d %H:%M') > cleanup_time
+        try:
+            stats = get_system_stats()
+            now = datetime.utcnow()
+            ts = now.replace(second=0, microsecond=0)
+            today = now.date()
+            day_start = datetime(now.year, now.month, now.day)
+            with app.app_context():
+                # 1. UPSERT минутной точки
+                vals = {
+                    'cpu': stats['cpu_percent'], 'memory': stats['memory_percent'],
+                    'disk': stats['disk_percent'], 'gpu': stats['gpu_percent'],
                 }
+                m_stmt = pg_insert(SystemMetric.__table__).values(ts=ts, **vals)
+                m_stmt = m_stmt.on_conflict_do_update(index_elements=['ts'], set_=vals)
+                db.session.execute(m_stmt)
 
+                # 2. Дневное среднее за сегодня (из минутных точек этого дня)
+                avg = db.session.query(
+                    func.avg(SystemMetric.cpu), func.avg(SystemMetric.memory),
+                    func.avg(SystemMetric.disk), func.avg(SystemMetric.gpu)
+                ).filter(SystemMetric.ts >= day_start).one()
+                dvals = {
+                    'cpu': float(avg[0] or 0), 'memory': float(avg[1] or 0),
+                    'disk': float(avg[2] or 0), 'gpu': float(avg[3] or 0),
+                }
+                d_stmt = pg_insert(SystemMetricDaily.__table__).values(day=today, **dvals)
+                d_stmt = d_stmt.on_conflict_do_update(index_elements=['day'], set_=dvals)
+                db.session.execute(d_stmt)
+
+                # 3. Retention
+                db.session.query(SystemMetric).filter(SystemMetric.ts < now - timedelta(days=3)).delete()
+                db.session.query(SystemMetricDaily).filter(SystemMetricDaily.day < today - timedelta(days=400)).delete()
+                db.session.commit()
+        except Exception as e:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+            logging.warning(f"collect_system_stats DB error: {e}")
         time.sleep(60)  # Collect stats every minute
 
 @app.route('/admin')
@@ -334,19 +420,46 @@ def admin_dashboard():
 @login_required
 @admin_required
 def admin_stats():
-    """API endpoint to get updated system stats"""
-    current_stats = get_system_stats()
+    """API endpoint to get updated system stats (персистентно из БД).
 
-    # Add historical data
-    with stats_lock:
-        history = {
-            resource: list(system_stats_history[resource].items())
-            for resource in system_stats_history
-        }
+    history       — минутные точки за ~25 ч (для графиков 1 Hour / 1 Day);
+    history_daily — дневные средние за ~год (для Week / Month / Year).
+    Формат точек '[ "YYYY-MM-DD HH:MM", value ]' совместим с фронтом (он парсит как UTC).
+    """
+    current_stats = get_system_stats()
+    now = datetime.utcnow()
+
+    empty = {'cpu': [], 'memory': [], 'disk': [], 'gpu': []}
+    history = {k: [] for k in empty}
+    history_daily = {k: [] for k in empty}
+
+    try:
+        minute_cut = now - timedelta(hours=25)
+        for r in db.session.query(SystemMetric).filter(SystemMetric.ts >= minute_cut).order_by(SystemMetric.ts).all():
+            ts_str = r.ts.strftime('%Y-%m-%d %H:%M')
+            history['cpu'].append([ts_str, r.cpu])
+            history['memory'].append([ts_str, r.memory])
+            history['disk'].append([ts_str, r.disk])
+            history['gpu'].append([ts_str, r.gpu])
+
+        day_cut = now.date() - timedelta(days=400)
+        for r in db.session.query(SystemMetricDaily).filter(SystemMetricDaily.day >= day_cut).order_by(SystemMetricDaily.day).all():
+            d_str = r.day.strftime('%Y-%m-%d 00:00')
+            history_daily['cpu'].append([d_str, r.cpu])
+            history_daily['memory'].append([d_str, r.memory])
+            history_daily['disk'].append([d_str, r.disk])
+            history_daily['gpu'].append([d_str, r.gpu])
+    except Exception as e:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        logging.warning(f"admin_stats DB read error: {e}")
 
     return jsonify({
         'current': current_stats,
-        'history': history
+        'history': history,
+        'history_daily': history_daily
     })
 
 @app.route('/admin/lists')
@@ -385,6 +498,8 @@ def admin_lists():
         'user_email': p.user.email,
         'name': p.name,
         'status': p.status,
+        'csv_type': p.csv_type,
+        'mode': 'editor' if p.csv_type == 'video_editor' else 'classic',
         'created_at': p.created_at.strftime('%Y-%m-%d %H:%M'),
         'progress': int(p.progress),  # Round progress to integer
         'duration': p.get_duration_str(),  # Add duration
@@ -414,6 +529,87 @@ def admin_lists():
             'total': users.total
         }
     })
+
+@app.route('/admin/usage-stats')
+@login_required
+@admin_required
+def admin_usage_stats():
+    """Агрегаты несгораемой таблицы UsageEvent для карточки аналитики на дашборде.
+
+    Отвечает на вопрос «классика vs серверный редактор vs Local Export» с полной
+    историей (UsageEvent не удаляется автоочисткой, в отличие от Project)."""
+    from sqlalchemy import func
+    now = datetime.utcnow()
+    day_ago = now - timedelta(hours=24)
+    week_ago = now - timedelta(days=7)
+
+    def scalar(q):
+        return q.scalar() or 0
+
+    def mode_breakdown(since=None):
+        q = db.session.query(UsageEvent.mode, func.count(UsageEvent.id))
+        if since is not None:
+            q = q.filter(UsageEvent.created_at >= since)
+        rows = dict(q.group_by(UsageEvent.mode).all())
+        return {
+            'classic': int(rows.get('classic', 0)),
+            'editor_server': int(rows.get('editor_server', 0)),
+            'editor_local': int(rows.get('editor_local', 0)),
+        }
+
+    def group_count(col, only_modes=None):
+        q = db.session.query(col, func.count(UsageEvent.id))
+        if only_modes is not None:
+            q = q.filter(UsageEvent.mode.in_(only_modes))
+        out = {}
+        for k, v in q.group_by(col).all():
+            out[str(k) if k is not None else '—'] = int(v)
+        return out
+
+    totals = {
+        'today': scalar(db.session.query(func.count(UsageEvent.id)).filter(UsageEvent.created_at >= day_ago)),
+        'week': scalar(db.session.query(func.count(UsageEvent.id)).filter(UsageEvent.created_at >= week_ago)),
+        'all': scalar(db.session.query(func.count(UsageEvent.id))),
+    }
+
+    users_total = scalar(db.session.query(func.count(User.id)))
+    users_confirmed = scalar(db.session.query(func.count(User.id)).filter(User.is_email_confirmed == True))
+    creators = scalar(db.session.query(func.count(func.distinct(UsageEvent.user_id))))
+
+    track_on = scalar(db.session.query(func.count(UsageEvent.id)).filter(UsageEvent.has_track_map == True))
+    laps_on = scalar(db.session.query(func.count(UsageEvent.id)).filter(UsageEvent.has_laps == True))
+
+    recent = []
+    for ev in db.session.query(UsageEvent).order_by(UsageEvent.created_at.desc()).limit(12).all():
+        recent.append({
+            'created_at': ev.created_at.strftime('%Y-%m-%d %H:%M') if ev.created_at else '',
+            'mode': ev.mode,
+            'user_email': ev.user.email if ev.user else '—',
+            'csv_source': ev.csv_source or '—',
+            'resolution': ev.resolution or '—',
+            'codec': ev.codec or '—',
+            'quality': ev.quality or '—',
+            'duration': round(ev.duration_sec) if ev.duration_sec else None,
+            'has_track_map': bool(ev.has_track_map),
+            'has_laps': bool(ev.has_laps),
+            'success': bool(ev.success),
+        })
+
+    return jsonify({
+        'totals': totals,
+        'by_mode': {
+            'today': mode_breakdown(day_ago),
+            'week': mode_breakdown(week_ago),
+            'all': mode_breakdown(None),
+        },
+        'by_csv': group_count(UsageEvent.csv_source),
+        'by_resolution': group_count(UsageEvent.resolution),
+        'by_quality': group_count(UsageEvent.quality, only_modes=['editor_server']),
+        'track_usage': {'with_track': track_on, 'with_laps': laps_on},
+        'funnel': {'users_total': users_total, 'users_confirmed': users_confirmed, 'creators': creators},
+        'recent': recent,
+    })
+
 
 # Add context processor for datetime
 @app.context_processor
@@ -1019,6 +1215,11 @@ def download_file(project_id, type):
     project = Project.query.get_or_404(project_id)
     if project.user_id != current_user.id and not current_user.is_admin:
         return jsonify({'error': 'Unauthorized'}), 403
+
+    # Срок хранения истёк — файлы удаляются фоновой очисткой; не отдаём «протухшую»
+    # ссылку (например, из старой вкладки), а возвращаем к списку проектов.
+    if project.is_expired():
+        return redirect(url_for('list_projects'))
 
     if type == 'video' and project.video_file:
         video_path = os.path.join('videos', project.video_file)
@@ -1685,50 +1886,15 @@ def cleanup_storage():
 @login_required
 @admin_required
 def cleanup_ve_uploads():
-    """Clean up abandoned video editor uploads: orphan chunks, duplicate CSVs/VBOs, old videos"""
+    """Clean up abandoned video editor uploads: orphan chunks + files older than 24h.
+    Использует общую логику _cleanup_ve_uploads_files (та же, что и часовой таймер)."""
     try:
-        deleted_count = 0
-        deleted_files = []
-        freed_bytes = 0
-        ve_dir = os.path.join('uploads', 'video_editor')
-        if not os.path.exists(ve_dir):
-            return jsonify({'success': True, 'deleted_count': 0, 'freed_mb': 0, 'deleted_files': []})
-
-        now = datetime.now().timestamp()
-        max_age_hours = 24  # Files older than 24h with no associated project
-
-        for user_dir_name in os.listdir(ve_dir):
-            user_path = os.path.join(ve_dir, user_dir_name)
-            if not os.path.isdir(user_path):
-                continue
-            for item in os.listdir(user_path):
-                item_path = os.path.join(user_path, item)
-                # Delete orphan chunk directories
-                if item.endswith('_chunks') and os.path.isdir(item_path):
-                    size = sum(os.path.getsize(os.path.join(dp, f)) for dp, dn, fnames in os.walk(item_path) for f in fnames)
-                    shutil.rmtree(item_path)
-                    deleted_files.append(f'video_editor/{user_dir_name}/{item}')
-                    deleted_count += 1
-                    freed_bytes += size
-                    continue
-                # Skip hash index
-                if item == '_video_hashes.json':
-                    continue
-                # Check age of regular files
-                if os.path.isfile(item_path):
-                    age_hours = (now - os.path.getmtime(item_path)) / 3600
-                    if age_hours > max_age_hours:
-                        size = os.path.getsize(item_path)
-                        os.remove(item_path)
-                        deleted_files.append(f'video_editor/{user_dir_name}/{item}')
-                        deleted_count += 1
-                        freed_bytes += size
-
+        res = _cleanup_ve_uploads_files(max_age_hours=24)
         return jsonify({
             'success': True,
-            'deleted_count': deleted_count,
-            'freed_mb': round(freed_bytes / 1024 / 1024, 1),
-            'deleted_files': deleted_files
+            'deleted_count': res['deleted_count'],
+            'freed_mb': round(res['freed_bytes'] / 1024 / 1024, 1),
+            'deleted_files': res['deleted_files']
         })
     except Exception as e:
         logging.error(f"VE cleanup error: {str(e)}")
@@ -3288,11 +3454,14 @@ def video_editor_upload_video_chunk():
     with open(meta_path, 'r') as mf:
         meta = json.load(mf)
 
-    # Save chunk
+    # Save chunk (overwrites if re-sent after a pause/abort or retry)
     chunk_path = os.path.join(meta['chunk_dir'], f'chunk_{chunk_index:06d}')
     chunk.save(chunk_path)
 
-    meta['received_chunks'].append(chunk_index)
+    # Record index once — a re-sent chunk must not create a duplicate (would break
+    # the exact-match check in /upload-video-complete and yield a spurious 400).
+    if chunk_index not in meta['received_chunks']:
+        meta['received_chunks'].append(chunk_index)
     with open(meta_path, 'w') as mf:
         json.dump(meta, mf)
 
@@ -3317,11 +3486,11 @@ def video_editor_upload_video_complete():
     with open(meta_path, 'r') as mf:
         meta = json.load(mf)
 
-    # Verify all chunks received
-    received = sorted(meta['received_chunks'])
-    expected = list(range(meta['total_chunks']))
+    # Verify all chunks received (set compare — tolerant of duplicate/re-sent indices)
+    received = set(meta['received_chunks'])
+    expected = set(range(meta['total_chunks']))
     if received != expected:
-        missing = set(expected) - set(received)
+        missing = expected - received
         return jsonify({'error': f'Missing chunks: {sorted(missing)}'}), 400
 
     # Assemble chunks into final file
@@ -3554,6 +3723,8 @@ def video_editor_export():
         'vbo_time_offset': data.get('vbo_time_offset', 0),
         'vbo_trim_start': data.get('vbo_trim_start', 0),
         'vbo_trim_end': data.get('vbo_trim_end', 0),
+        'track_gate_lat': data.get('track_gate_lat', None),
+        'track_gate_lon': data.get('track_gate_lon', None),
     }
     
     thread = threading.Thread(
@@ -3562,8 +3733,58 @@ def video_editor_export():
         daemon=True
     )
     thread.start()
-    
+
     return jsonify({'project_id': project.id})
+
+
+@app.route('/video-editor/track-local-export', methods=['POST'])
+@login_required
+def video_editor_track_local_export():
+    """Beacon от браузера по завершении Local Export (WebCodecs).
+
+    Local Export целиком в браузере и иначе не оставляет следов на сервере — этот
+    маршрут пишет несгораемое UsageEvent(mode='editor_local'). Всегда отвечает 204
+    и глотает любые ошибки, чтобы сбой статистики не влиял на пользователя.
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+
+        def _f(v):
+            try:
+                return float(v)
+            except (TypeError, ValueError):
+                return None
+
+        def _i(v):
+            try:
+                return int(v)
+            except (TypeError, ValueError):
+                return None
+
+        def _clip(v, n):
+            if v is None:
+                return None
+            try:
+                return str(v)[:n]
+            except Exception:
+                return None
+
+        UsageEvent.log(
+            user_id=current_user.id,
+            mode='editor_local',
+            csv_source=_clip(data.get('csv_source'), 20),
+            resolution=_clip(data.get('resolution'), 20),
+            codec=_clip(data.get('codec'), 10),
+            quality=None,
+            duration_sec=_f(data.get('duration_sec')),
+            frame_count=_i(data.get('frame_count')),
+            has_track_map=bool(data.get('has_track_map')),
+            has_laps=bool(data.get('has_laps')),
+            success=bool(data.get('success', True)),
+        )
+    except Exception:
+        pass
+    return ('', 204)
 
 
 def parse_vbo_file(filepath):
@@ -3714,6 +3935,9 @@ def process_video_editor_export(project_id, export_settings):
             vbo_time_offset = float(export_settings.get('vbo_time_offset', 0))
             vbo_trim_start = float(export_settings.get('vbo_trim_start', 0))
             vbo_trim_end = float(export_settings.get('vbo_trim_end', 0))
+            track_gate_lat = export_settings.get('track_gate_lat', None)
+            track_gate_lon = export_settings.get('track_gate_lon', None)
+            track_overlay = None   # precomputed minimap + lap data (server-side parity with editor)
             text_settings = export_settings.get('text_settings', {})
             fps_setting = export_settings.get('fps', 'source')
             fps = None if fps_setting == 'source' else float(fps_setting)
@@ -3825,6 +4049,15 @@ def process_video_editor_export(project_id, export_settings):
                             logging.info(f'VBO speed range: {min(d["speed"] for d in vbo_data):.1f} - {max(d["speed"] for d in vbo_data):.1f} km/h')
                             logging.info(f'VBO params: vbo_time_offset={vbo_time_offset}, vbo_trim_start={vbo_trim_start}, vbo_trim_end={vbo_trim_end}')
                             logging.info(f'CSV time_offset={time_offset}, show_dragy_speed={text_settings.get("show_dragy_speed", False)}')
+                        # Precompute the track minimap + lap board (same algorithm as the editor)
+                        if text_settings.get('show_track_map') or text_settings.get('show_lap_table'):
+                            try:
+                                from utils.track_overlay import prepare_track_overlay
+                                track_overlay = prepare_track_overlay(vbo_path, track_gate_lat, track_gate_lon, text_settings)
+                                logging.info(f'Track overlay prepared: {"yes" if track_overlay else "none"}')
+                            except Exception as _te:
+                                logging.warning(f'Track overlay prepare failed: {_te}')
+                                track_overlay = None
                     else:
                         logging.warning(f'VBO file not found: {vbo_path}')
 
@@ -3907,6 +4140,17 @@ def process_video_editor_export(project_id, export_settings):
                             custom_width=out_width,
                             custom_height=out_height
                         )
+                        # Overlay the VBO track minimap + lap board onto this frame
+                        if track_overlay is not None:
+                            try:
+                                from utils.track_overlay import draw_track_overlay
+                                _timg = Image.open(output_path).convert('RGBA')
+                                draw_track_overlay(_timg, out_width, out_height, text_settings, track_overlay,
+                                                   video_time, vbo_time_offset, vbo_trim_start, vbo_trim_end)
+                                _timg.save(output_path, format='PNG')
+                            except Exception as _de:
+                                if i < 3:
+                                    logging.warning(f'Track overlay draw failed at frame {i}: {_de}')
                     last_frame_path = output_path
                 else:
                     # Duplicate previous frame (fast copy instead of rendering)
@@ -3922,7 +4166,7 @@ def process_video_editor_export(project_id, export_settings):
 
             # Step 4: Create video with FFmpeg
             quality = export_settings.get('quality', 'medium')
-            bitrate_map = {'low': '4M', 'medium': '8M', 'high': '16M'}
+            bitrate_map = {'low': '4M', 'medium': '8M', 'high': '16M', 'superhigh': '50M'}
             bitrate = bitrate_map.get(quality, '8M')
             logging.info(f'Video editor export: creating video (quality={quality}, bitrate={bitrate})')
             output_file = os.path.join('videos', f'project_{project.folder_number}.mp4')
@@ -3979,6 +4223,22 @@ def process_video_editor_export(project_id, export_settings):
 
             logging.info(f'Video editor export completed for project {project_id}')
 
+            # Несгораемое событие статистики (серверный экспорт редактора)
+            _ts = export_settings.get('text_settings', {}) or {}
+            UsageEvent.log(
+                user_id=project.user_id,
+                mode='editor_server',
+                csv_source=None,  # тип CSV в редакторе парсится на клиенте, серверу неизвестен
+                resolution=project.resolution,
+                codec=project.codec,
+                quality=export_settings.get('quality'),
+                duration_sec=float(src_duration) if src_duration else None,
+                frame_count=total_frames,
+                has_track_map=bool(_ts.get('show_track_map')),
+                has_laps=bool(_ts.get('show_lap_table')),
+                success=True,
+            )
+
             # Cleanup overlay frames
             import shutil
             shutil.rmtree(overlay_dir, ignore_errors=True)
@@ -3993,5 +4253,11 @@ def process_video_editor_export(project_id, export_settings):
                     project.status = 'error'
                     project.error_message = str(e)
                     db.session.commit()
+                    # Подчищаем overlay-кадры упавшего экспорта сразу (могут быть гигабайты),
+                    # не дожидаясь истечения проекта — раньше они оставались навсегда.
+                    _od = os.path.join('frames', f'project_{project.folder_number}_overlay')
+                    if os.path.exists(_od):
+                        shutil.rmtree(_od, ignore_errors=True)
+                        logging.info(f'Cleaned overlay frames after failed export: {_od}')
             except Exception as e2:
                 logging.error(f'Error updating project status: {e2}')

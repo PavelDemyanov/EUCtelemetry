@@ -14,7 +14,88 @@
         </a>
     </div>
 
+    <!-- Usage Analytics -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h2 class="h5 mb-0"><i class="bi bi-graph-up-arrow"></i> Usage Analytics</h2>
+            <div class="btn-group btn-group-sm" role="group" id="usage-period-switch">
+                <button type="button" class="btn btn-outline-primary active" data-period="today">Today</button>
+                <button type="button" class="btn btn-outline-primary" data-period="week">7 days</button>
+                <button type="button" class="btn btn-outline-primary" data-period="all">All time</button>
+            </div>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small mb-3">
+                Every finished video is recorded permanently (unlike projects, which auto-expire in 12–48 h).
+                Browser Local Export is captured via a beacon, so it shows up here too.
+            </p>
 
+            <!-- Mode breakdown for selected period -->
+            <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                    <div class="border rounded p-3 h-100">
+                        <div class="text-muted small text-uppercase">Classic</div>
+                        <div class="h3 mb-0" id="usage-classic">–</div>
+                        <div class="small text-muted" id="usage-classic-pct"></div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="border rounded p-3 h-100">
+                        <div class="text-muted small text-uppercase">Editor — Server</div>
+                        <div class="h3 mb-0" id="usage-editor-server">–</div>
+                        <div class="small text-muted" id="usage-editor-server-pct"></div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="border rounded p-3 h-100">
+                        <div class="text-muted small text-uppercase">Editor — Local Export</div>
+                        <div class="h3 mb-0" id="usage-editor-local">–</div>
+                        <div class="small text-muted" id="usage-editor-local-pct"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Totals + funnel -->
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <div class="border rounded p-3 h-100">
+                        <div class="fw-bold mb-2">Total exports</div>
+                        <div class="d-flex justify-content-between"><span class="text-muted">Today</span><span id="usage-total-today">–</span></div>
+                        <div class="d-flex justify-content-between"><span class="text-muted">Last 7 days</span><span id="usage-total-week">–</span></div>
+                        <div class="d-flex justify-content-between"><span class="text-muted">All time</span><span id="usage-total-all">–</span></div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="border rounded p-3 h-100">
+                        <div class="fw-bold mb-2">User funnel</div>
+                        <div class="d-flex justify-content-between"><span class="text-muted">Registered</span><span id="usage-users-total">–</span></div>
+                        <div class="d-flex justify-content-between"><span class="text-muted">Email confirmed</span><span id="usage-users-confirmed">–</span></div>
+                        <div class="d-flex justify-content-between"><span class="text-muted">Made ≥1 export</span><span id="usage-creators">–</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Breakdowns (all-time) -->
+            <div class="row g-3 mb-3">
+                <div class="col-md-3"><div class="border rounded p-3 h-100"><div class="fw-bold mb-2 small">CSV source</div><div id="usage-by-csv" class="small"></div></div></div>
+                <div class="col-md-3"><div class="border rounded p-3 h-100"><div class="fw-bold mb-2 small">Resolution</div><div id="usage-by-res" class="small"></div></div></div>
+                <div class="col-md-3"><div class="border rounded p-3 h-100"><div class="fw-bold mb-2 small">Quality (server)</div><div id="usage-by-quality" class="small"></div></div></div>
+                <div class="col-md-3"><div class="border rounded p-3 h-100"><div class="fw-bold mb-2 small">Track overlay</div><div id="usage-track" class="small"></div></div></div>
+            </div>
+
+            <!-- Recent events -->
+            <div class="fw-bold mb-2 small">Recent exports</div>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead><tr>
+                        <th>Time</th><th>Mode</th><th>User</th><th>CSV</th>
+                        <th>Res</th><th>Codec</th><th>Quality</th><th>Dur</th><th>Overlay</th>
+                    </tr></thead>
+                    <tbody id="usage-recent"><tr><td colspan="9" class="text-center text-muted">Loading…</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 
     <!-- Achievements Management -->
     <div class="card mb-4">
@@ -240,6 +321,7 @@
                             <th>User</th>
                             <th>Email</th>
                             <th>Project Name</th>
+                            <th>Mode</th>
                             <th>Status</th>
                             <th>Created</th>
                             <th>Progress</th>
@@ -258,6 +340,13 @@
                             <td>{{ project.user.name }}</td>
                             <td>{{ project.user.email }}</td>
                             <td>{{ project.name }}</td>
+                            <td>
+                                {% if project.csv_type == 'video_editor' %}
+                                <span class="badge bg-info text-dark" title="Server export from the browser video editor">Editor</span>
+                                {% else %}
+                                <span class="badge bg-secondary" title="Classic server-rendered chroma-key pipeline">Classic</span>
+                                {% endif %}
+                            </td>
                             <td>
                                 <span class="badge {% if project.status == 'completed' %}bg-success muted text-white
                                               {% elif project.status == 'error' %}bg-danger muted text-white
@@ -666,7 +755,10 @@ function updateChart(resource, timeRange) {
     fetch('/admin/stats')
         .then(response => response.json())
         .then(stats => {
-            const history = stats.history[resource];
+            // Длинные периоды берут дневные агрегаты, короткие — минутные точки
+            const useDaily = (timeRange === 'week' || timeRange === 'month' || timeRange === 'year');
+            const source = useDaily ? stats.history_daily : stats.history;
+            const history = source ? source[resource] : null;
 
             if (history && history.length > 0) {
                 history.forEach(([timestamp, value]) => {
@@ -816,6 +908,9 @@ function updateProjectsTable(projects) {
             <td>${project.user_name}</td>
             <td>${project.user_email}</td>
             <td>${project.name}</td>
+            <td>${project.mode === 'editor'
+                ? '<span class="badge bg-info text-dark" title="Server export from the browser video editor">Editor</span>'
+                : '<span class="badge bg-secondary" title="Classic server-rendered chroma-key pipeline">Classic</span>'}</td>
             <td>
                 <span class="badge ${project.status === 'completed' ? 'bg-success muted text-white' :
                                   project.status === 'error' ? 'bg-danger muted text-white' :
@@ -1408,6 +1503,104 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Start periodic updates
     setInterval(updateData, 5000);
+});
+
+// ===== Usage Analytics card =====
+let usagePeriod = 'today';
+let usageData = null;
+
+function usagePct(v, total) { return total > 0 ? Math.round(v / total * 100) + '%' : '0%'; }
+
+function renderUsageMode() {
+    if (!usageData) return;
+    const m = usageData.by_mode[usagePeriod] || { classic: 0, editor_server: 0, editor_local: 0 };
+    const total = m.classic + m.editor_server + m.editor_local;
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    set('usage-classic', m.classic);
+    set('usage-editor-server', m.editor_server);
+    set('usage-editor-local', m.editor_local);
+    set('usage-classic-pct', usagePct(m.classic, total) + ' of period');
+    set('usage-editor-server-pct', usagePct(m.editor_server, total) + ' of period');
+    set('usage-editor-local-pct', usagePct(m.editor_local, total) + ' of period');
+}
+
+function renderUsageDict(elId, dict) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    const keys = Object.keys(dict || {});
+    if (!keys.length) { el.innerHTML = '<span class="text-muted">—</span>'; return; }
+    keys.sort((a, b) => dict[b] - dict[a]);
+    el.innerHTML = keys.map(k =>
+        `<div class="d-flex justify-content-between"><span class="text-muted text-truncate" style="max-width:70%">${k}</span><span>${dict[k]}</span></div>`
+    ).join('');
+}
+
+function usageModeBadge(mode) {
+    if (mode === 'editor_server') return '<span class="badge bg-info text-dark">Editor·Srv</span>';
+    if (mode === 'editor_local') return '<span class="badge bg-warning text-dark">Editor·Local</span>';
+    return '<span class="badge bg-secondary">Classic</span>';
+}
+
+function renderUsage() {
+    if (!usageData) return;
+    renderUsageMode();
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    set('usage-total-today', usageData.totals.today);
+    set('usage-total-week', usageData.totals.week);
+    set('usage-total-all', usageData.totals.all);
+    set('usage-users-total', usageData.funnel.users_total);
+    set('usage-users-confirmed', usageData.funnel.users_confirmed);
+    set('usage-creators', usageData.funnel.creators);
+    renderUsageDict('usage-by-csv', usageData.by_csv);
+    renderUsageDict('usage-by-res', usageData.by_resolution);
+    renderUsageDict('usage-by-quality', usageData.by_quality);
+    const trackEl = document.getElementById('usage-track');
+    if (trackEl) {
+        trackEl.innerHTML =
+            `<div class="d-flex justify-content-between"><span class="text-muted">With map</span><span>${usageData.track_usage.with_track}</span></div>` +
+            `<div class="d-flex justify-content-between"><span class="text-muted">With laps</span><span>${usageData.track_usage.with_laps}</span></div>`;
+    }
+    const tb = document.getElementById('usage-recent');
+    if (tb) {
+        if (!usageData.recent.length) {
+            tb.innerHTML = '<tr><td colspan="9" class="text-center text-muted">No exports recorded yet</td></tr>';
+        } else {
+            tb.innerHTML = usageData.recent.map(e => `<tr>
+                <td>${e.created_at}</td>
+                <td>${usageModeBadge(e.mode)}</td>
+                <td class="text-truncate" style="max-width:160px" title="${e.user_email}">${e.user_email}</td>
+                <td>${e.csv_source}</td>
+                <td>${e.resolution}</td>
+                <td>${e.codec}</td>
+                <td>${e.quality}</td>
+                <td>${e.duration != null ? e.duration + 's' : '—'}</td>
+                <td>${e.has_track_map ? '🗺️' : ''}${e.has_laps ? '⏱️' : ''}${!e.success ? '❌' : ''}</td>
+            </tr>`).join('');
+        }
+    }
+}
+
+function loadUsageStats() {
+    fetch('/admin/usage-stats')
+        .then(r => r.json())
+        .then(d => { usageData = d; renderUsage(); })
+        .catch(() => {});
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    const sw = document.getElementById('usage-period-switch');
+    if (sw) {
+        sw.addEventListener('click', function (e) {
+            const btn = e.target.closest('button[data-period]');
+            if (!btn) return;
+            usagePeriod = btn.dataset.period;
+            sw.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderUsageMode();
+        });
+    }
+    loadUsageStats();
+    setInterval(loadUsageStats, 30000);
 });
 </script>
 {% endblock %}
