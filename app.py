@@ -31,7 +31,7 @@ from forms import (LoginForm, RegistrationForm, ProfileForm,
                   ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm, DeleteAccountForm,
                   NewsForm, EmailCampaignForm, ResendConfirmationForm, EmailTestForm, AchievementForm,
                   CoauthorForm, generate_math_captcha)
-from models import User, Project, EmailCampaign, News, Preset, RegistrationAttempt, Achievement, SiteSetting, Coauthor, UsageEvent, SystemMetric, SystemMetricDaily
+from models import User, Project, EmailCampaign, News, Preset, RegistrationAttempt, Achievement, SiteSetting, Coauthor, UsageEvent, SystemMetric, SystemMetricDaily, ErrorReport
 import markdown
 from sqlalchemy import desc
 
@@ -609,6 +609,86 @@ def admin_usage_stats():
         'funnel': {'users_total': users_total, 'users_confirmed': users_confirmed, 'creators': creators},
         'recent': recent,
     })
+
+
+@app.route('/admin/error-reports')
+@login_required
+@admin_required
+def admin_error_reports():
+    """Список отчётов об ошибках (JSON) для раздела админки. Фильтр open/all + пагинация."""
+    page = request.args.get('page', 1, type=int)
+    show = request.args.get('show', 'open')  # 'open' = только нерешённые | 'all'
+    q = ErrorReport.query
+    if show == 'open':
+        q = q.filter(ErrorReport.resolved == False)
+    pag = q.order_by(ErrorReport.created_at.desc()).paginate(page=page, per_page=20, error_out=False)
+
+    def short(s, n=140):
+        if not s:
+            return ''
+        s = str(s)
+        return s[:n] + ('…' if len(s) > n else '')
+
+    items = [{
+        'id': r.id,
+        'created_at': r.created_at.strftime('%Y-%m-%d %H:%M') if r.created_at else '',
+        'user_email': r.user.email if r.user else '—',
+        'source': r.source or '—',
+        'error_message': short(r.error_message),
+        'resolved': bool(r.resolved),
+        'has_note': bool(r.user_note),
+    } for r in pag.items]
+
+    return jsonify({
+        'items': items,
+        'page': pag.page, 'pages': pag.pages, 'total': pag.total,
+        'has_next': pag.has_next, 'has_prev': pag.has_prev,
+        'open_count': ErrorReport.query.filter(ErrorReport.resolved == False).count(),
+        'total_count': ErrorReport.query.count(),
+        'show': show,
+    })
+
+
+@app.route('/admin/error-reports/<int:report_id>')
+@login_required
+@admin_required
+def admin_error_report_detail(report_id):
+    """Полные детали одного отчёта, включая распарсенный JSON-контекст."""
+    r = ErrorReport.query.get_or_404(report_id)
+    return jsonify({
+        'id': r.id,
+        'created_at': r.created_at.strftime('%Y-%m-%d %H:%M:%S') if r.created_at else '',
+        'user_email': r.user.email if r.user else None,
+        'user_id': r.user_id,
+        'source': r.source,
+        'error_message': r.error_message,
+        'error_stack': r.error_stack,
+        'context': r.get_context(),
+        'user_agent': r.user_agent,
+        'url': r.url,
+        'user_note': r.user_note,
+        'resolved': bool(r.resolved),
+    })
+
+
+@app.route('/admin/error-reports/<int:report_id>/resolve', methods=['POST'])
+@login_required
+@admin_required
+def admin_error_report_resolve(report_id):
+    r = ErrorReport.query.get_or_404(report_id)
+    r.resolved = not r.resolved
+    db.session.commit()
+    return jsonify({'success': True, 'resolved': bool(r.resolved)})
+
+
+@app.route('/admin/error-reports/<int:report_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def admin_error_report_delete(report_id):
+    r = ErrorReport.query.get_or_404(report_id)
+    db.session.delete(r)
+    db.session.commit()
+    return jsonify({'success': True})
 
 
 # Add context processor for datetime
@@ -3785,6 +3865,56 @@ def video_editor_track_local_export():
     except Exception:
         pass
     return ('', 204)
+
+
+@app.route('/video-editor/error-report', methods=['POST'])
+@login_required
+def video_editor_error_report():
+    """Приём отчёта об ошибке от браузера (в основном — сбои Local Export).
+
+    Сохраняет максимум диагностики в ErrorReport для просмотра админом. Всегда
+    отвечает 200 и глотает ошибки, чтобы не плодить вторичные сбои у пользователя."""
+    import json as _json
+    try:
+        data = request.get_json(silent=True) or {}
+
+        def _clip(v, n):
+            if v is None:
+                return None
+            try:
+                s = v if isinstance(v, str) else _json.dumps(v, ensure_ascii=False, default=str)
+            except Exception:
+                s = str(v)
+            return s[:n]
+
+        ctx = data.get('context')
+        if ctx is not None and not isinstance(ctx, str):
+            try:
+                ctx = _json.dumps(ctx, ensure_ascii=False, default=str)
+            except Exception:
+                ctx = str(ctx)
+
+        rep = ErrorReport(
+            user_id=current_user.id if current_user.is_authenticated else None,
+            source=_clip(data.get('source', 'local_export'), 40),
+            error_message=_clip(data.get('error_message'), 4000),
+            error_stack=_clip(data.get('error_stack'), 8000),
+            context=_clip(ctx, 60000),
+            user_agent=_clip(request.headers.get('User-Agent'), 1000),
+            url=_clip(data.get('url'), 500),
+            user_note=_clip(data.get('user_note'), 2000),
+        )
+        db.session.add(rep)
+        db.session.commit()
+        return jsonify({'success': True, 'id': rep.id})
+    except Exception as e:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        logging.error(f"error-report save failed: {e}")
+        # 200, чтобы клиент не показал юзеру вторую ошибку поверх первой
+        return jsonify({'success': False})
 
 
 def parse_vbo_file(filepath):

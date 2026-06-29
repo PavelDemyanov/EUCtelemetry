@@ -97,6 +97,54 @@
         </div>
     </div>
 
+    <!-- Error Reports -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h2 class="h5 mb-0">
+                <i class="bi bi-bug"></i> Error Reports
+                <span class="badge bg-danger ms-2" id="err-open-badge" style="display:none;">0</span>
+            </h2>
+            <div class="btn-group btn-group-sm" role="group" id="err-show-switch">
+                <button type="button" class="btn btn-outline-primary active" data-show="open">Open</button>
+                <button type="button" class="btn btn-outline-primary" data-show="all">All</button>
+            </div>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small mb-3">
+                Отчёты об ошибках от пользователей (в основном — сбои Local Export, который целиком в браузере). Кликни строку — увидишь полный диагностический контекст.
+            </p>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle mb-0">
+                    <thead><tr>
+                        <th>Time</th><th>User</th><th>Source</th><th>Error</th><th>Status</th><th class="text-end">View</th>
+                    </tr></thead>
+                    <tbody id="err-reports-body">
+                        <tr><td colspan="6" class="text-center text-muted">Loading…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <nav class="mt-2"><ul class="pagination pagination-sm mb-0 justify-content-center" id="err-pagination"></ul></nav>
+        </div>
+    </div>
+
+    <!-- Error Report Detail Modal -->
+    <div class="modal fade" id="errReportModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-bug"></i> Error Report <span id="err-modal-id" class="text-muted"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="err-modal-body"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-outline-success" id="err-modal-resolve"><i class="bi bi-check2-circle"></i> Toggle resolved</button>
+                    <button type="button" class="btn btn-sm btn-outline-danger" id="err-modal-delete"><i class="bi bi-trash"></i> Delete</button>
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Achievements Management -->
     <div class="card mb-4">
         <div class="card-header">
@@ -1337,9 +1385,14 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.btn-group button').forEach(button => {
         button.addEventListener('click', function() {
             const range = this.dataset.range;
+            // Этот глобальный обработчик ловит ВСЕ .btn-group кнопки на странице,
+            // включая переключатели Usage Analytics (data-period) и Error Reports
+            // (data-show) — у них нет data-range. Без guard они бы обнулили графики
+            // ресурсов (range=undefined → пустые labels) и сняли active с кнопок диапазона.
+            if (range === undefined) return;
             currentRange = range;
 
-            document.querySelectorAll('.btn-group button').forEach(btn => {
+            document.querySelectorAll('#system-range-switch button, .btn-group button[data-range]').forEach(btn => {
                 btn.classList.remove('active');
             });
             this.classList.add('active');
@@ -1601,6 +1654,111 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     loadUsageStats();
     setInterval(loadUsageStats, 30000);
+});
+
+// ===== Error Reports section =====
+let errShow = 'open';
+let errPage = 1;
+let errCurrentId = null;
+
+function errEsc(s) {
+    if (s == null) return '';
+    return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function loadErrorReports() {
+    fetch(`/admin/error-reports?show=${errShow}&page=${errPage}`)
+        .then(r => r.json())
+        .then(d => {
+            const badge = document.getElementById('err-open-badge');
+            if (badge) { if (d.open_count > 0) { badge.textContent = d.open_count; badge.style.display = ''; } else { badge.style.display = 'none'; } }
+            const tb = document.getElementById('err-reports-body');
+            if (!tb) return;
+            if (!d.items.length) {
+                tb.innerHTML = `<tr><td colspan="6" class="text-center text-muted">${errShow === 'open' ? 'Нет открытых отчётов' : 'Отчётов пока нет'}</td></tr>`;
+            } else {
+                tb.innerHTML = d.items.map(it => `
+                    <tr style="cursor:pointer" class="err-row" data-id="${it.id}">
+                        <td class="text-nowrap small">${it.created_at}</td>
+                        <td class="small text-truncate" style="max-width:150px" title="${errEsc(it.user_email)}">${errEsc(it.user_email)}</td>
+                        <td><span class="badge bg-secondary">${errEsc(it.source)}</span></td>
+                        <td class="small text-truncate" style="max-width:340px" title="${errEsc(it.error_message)}">${errEsc(it.error_message)}${it.has_note ? ' <i class="bi bi-chat-left-text text-info" title="есть комментарий"></i>' : ''}</td>
+                        <td>${it.resolved ? '<span class="badge bg-success">resolved</span>' : '<span class="badge bg-danger">open</span>'}</td>
+                        <td class="text-end"><button class="btn btn-sm btn-outline-primary err-view" data-id="${it.id}"><i class="bi bi-eye"></i></button></td>
+                    </tr>`).join('');
+            }
+            const pag = document.getElementById('err-pagination');
+            if (pag) {
+                pag.innerHTML = '';
+                if (d.pages > 1) {
+                    const mk = (p, label, dis) => `<li class="page-item ${dis ? 'disabled' : ''}"><a class="page-link" href="#" data-errpage="${p}">${label}</a></li>`;
+                    pag.innerHTML = mk(d.page - 1, '«', !d.has_prev) + `<li class="page-item disabled"><span class="page-link">${d.page}/${d.pages}</span></li>` + mk(d.page + 1, '»', !d.has_next);
+                    pag.querySelectorAll('[data-errpage]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); errPage = parseInt(a.dataset.errpage); loadErrorReports(); }));
+                }
+            }
+            tb.querySelectorAll('.err-row').forEach(row => row.addEventListener('click', () => openErrorReport(row.dataset.id)));
+        }).catch(() => {});
+}
+
+function openErrorReport(id) {
+    errCurrentId = id;
+    fetch(`/admin/error-reports/${id}`).then(r => r.json()).then(d => {
+        document.getElementById('err-modal-id').textContent = '#' + d.id;
+        const ctx = d.context || {};
+        const ctxRows = Object.keys(ctx).map(k => {
+            const v = ctx[k];
+            const vs = (v != null && typeof v === 'object') ? JSON.stringify(v, null, 2) : (v == null ? '' : String(v));
+            return `<tr><td class="text-muted small" style="white-space:nowrap;vertical-align:top">${errEsc(k)}</td><td class="small"><pre style="white-space:pre-wrap;word-break:break-word;margin:0">${errEsc(vs)}</pre></td></tr>`;
+        }).join('');
+        document.getElementById('err-modal-body').innerHTML = `
+            <div class="mb-2 small">
+                <span class="text-muted">Time:</span> ${d.created_at} &nbsp;
+                <span class="text-muted">User:</span> ${errEsc(d.user_email || '—')} &nbsp;
+                <span class="text-muted">Source:</span> <span class="badge bg-secondary">${errEsc(d.source || '—')}</span>
+                ${d.resolved ? '<span class="badge bg-success">resolved</span>' : '<span class="badge bg-danger">open</span>'}
+            </div>
+            <div class="mb-2"><div class="fw-bold small">Error</div><pre class="bg-body-tertiary p-2 rounded small" style="white-space:pre-wrap;word-break:break-word;">${errEsc(d.error_message || '—')}</pre></div>
+            ${d.user_note ? `<div class="mb-2"><div class="fw-bold small">User note</div><div class="alert alert-info py-1 px-2 small mb-0">${errEsc(d.user_note)}</div></div>` : ''}
+            ${d.error_stack ? `<details class="mb-2"><summary class="small fw-bold">Stack trace</summary><pre class="bg-body-tertiary p-2 rounded small" style="white-space:pre-wrap;word-break:break-word;">${errEsc(d.error_stack)}</pre></details>` : ''}
+            <div class="mb-2"><div class="fw-bold small">URL</div><div class="small text-break">${errEsc(d.url || '—')}</div></div>
+            <div class="mb-2"><div class="fw-bold small">User-Agent</div><div class="small text-break">${errEsc(d.user_agent || '—')}</div></div>
+            <div class="fw-bold small mb-1">Context</div>
+            <div class="table-responsive"><table class="table table-sm table-bordered mb-0"><tbody>${ctxRows || '<tr><td class="text-muted">—</td></tr>'}</tbody></table></div>`;
+        new bootstrap.Modal(document.getElementById('errReportModal')).show();
+    }).catch(() => {});
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    const sw = document.getElementById('err-show-switch');
+    if (sw) {
+        sw.addEventListener('click', e => {
+            const b = e.target.closest('button[data-show]');
+            if (!b) return;
+            errShow = b.dataset.show; errPage = 1;
+            sw.querySelectorAll('button').forEach(x => x.classList.remove('active'));
+            b.classList.add('active');
+            loadErrorReports();
+        });
+    }
+    const rb = document.getElementById('err-modal-resolve');
+    if (rb) rb.addEventListener('click', () => {
+        if (!errCurrentId) return;
+        fetch(`/admin/error-reports/${errCurrentId}/resolve`, { method: 'POST' }).then(r => r.json()).then(() => {
+            loadErrorReports();
+            const m = bootstrap.Modal.getInstance(document.getElementById('errReportModal')); if (m) m.hide();
+        });
+    });
+    const delb = document.getElementById('err-modal-delete');
+    if (delb) delb.addEventListener('click', () => {
+        if (!errCurrentId) return;
+        if (!confirm('Удалить этот отчёт?')) return;
+        fetch(`/admin/error-reports/${errCurrentId}/delete`, { method: 'POST' }).then(r => r.json()).then(() => {
+            loadErrorReports();
+            const m = bootstrap.Modal.getInstance(document.getElementById('errReportModal')); if (m) m.hide();
+        });
+    });
+    loadErrorReports();
+    setInterval(loadErrorReports, 30000);
 });
 </script>
 {% endblock %}

@@ -601,12 +601,23 @@
         <div style="font-size:0.75rem;color:#6e7681;text-align:center;" id="localExpStage">Initializing...</div>
       </div>
       <div style="padding:0.75rem 1.25rem;border-top:1px solid var(--bs-border-color);text-align:center;">
-        <div class="alert alert-danger" style="font-size:0.75rem;padding:0.4rem 0.75rem;margin-bottom:0.75rem;display:none;" id="localExpError"></div>
+        <div class="alert alert-danger" style="font-size:0.75rem;padding:0.5rem 0.75rem;margin-bottom:0.75rem;display:none;text-align:left;" id="localExpError">
+          <div id="localExpErrorMsg" style="font-weight:600;"></div>
+          <div id="localExpErrorHint" style="margin-top:0.35rem;color:#f3b0b0;"></div>
+          <details style="margin-top:0.5rem;">
+            <summary style="cursor:pointer;font-size:0.7rem;color:#c8c8c8;">Технические детали</summary>
+            <pre id="localExpErrorDetails" style="white-space:pre-wrap;word-break:break-word;font-size:0.65rem;line-height:1.35;max-height:200px;overflow:auto;margin:0.4rem 0 0;color:#d6d6d6;"></pre>
+          </details>
+          <div id="localExpReportStatus" style="margin-top:0.45rem;font-size:0.7rem;color:#9fd89f;display:none;"></div>
+        </div>
         <button type="button" class="btn btn-sm btn-danger" id="btnLocalExportCancel">
           <i class="bi bi-x-circle"></i> Cancel
         </button>
         <button type="button" class="btn btn-sm btn-primary" id="btnLocalExportDownload" style="display:none;">
           <i class="bi bi-download"></i> Download MP4
+        </button>
+        <button type="button" class="btn btn-sm btn-warning" id="btnLocalExportReport" style="display:none;">
+          <i class="bi bi-send"></i> Отправить отчёт
         </button>
         <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal" id="btnLocalExportClose" style="display:none;">
           Close
@@ -623,5 +634,5 @@
 <script>window._isAdmin = {{ 'true' if current_user.is_admin else 'false' }};</script>
 <script src="{{ url_for('static', filename='js/mp4box.all.min.js') }}"></script>
 <script src="{{ url_for('static', filename='js/mp4-muxer.min.js') }}"></script>
-<script src="{{ url_for('static', filename='js/video-editor.js') }}?v=1780403210"></script>
+<script src="{{ url_for('static', filename='js/video-editor.js') }}?v=1782720600"></script>
 {% endblock %}

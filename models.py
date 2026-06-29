@@ -526,3 +526,33 @@ class SystemMetricDaily(db.Model):
     memory = db.Column(db.Float, default=0)
     disk = db.Column(db.Float, default=0)
     gpu = db.Column(db.Float, default=0)
+
+
+class ErrorReport(db.Model):
+    """Отчёт об ошибке, присланный пользователем (в основном — сбои Local Export,
+    который целиком в браузере и иначе серверу не виден). Собирает максимум
+    диагностики, чтобы воспроизвести и найти причину без доступа к машине юзера.
+    Виден админу в разделе «Отчёты об ошибках»."""
+    __tablename__ = 'error_report'
+    id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)
+    source = db.Column(db.String(40), index=True)   # 'local_export' | 'server_export' | ...
+    error_message = db.Column(db.Text)              # человекочитаемое сообщение об ошибке
+    error_stack = db.Column(db.Text)                # JS stack trace, если есть
+    context = db.Column(db.Text)                    # JSON: браузер, видео, экспорт, WebCodecs, прогресс, память
+    user_agent = db.Column(db.Text)
+    url = db.Column(db.String(500))
+    user_note = db.Column(db.Text)                  # опциональный комментарий пользователя
+    resolved = db.Column(db.Boolean, default=False, index=True)
+
+    user = db.relationship('User', foreign_keys=[user_id])
+
+    def get_context(self):
+        """context как dict (или {} если пусто/битый)."""
+        if not self.context:
+            return {}
+        try:
+            return json.loads(self.context)
+        except Exception:
+            return {'_raw': self.context}

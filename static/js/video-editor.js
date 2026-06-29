@@ -759,6 +759,34 @@
       startThumbnails();
     });
 
+    // Пассивная оценка реального fps через requestVideoFrameCallback (видео и так
+    // кратко проигрывается выше для preload). HTML5 video API не отдаёт частоту кадров,
+    // и раньше fps был захардкожен 30 — 60fps-видео экспортировалось рывками и с
+    // неверной длительностью. Если кадры собрать не удалось — остаётся fallback 30.
+    if (typeof dom.video.requestVideoFrameCallback === 'function') {
+      (function attachFpsProbe() {
+        var times = [];
+        function probe(now, meta) {
+          if (typeof meta.mediaTime === 'number') times.push(meta.mediaTime);
+          if (times.length >= 8) {
+            var deltas = [];
+            for (var i = 1; i < times.length; i++) { var d = times[i] - times[i - 1]; if (d > 0.0001) deltas.push(d); }
+            if (deltas.length) {
+              deltas.sort(function (a, b) { return a - b; });
+              var fps = 1 / deltas[Math.floor(deltas.length / 2)];
+              if (isFinite(fps) && fps >= 10 && fps <= 244) {
+                state.videoMeta.fps = Math.round(fps * 100) / 100;
+                console.log('Local export: detected source fps', state.videoMeta.fps);
+              }
+            }
+            return; // достаточно
+          }
+          dom.video.requestVideoFrameCallback(probe);
+        }
+        dom.video.requestVideoFrameCallback(probe);
+      })();
+    }
+
     // Background upload to server — check disk space first
     fetch('/api/disk-space')
       .then(function(resp) { return resp.json(); })
@@ -4135,6 +4163,8 @@
     if (btnCancel) btnCancel.addEventListener('click', cancelLocalExport);
     var btnDownload = document.getElementById('btnLocalExportDownload');
     if (btnDownload) btnDownload.addEventListener('click', downloadLocalExport);
+    var btnReport = document.getElementById('btnLocalExportReport');
+    if (btnReport) btnReport.addEventListener('click', sendLocalExportReport);
   }
 
   function showLocalExportConfirm() {
@@ -4232,21 +4262,129 @@
     } catch (e) {}
   }
 
-  function showLocalExportError(msg) {
+  // Понятное сообщение + подсказка по частым причинам сбоя экспорта.
+  function _humanizeExportError(err) {
+    var m = (err && err.message) ? err.message : String(err || 'Unknown error');
+    var hint = '';
+    if (/closed codec|encoder closed|закрыл/i.test(m)) hint = 'Кодек закрылся — обычно разрешение или частота кадров не поддерживаются кодировщиком. Попробуйте экспорт в 1080p (параметр Resolution).';
+    else if (/not supported|unsupported|isConfigSupported|не поддерж/i.test(m)) hint = 'Эта конфигурация не поддерживается браузером или видеокартой. Попробуйте меньшее разрешение (1080p) либо свежий Chrome/Edge.';
+    else if (/memory|allocation|OOM|heap/i.test(m)) hint = 'Не хватило памяти — видео слишком большое для экспорта в браузере. Попробуйте меньшее разрешение или серверный экспорт (Export).';
+    else if (/VideoEncoder|VideoFrame|WebCodecs|is not defined/i.test(m)) hint = 'Похоже, браузер не поддерживает WebCodecs. Используйте свежий Chrome/Edge или серверный экспорт.';
+    return { message: m, hint: hint };
+  }
+
+  // Собирает максимум диагностики для отчёта об ошибке (браузер, видео, экспорт, память).
+  function _collectExportDiag(err) {
+    var diag = {};
+    try {
+      diag.error_name = err && err.name;
+      diag.error_message = err && err.message ? err.message : String(err || '');
+      var resSel = document.getElementById('localExportRes');
+      diag.export = {
+        resolution: (_localExport.expW && _localExport.expH) ? (_localExport.expW + 'x' + _localExport.expH) : (resSel ? resSel.value : null),
+        fps: _localExport.expFps,
+        total_frames: _localExport.expFrames,
+        duration_sec: _localExport.expDuration,
+        encoder_config: _localExport.encConfig || null,
+        audio_skipped: _localExport.audioSkippedReason || null,
+        progress_frame: (document.getElementById('localExpFrame') || {}).textContent || null,
+        progress_stage: (document.getElementById('localExpStage') || {}).textContent || null,
+        no_video_mode: !!state.noVideoMode,
+      };
+      var vm = state.videoMeta || {};
+      diag.video = {
+        width: vm.width, height: vm.height, fps: vm.fps, duration: vm.duration,
+        file_name: state.videoFile && state.videoFile.name,
+        file_size_mb: (state.videoFile && state.videoFile.size) ? Math.round(state.videoFile.size / 1048576) : null,
+        file_type: state.videoFile && state.videoFile.type,
+      };
+      diag.telemetry = {
+        csv_type: state.csvType || null,
+        has_vbo: !!state.vboData,
+        has_track_map: !!(settings && settings.show_track_map),
+        laps: (state.trackLaps && state.trackLaps.length) || 0,
+      };
+      diag.webcodecs = {
+        VideoEncoder: (typeof VideoEncoder !== 'undefined'),
+        VideoFrame: (typeof VideoFrame !== 'undefined'),
+        AudioEncoder: (typeof AudioEncoder !== 'undefined'),
+        Mp4Muxer: (typeof Mp4Muxer !== 'undefined'),
+        MP4Box: (typeof MP4Box !== 'undefined'),
+        isConfigSupported: (typeof VideoEncoder !== 'undefined' && typeof VideoEncoder.isConfigSupported === 'function'),
+      };
+      var nav = window.navigator || {};
+      diag.browser = {
+        userAgent: nav.userAgent, platform: nav.platform, language: nav.language,
+        hardwareConcurrency: nav.hardwareConcurrency, deviceMemory: nav.deviceMemory,
+        screen: (window.screen ? (window.screen.width + 'x' + window.screen.height) : null),
+        dpr: window.devicePixelRatio,
+      };
+      if (window.performance && performance.memory) {
+        diag.memory = {
+          usedJSHeapMB: Math.round(performance.memory.usedJSHeapSize / 1048576),
+          totalJSHeapMB: Math.round(performance.memory.totalJSHeapSize / 1048576),
+          limitMB: Math.round(performance.memory.jsHeapSizeLimit / 1048576),
+        };
+      }
+      diag.stack = (err && err.stack) ? String(err.stack).slice(0, 4000) : null;
+      diag.time = new Date().toISOString();
+    } catch (e) { diag._collectError = String(e); }
+    return diag;
+  }
+
+  function showLocalExportError(err, diag) {
+    var info = _humanizeExportError(err);
+    _localExport.lastError = info.message;
+    _localExport.lastDiag = diag || _collectExportDiag(err);
+    var msgEl = document.getElementById('localExpErrorMsg');
+    var hintEl = document.getElementById('localExpErrorHint');
+    var detEl = document.getElementById('localExpErrorDetails');
     var errEl = document.getElementById('localExpError');
     var stageEl = document.getElementById('localExpStage');
     var statusEl = document.getElementById('localExpStatus');
     var btnCancel = document.getElementById('btnLocalExportCancel');
     var btnClose = document.getElementById('btnLocalExportClose');
-    if (errEl) { errEl.textContent = msg; errEl.style.display = ''; }
+    var btnReport = document.getElementById('btnLocalExportReport');
+    var rptStatus = document.getElementById('localExpReportStatus');
+    if (msgEl) msgEl.textContent = info.message;
+    if (hintEl) { hintEl.textContent = info.hint || ''; hintEl.style.display = info.hint ? '' : 'none'; }
+    if (detEl) { try { detEl.textContent = JSON.stringify(_localExport.lastDiag, null, 2); } catch (e) { detEl.textContent = String(_localExport.lastDiag); } }
+    if (errEl) errEl.style.display = '';
     if (stageEl) stageEl.textContent = 'Export failed';
     if (statusEl) statusEl.innerHTML = '<span class="badge text-bg-danger">Error</span>';
     if (btnCancel) btnCancel.style.display = 'none';
     if (btnClose) btnClose.style.display = '';
+    if (rptStatus) { rptStatus.style.display = 'none'; rptStatus.textContent = ''; }
+    if (btnReport) { btnReport.style.display = ''; btnReport.disabled = false; btnReport.innerHTML = '<i class="bi bi-send"></i> Отправить отчёт'; }
+  }
+
+  // Отправка отчёта об ошибке на сервер (кнопка в модалке).
+  function sendLocalExportReport() {
+    var btnReport = document.getElementById('btnLocalExportReport');
+    var rptStatus = document.getElementById('localExpReportStatus');
+    if (btnReport) { btnReport.disabled = true; btnReport.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Отправка…'; }
+    fetch('/video-editor/error-report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        source: 'local_export',
+        error_message: _localExport.lastError || 'Unknown error',
+        error_stack: (_localExport.lastDiag && _localExport.lastDiag.stack) || null,
+        context: _localExport.lastDiag || {},
+        url: window.location.href,
+      })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (rptStatus) { rptStatus.style.display = ''; rptStatus.style.color = '#9fd89f'; rptStatus.textContent = (d && d.success) ? '✓ Отчёт отправлен, спасибо! Мы разберёмся.' : 'Отчёт принят.'; }
+      if (btnReport) btnReport.style.display = 'none';
+    }).catch(function () {
+      if (rptStatus) { rptStatus.style.display = ''; rptStatus.style.color = '#f3b0b0'; rptStatus.textContent = 'Не удалось отправить отчёт (проверьте соединение).'; }
+      if (btnReport) { btnReport.disabled = false; btnReport.innerHTML = '<i class="bi bi-send"></i> Отправить отчёт'; }
+    });
   }
 
   function cancelLocalExport() {
     _localExport.cancelled = true;
+    _localExport.userCancelled = true;   // отличаем ручную отмену от сбоя энкодера
     try { if (_localExport.videoEncoder && _localExport.videoEncoder.state !== 'closed') _localExport.videoEncoder.close(); } catch(e) {}
     try { if (_localExport.audioEncoder && _localExport.audioEncoder.state !== 'closed') _localExport.audioEncoder.close(); } catch(e) {}
     var modal = bootstrap.Modal.getInstance(document.getElementById('localExportProgressModal'));
@@ -4268,7 +4406,13 @@
     if (_localExport.active) return;
     _localExport.active = true;
     _localExport.cancelled = false;
+    _localExport.userCancelled = false;
+    _localExport.encoderError = null;
+    _localExport.audioSkippedReason = null;
+    _localExport.encConfig = null;
     _localExport.resultBlob = null;
+    _localExport.muxerChunks = null;
+    _localExport.muxer = null;
 
     var confirmModal = bootstrap.Modal.getInstance(document.getElementById('localExportConfirmModal'));
     if (confirmModal) confirmModal.hide();
@@ -4299,11 +4443,54 @@
       await doLocalExport();
     } catch (e) {
       console.error('Local export error:', e);
-      if (!_localExport.cancelled) {
-        showLocalExportError(e.message || 'Unknown error');
+      // Освобождаем нативные ресурсы кодеков/muxer при сбое (иначе утечка) и
+      // восстанавливаем ширины боксов под viewport.
+      try { if (_localExport.videoEncoder && _localExport.videoEncoder.state !== 'closed') _localExport.videoEncoder.close(); } catch (_) {}
+      try { if (_localExport.audioEncoder && _localExport.audioEncoder.state !== 'closed') _localExport.audioEncoder.close(); } catch (_) {}
+      try { recalcStaticBoxWidths(); } catch (_) {}
+      _localExport.muxerChunks = null;
+      _localExport.muxer = null;
+      // Показываем ошибку только если это реальный сбой, а не ручная отмена.
+      if (!_localExport.userCancelled) {
+        showLocalExportError(e);
       }
     }
     _localExport.active = false;
+  }
+
+  // Подбор поддерживаемой конфигурации H.264-энкодера: достаточный Level по
+  // разрешению/fps, сначала аппаратное ускорение, затем software. Возвращает первый
+  // поддерживаемый VideoEncoderConfig или null, если ничего не подошло.
+  async function _pickVideoEncoderConfig(w, h, fps, bitrate) {
+    // High Profile, codec-строки с возрастающим Level и их потолком разрешения
+    var byLevel = [
+      { lvl: 'avc1.64001f', maxW: 1280, maxH: 720 },   // 3.1
+      { lvl: 'avc1.640028', maxW: 2048, maxH: 1080 },  // 4.0  (1080p30)
+      { lvl: 'avc1.64002a', maxW: 2704, maxH: 1536 },  // 4.2  (1080p60 / 2.7K)
+      { lvl: 'avc1.640032', maxW: 3840, maxH: 2160 },  // 5.0
+      { lvl: 'avc1.640033', maxW: 4096, maxH: 2304 },  // 5.1  (4K)
+      { lvl: 'avc1.640034', maxW: 8192, maxH: 4320 },  // 5.2
+    ];
+    var candidates = byLevel.filter(function (c) { return w <= c.maxW && h <= c.maxH; }).map(function (c) { return c.lvl; });
+    if (!candidates.length) candidates = ['avc1.640034', 'avc1.640033'];
+    var accels = ['prefer-hardware', 'prefer-software', 'no-preference'];
+    var hasCheck = (typeof VideoEncoder !== 'undefined' && typeof VideoEncoder.isConfigSupported === 'function');
+    for (var ai = 0; ai < accels.length; ai++) {
+      for (var ci = 0; ci < candidates.length; ci++) {
+        var cfg = {
+          codec: candidates[ci], width: w, height: h,
+          bitrate: bitrate, framerate: fps,
+          hardwareAcceleration: accels[ai],
+          avc: { format: 'avc' },
+        };
+        if (!hasCheck) return cfg; // нет API проверки — пробуем как есть
+        try {
+          var sup = await VideoEncoder.isConfigSupported(cfg);
+          if (sup && sup.supported) { console.log('Local export: encoder config selected', cfg.codec, accels[ai]); return cfg; }
+        } catch (e) { /* пробуем следующий вариант */ }
+      }
+    }
+    return null;
   }
 
   async function doLocalExport() {
@@ -4323,6 +4510,10 @@
       w = state.videoMeta.width || video.videoWidth || 1920;
       h = state.videoMeta.height || video.videoHeight || 1080;
     }
+    // H.264 требует ЧЁТНЫЕ width/height — нечётный source (часто у портретных/обрезанных
+    // видео) иначе валит VideoEncoder.configure() и даёт 'closed codec' на кадре 0.
+    w = w - (w % 2);
+    h = h - (h % 2);
 
     // Read user-selected FPS from modal
     var fpsSelect = document.getElementById('localExportFps');
@@ -4361,7 +4552,13 @@
     var audioSamples = [];
     updateLocalProgress(0, totalFrames, 'Extracting audio from original...', '\u2014', '\u2014');
     try {
-      if (!state.noVideoMode && state.videoFile && typeof MP4Box !== 'undefined') {
+      // Guard: извлечение аудио читает файл в память (mp4box) — на очень больших
+      // файлах (десятки ГБ с экшн-камер) это валит вкладку по OOM ещё до рендера.
+      // Пропускаем звук с предупреждением, а не роняем весь экспорт.
+      if (!state.noVideoMode && state.videoFile && state.videoFile.size > 1610612736 /* 1.5 GB */) {
+        console.warn('Local export: video file too large (' + (state.videoFile.size / 1073741824).toFixed(1) + ' GB) for in-browser audio extraction — exporting without audio');
+        _localExport.audioSkippedReason = 'file_too_large';
+      } else if (!state.noVideoMode && state.videoFile && typeof MP4Box !== 'undefined') {
         var extracted = await _extractAudioFromMP4(state.videoFile);
         if (extracted) {
           var aCodec = (extracted.info.codec || '').toLowerCase();
@@ -4373,7 +4570,7 @@
               'channels:', audioTrackInfo.channels);
           } else {
             console.warn('Local export: unsupported audio codec:', aCodec);
-            alert('Audio format  + aCodec +  is not supported for local export. The video will be exported without audio. Supported format: AAC.');
+            alert('Audio format ' + aCodec + ' is not supported for local export. The video will be exported without audio. Supported format: AAC.');
           }
         }
       }
@@ -4431,10 +4628,17 @@
     var muxer = new Mp4Muxer.Muxer(muxerOpts);
     _localExport.muxer = muxer;
 
-    // Video encoder
+    // Video encoder. error-колбэк ФАТАЛЬНЫЙ: сохраняет реальную причину и валит экспорт.
+    // Иначе configure() с неподдерживаемой конфигурацией асинхронно переводит кодек в
+    // 'closed', а цикл продолжает encode() на закрытом кодеке → невнятное
+    // 'Cannot call encode on a closed codec' на кадре 0 (исходный баг инцидента).
     var videoEncoder = new VideoEncoder({
       output: function(chunk, meta) { muxer.addVideoChunk(chunk, meta); },
-      error: function(e) { console.error('VideoEncoder error:', e); }
+      error: function(e) {
+        console.error('VideoEncoder error:', e);
+        _localExport.encoderError = e;
+        _localExport.cancelled = true;
+      }
     });
     _localExport.videoEncoder = videoEncoder;
 
@@ -4443,15 +4647,16 @@
     else if (w >= 1920) bitrate = 12000000;
     else if (w >= 1280) bitrate = 8000000;
 
-    videoEncoder.configure({
-      codec: 'avc1.640028',
-      width: w,
-      height: h,
-      bitrate: bitrate,
-      framerate: fps,
-      hardwareAcceleration: 'prefer-hardware',
-      avc: { format: 'avc' },
-    });
+    // Подбираем H.264 Level под разрешение/fps и проверяем поддержку через
+    // isConfigSupported, с фолбэком на software-кодирование. Захардкоженный ранее
+    // 'avc1.640028' (Level 4.0) не поддерживает >1080p — отсюда сбой на 4K/2.7K видео.
+    var encCfg = await _pickVideoEncoderConfig(w, h, fps, bitrate);
+    if (!encCfg) {
+      throw new Error('Браузер или видеокарта не поддерживают кодирование ' + w + '×' + h +
+        ' в H.264. Попробуйте экспортировать в меньшем разрешении (1080p) — параметр Resolution в окне Local Export.');
+    }
+    _localExport.encConfig = { codec: encCfg.codec, accel: encCfg.hardwareAcceleration, bitrate: bitrate, width: w, height: h, fps: fps };
+    videoEncoder.configure(encCfg);
 
     updateLocalProgress(0, totalFrames, 'Rendering frames...', '\u2014', '\u2014');
     video.pause();
@@ -4465,6 +4670,9 @@
     // Frame-by-frame rendering
     for (var frameIdx = 0; frameIdx < totalFrames; frameIdx++) {
       if (_localExport.cancelled) break;
+      // Если энкодер упал асинхронно (отказ HW/конфига) — пробрасываем ИСХОДНУЮ
+      // причину, а не ждём generic 'closed codec' на следующем encode().
+      if (_localExport.encoderError) throw _localExport.encoderError;
 
       var t = frameIdx / fps;
 
@@ -4484,16 +4692,16 @@
         // Safety timeout 10s — should never trigger if either signal works.
         await new Promise(function(resolve) {
           var done = false;
+          var onSeeked = function() { finish(); };
           function finish() {
             if (done) return;
             done = true;
+            // снимаем listener во ВСЕХ путях завершения (rVFC-first / seeked / timeout),
+            // иначе на длинном видео накапливаются десятки тысяч 'seeked'-обработчиков
+            video.removeEventListener('seeked', onSeeked);
             // Wait one paint frame so the video element actually shows the new frame
             requestAnimationFrame(function() { resolve(); });
           }
-          var onSeeked = function() {
-            video.removeEventListener('seeked', onSeeked);
-            finish();
-          };
           video.addEventListener('seeked', onSeeked);
           if (typeof video.requestVideoFrameCallback === 'function') {
             video.requestVideoFrameCallback(function() { finish(); });
@@ -4502,6 +4710,7 @@
             if (!done) {
               console.warn('Local export: frame ready timeout at frame', frameIdx, 't=', t.toFixed(3));
               done = true;
+              video.removeEventListener('seeked', onSeeked);
               resolve();
             }
           }, 10000);
@@ -4522,7 +4731,9 @@
         drawLapTimer(offCtx, w, h, dataPoint, false);
       }
 
-      // Encode frame
+      // Encode frame. Если кодек уже закрыт (асинхронный отказ) — бросаем понятную
+      // причину вместо нативного 'Cannot call encode on a closed codec'.
+      if (videoEncoder.state === 'closed') throw (_localExport.encoderError || new Error('Видеокодек неожиданно закрылся во время кодирования'));
       var frame = new VideoFrame(offCanvas, {
         timestamp: Math.round(t * 1000000),
         duration: Math.round(1000000 / fps),
@@ -4532,6 +4743,7 @@
 
       // Backpressure: wait if encoder queue is building up
       while (videoEncoder.encodeQueueSize > 10) {
+        if (_localExport.encoderError) throw _localExport.encoderError;
         await new Promise(function(r) { setTimeout(r, 1); });
       }
 
@@ -4547,7 +4759,7 @@
       }
     }
 
-    if (_localExport.cancelled) { videoEncoder.close(); return; }
+    if (_localExport.cancelled) { if (videoEncoder.state !== 'closed') videoEncoder.close(); return; }
 
     // Flush video
     updateLocalProgress(totalFrames, totalFrames, 'Flushing video encoder...', '\u2014', '\u2014');
@@ -4582,6 +4794,10 @@
     // Blob from accumulated chunks. Blob can hold many GB (may spill to disk),
     // unlike ArrayBuffer which has a hard ~2GB-per-tab ceiling in Chromium.
     _localExport.resultBlob = new Blob(muxerChunks, { type: 'video/mp4' });
+    // Освобождаем промежуточные чанки — Blob уже владеет копией данных (иначе на больших
+    // видео гигабайты держатся в RAM дважды и копятся между прогонами).
+    muxerChunks.length = 0;
+    _localExport.muxerChunks = null;
     // Restore static box widths for viewport
     recalcStaticBoxWidths();
     showLocalExportDone();
