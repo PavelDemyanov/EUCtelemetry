@@ -2,130 +2,596 @@
 
 {% block content %}
 <div class="container py-4">
-    <h1 class="mb-4">Admin Dashboard</h1>
-
-    <!-- Admin Actions -->
-    <div class="mb-4">
-        <a href="{{ url_for('email_campaigns') }}" class="btn btn-primary">
-            <i class="bi bi-envelope"></i> Email Campaigns
-        </a>
-        <a href="{{ url_for('admin_settings') }}" class="btn btn-outline-secondary ms-2">
-            <i class="bi bi-gear"></i> Settings
-        </a>
-    </div>
-
-    <!-- Usage Analytics -->
-    <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <h2 class="h5 mb-0"><i class="bi bi-graph-up-arrow"></i> Usage Analytics</h2>
-            <div class="btn-group btn-group-sm" role="group" id="usage-period-switch">
-                <button type="button" class="btn btn-outline-primary active" data-period="today">Today</button>
-                <button type="button" class="btn btn-outline-primary" data-period="week">7 days</button>
-                <button type="button" class="btn btn-outline-primary" data-period="all">All time</button>
-            </div>
-        </div>
-        <div class="card-body">
-            <p class="text-muted small mb-3">
-                Every finished video is recorded permanently (unlike projects, which auto-expire in 12–48 h).
-                Browser Local Export is captured via a beacon, so it shows up here too.
-            </p>
-
-            <!-- Mode breakdown for selected period -->
-            <div class="row g-3 mb-3">
-                <div class="col-md-4">
-                    <div class="border rounded p-3 h-100">
-                        <div class="text-muted small text-uppercase">Classic</div>
-                        <div class="h3 mb-0" id="usage-classic">–</div>
-                        <div class="small text-muted" id="usage-classic-pct"></div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="border rounded p-3 h-100">
-                        <div class="text-muted small text-uppercase">Editor — Server</div>
-                        <div class="h3 mb-0" id="usage-editor-server">–</div>
-                        <div class="small text-muted" id="usage-editor-server-pct"></div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="border rounded p-3 h-100">
-                        <div class="text-muted small text-uppercase">Editor — Local Export</div>
-                        <div class="h3 mb-0" id="usage-editor-local">–</div>
-                        <div class="small text-muted" id="usage-editor-local-pct"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Totals + funnel -->
-            <div class="row g-3 mb-3">
-                <div class="col-md-6">
-                    <div class="border rounded p-3 h-100">
-                        <div class="fw-bold mb-2">Total exports</div>
-                        <div class="d-flex justify-content-between"><span class="text-muted">Today</span><span id="usage-total-today">–</span></div>
-                        <div class="d-flex justify-content-between"><span class="text-muted">Last 7 days</span><span id="usage-total-week">–</span></div>
-                        <div class="d-flex justify-content-between"><span class="text-muted">All time</span><span id="usage-total-all">–</span></div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="border rounded p-3 h-100">
-                        <div class="fw-bold mb-2">User funnel</div>
-                        <div class="d-flex justify-content-between"><span class="text-muted">Registered</span><span id="usage-users-total">–</span></div>
-                        <div class="d-flex justify-content-between"><span class="text-muted">Email confirmed</span><span id="usage-users-confirmed">–</span></div>
-                        <div class="d-flex justify-content-between"><span class="text-muted">Made ≥1 export</span><span id="usage-creators">–</span></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Breakdowns (all-time) -->
-            <div class="row g-3 mb-3">
-                <div class="col-md-3"><div class="border rounded p-3 h-100"><div class="fw-bold mb-2 small">CSV source</div><div id="usage-by-csv" class="small"></div></div></div>
-                <div class="col-md-3"><div class="border rounded p-3 h-100"><div class="fw-bold mb-2 small">Resolution</div><div id="usage-by-res" class="small"></div></div></div>
-                <div class="col-md-3"><div class="border rounded p-3 h-100"><div class="fw-bold mb-2 small">Quality (server)</div><div id="usage-by-quality" class="small"></div></div></div>
-                <div class="col-md-3"><div class="border rounded p-3 h-100"><div class="fw-bold mb-2 small">Track overlay</div><div id="usage-track" class="small"></div></div></div>
-            </div>
-
-            <!-- Recent events -->
-            <div class="fw-bold mb-2 small">Recent exports</div>
-            <div class="table-responsive">
-                <table class="table table-sm table-hover mb-0">
-                    <thead><tr>
-                        <th>Time</th><th>Mode</th><th>User</th><th>CSV</th>
-                        <th>Res</th><th>Codec</th><th>Quality</th><th>Dur</th><th>Overlay</th>
-                    </tr></thead>
-                    <tbody id="usage-recent"><tr><td colspan="9" class="text-center text-muted">Loading…</td></tr></tbody>
-                </table>
-            </div>
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <h1 class="mb-0">Admin Dashboard</h1>
+        <div>
+            <a href="{{ url_for('email_campaigns') }}" class="btn btn-sm btn-primary">
+                <i class="bi bi-envelope"></i> Email Campaigns
+            </a>
+            <a href="{{ url_for('admin_settings') }}" class="btn btn-sm btn-outline-secondary ms-1">
+                <i class="bi bi-gear"></i> Settings
+            </a>
         </div>
     </div>
 
-    <!-- Error Reports -->
-    <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <h2 class="h5 mb-0">
-                <i class="bi bi-bug"></i> Error Reports
-                <span class="badge bg-danger ms-2" id="err-open-badge" style="display:none;">0</span>
-            </h2>
-            <div class="btn-group btn-group-sm" role="group" id="err-show-switch">
-                <button type="button" class="btn btn-outline-primary active" data-show="open">Open</button>
-                <button type="button" class="btn btn-outline-primary" data-show="all">All</button>
+    <!-- ===== Tab navigation ===== -->
+    <ul class="nav nav-tabs mb-3" id="admin-tabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#pane-overview" data-tab="overview" type="button" role="tab">
+                <i class="bi bi-speedometer2"></i> Обзор
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#pane-activity" data-tab="activity" type="button" role="tab">
+                <i class="bi bi-activity"></i> Активность
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#pane-users" data-tab="users" type="button" role="tab">
+                <i class="bi bi-people"></i> Пользователи
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#pane-infra" data-tab="infra" type="button" role="tab">
+                <i class="bi bi-hdd-stack"></i> Хранилище/Система
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#pane-content" data-tab="content" type="button" role="tab">
+                <i class="bi bi-collection"></i> Контент
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#pane-errors" data-tab="errors" type="button" role="tab">
+                <i class="bi bi-bug"></i> Ошибки
+                <span class="badge bg-danger ms-1" id="tab-err-badge" style="display:none;">0</span>
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+
+        <!-- ============================ OVERVIEW ============================ -->
+        <div class="tab-pane fade show active" id="pane-overview" role="tabpanel">
+
+            <!-- Health alerts -->
+            <div class="alert alert-danger d-flex justify-content-between align-items-center" id="overview-err-alert" style="display:none;">
+                <span><i class="bi bi-bug"></i> Открытых отчётов об ошибках: <strong id="overview-err-count">0</strong></span>
+                <button class="btn btn-sm btn-outline-light" data-goto-tab="errors">Открыть</button>
+            </div>
+            <div class="alert alert-warning d-flex justify-content-between align-items-center" id="overview-disk-alert" style="display:none;">
+                <span><i class="bi bi-exclamation-triangle"></i> Диск заполнен — стоит запустить очистку.</span>
+                <button class="btn btn-sm btn-outline-dark" data-goto-tab="infra">Хранилище</button>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <h2 class="h5 mb-0"><i class="bi bi-graph-up-arrow"></i> Usage Analytics</h2>
+                    <div class="btn-group btn-group-sm" role="group" id="usage-period-switch">
+                        <button type="button" class="btn btn-outline-primary active" data-period="today">Today</button>
+                        <button type="button" class="btn btn-outline-primary" data-period="week">7 days</button>
+                        <button type="button" class="btn btn-outline-primary" data-period="all">All time</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3">
+                        Каждое завершённое видео записывается навсегда (в отличие от проектов, которые истекают за 12–48 ч).
+                        Браузерный Local Export фиксируется через beacon, поэтому тоже учитывается. Полный лог — во вкладке «Активность → История экспортов».
+                    </p>
+
+                    <!-- Mode breakdown for selected period -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <div class="border rounded p-3 h-100">
+                                <div class="text-muted small text-uppercase">Classic</div>
+                                <div class="h3 mb-0" id="usage-classic">–</div>
+                                <div class="small text-muted" id="usage-classic-pct"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="border rounded p-3 h-100">
+                                <div class="text-muted small text-uppercase">Editor — Server</div>
+                                <div class="h3 mb-0" id="usage-editor-server">–</div>
+                                <div class="small text-muted" id="usage-editor-server-pct"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="border rounded p-3 h-100">
+                                <div class="text-muted small text-uppercase">Editor — Local Export</div>
+                                <div class="h3 mb-0" id="usage-editor-local">–</div>
+                                <div class="small text-muted" id="usage-editor-local-pct"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Totals + funnel -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <div class="border rounded p-3 h-100">
+                                <div class="fw-bold mb-2">Total exports</div>
+                                <div class="d-flex justify-content-between"><span class="text-muted">Today</span><span id="usage-total-today">–</span></div>
+                                <div class="d-flex justify-content-between"><span class="text-muted">Last 7 days</span><span id="usage-total-week">–</span></div>
+                                <div class="d-flex justify-content-between"><span class="text-muted">All time</span><span id="usage-total-all">–</span></div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="border rounded p-3 h-100">
+                                <div class="fw-bold mb-2">User funnel</div>
+                                <div class="d-flex justify-content-between"><span class="text-muted">Registered</span><span id="usage-users-total">–</span></div>
+                                <div class="d-flex justify-content-between"><span class="text-muted">Email confirmed</span><span id="usage-users-confirmed">–</span></div>
+                                <div class="d-flex justify-content-between"><span class="text-muted">Made ≥1 export</span><span id="usage-creators">–</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Health tiles -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <div class="border rounded p-3 h-100">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="fw-bold">Disk usage</span>
+                                    <span class="h5 mb-0" id="overview-disk">–</span>
+                                </div>
+                                <div class="progress" style="height:8px;">
+                                    <div class="progress-bar progress-bar-disk" id="overview-disk-bar" style="width:0%"></div>
+                                </div>
+                                <button class="btn btn-sm btn-outline-secondary mt-2" data-goto-tab="infra">
+                                    <i class="bi bi-hdd"></i> Управление хранилищем
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="border rounded p-3 h-100">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="fw-bold">Open error reports</span>
+                                    <span class="h5 mb-0" id="overview-err-num">–</span>
+                                </div>
+                                <div class="small text-muted">Отчёты от пользователей (в основном Local Export).</div>
+                                <button class="btn btn-sm btn-outline-secondary mt-2" data-goto-tab="errors">
+                                    <i class="bi bi-bug"></i> К отчётам
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Breakdowns (all-time) -->
+                    <div class="row g-3">
+                        <div class="col-md-3"><div class="border rounded p-3 h-100"><div class="fw-bold mb-2 small">CSV source</div><div id="usage-by-csv" class="small"></div></div></div>
+                        <div class="col-md-3"><div class="border rounded p-3 h-100"><div class="fw-bold mb-2 small">Resolution</div><div id="usage-by-res" class="small"></div></div></div>
+                        <div class="col-md-3"><div class="border rounded p-3 h-100"><div class="fw-bold mb-2 small">Quality (server)</div><div id="usage-by-quality" class="small"></div></div></div>
+                        <div class="col-md-3"><div class="border rounded p-3 h-100"><div class="fw-bold mb-2 small">Track overlay</div><div id="usage-track" class="small"></div></div></div>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="card-body">
-            <p class="text-muted small mb-3">
-                Отчёты об ошибках от пользователей (в основном — сбои Local Export, который целиком в браузере). Кликни строку — увидишь полный диагностический контекст.
-            </p>
-            <div class="table-responsive">
-                <table class="table table-sm table-hover align-middle mb-0">
-                    <thead><tr>
-                        <th>Time</th><th>User</th><th>Source</th><th>Error</th><th>Status</th><th class="text-end">View</th>
-                    </tr></thead>
-                    <tbody id="err-reports-body">
-                        <tr><td colspan="6" class="text-center text-muted">Loading…</td></tr>
-                    </tbody>
-                </table>
+
+        <!-- ============================ ACTIVITY ============================ -->
+        <div class="tab-pane fade" id="pane-activity" role="tabpanel">
+            <div class="card">
+                <div class="card-header">
+                    <ul class="nav nav-pills" id="activity-subtabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#act-projects" data-actsub="projects" type="button" role="tab">
+                                <i class="bi bi-hourglass-split"></i> Текущие проекты
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#act-history" data-actsub="history" type="button" role="tab">
+                                <i class="bi bi-clock-history"></i> История экспортов
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body">
+                    <div class="tab-content">
+
+                        <!-- Sub-tab: live projects -->
+                        <div class="tab-pane fade show active" id="act-projects" role="tabpanel">
+                            <p class="text-muted small mb-3">
+                                Проекты серверного рендера (классика + серверный экспорт редактора): живой статус/прогресс, ссылки на скачивание, срок хранения. Автоматически истекают за 12–48 ч.
+                            </p>
+                            <div class="table-responsive">
+                                <table class="table table-hover" id="projects-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Project ID</th>
+                                            <th>User</th>
+                                            <th>Email</th>
+                                            <th>Project Name</th>
+                                            <th>Mode</th>
+                                            <th>Status</th>
+                                            <th>Created</th>
+                                            <th>Progress</th>
+                                            <th>Duration</th>
+                                            <th>Expiry</th>
+                                            <th>Proc. Time</th>
+                                            <th>FPS</th>
+                                            <th>Resolution</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for project in projects.items %}
+                                        <tr>
+                                            <td>{{ project.id }}</td>
+                                            <td>{{ project.user.name }}</td>
+                                            <td>{{ project.user.email }}</td>
+                                            <td>{{ project.name }}</td>
+                                            <td>
+                                                {% if project.csv_type == 'video_editor' %}
+                                                <span class="badge bg-info text-dark" title="Server export from the browser video editor">Editor</span>
+                                                {% else %}
+                                                <span class="badge bg-secondary" title="Classic server-rendered chroma-key pipeline">Classic</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <span class="badge {% if project.status == 'completed' %}bg-success muted text-white
+                                                              {% elif project.status == 'error' %}bg-danger muted text-white
+                                                              {% elif project.status == 'processing' %}bg-primary muted text-white
+                                                              {% else %}bg-secondary muted text-white{% endif %}">
+                                                    {{ project.status }}
+                                                </span>
+                                            </td>
+                                            <td>{{ project.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                            <td>
+                                                <div class="progress">
+                                                    <div class="progress-bar" role="progressbar"
+                                                         style="width: {{ project.progress|int }}%"
+                                                         aria-valuenow="{{ project.progress|int }}"
+                                                         aria-valuemin="0"
+                                                         aria-valuemax="100">
+                                                        {{ project.progress|int }}%
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>{{ project.get_duration_str() }}</td>
+                                            <td>{{ project.time_until_expiry() }}</td>
+                                            <td>{{ project.get_processing_time_str() }}</td>
+                                            <td>{{ "%.2f"|format(project.fps) if project.fps else '-' }}</td>
+                                            <td>{{ project.resolution or '-' }}</td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    {% if project.csv_file %}
+                                                    <a href="{{ url_for('download_file', project_id=project.id, type='processed_csv') }}"
+                                                       class="btn btn-sm btn-outline-primary" title="Download CSV">
+                                                        <i class="fas fa-file-csv"></i> CSV
+                                                    </a>
+                                                    {% endif %}
+
+                                                    {% if project.video_file %}
+                                                    <a href="{{ url_for('download_file', project_id=project.id, type='video') }}"
+                                                       class="btn btn-sm btn-outline-success" title="Download Video">
+                                                        <i class="fas fa-file-video"></i> Video
+                                                    </a>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <nav aria-label="Project pagination" class="mt-4">
+                                <ul class="pagination justify-content-center" id="projects-pagination"></ul>
+                            </nav>
+                        </div>
+
+                        <!-- Sub-tab: export history -->
+                        <div class="tab-pane fade" id="act-history" role="tabpanel">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                                <div class="text-muted small">
+                                    Несгораемая история всех экспортов, включая браузерный Local Export (у него нет проекта). Не истекает.
+                                </div>
+                                <div class="btn-group btn-group-sm" role="group" id="usage-history-mode">
+                                    <button type="button" class="btn btn-outline-primary active" data-uhmode="">Все</button>
+                                    <button type="button" class="btn btn-outline-primary" data-uhmode="classic">Classic</button>
+                                    <button type="button" class="btn btn-outline-primary" data-uhmode="editor_server">Editor·Srv</button>
+                                    <button type="button" class="btn btn-outline-primary" data-uhmode="editor_local">Editor·Local</button>
+                                </div>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover mb-0">
+                                    <thead><tr>
+                                        <th>Time</th><th>Mode</th><th>User</th><th>CSV</th>
+                                        <th>Res</th><th>Codec</th><th>Quality</th><th>Dur</th><th>Overlay</th>
+                                    </tr></thead>
+                                    <tbody id="usage-history-body"><tr><td colspan="9" class="text-center text-muted">Loading…</td></tr></tbody>
+                                </table>
+                            </div>
+                            <nav class="mt-2"><ul class="pagination pagination-sm mb-0 justify-content-center" id="usage-history-pagination"></ul></nav>
+                        </div>
+
+                    </div>
+                </div>
             </div>
-            <nav class="mt-2"><ul class="pagination pagination-sm mb-0 justify-content-center" id="err-pagination"></ul></nav>
         </div>
-    </div>
+
+        <!-- ============================ USERS ============================ -->
+        <div class="tab-pane fade" id="pane-users" role="tabpanel">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h2 class="h5 mb-0">All Users</h2>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="show-all-users">All Users</button>
+                            <button type="button" class="btn btn-sm btn-outline-warning" id="show-pending-users">Pending Email Confirmation</button>
+                        </div>
+                    </div>
+                    <!-- Bulk Delete Section -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="d-flex align-items-center">
+                                <label class="form-label me-2 mb-0">Массовое удаление:</label>
+                                <input type="text" class="form-control form-control-sm me-2" id="bulk-delete-pattern"
+                                       placeholder="Введите паттерн имени (например: IVA)" style="max-width: 200px;">
+                                <button type="button" class="btn btn-sm btn-outline-info me-2" id="search-users-btn">
+                                    <i class="fas fa-search"></i> Найти
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger" id="bulk-delete-btn" disabled>
+                                    <i class="fas fa-trash"></i> Удалить найденных
+                                </button>
+                                <button type="button" class="btn btn-sm btn-danger ms-auto" id="delete-selected-btn" disabled>
+                                    <i class="fas fa-trash"></i> Удалить выбранные (<span id="selected-count">0</span>)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="bulk-delete-info" class="mt-2" style="display: none;">
+                        <div class="alert alert-info mb-0">
+                            <span id="found-users-count">0</span> пользователей найдено с именем содержащим "<span id="search-pattern"></span>"
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="users-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:1%"><input type="checkbox" id="select-all-users" title="Выбрать всех на странице"></th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Registration Date</th>
+                                    <th>Email Status</th>
+                                    <th>Account Status</th>
+                                    <th>Admin Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in users.items %}
+                                <tr{% if not user.is_active %} class="deactivated-user"{% endif %}>
+                                    <td><input type="checkbox" class="user-select" value="{{ user.id }}"{% if user.is_admin %} disabled{% endif %}></td>
+                                    <td>
+                                        {{ user.name }}
+                                        {% if user.created_at.date() == today %}
+                                        <span class="badge bg-success muted text-white">New User</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ user.email }}</td>
+                                    <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    <td>
+                                        {% if user.is_email_confirmed %}
+                                        <span class="badge bg-success muted text-white">Confirmed</span>
+                                        {% else %}
+                                        <span class="badge bg-warning muted text-dark">Pending</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if user.is_active %}
+                                        <span class="badge bg-success muted text-white">Active</span>
+                                        {% else %}
+                                        <span class="badge bg-danger muted text-white">Deactivated</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if user.is_admin %}
+                                        <span class="badge bg-info muted text-white">Admin</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary muted text-white">User</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-primary" onclick="editUser({{ user.id }}, '{{ user.name }}', '{{ user.email }}', {{ user.is_admin|tojson }}, {{ user.is_email_confirmed|tojson }})">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </button>
+                                        <button class="btn btn-sm btn-danger" onclick="confirmDeleteUser({{ user.id }}, '{{ user.email }}')">
+                                            <i class="fas fa-trash"></i> Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <nav aria-label="Users pagination" class="mt-4">
+                        <ul class="pagination justify-content-center" id="users-pagination"></ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================ INFRA (Storage + System) ============================ -->
+        <div class="tab-pane fade" id="pane-infra" role="tabpanel">
+
+            <!-- File Storage Management -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h2 class="h5 mb-0"><i class="bi bi-hdd"></i> Storage Management</h2>
+                    <button class="btn btn-sm btn-outline-info" onclick="loadStorageStats()">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="storage-stats" class="mb-3">
+                        <div class="row g-2" id="storage-bars">
+                            <div class="col-12 text-muted">Loading storage stats…</div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row g-2">
+                        <div class="col-auto">
+                            <button class="btn btn-warning btn-sm" onclick="cleanupStorage()">
+                                <i class="bi bi-trash"></i> Delete Unused Files
+                            </button>
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-warning btn-sm" onclick="cleanupVeUploads()">
+                                <i class="bi bi-cloud-slash"></i> Clean VE Uploads (>24h)
+                            </button>
+                        </div>
+                        <div class="col-auto">
+                            <div class="input-group input-group-sm">
+                                <input type="number" class="form-control" id="cleanupDays" value="7" min="1" max="365" style="width:70px;">
+                                <span class="input-group-text">days</span>
+                                <button class="btn btn-danger btn-sm" onclick="cleanupOldProjects()">
+                                    <i class="bi bi-calendar-x"></i> Delete Old Projects
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 mt-3" id="cleanup-results" style="display: none;">
+                        <div class="alert alert-info">
+                            <h6 class="alert-heading">Cleanup Results:</h6>
+                            <p class="mb-0" id="cleanup-summary"></p>
+                            <hr>
+                            <details>
+                                <summary>Deleted files (<span id="files-deleted-count">0</span>)</summary>
+                                <ul id="deleted-files-list" class="mb-0 mt-2" style="font-size:0.8rem;max-height:200px;overflow-y:auto;"></ul>
+                            </details>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Monitoring -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">System Resources</h2>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <h6>CPU Usage</h6>
+                            <div class="progress mb-2">
+                                <div class="progress-bar progress-bar-cpu" role="progressbar" style="width: {{ cpu_percent }}%">
+                                    {{ cpu_percent }}%
+                                </div>
+                            </div>
+                            <div class="chart-container" style="position: relative; height: 200px;">
+                                <canvas id="cpu-chart"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <h6>Memory Usage</h6>
+                            <div class="progress mb-2">
+                                <div class="progress-bar progress-bar-memory" role="progressbar" style="width: {{ memory_percent }}%">
+                                    {{ memory_percent }}%
+                                </div>
+                            </div>
+                            <div class="chart-container" style="position: relative; height: 200px;">
+                                <canvas id="memory-chart"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <h6>Disk Usage</h6>
+                            <div class="progress mb-2">
+                                <div class="progress-bar progress-bar-disk" role="progressbar" style="width: {{ disk_percent }}%">
+                                    {{ disk_percent }}%
+                                </div>
+                            </div>
+                            <div class="chart-container" style="position: relative; height: 200px;">
+                                <canvas id="disk-chart"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <h6>GPU Usage</h6>
+                            <div class="progress mb-2">
+                                <div class="progress-bar progress-bar-gpu" role="progressbar" style="width: {{ gpu_percent|default(0) }}%">
+                                    {{ gpu_percent|default(0) }}%
+                                </div>
+                            </div>
+                            <div class="chart-container" style="position: relative; height: 200px;">
+                                <canvas id="gpu-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="btn-group mt-3" id="system-range-switch">
+                        <button type="button" class="btn btn-outline-primary" data-range="hour">1 Hour</button>
+                        <button type="button" class="btn btn-outline-primary active" data-range="day">1 Day</button>
+                        <button type="button" class="btn btn-outline-primary" data-range="week">Week</button>
+                        <button type="button" class="btn btn-outline-primary" data-range="month">Month</button>
+                        <button type="button" class="btn btn-outline-primary" data-range="year">Year</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================ CONTENT ============================ -->
+        <div class="tab-pane fade" id="pane-content" role="tabpanel">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2 class="h5 mb-0"><i class="bi bi-trophy"></i> Achievements Management</h2>
+                </div>
+                <div class="card-body">
+                    <a href="{{ url_for('admin_achievements') }}" class="btn btn-outline-warning">
+                        <i class="bi bi-trophy"></i> Manage Achievements
+                    </a>
+                    <p class="text-muted mt-2 mb-0">
+                        Create, edit, and manage achievement formulas and descriptions
+                    </p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="h5 mb-0"><i class="bi bi-people"></i> Coauthors</h2>
+                </div>
+                <div class="card-body">
+                    <a href="{{ url_for('admin_coauthors') }}" class="btn btn-outline-info">
+                        <i class="bi bi-people"></i> Manage Coauthors
+                    </a>
+                    <p class="text-muted mt-2 mb-0">
+                        Add, edit, or remove project contributors shown on the About page.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================ ERRORS ============================ -->
+        <div class="tab-pane fade" id="pane-errors" role="tabpanel">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <h2 class="h5 mb-0">
+                        <i class="bi bi-bug"></i> Error Reports
+                        <span class="badge bg-danger ms-2" id="err-open-badge" style="display:none;">0</span>
+                    </h2>
+                    <div class="btn-group btn-group-sm" role="group" id="err-show-switch">
+                        <button type="button" class="btn btn-outline-primary active" data-show="open">Open</button>
+                        <button type="button" class="btn btn-outline-primary" data-show="all">All</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3">
+                        Отчёты об ошибках от пользователей (в основном — сбои Local Export, который целиком в браузере). Кликни строку — увидишь полный диагностический контекст.
+                    </p>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover align-middle mb-0">
+                            <thead><tr>
+                                <th>Time</th><th>User</th><th>Source</th><th>Error</th><th>Status</th><th class="text-end">View</th>
+                            </tr></thead>
+                            <tbody id="err-reports-body">
+                                <tr><td colspan="6" class="text-center text-muted">Loading…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <nav class="mt-2"><ul class="pagination pagination-sm mb-0 justify-content-center" id="err-pagination"></ul></nav>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /.tab-content -->
+
+    <!-- ===== Modals (kept outside tab-content so they work from any tab) ===== -->
 
     <!-- Error Report Detail Modal -->
     <div class="modal fade" id="errReportModal" tabindex="-1" aria-hidden="true">
@@ -140,365 +606,6 @@
                     <button type="button" class="btn btn-sm btn-outline-success" id="err-modal-resolve"><i class="bi bi-check2-circle"></i> Toggle resolved</button>
                     <button type="button" class="btn btn-sm btn-outline-danger" id="err-modal-delete"><i class="bi bi-trash"></i> Delete</button>
                     <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Achievements Management -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h2 class="h5 mb-0">
-                <i class="bi bi-trophy"></i> Achievements Management
-            </h2>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-12">
-                    <a href="{{ url_for('admin_achievements') }}" class="btn btn-outline-warning">
-                        <i class="bi bi-trophy"></i> Manage Achievements
-                    </a>
-                    <p class="text-muted mt-2 mb-0">
-                        Create, edit, and manage achievement formulas and descriptions
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Coauthors Management -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h2 class="h5 mb-0">
-                <i class="bi bi-people"></i> Coauthors
-            </h2>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-12">
-                    <a href="{{ url_for('admin_coauthors') }}" class="btn btn-outline-info">
-                        <i class="bi bi-people"></i> Manage Coauthors
-                    </a>
-                    <p class="text-muted mt-2 mb-0">
-                        Add, edit, or remove project contributors shown on the About page.
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- System Monitoring -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h2 class="h5 mb-0">System Resources</h2>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-3">
-                    <h6>CPU Usage</h6>
-                    <div class="progress mb-2">
-                        <div class="progress-bar progress-bar-cpu" role="progressbar" style="width: {{ cpu_percent }}%">
-                            {{ cpu_percent }}%
-                        </div>
-                    </div>
-                    <div class="chart-container" style="position: relative; height: 200px;">
-                        <canvas id="cpu-chart"></canvas>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <h6>Memory Usage</h6>
-                    <div class="progress mb-2">
-                        <div class="progress-bar progress-bar-memory" role="progressbar" style="width: {{ memory_percent }}%">
-                            {{ memory_percent }}%
-                        </div>
-                    </div>
-                    <div class="chart-container" style="position: relative; height: 200px;">
-                        <canvas id="memory-chart"></canvas>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <h6>Disk Usage</h6>
-                    <div class="progress mb-2">
-                        <div class="progress-bar progress-bar-disk" role="progressbar" style="width: {{ disk_percent }}%">
-                            {{ disk_percent }}%
-                        </div>
-                    </div>
-                    <div class="chart-container" style="position: relative; height: 200px;">
-                        <canvas id="disk-chart"></canvas>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <h6>GPU Usage</h6>
-                    <div class="progress mb-2">
-                        <div class="progress-bar progress-bar-gpu" role="progressbar" style="width: {{ gpu_percent|default(0) }}%">
-                            {{ gpu_percent|default(0) }}%
-                        </div>
-                    </div>
-                    <div class="chart-container" style="position: relative; height: 200px;">
-                        <canvas id="gpu-chart"></canvas>
-                    </div>
-                </div>
-            </div>
-            <!-- Time Range Selector -->
-            <div class="btn-group mt-3">
-                <button type="button" class="btn btn-outline-primary" data-range="hour">1 Hour</button>
-                <button type="button" class="btn btn-outline-primary active" data-range="day">1 Day</button>
-                <button type="button" class="btn btn-outline-primary" data-range="week">Week</button>
-                <button type="button" class="btn btn-outline-primary" data-range="month">Month</button>
-                <button type="button" class="btn btn-outline-primary" data-range="year">Year</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Users Management -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h2 class="h5 mb-0">All Users</h2>
-                <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-sm btn-outline-primary" id="show-all-users">All Users</button>
-                    <button type="button" class="btn btn-sm btn-outline-warning" id="show-pending-users">Pending Email Confirmation</button>
-                </div>
-            </div>
-            <!-- Bulk Delete Section -->
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="d-flex align-items-center">
-                        <label class="form-label me-2 mb-0">Массовое удаление:</label>
-                        <input type="text" class="form-control form-control-sm me-2" id="bulk-delete-pattern" 
-                               placeholder="Введите паттерн имени (например: IVA)" style="max-width: 200px;">
-                        <button type="button" class="btn btn-sm btn-outline-info me-2" id="search-users-btn">
-                            <i class="fas fa-search"></i> Найти
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-danger" id="bulk-delete-btn" disabled>
-                            <i class="fas fa-trash"></i> Удалить найденных
-                        </button>
-                        <button type="button" class="btn btn-sm btn-danger ms-auto" id="delete-selected-btn" disabled>
-                            <i class="fas fa-trash"></i> Удалить выбранные (<span id="selected-count">0</span>)
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <div id="bulk-delete-info" class="mt-2" style="display: none;">
-                <div class="alert alert-info mb-0">
-                    <span id="found-users-count">0</span> пользователей найдено с именем содержащим "<span id="search-pattern"></span>"
-                </div>
-            </div>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover" id="users-table">
-                    <thead>
-                        <tr>
-                            <th style="width:1%"><input type="checkbox" id="select-all-users" title="Выбрать всех на странице"></th>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Registration Date</th>
-                            <th>Email Status</th>
-                            <th>Account Status</th>
-                            <th>Admin Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for user in users.items %}
-                        <tr>
-                            <td><input type="checkbox" class="user-select" value="{{ user.id }}"{% if user.is_admin %} disabled{% endif %}></td>
-                            <td>
-                                {{ user.name }}
-                                {% if user.created_at.date() == today %}
-                                <span class="badge bg-success muted text-white">New User</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ user.email }}</td>
-                            <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                            <td>
-                                {% if user.is_email_confirmed %}
-                                <span class="badge bg-success muted text-white">Confirmed</span>
-                                {% else %}
-                                <span class="badge bg-warning muted text-dark">Pending</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if user.is_active %}
-                                <span class="badge bg-success muted text-white">Active</span>
-                                {% else %}
-                                <span class="badge bg-danger muted text-white">Deactivated</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if user.is_admin %}
-                                <span class="badge bg-info muted text-white">Admin</span>
-                                {% else %}
-                                <span class="badge bg-secondary muted text-white">User</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <button class="btn btn-sm btn-primary" onclick="editUser({{ user.id }}, '{{ user.name }}', '{{ user.email }}', {{ user.is_admin|tojson }}, {{ user.is_email_confirmed|tojson }})">
-                                    <i class="fas fa-edit"></i> Edit
-                                </button>
-                                <button class="btn btn-sm btn-danger" onclick="confirmDeleteUser({{ user.id }}, '{{ user.email }}')">
-                                    <i class="fas fa-trash"></i> Delete
-                                </button>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            <!-- Users Pagination -->
-            <nav aria-label="Users pagination" class="mt-4">
-                <ul class="pagination justify-content-center" id="users-pagination">
-                    <!-- Pagination items will be dynamically updated -->
-                </ul>
-            </nav>
-        </div>
-    </div>
-
-    <!-- Project Monitoring -->
-    <div class="card">
-        <div class="card-header">
-            <h2 class="h5 mb-0">User Projects</h2>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover" id="projects-table">
-                    <thead>
-                        <tr>
-                            <th>Project ID</th>
-                            <th>User</th>
-                            <th>Email</th>
-                            <th>Project Name</th>
-                            <th>Mode</th>
-                            <th>Status</th>
-                            <th>Created</th>
-                            <th>Progress</th>
-                            <th>Duration</th>
-                            <th>Expiry</th>
-                            <th>Proc. Time</th>
-                            <th>FPS</th>
-                            <th>Resolution</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for project in projects.items %}
-                        <tr>
-                            <td>{{ project.id }}</td>
-                            <td>{{ project.user.name }}</td>
-                            <td>{{ project.user.email }}</td>
-                            <td>{{ project.name }}</td>
-                            <td>
-                                {% if project.csv_type == 'video_editor' %}
-                                <span class="badge bg-info text-dark" title="Server export from the browser video editor">Editor</span>
-                                {% else %}
-                                <span class="badge bg-secondary" title="Classic server-rendered chroma-key pipeline">Classic</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <span class="badge {% if project.status == 'completed' %}bg-success muted text-white
-                                              {% elif project.status == 'error' %}bg-danger muted text-white
-                                              {% elif project.status == 'processing' %}bg-primary muted text-white
-                                              {% else %}bg-secondary muted text-white{% endif %}">
-                                    {{ project.status }}
-                                </span>
-                            </td>
-                            <td>{{ project.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                            <td>
-                                <div class="progress">
-                                    <div class="progress-bar" role="progressbar" 
-                                         style="width: {{ project.progress|int }}%"
-                                         aria-valuenow="{{ project.progress|int }}" 
-                                         aria-valuemin="0" 
-                                         aria-valuemax="100">
-                                        {{ project.progress|int }}%
-                                    </div>
-                                </div>
-                            </td>
-                            <td>{{ project.get_duration_str() }}</td>
-                            <td>{{ project.time_until_expiry() }}</td>
-                            <td>{{ project.get_processing_time_str() }}</td>
-                            <td>{{ "%.2f"|format(project.fps) if project.fps else '-' }}</td>
-                            <td>{{ project.resolution or '-' }}</td>
-                            <td>
-                                <div class="btn-group" role="group">
-                                    {% if project.csv_file %}
-                                    <a href="{{ url_for('download_file', project_id=project.id, type='processed_csv') }}" 
-                                       class="btn btn-sm btn-outline-primary" title="Download CSV">
-                                        <i class="fas fa-file-csv"></i> CSV
-                                    </a>
-                                    {% endif %}
-                                    
-                                    {% if project.video_file %}
-                                    <a href="{{ url_for('download_file', project_id=project.id, type='video') }}" 
-                                       class="btn btn-sm btn-outline-success" title="Download Video">
-                                        <i class="fas fa-file-video"></i> Video
-                                    </a>
-                                    {% endif %}
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            <!-- Projects Pagination -->
-            <nav aria-label="Project pagination" class="mt-4">
-                <ul class="pagination justify-content-center" id="projects-pagination">
-                    <!-- Pagination items will be dynamically updated -->
-                </ul>
-            </nav>
-        </div>
-    </div>
-
-    <!-- File Storage Management -->
-    <div class="card mt-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h2 class="h5 mb-0"><i class="bi bi-hdd"></i> Storage Management</h2>
-            <button class="btn btn-sm btn-outline-info" onclick="loadStorageStats()">
-                <i class="bi bi-arrow-clockwise"></i> Refresh
-            </button>
-        </div>
-        <div class="card-body">
-            <!-- Storage stats -->
-            <div id="storage-stats" class="mb-3">
-                <div class="row g-2" id="storage-bars">
-                    <div class="col-12 text-muted">Click "Refresh" to load storage stats</div>
-                </div>
-            </div>
-            <hr>
-            <!-- Actions -->
-            <div class="row g-2">
-                <div class="col-auto">
-                    <button class="btn btn-warning btn-sm" onclick="cleanupStorage()">
-                        <i class="bi bi-trash"></i> Delete Unused Files
-                    </button>
-                </div>
-                <div class="col-auto">
-                    <button class="btn btn-warning btn-sm" onclick="cleanupVeUploads()">
-                        <i class="bi bi-cloud-slash"></i> Clean VE Uploads (>24h)
-                    </button>
-                </div>
-                <div class="col-auto">
-                    <div class="input-group input-group-sm">
-                        <input type="number" class="form-control" id="cleanupDays" value="7" min="1" max="365" style="width:70px;">
-                        <span class="input-group-text">days</span>
-                        <button class="btn btn-danger btn-sm" onclick="cleanupOldProjects()">
-                            <i class="bi bi-calendar-x"></i> Delete Old Projects
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <!-- Results -->
-            <div class="col-12 mt-3" id="cleanup-results" style="display: none;">
-                <div class="alert alert-info">
-                    <h6 class="alert-heading">Cleanup Results:</h6>
-                    <p class="mb-0" id="cleanup-summary"></p>
-                    <hr>
-                    <details>
-                        <summary>Deleted files (<span id="files-deleted-count">0</span>)</summary>
-                        <ul id="deleted-files-list" class="mb-0 mt-2" style="font-size:0.8rem;max-height:200px;overflow-y:auto;"></ul>
-                    </details>
                 </div>
             </div>
         </div>
@@ -618,7 +725,7 @@
     .progress {
         background-color: rgba(0,0,0,0.2);
     }
-    
+
     /* Стиль для деактивированных пользователей */
     .deactivated-user td,
     .deactivated-user th,
@@ -639,9 +746,19 @@
 let currentUserPage = 1;
 let currentProjectPage = 1;
 let charts = {};
+let chartsInited = false;
 let currentRange = 'day';
 const resources = ['cpu', 'memory', 'disk', 'gpu'];
 let usersData = null; // Global variable to store full users data including pagination metadata
+
+// ===== Active-tab driven refresh =====
+// Раньше было 3 постоянных setInterval (updateData 5с, loadUsageStats 30с,
+// loadErrorReports 30с), молотивших сервер независимо от того, что видно.
+// Теперь работает таймер ТОЛЬКО активной вкладки.
+let activeTimers = [];
+let activitySub = 'projects';
+function clearActiveTimers() { activeTimers.forEach(t => clearInterval(t)); activeTimers = []; }
+function addTimer(fn, ms) { activeTimers.push(setInterval(fn, ms)); }
 
 // Get user's timezone
 const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -796,6 +913,7 @@ function getLabelsForTimeRange(range) {
 }
 
 function updateChart(resource, timeRange) {
+    if (!charts[resource]) return;  // графики инициализируются лениво на показе вкладки
     const labels = getLabelsForTimeRange(timeRange);
     const now = new Date();
     const data = new Array(labels.length).fill(0);
@@ -859,32 +977,37 @@ function updateChart(resource, timeRange) {
         });
 }
 
+// Обновление прогресс-баров ресурсов + графиков (только когда активна вкладка Хранилище/Система)
+function refreshResources() {
+    fetch('/admin/stats')
+        .then(response => response.json())
+        .then(stats => {
+            resources.forEach(resource => {
+                const value = stats.current[`${resource}_percent`];
+                const progressBar = document.querySelector(`.progress-bar-${resource}`);
+                if (progressBar) {
+                    progressBar.style.width = `${value}%`;
+                    progressBar.textContent = `${value}%`;
+                }
+                updateChart(resource, currentRange);
+            });
+        })
+        .catch(() => {});
+}
+
+function ensureChartsInited() {
+    if (chartsInited) return;
+    resources.forEach(resource => {
+        const ctx = document.getElementById(`${resource}-chart`);
+        if (ctx) charts[resource] = createChart(ctx, resource);
+    });
+    chartsInited = true;
+}
+
 // User Management Functions
 // Store users data globally to use for filtering
 let allUsers = [];
 let filterMode = 'all';  // 'all' or 'pending'
-
-// Button event handlers for user filters
-document.addEventListener('DOMContentLoaded', function() {
-    // Add event listeners for filter buttons
-    document.getElementById('show-all-users').addEventListener('click', function() {
-        filterMode = 'all';
-        this.classList.add('btn-primary');
-        this.classList.remove('btn-outline-primary');
-        document.getElementById('show-pending-users').classList.add('btn-outline-warning');
-        document.getElementById('show-pending-users').classList.remove('btn-warning');
-        renderUsersTable();
-    });
-    
-    document.getElementById('show-pending-users').addEventListener('click', function() {
-        filterMode = 'pending';
-        this.classList.add('btn-warning');
-        this.classList.remove('btn-outline-warning');
-        document.getElementById('show-all-users').classList.add('btn-outline-primary');
-        document.getElementById('show-all-users').classList.remove('btn-primary');
-        renderUsersTable();
-    });
-});
 
 function updateUsersTable(users) {
     // Store all users data for filtering
@@ -896,13 +1019,13 @@ function updateUsersTable(users) {
 
 function renderUsersTable() {
     const tbody = document.querySelector('#users-table tbody');
-    
+
     // Apply filter
     let filteredUsers = allUsers;
     if (filterMode === 'pending') {
         filteredUsers = allUsers.filter(user => !user.is_email_confirmed);
     }
-    
+
     // Render table
     tbody.innerHTML = filteredUsers.map(user => `
         <tr${!user.is_active ? ' class="deactivated-user"' : ''}>
@@ -914,13 +1037,13 @@ function renderUsersTable() {
             <td>${user.email}</td>
             <td>${user.created_at}</td>
             <td>
-                ${user.is_email_confirmed ? 
-                '<span class="badge bg-success muted text-white">Confirmed</span>' : 
+                ${user.is_email_confirmed ?
+                '<span class="badge bg-success muted text-white">Confirmed</span>' :
                 '<span class="badge bg-warning muted text-dark">Pending</span>'}
             </td>
             <td>
-                ${user.is_active ? 
-                '<span class="badge bg-success muted text-white">Active</span>' : 
+                ${user.is_active ?
+                '<span class="badge bg-success muted text-white">Active</span>' :
                 '<span class="badge bg-danger muted text-white">Deactivated</span>'}
             </td>
             <td>
@@ -932,10 +1055,10 @@ function renderUsersTable() {
                 <button class="btn btn-sm btn-primary" onclick="editUser(${user.id}, '${user.name}', '${user.email}', ${user.is_admin}, ${user.is_email_confirmed}, ${user.is_active})">
                     <i class="fas fa-edit"></i> Edit
                 </button>
-                ${user.is_active ? 
+                ${user.is_active ?
                 `<button class="btn btn-sm btn-warning" onclick="toggleUserActivation(${user.id}, '${user.email}', false)">
                     <i class="fas fa-ban"></i> Deactivate
-                </button>` : 
+                </button>` :
                 `<button class="btn btn-sm btn-success" onclick="toggleUserActivation(${user.id}, '${user.email}', true)">
                     <i class="fas fa-check"></i> Activate
                 </button>`}
@@ -944,7 +1067,7 @@ function renderUsersTable() {
     `).join('');
 
     updatePagination('users', usersData);
-    // Восстановить отметки чекбоксов после перерисовки (она бывает каждые 5 сек)
+    // Восстановить отметки чекбоксов после перерисовки
     if (window.restoreUserSelection) window.restoreUserSelection();
 }
 
@@ -970,10 +1093,10 @@ function updateProjectsTable(projects) {
             <td>${project.created_at}</td>
             <td>
                 <div class="progress">
-                    <div class="progress-bar" role="progressbar" 
+                    <div class="progress-bar" role="progressbar"
                          style="width: ${project.progress}%"
-                         aria-valuenow="${project.progress}" 
-                         aria-valuemin="0" 
+                         aria-valuenow="${project.progress}"
+                         aria-valuemin="0"
                          aria-valuemax="100">
                         ${project.progress}%
                     </div>
@@ -986,14 +1109,14 @@ function updateProjectsTable(projects) {
             <td>${project.resolution}</td>
             <td>
                 <div class="btn-group" role="group">
-                    ${project.has_csv ? 
-                    `<a href="/download/${project.id}/processed_csv" 
+                    ${project.has_csv ?
+                    `<a href="/download/${project.id}/processed_csv"
                        class="btn btn-sm btn-outline-primary" title="Download CSV">
                         <i class="fas fa-file-csv"></i> CSV
                     </a>` : ''}
-                    
-                    ${project.has_video ? 
-                    `<a href="/download/${project.id}/video" 
+
+                    ${project.has_video ?
+                    `<a href="/download/${project.id}/video"
                        class="btn btn-sm btn-outline-success" title="Download Video">
                         <i class="fas fa-file-video"></i> Video
                     </a>` : ''}
@@ -1076,23 +1199,6 @@ function updateLists(userPage = null, projectPage = null) {
         .then(data => {
             updateUsersTable(data.users);
             updateProjectsTable(data.projects);
-        });
-}
-
-function updateData() {
-    fetch('/admin/stats')
-        .then(response => response.json())
-        .then(stats => {
-            resources.forEach(resource => {
-                const value = stats.current[`${resource}_percent`];
-                const progressBar = document.querySelector(`.progress-bar-${resource}`);
-                if (progressBar) {
-                    progressBar.style.width = `${value}%`;
-                    progressBar.textContent = `${value}%`;
-                }
-                updateChart(resource, currentRange);
-            });
-            updateLists(currentUserPage, currentProjectPage);
         });
 }
 
@@ -1191,7 +1297,7 @@ function deleteUser() {
         if (data.success) {
             // Скрыть модальное окно подтверждения удаления
             bootstrap.Modal.getInstance(document.getElementById('deleteUserModal')).hide();
-            
+
             // Показать уведомление об успешном деактивировании
             const alertDiv = document.createElement('div');
             alertDiv.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
@@ -1201,10 +1307,10 @@ function deleteUser() {
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             `;
             document.body.appendChild(alertDiv);
-            
+
             // Обновить список пользователей
             updateLists(currentUserPage, currentProjectPage);
-            
+
             // Удалить уведомление через 3 секунды
             setTimeout(() => {
                 alertDiv.remove();
@@ -1222,12 +1328,12 @@ function deleteUser() {
 // Функция для прямой активации/деактивации через кнопки в таблице
 function toggleUserActivation(userId, email, activate) {
     const action = activate ? 'activate' : 'deactivate';
-    
+
     // Подтверждение действия
     if (!confirm(`Are you sure you want to ${action} user ${email}?`)) {
         return;
     }
-    
+
     // Отправляем запрос на изменение статуса активации
     fetch(`/admin/user/${userId}`, {
         method: 'PUT',
@@ -1256,10 +1362,10 @@ function toggleUserActivation(userId, email, activate) {
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             `;
             document.body.appendChild(alertDiv);
-            
+
             // Обновить список пользователей
             updateLists(currentUserPage, currentProjectPage);
-            
+
             // Удалить уведомление через 3 секунды
             setTimeout(() => {
                 alertDiv.remove();
@@ -1372,193 +1478,7 @@ function loadStorageStats() {
         });
 }
 
-// Initialize when document is ready
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize all charts
-    resources.forEach(resource => {
-        const ctx = document.getElementById(`${resource}-chart`);
-        charts[resource] = createChart(ctx, resource);
-        updateChart(resource, currentRange);
-    });
-
-    // Setup click handlers for time range buttons
-    document.querySelectorAll('.btn-group button').forEach(button => {
-        button.addEventListener('click', function() {
-            const range = this.dataset.range;
-            // Этот глобальный обработчик ловит ВСЕ .btn-group кнопки на странице,
-            // включая переключатели Usage Analytics (data-period) и Error Reports
-            // (data-show) — у них нет data-range. Без guard они бы обнулили графики
-            // ресурсов (range=undefined → пустые labels) и сняли active с кнопок диапазона.
-            if (range === undefined) return;
-            currentRange = range;
-
-            document.querySelectorAll('#system-range-switch button, .btn-group button[data-range]').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            this.classList.add('active');
-
-            resources.forEach(resource => {
-                updateChart(resource, range);
-            });
-        });
-    });
-
-    // Bulk delete functionality
-    let foundUsers = [];
-    
-    document.getElementById('search-users-btn').addEventListener('click', function() {
-        const pattern = document.getElementById('bulk-delete-pattern').value.trim();
-        if (!pattern) {
-            alert('Введите паттерн для поиска');
-            return;
-        }
-        
-        fetch('/admin/search-users', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({pattern: pattern})
-        })
-        .then(response => response.json())
-        .then(data => {
-            foundUsers = data.users;
-            document.getElementById('found-users-count').textContent = foundUsers.length;
-            document.getElementById('search-pattern').textContent = pattern;
-            document.getElementById('bulk-delete-info').style.display = foundUsers.length > 0 ? 'block' : 'none';
-            document.getElementById('bulk-delete-btn').disabled = foundUsers.length === 0;
-        })
-        .catch(error => {
-            console.error('Error searching users:', error);
-            alert('Ошибка при поиске пользователей');
-        });
-    });
-    
-    document.getElementById('bulk-delete-btn').addEventListener('click', function() {
-        if (foundUsers.length === 0) return;
-        
-        const confirmMsg = `Вы уверены, что хотите удалить ${foundUsers.length} пользователей? Это действие необратимо!`;
-        if (!confirm(confirmMsg)) return;
-        
-        fetch('/admin/bulk-delete-users', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({user_ids: foundUsers.map(u => u.id)})
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert(`Удалено ${data.deleted_count} пользователей`);
-                // Reset form
-                document.getElementById('bulk-delete-pattern').value = '';
-                document.getElementById('bulk-delete-info').style.display = 'none';
-                document.getElementById('bulk-delete-btn').disabled = true;
-                foundUsers = [];
-                // Refresh lists
-                updateLists(currentUserPage, currentProjectPage);
-            } else {
-                alert('Ошибка при удалении пользователей: ' + data.error);
-            }
-        })
-        .catch(error => {
-            console.error('Error deleting users:', error);
-            alert('Ошибка при удалении пользователей');
-        });
-    });
-
-    // ===== Выбор аккаунтов чекбоксами + удаление выбранных =====
-    // Выбор хранится в Set по id (а не в DOM), чтобы переживать перерисовку
-    // таблицы (она происходит каждые 5 сек и при пагинации/фильтре).
-    const selectedUserIds = new Set();
-
-    function updateSelectedUsersUI() {
-        const cnt = document.getElementById('selected-count');
-        const btn = document.getElementById('delete-selected-btn');
-        if (cnt) cnt.textContent = selectedUserIds.size;
-        if (btn) btn.disabled = selectedUserIds.size === 0;
-        // Состояние галочки "выбрать всех" — по видимым на странице строкам
-        const boxes = document.querySelectorAll('#users-table tbody .user-select:not(:disabled)');
-        const selectAll = document.getElementById('select-all-users');
-        if (selectAll) {
-            const total = boxes.length;
-            const checked = Array.from(boxes).filter(b => b.checked).length;
-            selectAll.checked = total > 0 && checked === total;
-            selectAll.indeterminate = checked > 0 && checked < total;
-        }
-    }
-
-    // Восстанавливает отметки после перерисовки tbody (зовётся из renderUsersTable)
-    window.restoreUserSelection = function() {
-        document.querySelectorAll('#users-table tbody .user-select').forEach(function(box) {
-            box.checked = selectedUserIds.has(parseInt(box.value, 10));
-        });
-        updateSelectedUsersUI();
-    };
-
-    // Делегированный обработчик на постоянной таблице (строки пересоздаются)
-    const usersTableEl = document.getElementById('users-table');
-    if (usersTableEl) {
-        usersTableEl.addEventListener('change', function(e) {
-            if (!e.target.classList.contains('user-select')) return;
-            const id = parseInt(e.target.value, 10);
-            if (e.target.checked) selectedUserIds.add(id); else selectedUserIds.delete(id);
-            updateSelectedUsersUI();
-        });
-    }
-
-    const selectAllBox = document.getElementById('select-all-users');
-    if (selectAllBox) {
-        selectAllBox.addEventListener('change', function() {
-            document.querySelectorAll('#users-table tbody .user-select:not(:disabled)').forEach(function(box) {
-                box.checked = selectAllBox.checked;
-                const id = parseInt(box.value, 10);
-                if (selectAllBox.checked) selectedUserIds.add(id); else selectedUserIds.delete(id);
-            });
-            updateSelectedUsersUI();
-        });
-    }
-
-    const deleteSelectedBtn = document.getElementById('delete-selected-btn');
-    if (deleteSelectedBtn) {
-        deleteSelectedBtn.addEventListener('click', function() {
-            if (selectedUserIds.size === 0) return;
-            const ids = Array.from(selectedUserIds);
-            if (!confirm(`Удалить выбранные аккаунты (${ids.length})? Действие необратимо!`)) return;
-            fetch('/admin/bulk-delete-users', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_ids: ids })
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    alert(`Удалено ${data.deleted_count} аккаунтов`);
-                    selectedUserIds.clear();
-                    updateSelectedUsersUI();
-                    updateLists(currentUserPage, currentProjectPage);
-                } else {
-                    alert('Ошибка при удалении: ' + (data.error || 'неизвестная ошибка'));
-                }
-            })
-            .catch(err => {
-                console.error('Error deleting selected users:', err);
-                alert('Ошибка при удалении выбранных аккаунтов');
-            });
-        });
-    }
-
-    // Initial load of data
-    updateData();
-    // Initial load of user and project lists
-    updateLists(currentUserPage, currentProjectPage);
-
-    // Start periodic updates
-    setInterval(updateData, 5000);
-});
-
-// ===== Usage Analytics card =====
+// ===== Usage Analytics =====
 let usagePeriod = 'today';
 let usageData = null;
 
@@ -1613,50 +1533,52 @@ function renderUsage() {
             `<div class="d-flex justify-content-between"><span class="text-muted">With map</span><span>${usageData.track_usage.with_track}</span></div>` +
             `<div class="d-flex justify-content-between"><span class="text-muted">With laps</span><span>${usageData.track_usage.with_laps}</span></div>`;
     }
-    const tb = document.getElementById('usage-recent');
-    if (tb) {
-        if (!usageData.recent.length) {
-            tb.innerHTML = '<tr><td colspan="9" class="text-center text-muted">No exports recorded yet</td></tr>';
-        } else {
-            tb.innerHTML = usageData.recent.map(e => `<tr>
-                <td>${e.created_at}</td>
-                <td>${usageModeBadge(e.mode)}</td>
-                <td class="text-truncate" style="max-width:160px" title="${e.user_email}">${e.user_email}</td>
-                <td>${e.csv_source}</td>
-                <td>${e.resolution}</td>
-                <td>${e.codec}</td>
-                <td>${e.quality}</td>
-                <td>${e.duration != null ? e.duration + 's' : '—'}</td>
-                <td>${e.has_track_map ? '🗺️' : ''}${e.has_laps ? '⏱️' : ''}${!e.success ? '❌' : ''}</td>
-            </tr>`).join('');
-        }
-    }
 }
 
 function loadUsageStats() {
-    fetch('/admin/usage-stats')
+    return fetch('/admin/usage-stats')
         .then(r => r.json())
         .then(d => { usageData = d; renderUsage(); })
         .catch(() => {});
 }
 
-document.addEventListener('DOMContentLoaded', function () {
-    const sw = document.getElementById('usage-period-switch');
-    if (sw) {
-        sw.addEventListener('click', function (e) {
-            const btn = e.target.closest('button[data-period]');
-            if (!btn) return;
-            usagePeriod = btn.dataset.period;
-            sw.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            renderUsageMode();
-        });
-    }
-    loadUsageStats();
-    setInterval(loadUsageStats, 30000);
-});
+// ===== Export history (sub-tab of Activity) =====
+let uhPage = 1, uhMode = '';
 
-// ===== Error Reports section =====
+function loadUsageHistory() {
+    fetch(`/admin/usage-history?page=${uhPage}&mode=${encodeURIComponent(uhMode)}`)
+        .then(r => r.json())
+        .then(d => {
+            const tb = document.getElementById('usage-history-body');
+            if (!tb) return;
+            if (!d.items.length) {
+                tb.innerHTML = '<tr><td colspan="9" class="text-center text-muted">No exports recorded yet</td></tr>';
+            } else {
+                tb.innerHTML = d.items.map(e => `<tr>
+                    <td class="text-nowrap small">${e.created_at}</td>
+                    <td>${usageModeBadge(e.mode)}</td>
+                    <td class="text-truncate" style="max-width:160px" title="${errEsc(e.user_email)}">${errEsc(e.user_email)}</td>
+                    <td>${errEsc(e.csv_source)}</td>
+                    <td>${errEsc(e.resolution)}</td>
+                    <td>${errEsc(e.codec)}</td>
+                    <td>${errEsc(e.quality)}</td>
+                    <td>${e.duration != null ? e.duration + 's' : '—'}</td>
+                    <td>${e.has_track_map ? '🗺️' : ''}${e.has_laps ? '⏱️' : ''}${!e.success ? '❌' : ''}</td>
+                </tr>`).join('');
+            }
+            const pag = document.getElementById('usage-history-pagination');
+            if (pag) {
+                pag.innerHTML = '';
+                if (d.pages > 1) {
+                    const mk = (p, label, dis) => `<li class="page-item ${dis ? 'disabled' : ''}"><a class="page-link" href="#" data-uhpage="${p}">${label}</a></li>`;
+                    pag.innerHTML = mk(d.page - 1, '«', !d.has_prev) + `<li class="page-item disabled"><span class="page-link">${d.page}/${d.pages}</span></li>` + mk(d.page + 1, '»', !d.has_next);
+                    pag.querySelectorAll('[data-uhpage]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); uhPage = parseInt(a.dataset.uhpage); loadUsageHistory(); }));
+                }
+            }
+        }).catch(() => {});
+}
+
+// ===== Error Reports =====
 let errShow = 'open';
 let errPage = 1;
 let errCurrentId = null;
@@ -1666,12 +1588,25 @@ function errEsc(s) {
     return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+function updateErrBadge(n) {
+    ['err-open-badge', 'tab-err-badge'].forEach(id => {
+        const b = document.getElementById(id);
+        if (b) { if (n > 0) { b.textContent = n; b.style.display = ''; } else { b.style.display = 'none'; } }
+    });
+    const num = document.getElementById('overview-err-num');
+    if (num) num.textContent = n;
+    const al = document.getElementById('overview-err-alert');
+    if (al) {
+        if (n > 0) { const c = document.getElementById('overview-err-count'); if (c) c.textContent = n; al.style.display = ''; }
+        else { al.style.display = 'none'; }
+    }
+}
+
 function loadErrorReports() {
     fetch(`/admin/error-reports?show=${errShow}&page=${errPage}`)
         .then(r => r.json())
         .then(d => {
-            const badge = document.getElementById('err-open-badge');
-            if (badge) { if (d.open_count > 0) { badge.textContent = d.open_count; badge.style.display = ''; } else { badge.style.display = 'none'; } }
+            updateErrBadge(d.open_count || 0);
             const tb = document.getElementById('err-reports-body');
             if (!tb) return;
             if (!d.items.length) {
@@ -1728,14 +1663,276 @@ function openErrorReport(id) {
     }).catch(() => {});
 }
 
-document.addEventListener('DOMContentLoaded', function () {
-    const sw = document.getElementById('err-show-switch');
-    if (sw) {
-        sw.addEventListener('click', e => {
+// ===== Overview tab loader =====
+function loadOverview() {
+    loadUsageStats();
+    fetch('/admin/stats').then(r => r.json()).then(s => {
+        const dp = (s.current && s.current.disk_percent != null) ? s.current.disk_percent : null;
+        const el = document.getElementById('overview-disk');
+        if (el) el.textContent = dp != null ? dp + '%' : '—';
+        const bar = document.getElementById('overview-disk-bar');
+        if (bar && dp != null) bar.style.width = dp + '%';
+        const al = document.getElementById('overview-disk-alert');
+        if (al) al.style.display = (dp != null && dp >= 85) ? '' : 'none';
+    }).catch(() => {});
+    fetch('/admin/error-reports?show=open&page=1').then(r => r.json()).then(d => {
+        updateErrBadge(d.open_count || 0);
+    }).catch(() => {});
+}
+
+// ===== Tab controller =====
+function activateActivitySub(sub) {
+    if (sub === 'history') {
+        loadUsageHistory();
+        addTimer(loadUsageHistory, 30000);
+    } else {
+        updateLists(currentUserPage, currentProjectPage);
+        addTimer(() => updateLists(currentUserPage, currentProjectPage), 5000);
+    }
+}
+
+function activateTab(name) {
+    clearActiveTimers();
+    if (name === 'overview') {
+        loadOverview();
+        addTimer(loadOverview, 30000);
+    } else if (name === 'activity') {
+        activateActivitySub(activitySub);
+    } else if (name === 'users') {
+        updateLists(currentUserPage, currentProjectPage);
+        addTimer(() => updateLists(currentUserPage, currentProjectPage), 5000);
+    } else if (name === 'infra') {
+        ensureChartsInited();
+        loadStorageStats();
+        refreshResources();
+        addTimer(refreshResources, 5000);
+    } else if (name === 'errors') {
+        loadErrorReports();
+        addTimer(loadErrorReports, 30000);
+    }
+}
+
+// Initialize when document is ready
+document.addEventListener('DOMContentLoaded', function() {
+    // ----- User filter buttons -----
+    document.getElementById('show-all-users').addEventListener('click', function() {
+        filterMode = 'all';
+        this.classList.add('btn-primary');
+        this.classList.remove('btn-outline-primary');
+        document.getElementById('show-pending-users').classList.add('btn-outline-warning');
+        document.getElementById('show-pending-users').classList.remove('btn-warning');
+        renderUsersTable();
+    });
+
+    document.getElementById('show-pending-users').addEventListener('click', function() {
+        filterMode = 'pending';
+        this.classList.add('btn-warning');
+        this.classList.remove('btn-outline-warning');
+        document.getElementById('show-all-users').classList.add('btn-outline-primary');
+        document.getElementById('show-all-users').classList.remove('btn-primary');
+        renderUsersTable();
+    });
+
+    // ----- System resources time-range buttons -----
+    // Этот обработчик ловит ВСЕ .btn-group кнопки на странице, включая
+    // переключатели Usage (data-period), Error Reports (data-show) и фильтр
+    // истории (data-uhmode) — у них нет data-range. Без guard они бы обнулили
+    // графики ресурсов (range=undefined → пустые labels). НЕ убирать guard.
+    document.querySelectorAll('.btn-group button').forEach(button => {
+        button.addEventListener('click', function() {
+            const range = this.dataset.range;
+            if (range === undefined) return;
+            currentRange = range;
+
+            document.querySelectorAll('#system-range-switch button, .btn-group button[data-range]').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            this.classList.add('active');
+
+            resources.forEach(resource => {
+                updateChart(resource, range);
+            });
+        });
+    });
+
+    // ----- Bulk delete by pattern -----
+    let foundUsers = [];
+
+    document.getElementById('search-users-btn').addEventListener('click', function() {
+        const pattern = document.getElementById('bulk-delete-pattern').value.trim();
+        if (!pattern) {
+            alert('Введите паттерн для поиска');
+            return;
+        }
+
+        fetch('/admin/search-users', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({pattern: pattern})
+        })
+        .then(response => response.json())
+        .then(data => {
+            foundUsers = data.users;
+            document.getElementById('found-users-count').textContent = foundUsers.length;
+            document.getElementById('search-pattern').textContent = pattern;
+            document.getElementById('bulk-delete-info').style.display = foundUsers.length > 0 ? 'block' : 'none';
+            document.getElementById('bulk-delete-btn').disabled = foundUsers.length === 0;
+        })
+        .catch(error => {
+            console.error('Error searching users:', error);
+            alert('Ошибка при поиске пользователей');
+        });
+    });
+
+    document.getElementById('bulk-delete-btn').addEventListener('click', function() {
+        if (foundUsers.length === 0) return;
+
+        const confirmMsg = `Вы уверены, что хотите удалить ${foundUsers.length} пользователей? Это действие необратимо!`;
+        if (!confirm(confirmMsg)) return;
+
+        fetch('/admin/bulk-delete-users', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({user_ids: foundUsers.map(u => u.id)})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(`Удалено ${data.deleted_count} пользователей`);
+                // Reset form
+                document.getElementById('bulk-delete-pattern').value = '';
+                document.getElementById('bulk-delete-info').style.display = 'none';
+                document.getElementById('bulk-delete-btn').disabled = true;
+                foundUsers = [];
+                // Refresh lists
+                updateLists(currentUserPage, currentProjectPage);
+            } else {
+                alert('Ошибка при удалении пользователей: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting users:', error);
+            alert('Ошибка при удалении пользователей');
+        });
+    });
+
+    // ----- Чекбоксы выбора + удаление выбранных -----
+    // Выбор хранится в Set по id (а не в DOM), чтобы переживать перерисовку
+    // таблицы (она происходит при пагинации/фильтре/рефреше).
+    const selectedUserIds = new Set();
+
+    function updateSelectedUsersUI() {
+        const cnt = document.getElementById('selected-count');
+        const btn = document.getElementById('delete-selected-btn');
+        if (cnt) cnt.textContent = selectedUserIds.size;
+        if (btn) btn.disabled = selectedUserIds.size === 0;
+        const boxes = document.querySelectorAll('#users-table tbody .user-select:not(:disabled)');
+        const selectAll = document.getElementById('select-all-users');
+        if (selectAll) {
+            const total = boxes.length;
+            const checked = Array.from(boxes).filter(b => b.checked).length;
+            selectAll.checked = total > 0 && checked === total;
+            selectAll.indeterminate = checked > 0 && checked < total;
+        }
+    }
+
+    // Восстанавливает отметки после перерисовки tbody (зовётся из renderUsersTable)
+    window.restoreUserSelection = function() {
+        document.querySelectorAll('#users-table tbody .user-select').forEach(function(box) {
+            box.checked = selectedUserIds.has(parseInt(box.value, 10));
+        });
+        updateSelectedUsersUI();
+    };
+
+    const usersTableEl = document.getElementById('users-table');
+    if (usersTableEl) {
+        usersTableEl.addEventListener('change', function(e) {
+            if (!e.target.classList.contains('user-select')) return;
+            const id = parseInt(e.target.value, 10);
+            if (e.target.checked) selectedUserIds.add(id); else selectedUserIds.delete(id);
+            updateSelectedUsersUI();
+        });
+    }
+
+    const selectAllBox = document.getElementById('select-all-users');
+    if (selectAllBox) {
+        selectAllBox.addEventListener('change', function() {
+            document.querySelectorAll('#users-table tbody .user-select:not(:disabled)').forEach(function(box) {
+                box.checked = selectAllBox.checked;
+                const id = parseInt(box.value, 10);
+                if (selectAllBox.checked) selectedUserIds.add(id); else selectedUserIds.delete(id);
+            });
+            updateSelectedUsersUI();
+        });
+    }
+
+    const deleteSelectedBtn = document.getElementById('delete-selected-btn');
+    if (deleteSelectedBtn) {
+        deleteSelectedBtn.addEventListener('click', function() {
+            if (selectedUserIds.size === 0) return;
+            const ids = Array.from(selectedUserIds);
+            if (!confirm(`Удалить выбранные аккаунты (${ids.length})? Действие необратимо!`)) return;
+            fetch('/admin/bulk-delete-users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_ids: ids })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert(`Удалено ${data.deleted_count} аккаунтов`);
+                    selectedUserIds.clear();
+                    updateSelectedUsersUI();
+                    updateLists(currentUserPage, currentProjectPage);
+                } else {
+                    alert('Ошибка при удалении: ' + (data.error || 'неизвестная ошибка'));
+                }
+            })
+            .catch(err => {
+                console.error('Error deleting selected users:', err);
+                alert('Ошибка при удалении выбранных аккаунтов');
+            });
+        });
+    }
+
+    // ----- Usage period switch (overview) -----
+    const usw = document.getElementById('usage-period-switch');
+    if (usw) {
+        usw.addEventListener('click', function (e) {
+            const btn = e.target.closest('button[data-period]');
+            if (!btn) return;
+            usagePeriod = btn.dataset.period;
+            usw.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderUsageMode();
+        });
+    }
+
+    // ----- Export history mode filter -----
+    const uhSwitch = document.getElementById('usage-history-mode');
+    if (uhSwitch) {
+        uhSwitch.addEventListener('click', function (e) {
+            const b = e.target.closest('button[data-uhmode]');
+            if (!b) return;
+            uhMode = b.dataset.uhmode; uhPage = 1;
+            uhSwitch.querySelectorAll('button').forEach(x => x.classList.remove('active'));
+            b.classList.add('active');
+            loadUsageHistory();
+        });
+    }
+
+    // ----- Error reports: show switch + modal buttons -----
+    const esw = document.getElementById('err-show-switch');
+    if (esw) {
+        esw.addEventListener('click', e => {
             const b = e.target.closest('button[data-show]');
             if (!b) return;
             errShow = b.dataset.show; errPage = 1;
-            sw.querySelectorAll('button').forEach(x => x.classList.remove('active'));
+            esw.querySelectorAll('button').forEach(x => x.classList.remove('active'));
             b.classList.add('active');
             loadErrorReports();
         });
@@ -1757,8 +1954,31 @@ document.addEventListener('DOMContentLoaded', function () {
             const m = bootstrap.Modal.getInstance(document.getElementById('errReportModal')); if (m) m.hide();
         });
     });
-    loadErrorReports();
-    setInterval(loadErrorReports, 30000);
+
+    // ----- Tab activation: main tabs -----
+    document.querySelectorAll('#admin-tabs [data-bs-toggle="tab"]').forEach(t => {
+        t.addEventListener('shown.bs.tab', function () { activateTab(this.dataset.tab); });
+    });
+
+    // ----- Tab activation: activity sub-pills -----
+    document.querySelectorAll('#activity-subtabs [data-bs-toggle="pill"]').forEach(t => {
+        t.addEventListener('shown.bs.tab', function () {
+            activitySub = this.dataset.actsub;
+            clearActiveTimers();
+            activateActivitySub(activitySub);
+        });
+    });
+
+    // ----- Quick-jump buttons (overview) -----
+    document.querySelectorAll('[data-goto-tab]').forEach(b => {
+        b.addEventListener('click', function () {
+            const t = document.querySelector(`#admin-tabs [data-tab="${this.dataset.gotoTab}"]`);
+            if (t) new bootstrap.Tab(t).show();
+        });
+    });
+
+    // ----- Initial: load default (overview) tab data; populate error badge -----
+    activateTab('overview');
 });
 </script>
 {% endblock %}

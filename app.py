@@ -611,6 +611,42 @@ def admin_usage_stats():
     })
 
 
+@app.route('/admin/usage-history')
+@login_required
+@admin_required
+def admin_usage_history():
+    """Пагинируемая история UsageEvent для под-вкладки «История экспортов».
+
+    Несгораемый лог всех экспортов (классика / серверный редактор / Local Export)
+    с опциональным фильтром по режиму. `recent` в admin_usage_stats ограничен 12 —
+    здесь полная история с пагинацией."""
+    page = request.args.get('page', 1, type=int)
+    mode = request.args.get('mode', '') or ''
+    q = UsageEvent.query
+    if mode in ('classic', 'editor_server', 'editor_local'):
+        q = q.filter(UsageEvent.mode == mode)
+    pag = q.order_by(UsageEvent.created_at.desc()).paginate(page=page, per_page=25, error_out=False)
+    items = [{
+        'created_at': ev.created_at.strftime('%Y-%m-%d %H:%M') if ev.created_at else '',
+        'mode': ev.mode,
+        'user_email': ev.user.email if ev.user else '—',
+        'csv_source': ev.csv_source or '—',
+        'resolution': ev.resolution or '—',
+        'codec': ev.codec or '—',
+        'quality': ev.quality or '—',
+        'duration': round(ev.duration_sec) if ev.duration_sec else None,
+        'has_track_map': bool(ev.has_track_map),
+        'has_laps': bool(ev.has_laps),
+        'success': bool(ev.success),
+    } for ev in pag.items]
+    return jsonify({
+        'items': items,
+        'page': pag.page, 'pages': pag.pages, 'total': pag.total,
+        'has_next': pag.has_next, 'has_prev': pag.has_prev,
+        'mode': mode,
+    })
+
+
 @app.route('/admin/error-reports')
 @login_required
 @admin_required
