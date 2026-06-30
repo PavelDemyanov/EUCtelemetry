@@ -1129,10 +1129,10 @@
   function uploadCSVToServer(file) {
     var formData = new FormData();
     formData.append('csv', file);
-    fetch('/video-editor/upload-csv', { method: 'POST', body: formData })
+    return fetch('/video-editor/upload-csv', { method: 'POST', body: formData })
       .then(function(r) { return r.json(); })
-      .then(function(data) { state.csvId = data.csv_id; checkExportReady(); })
-      .catch(function(err) { console.error('CSV upload failed:', err); });
+      .then(function(data) { state.csvId = data.csv_id; checkExportReady(); return data; })
+      .catch(function(err) { console.error('CSV upload failed:', err); throw err; });
   }
 
   function parseCSV(text) {
@@ -2920,11 +2920,26 @@
       alert('Video is still uploading to the server. Please wait or use Local Export (Browser).');
       return;
     }
-    if (!state.csvId) {
+    if (!state.csvId && !state.csvFile) {
       alert('CSV not uploaded to server yet.');
       return;
     }
 
+    // Переотправляем CSV/VBO на сервер перед серверным экспортом. Автоочистка
+    // uploads/video_editor (файлы >24ч) могла их удалить, если редактор был открыт
+    // дольше суток — иначе экспорт падает с 'CSV file not found'. Файлы крошечные,
+    // оригиналы есть в браузере (state.csvFile / state.vboFile).
+    var reuploads = [];
+    if (state.csvFile) reuploads.push(uploadCSVToServer(state.csvFile));
+    if (state.vboFile) reuploads.push(uploadVBOToServer(state.vboFile));
+    Promise.all(reuploads).then(function() {
+      _sendExportRequest();
+    }).catch(function(err) {
+      alert('Не удалось подготовить данные на сервере: ' + ((err && err.message) || err) + '. Попробуйте ещё раз.');
+    });
+  }
+
+  function _sendExportRequest() {
     var nameInput = document.getElementById('exportProjectName');
     var projectName = nameInput ? nameInput.value.trim() : '';
     if (!projectName) projectName = generateProjectName();
@@ -3055,10 +3070,10 @@
   function uploadVBOToServer(file) {
     var formData = new FormData();
     formData.append('vbo', file);
-    fetch('/video-editor/upload-vbo', { method: 'POST', body: formData })
+    return fetch('/video-editor/upload-vbo', { method: 'POST', body: formData })
       .then(function(r) { return r.json(); })
-      .then(function(data) { state.vboId = data.vbo_id; })
-      .catch(function(err) { console.error('VBO upload failed:', err); });
+      .then(function(data) { state.vboId = data.vbo_id; return data; })
+      .catch(function(err) { console.error('VBO upload failed:', err); throw err; });
   }
 
   function parseVBO(text) {
